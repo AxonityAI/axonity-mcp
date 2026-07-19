@@ -1,0 +1,28 @@
+name: Publish to npm
+
+# Publishes @axonity-ai/mcp when a GitHub Release is published. Cut a release
+# whose tag matches the package version (e.g. v0.1.0) and this ships it.
+# Requires an NPM_TOKEN repo secret (an npm automation token with publish
+# rights on the axonity-ai org).
+on:
+  release:
+    types: [published]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          registry-url: https://registry.npmjs.org
+      - run: npm ci
+      - run: npm test
+      # prepublishOnly builds; publishConfig makes it public.
+      - run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

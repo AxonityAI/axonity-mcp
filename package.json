@@ -5,9 +5,19 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/AxonityAI/axonity-flow.git",
-    "directory": "integrations/mcp-server"
+    "url": "git+https://github.com/AxonityAI/axonity-mcp.git"
   },
+  "homepage": "https://github.com/AxonityAI/axonity-mcp#readme",
+  "bugs": {
+    "url": "https://github.com/AxonityAI/axonity-mcp/issues"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "axonity",
+    "claude",
+    "agent"
+  ],
   "type": "module",
   "bin": {
     "axonity-mcp": "dist/index.js"
