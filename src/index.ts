@@ -6,7 +6,7 @@
  * draft, and update workflows, agents and tools in an Axonity tenant. Add it to
  * your client with:
  *
- *   claude mcp add axonity -- npx -y @axonity/mcp
+ *   claude mcp add axonity -- npx -y @axonity-ai/mcp
  *
  * with AXONITY_TOKEN (a service token minted in Axonity → Settings → API tokens)
  * and, if self-hosting, AXONITY_API_URL in the environment.

@@ -1,4 +1,4 @@
-# @axonity/mcp — Axonity Flow MCP connector
+# @axonity-ai/mcp — Axonity Flow MCP connector
 
 A local [Model Context Protocol](https://modelcontextprotocol.io) server that lets
 an external agent (e.g. **Claude Code** on your laptop) read, draft, and update
@@ -20,7 +20,7 @@ tenant + scope on every call, so the connector is not a trust boundary.
    claude mcp add axonity \
      --env AXONITY_TOKEN=axs_your_token_here \
      --env AXONITY_API_URL=https://app.axonity.ai \
-     -- npx -y @axonity/mcp
+     -- npx -y @axonity-ai/mcp
    ```
 
    `AXONITY_API_URL` is optional (defaults to the Axonity SaaS URL); set it if you
