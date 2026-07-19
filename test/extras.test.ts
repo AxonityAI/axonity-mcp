@@ -1,0 +1,110 @@
+import { describe, expect, it, vi } from "vitest";
+
+import type { AxonityClient } from "../src/client.js";
+import {
+  registerAttachTools,
+  registerConnectorTools,
+  registerPersonaTools,
+} from "../src/tools/extras.js";
+
+function fakeServer() {
+  const handlers = new Map<string, (args: Record<string, unknown>) => Promise<unknown>>();
+  const server = {
+    tool: (name: string, _d: string, _s: unknown, handler: (a: never) => Promise<unknown>) => {
+      handlers.set(name, handler as (args: Record<string, unknown>) => Promise<unknown>);
+    },
+  };
+  return { server, handlers };
+}
+
+function fakeClient() {
+  return {
+    get: vi.fn(async () => ({ ok: true })),
+    post: vi.fn(async () => ({ ok: true })),
+    put: vi.fn(async () => ({ ok: true })),
+    patch: vi.fn(async () => ({ ok: true })),
+  };
+}
+
+describe("persona tools", () => {
+  it("reads / creates agent-scoped and updates by id", async () => {
+    const { server, handlers } = fakeServer();
+    const client = fakeClient();
+    registerPersonaTools(server as never, client as unknown as AxonityClient);
+
+    await handlers.get("read_agent_persona")!({ agentId: "ag-1" });
+    expect(client.get).toHaveBeenCalledWith("/api/v1/agents/ag-1/persona");
+
+    await handlers.get("create_agent_persona")!({ agentId: "ag-1", fields: { name: "V" } });
+    expect(client.post).toHaveBeenCalledWith("/api/v1/agents/ag-1/persona", { name: "V" });
+
+    await handlers.get("update_persona")!({
+      personaId: "p-1",
+      expectedVersion: 2,
+      fields: { name: "V2" },
+    });
+    expect(client.put).toHaveBeenCalledWith("/api/v1/personas/p-1", {
+      expectedVersion: 2,
+      name: "V2",
+    });
+  });
+
+  it("has no standalone persona list tool", () => {
+    const { server, handlers } = fakeServer();
+    registerPersonaTools(server as never, fakeClient() as unknown as AxonityClient);
+    expect([...handlers.keys()]).not.toContain("list_personas");
+  });
+});
+
+describe("connector tools", () => {
+  it("creates a tool of type connector", async () => {
+    const { server, handlers } = fakeServer();
+    const client = fakeClient();
+    registerConnectorTools(server as never, client as unknown as AxonityClient);
+    await handlers.get("create_connector")!({ fields: { name: "Slack" } });
+    expect(client.post).toHaveBeenCalledWith("/api/v1/tools", {
+      type: "connector",
+      name: "Slack",
+    });
+  });
+
+  it("rejects real credentials in authConfig (placeholder-only)", async () => {
+    const { server, handlers } = fakeServer();
+    const client = fakeClient();
+    registerConnectorTools(server as never, client as unknown as AxonityClient);
+    const result = (await handlers.get("create_connector")!({
+      fields: { name: "X", authConfig: { apiKey: "sk-real-secret" } },
+    })) as { isError?: boolean; content: { text: string }[] };
+    expect(result.isError).toBe(true);
+    expect(result.content[0].text).toMatch(/placeholder/i);
+    expect(client.post).not.toHaveBeenCalled();
+  });
+
+  it("accepts placeholder authConfig", async () => {
+    const { server, handlers } = fakeServer();
+    const client = fakeClient();
+    registerConnectorTools(server as never, client as unknown as AxonityClient);
+    await handlers.get("create_connector")!({
+      fields: { name: "X", authConfig: { apiKey: "{{ SLACK_TOKEN }}" } },
+    });
+    expect(client.post).toHaveBeenCalled();
+  });
+});
+
+describe("attach tools", () => {
+  it("attaches a skill to an agent via the link route", async () => {
+    const { server, handlers } = fakeServer();
+    const client = fakeClient();
+    registerAttachTools(server as never, client as unknown as AxonityClient);
+    await handlers.get("attach_skill_to_agent")!({ agentId: "ag-1", skillId: "sk-1" });
+    expect(client.post).toHaveBeenCalledWith("/api/v1/agents/ag-1/skills-v2/sk-1");
+  });
+
+  it("attaches a reference doc to an agent", async () => {
+    const { server, handlers } = fakeServer();
+    const client = fakeClient();
+    registerAttachTools(server as never, client as unknown as AxonityClient);
+    await handlers.get("attach_reference_to_agent")!({ agentId: "ag-1", refId: "rd-1" });
+    expect(client.post).toHaveBeenCalledWith("/api/v1/agents/ag-1/reference-docs/rd-1");
+  });
+});
