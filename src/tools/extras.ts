@@ -12,14 +12,10 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 
 import type { AxonityClient } from "../client.js";
+import { assertPlaceholderCredentials } from "./credentials.js";
 import { guard, jsonResult } from "./result.js";
 
 /** A value is a safe placeholder if it's empty or a `{{ … }}` template. */
-function isPlaceholder(value: unknown): boolean {
-  if (value === "" || value === null || value === undefined) return true;
-  return typeof value === "string" && /^\s*\{\{.*\}\}\s*$/.test(value);
-}
-
 export function registerPersonaTools(
   server: McpServer,
   client: AxonityClient,
@@ -77,17 +73,6 @@ export function registerConnectorTools(
   server: McpServer,
   client: AxonityClient,
 ): void {
-  const authGuard = (fields: Record<string, unknown>) => {
-    const authConfig = fields.authConfig as Record<string, unknown> | undefined;
-    if (authConfig && !Object.values(authConfig).every(isPlaceholder)) {
-      throw new Error(
-        "authConfig must contain only placeholders (empty or {{ … }}). Never put " +
-          "real credentials in a connector — a human fills secrets in the Axonity " +
-          "tool editor.",
-      );
-    }
-  };
-
   server.tool(
     "create_connector",
     "Create a connector draft (a tool of type 'connector'). Do NOT put real " +
@@ -99,7 +84,7 @@ export function registerConnectorTools(
     },
     async ({ fields }) =>
       guard(async () => {
-        authGuard(fields);
+        assertPlaceholderCredentials(fields);
         return jsonResult(
           await client.post("/api/v1/tools", { type: "connector", ...fields }),
         );
@@ -117,7 +102,7 @@ export function registerConnectorTools(
     },
     async ({ id, expectedVersion, fields }) =>
       guard(async () => {
-        authGuard(fields);
+        assertPlaceholderCredentials(fields);
         return jsonResult(
           await client.put(`/api/v1/tools/${id}`, {
             expectedVersion,
@@ -133,50 +118,74 @@ export function registerAttachTools(
   server: McpServer,
   client: AxonityClient,
 ): void {
-  const attach = (
-    name: string,
-    description: string,
+  /**
+   * Attach and detach are the same path with POST vs DELETE, so both verbs are
+   * generated from one definition — that is what keeps them from drifting apart
+   * again (only attach existed before, so nothing could be unwired).
+   */
+  const link = (
+    subject: string,
+    target: string,
     path: (a: string, b: string) => string,
     firstArg: string,
     secondArg: string,
-  ) =>
+  ) => {
+    const shape = { [firstArg]: z.string(), [secondArg]: z.string() };
+
     server.tool(
-      name,
-      description,
-      {
-        [firstArg]: z.string(),
-        [secondArg]: z.string(),
-      },
+      `attach_${subject}_to_${target}`,
+      `Scope a ${subject.replace("_", " ")} to a ${target} so the ${target} uses it.`,
+      shape,
       async (args: Record<string, string>) =>
         guard(async () =>
           jsonResult(await client.post(path(args[firstArg], args[secondArg]))),
         ),
     );
 
-  attach(
-    "attach_skill_to_agent",
-    "Scope a skill to an agent so the agent uses it.",
+    server.tool(
+      `detach_${subject}_from_${target}`,
+      `Unscope a ${subject.replace("_", " ")} from a ${target}. This only ` +
+        `removes the link — the ${subject.replace("_", " ")} itself is not deleted ` +
+        `and stays available to attach elsewhere.`,
+      shape,
+      async (args: Record<string, string>) =>
+        guard(async () => {
+          await client.del(path(args[firstArg], args[secondArg]));
+          return jsonResult({
+            detached: true,
+            [firstArg]: args[firstArg],
+            [secondArg]: args[secondArg],
+          });
+        }),
+    );
+  };
+
+  link(
+    "skill",
+    "agent",
     (agentId, skillId) => `/api/v1/agents/${agentId}/skills-v2/${skillId}`,
     "agentId",
     "skillId",
   );
-  attach(
-    "attach_skill_to_workflow",
-    "Scope a skill to a workflow.",
+  link(
+    "skill",
+    "workflow",
     (workflowId, skillId) => `/api/v1/workflows/${workflowId}/skills-v2/${skillId}`,
     "workflowId",
     "skillId",
   );
-  attach(
-    "attach_policy_to_agent",
-    "Scope a policy to an agent.",
+  link(
+    "policy",
+    "agent",
     (agentId, policyId) => `/api/v1/agents/${agentId}/policies/${policyId}`,
     "agentId",
     "policyId",
   );
-  attach(
-    "attach_reference_to_agent",
-    "Scope a reference doc to an agent.",
+  // Reference docs attach to agents only — there is no workflow-scoped
+  // reference-doc route on the backend, so no `*_to_workflow` pair here.
+  link(
+    "reference",
+    "agent",
     (agentId, refId) => `/api/v1/agents/${agentId}/reference-docs/${refId}`,
     "agentId",
     "refId",

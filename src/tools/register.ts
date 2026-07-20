@@ -31,6 +31,18 @@ export interface EntityDef {
   updateMethod: "PUT" | "PATCH";
   /** One-line human description of the entity, for the tool docs. */
   label: string;
+  /**
+   * Optional pre-write check on the caller's fields, applied to `create_*` and
+   * `update_*`. Throws to reject. Used to run the connector credential guard on
+   * plain tool writes, which would otherwise bypass it.
+   */
+  guardFields?: (fields: Record<string, unknown>) => void;
+  /**
+   * Whether this entity can be published. Default true. Output schemas have no
+   * publish route and are not a valid `entityType` for a publish approval, so
+   * generating `request_publish_*` for them would ship a tool that always 422s.
+   */
+  publishable?: boolean;
 }
 
 export function registerEntityTools(
@@ -38,7 +50,8 @@ export function registerEntityTools(
   client: AxonityClient,
   def: EntityDef,
 ): void {
-  const { singular, basePath, updateMethod, label } = def;
+  const { singular, basePath, updateMethod, label, guardFields } = def;
+  const publishable = def.publishable !== false;
 
   server.tool(
     `list_${singular}s`,
@@ -70,7 +83,10 @@ export function registerEntityTools(
         ),
     },
     async ({ fields }) =>
-      guard(async () => jsonResult(await client.post(basePath, fields))),
+      guard(async () => {
+        guardFields?.(fields);
+        return jsonResult(await client.post(basePath, fields));
+      }),
   );
 
   server.tool(
@@ -90,6 +106,7 @@ export function registerEntityTools(
     },
     async ({ id, expectedVersion, fields }) =>
       guard(async () => {
+        guardFields?.(fields);
         const body = { expectedVersion, ...fields };
         const path = `${basePath}/${id}`;
         const data =
@@ -99,6 +116,8 @@ export function registerEntityTools(
         return jsonResult(data);
       }),
   );
+
+  if (!publishable) return;
 
   server.tool(
     `request_publish_${singular}`,

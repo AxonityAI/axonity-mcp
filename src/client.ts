@@ -12,11 +12,22 @@ import { AxonityApiError, errorForStatus } from "./errors.js";
 
 export type Json = Record<string, unknown>;
 
+/** Query-string values a route may take. `undefined` entries are omitted. */
+export type Query = Record<string, string | number | boolean | undefined>;
+
 export class AxonityClient {
   constructor(private readonly config: AxonityConfig) {}
 
-  private url(path: string): string {
-    return `${this.config.apiUrl}${path.startsWith("/") ? path : `/${path}`}`;
+  private url(path: string, query?: Query): string {
+    const base = `${this.config.apiUrl}${path.startsWith("/") ? path : `/${path}`}`;
+    if (!query) return base;
+
+    const params = new URLSearchParams();
+    for (const [key, value] of Object.entries(query)) {
+      if (value !== undefined) params.set(key, String(value));
+    }
+    const qs = params.toString();
+    return qs ? `${base}?${qs}` : base;
   }
 
   /**
@@ -27,10 +38,11 @@ export class AxonityClient {
     method: string,
     path: string,
     body?: unknown,
+    query?: Query,
   ): Promise<T> {
     let resp: Response;
     try {
-      resp = await fetch(this.url(path), {
+      resp = await fetch(this.url(path, query), {
         method,
         headers: {
           Authorization: `Bearer ${this.config.token}`,
@@ -61,8 +73,8 @@ export class AxonityClient {
     return parsed as T;
   }
 
-  get<T = unknown>(path: string): Promise<T> {
-    return this.request<T>("GET", path);
+  get<T = unknown>(path: string, query?: Query): Promise<T> {
+    return this.request<T>("GET", path, undefined, query);
   }
 
   post<T = unknown>(path: string, body?: unknown): Promise<T> {
@@ -75,6 +87,16 @@ export class AxonityClient {
 
   patch<T = unknown>(path: string, body?: unknown): Promise<T> {
     return this.request<T>("PATCH", path, body);
+  }
+
+  /**
+   * DELETE. The optimistic lock travels as a QUERY parameter on these routes,
+   * not in the body — and its spelling differs by entity family
+   * (`expectedVersion` vs `expected_version`), so the caller passes it in.
+   * A 204 with no body resolves to `undefined`.
+   */
+  del<T = unknown>(path: string, query?: Query): Promise<T> {
+    return this.request<T>("DELETE", path, undefined, query);
   }
 }
 
