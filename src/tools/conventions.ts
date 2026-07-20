@@ -136,11 +136,11 @@ Read this before creating or updating anything.
 - **persona**: an agent's character — 1:1 with an agent. Created only through
   its agent (\`create_agent_persona\`); once created it's a normal entity
   (\`list_personas\`, \`read_persona\`, \`update_persona\`, delete/restore/versions).
-- **prompt_snippet**: reusable prompt fragments. No single-item read route
-  exists — use \`list_prompt_snippets\` and filter client-side, or read a
-  specific historical version. No \`discard_prompt_snippet_draft\` either.
-  \`list_deleted_prompt_snippets\` works like every other entity's even though
-  it's implemented differently on the wire.
+- **prompt_snippet**: reusable prompt fragments. A normal entity in every
+  respect now (\`read_prompt_snippet\`, \`discard_prompt_snippet_draft\`,
+  everything else). Only wire-level oddity: \`list_deleted_prompt_snippets\`
+  is implemented as \`?deleted=true\` on the list route rather than a
+  dedicated collection — you won't notice from the tool's shape.
 - **output_schema**: a reusable output contract, fully version-controlled and
   publishable like the other memory entities. A tool's \`outputValidators\` (or
   an agent's \`permissions.expected_output_schema_id\`) references one by id —

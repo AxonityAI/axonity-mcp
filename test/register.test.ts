@@ -295,12 +295,15 @@ describe("registerEntityTools — creatable/readable flags", () => {
     expect(names).toContain("delete_persona");
   });
 
-  it("omits read_<entity> when readable is false (prompt_snippet's shape)", () => {
-    const PROMPT_SNIPPET: EntityDef = {
-      singular: "prompt_snippet",
-      basePath: "/api/v1/prompt-snippets",
+  it("omits read_<entity>/discard_<entity>_draft when readable/hasDiscardDraft are false", () => {
+    // A hypothetical entity missing those routes — real prompt_snippet gained
+    // both in axonity-flow#699 and no longer needs either flag, but the
+    // generator must still support an entity that genuinely lacks them.
+    const NO_READ_NO_DISCARD: EntityDef = {
+      singular: "widget",
+      basePath: "/api/v1/widgets",
       updateMethod: "PATCH",
-      label: "prompt snippets",
+      label: "widgets",
       readable: false,
       deleteVersionParam: "expectedVersion",
       hasDiscardDraft: false,
@@ -310,13 +313,13 @@ describe("registerEntityTools — creatable/readable flags", () => {
     registerEntityTools(
       server as never,
       fakeClient() as unknown as AxonityClient,
-      PROMPT_SNIPPET,
+      NO_READ_NO_DISCARD,
     );
     const names = [...handlers.keys()];
-    expect(names).not.toContain("read_prompt_snippet");
-    expect(names).not.toContain("discard_prompt_snippet_draft");
-    expect(names).toContain("create_prompt_snippet");
-    expect(names).toContain("list_deleted_prompt_snippets");
+    expect(names).not.toContain("read_widget");
+    expect(names).not.toContain("discard_widget_draft");
+    expect(names).toContain("create_widget");
+    expect(names).toContain("list_deleted_widgets");
   });
 
   it("flow: publishable false + no discard-draft, but still deletable", () => {

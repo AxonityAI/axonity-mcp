@@ -59,10 +59,9 @@ entity gets every verb (see the per-entity notes below for the exceptions):
 | `request_publish_<entity>` | Ask for a draft to be published — creates a pending approval; never publishes. |
 
 Exceptions: `persona` has no `create_persona` (create only via
-`create_agent_persona`); `prompt_snippet` has no `read_prompt_snippet` (no such
-route exists — list and filter client-side) and no `discard_prompt_snippet_draft`;
-`flow` has no `request_publish_flow`, no `discard_flow_draft`, and no version
-family at all (a flow is live the moment you save it — see `clone_flow` below).
+`create_agent_persona`); `flow` has no `request_publish_flow`, no
+`discard_flow_draft`, and no version family at all (a flow is live the moment
+you save it — see `clone_flow` below).
 
 Plus `apply_workflow_mutations` for structural workflow edits (add steps, connect
 edges) via mutation commands, sequenced and version-threaded for you.

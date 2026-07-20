@@ -119,11 +119,7 @@ const ENTITIES: EntityDef[] = [
     basePath: "/api/v1/prompt-snippets",
     updateMethod: "PATCH",
     label: "prompt snippets (reusable prompt fragments)",
-    // No single-read route exists on the backend — list and filter client-side.
-    readable: false,
     deleteVersionParam: "expectedVersion",
-    // No discard-draft route for this entity.
-    hasDiscardDraft: false,
     // Its "list deleted" is `?deleted=true` on the main list route, not a
     // dedicated /deleted collection like every other entity.
     deletedListPath: "query",
