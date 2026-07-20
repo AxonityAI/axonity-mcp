@@ -5,6 +5,7 @@ import {
   AxonityApiError,
   ForbiddenError,
   NotFoundError,
+  ReferenceConflictError,
   VersionConflictError,
   describeDetail,
   errorForStatus,
@@ -93,5 +94,70 @@ describe("errorForStatus surfaces the server detail", () => {
     expect(shown(errorForStatus(400, { code: "bad_request", hint: "check ids" }))).not.toContain(
       "[object Object]",
     );
+  });
+});
+
+describe("the structured error envelope", () => {
+  it("branches on code, not status — a 409 with reference_conflict is NOT a VersionConflictError", () => {
+    const body = {
+      error: "reference_conflict",
+      code: "reference_conflict",
+      retryable: false,
+      message: "Cannot delete agent: referenced by published workflow(s): Onboarding",
+    };
+    const err = errorForStatus(409, body);
+    expect(err).toBeInstanceOf(ReferenceConflictError);
+    expect(err).not.toBeInstanceOf(VersionConflictError);
+    expect(err.retryable).toBe(false);
+    expect(err.code).toBe("reference_conflict");
+    expect(shown(err)).toMatch(/will never succeed/i);
+    expect(shown(err)).toContain("referenced by published workflow(s): Onboarding");
+  });
+
+  it("still produces VersionConflictError for a 409 whose code says so", () => {
+    const err = errorForStatus(409, {
+      code: "version_conflict",
+      retryable: true,
+      message: "Version conflict: expected 3, current 4",
+    });
+    expect(err).toBeInstanceOf(VersionConflictError);
+    expect(err.retryable).toBe(true);
+    expect(shown(err)).toContain("expected 3, current 4");
+  });
+
+  it("appends field-level detail after the top-level message", () => {
+    const err = errorForStatus(422, {
+      error: "validation_error",
+      code: "validation_error",
+      retryable: false,
+      message: "Request validation failed",
+      detail: [{ loc: ["body", "name"], msg: "Field required" }],
+    });
+    const text = shown(err);
+    expect(text).toContain("Request validation failed");
+    expect(text).toContain("body.name: Field required");
+  });
+
+  it("appends affectedEntities when present", () => {
+    const err = errorForStatus(409, {
+      code: "reference_conflict",
+      retryable: false,
+      message: "Cannot delete: still referenced",
+      affectedEntities: ["workflow:onboarding", "workflow:offboarding"],
+    });
+    expect(shown(err)).toContain("Affects: workflow:onboarding, workflow:offboarding");
+  });
+
+  it("falls back to status-based mapping when no code is present (older-style bodies)", () => {
+    const err = errorForStatus(409, "Cannot delete: legacy plain-string body");
+    expect(err).toBeInstanceOf(VersionConflictError);
+  });
+
+  it("exposes code/retryable on every mapped error, defaulting sensibly", () => {
+    expect(new VersionConflictError().code).toBe("version_conflict");
+    expect(new VersionConflictError().retryable).toBe(true);
+    expect(new ReferenceConflictError().code).toBe("reference_conflict");
+    expect(new ReferenceConflictError().retryable).toBe(false);
+    expect(new NotFoundError().retryable).toBe(false);
   });
 });
