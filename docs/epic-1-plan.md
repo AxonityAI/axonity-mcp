@@ -3,6 +3,58 @@
 Status: **superseded in part.** Verified against `axonity-flow` @ `backend/src` by direct
 code read (routes, schemas, services). Where the code and the epic disagree, the code wins.
 
+## Revision 3 — 2026-07-20, re-verified against axonity-flow @ `036a1e15`
+
+Comprehensive re-audit after PR #6 (issue #4's implementation) was already open, prompted
+by axonity-flow having moved forward several commits. Nothing required a connector code
+change except one item already shipped in a follow-up commit on #6. Findings:
+
+1. **PR #699** (`feat(prompt-snippets): add singular read + discard-draft routes`) closed
+   the two permanent gaps this doc and the connector had documented for `prompt_snippet` —
+   `GET /api/v1/prompt-snippets/{id}` and `POST /api/v1/prompt-snippets/{id}/discard-draft`
+   now exist, mirroring skill/policy/reference_doc/persona exactly. **Shipped**: dropped
+   `readable: false` / `hasDiscardDraft: false` from its `EntityDef`. Its `?deleted=true`
+   list-deleted quirk (vs a `/deleted` collection) is unaffected and still real.
+2. **Revision 2 item 2's persona half is now FIXED, the company half is not — and the same
+   gap also affects `/company/unpublish`, not just `/company/publish`.**
+   `POST /api/v1/personas/{id}/versions/publish/{major}` now carries `forbid_service_token`
+   (`personas.py:511`, confirmed fixed). `company.py` still never imports
+   `forbid_service_token` at all — both `POST /api/v1/company/publish` (`company.py:261`)
+   and `POST /api/v1/company/unpublish` (`company.py:~278`) remain reachable by a
+   write-scoped service token, bypassing the approval queue. Not connector-actionable
+   (company is out of scope for this connector) — report both routes to axonity-flow.
+3. **A documentation bug of our own, found and fixed**: this connector's own
+   `clone_flow`/`axonity_conventions`/README text claimed a framework-provided flow is
+   "read-only to your tenant" — lifted from `flows.py`'s route docstrings without
+   verifying them. Independently confirmed **false**: `flow_service.py`'s `update_flow`
+   and `delete_flow` perform no scope check at all (`_require_flow` only checks
+   existence/visibility, never `flow.scope`), and the service's own docstring
+   contradicts the route's: *"Every flow visible to the tenant is editable — there is no
+   read-only 'framework' tier surfaced to the user."* **Shipped**: reworded `clone_flow`,
+   `axonity_conventions`, and the README to state this is NOT enforced and to recommend
+   `clone_flow` as a convention, not a guarantee. This is a live bug in axonity-flow
+   worth reporting (stale docstrings on both `flows.py:127` and `flows.py:156`).
+4. **Everything else re-checked clean, no drift**: the full `expectedVersion` (workflow,
+   agent, tool, prompt_snippet, flow) vs `expected_version` (skill, policy, reference_doc,
+   output_schema, persona) DELETE query-param split, still exactly as this connector's
+   `EntityDef.deleteVersionParam` encodes it; triggers, run observability, tool execution,
+   and publish-approval routes (fields, auth dependencies, pagination) — byte-for-byte
+   unchanged since the original verification pass; the `ErrorCode`/`RETRYABLE_CODES`
+   vocabulary and the control-character guard message — unchanged; `/api/v1/secrets`
+   writes and `/api/v1/system-tools` — unchanged (no grant/revoke, still catalog-only).
+5. **The `agent.tags` → policy-activation claim in `axonity_conventions` was verified
+   for the first time** (it had been carried over from the GitHub issue's text without
+   independent confirmation) and holds, with a nuance worth recording: tags are a
+   *secondary* gate (`context_builder.py` checks `activation.tags` against the agent's
+   `tags`), not the primary attachment mechanism (that's scope + owner_id + explicit
+   `attach_policy_to_agent` links, in `policy_repository.list_for_agent`). A policy with
+   no `activation.tags` set applies regardless of the agent's tags.
+6. **New, not previously noted**: `POST /api/v1/workflows/{id}/runs` (trigger a run) has
+   **no scope check at all** — plain `get_auth_context`, not `require_write`. If this
+   connector ever wraps run-triggering (still an open product question — see §6), a
+   read-scoped token could technically start a run today; worth an explicit decision
+   before wrapping it, not an oversight to silently inherit.
+
 ## Revision 2 — 2026-07-19, re-verified against axonity-flow @ `1c7820ed`
 
 Issue #1 was revised and **issue #3 is now the plan of record** (ordering + acceptance bar),

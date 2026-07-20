@@ -166,6 +166,11 @@ These are enforced by the backend, not merely by convention:
   `axonity_conventions`); the connector tells them apart by `code`, never by
   matching the message text.
 
+**One known exception, not enforced:** a framework-provided `flow` is meant to
+be read-only to a tenant, but the backend does not actually block
+`update_flow`/`delete_flow` against one. Prefer `clone_flow` over editing a
+framework flow in place.
+
 ## Development
 
 ```bash

@@ -195,8 +195,11 @@ export function registerCatalogTools(server: McpServer, client: AxonityClient): 
 
   server.tool(
     "clone_flow",
-    "Fork a flow into a new, tenant-owned copy — including a framework-provided " +
-      "one, which is otherwise read-only to your tenant.",
+    "Fork a flow into a new, independent, tenant-owned copy — including a " +
+      "framework-provided one. Prefer this over editing a framework flow " +
+      "directly: it is visible and NOT actually protected from update_flow/ " +
+      "delete_flow (a backend gap, despite what its docstrings claim), so " +
+      "editing one in place risks changing something other tenants share.",
     { flowId: z.string().describe("The flow's id.") },
     async ({ flowId }) =>
       guard(async () => jsonResult(await client.post(`/api/v1/flows/${flowId}/clone`))),

@@ -146,9 +146,13 @@ Read this before creating or updating anything.
   an agent's \`permissions.expected_output_schema_id\`) references one by id —
   create it before you need to point something at it.
 - **flow**: a reusable workflow fragment. No versions, no publish — a flow is
-  live the moment you save it. \`clone_flow\` forks one (including a
-  framework-provided flow, which is otherwise read-only to your tenant) into a
-  tenant-owned copy you can then edit freely.
+  live the moment you save it. A framework-provided flow is meant to be
+  read-only, but that is NOT actually enforced on the backend — \`update_flow\`
+  and \`delete_flow\` will succeed against one, and doing so can change
+  something every tenant shares. Use \`clone_flow\` to fork one into your own
+  tenant-owned copy instead of editing it in place; never call update/delete
+  on a flow you didn't create yourself unless a human has explicitly asked you
+  to.
 
 ## Structural workflow edits
 - \`apply_workflow_mutations\` takes a LIST of commands and applies them in order,
