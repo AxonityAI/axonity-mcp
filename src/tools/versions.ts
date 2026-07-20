@@ -1,17 +1,25 @@
 /**
- * Version history and rollback.
+ * Version history, rollback, and version-level delete/restore.
  *
  * Two different identifiers appear in these routes and confusing them silently
  * 404s:
  *   - `version`    — an INTEGER checkpoint number (1, 2, 3 …), used to read one.
- *   - `versionId`  — the UUID of the version row, used to restore it.
+ *   - `versionId`  — the UUID of the version row, used to restore/delete it.
+ *
+ * There are also two unrelated things both called "restore" here:
+ *   - `restore_<entity>_version`         — roll the DRAFT back to an old,
+ *     still-live version. Takes `expectedVersion` in the body.
+ *   - `restore_deleted_<entity>_version` — undo a DELETED version row coming
+ *     back into history. No body — a restore must never lose to a stale-version
+ *     guard.
  *
  * The published snapshot also lives in two places depending on the entity
  * family: `/{id}/published` for workflow/agent/tool, `/{id}/versions/published`
- * for the memory entities. `publishedPath` selects the right one.
+ * for the memory entities (including output_schema and prompt_snippet, which
+ * gained full versioning alongside them). `publishedPath` selects the right one.
  *
- * Only entities that actually expose `/versions*` get these verbs — output
- * schemas and flows have no version system at all.
+ * Only entities that actually expose `/versions*` get these verbs — `flow` has
+ * no version system at all.
  */
 
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -19,6 +27,11 @@ import { z } from "zod";
 
 import type { AxonityClient } from "../client.js";
 import { guard, jsonResult } from "./result.js";
+
+/** A required literal — an agent cannot satisfy it by filling in a default. */
+const CONFIRM = z
+  .literal(true)
+  .describe("Must be true. Acknowledges you understand this is destructive.");
 
 export interface VersionedEntity {
   /** Tool noun, e.g. "workflow". */
@@ -99,6 +112,54 @@ export function registerVersionTools(
           await client.post(`${basePath}/${id}/versions/${versionId}/restore`, {
             expectedVersion,
           }),
+        ),
+      ),
+  );
+
+  server.tool(
+    `delete_${singular}_version`,
+    `Permanently remove one entry from a ${singular}'s version history. The ` +
+      `working draft and the currently published version are protected and ` +
+      `cannot be targeted this way. Recoverable with ` +
+      `restore_deleted_${singular}_version until it is purged for good.`,
+    {
+      id: z.string().describe(`The ${singular}'s id.`),
+      versionId: z.string().describe("The version row's UUID (not the checkpoint number)."),
+      confirm: CONFIRM,
+    },
+    async ({ id, versionId }) =>
+      guard(async () => {
+        await client.del(`${basePath}/${id}/versions/${versionId}`);
+        return jsonResult({ deleted: true, id, versionId });
+      }),
+  );
+
+  server.tool(
+    `list_deleted_${singular}_versions`,
+    `List a ${singular}'s deleted version rows — restore candidates for ` +
+      `restore_deleted_${singular}_version. Deleted version numbers stay ` +
+      `reserved (not reused), so gaps in the numbering are expected, not corruption.`,
+    { id: z.string().describe(`The ${singular}'s id.`) },
+    async ({ id }) =>
+      guard(async () => jsonResult(await client.get(`${basePath}/${id}/versions/deleted`))),
+  );
+
+  server.tool(
+    `restore_deleted_${singular}_version`,
+    `Undo delete_${singular}_version — bring a removed version row back into ` +
+      `history. This does NOT change the current draft (unlike ` +
+      `restore_${singular}_version); it only makes the row visible/restorable ` +
+      `again. Takes no version check.`,
+    {
+      id: z.string().describe(`The ${singular}'s id.`),
+      versionId: z
+        .string()
+        .describe(`The version row's UUID, from list_deleted_${singular}_versions.`),
+    },
+    async ({ id, versionId }) =>
+      guard(async () =>
+        jsonResult(
+          await client.post(`${basePath}/${id}/versions/${versionId}/restore-deleted`),
         ),
       ),
   );
