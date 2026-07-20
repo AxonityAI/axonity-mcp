@@ -1,9 +1,10 @@
 # @axonity-ai/mcp — Axonity Flow MCP connector
 
 A local [Model Context Protocol](https://modelcontextprotocol.io) server that lets
-an external agent (e.g. **Claude Code** on your laptop) read, draft, and update
-**workflows, agents, tools, skills, policies and reference docs** in your Axonity
-tenant — the same verbs the internal Builder team has, minus direct publish.
+an external agent (e.g. **Claude Code** on your laptop) read, draft, update, and
+recoverably delete **workflows, agents, tools, skills, policies, reference docs,
+personas, output schemas, prompt snippets and flows** in your Axonity tenant —
+the same verbs the internal Builder team has, minus direct publish.
 
 It runs on your machine and talks to Axonity **only over the public REST API**,
 authenticated with a per-tenant **service token**. The backend re-enforces
@@ -13,7 +14,11 @@ tenant + scope on every call, so the connector is not a trust boundary.
 
 1. **Mint a service token** in Axonity → **Settings → API tokens**. Copy it once
    (it starts with `axs_`); you won't see it again. Use a **read-only** token if
-   you only want the agent to read.
+   you only want the agent to read — it is genuinely enforced, any write from it
+   is refused with a 403. Every token expires (you choose 7, 15, 30, 60 or 90
+   days at mint time; there is no "never"), and there is no way for the agent to
+   check remaining lifetime in advance — an expired token fails exactly like a
+   revoked one, so mint a fresh one when that happens.
 2. **Add the connector to Claude Code:**
 
    ```bash
@@ -31,36 +36,72 @@ tenant + scope on every call, so the connector is not a trust boundary.
 
 ## Tools
 
-| Tool | What it does |
-|------|--------------|
-| `axonity_conventions` | The authoring rules (drafts vs live, optimistic locking, per-entity fields). Read this first. |
-Each entity — **workflow, agent, tool, skill, policy, reference_doc** — gets the
-same five verbs:
+194 tools total. `axonity_conventions` (read this first) covers the authoring
+rules — drafts vs live, optimistic locking, per-entity fields, delete/restore,
+and how to tell a retryable error from one that will never succeed.
+
+### The generic entity family
+
+Ten entities — **workflow, agent, tool, skill, policy, reference_doc, persona,
+output_schema, prompt_snippet, flow** — share one shape, though not every
+entity gets every verb (see the per-entity notes below for the exceptions):
 
 | Tool (per `<entity>`) | What it does |
 |------|--------------|
-| `list_<entity>s` | List the tenant's entities. |
+| `list_<plural>` | List the tenant's entities. |
 | `read_<entity>` | Read one by id (incl. its version — read before you update). |
 | `create_<entity>` | Create a new **draft**. |
-| `update_<entity>` | Update a draft (carries `expectedVersion`; 409 on a stale write). |
+| `update_<entity>` | Update a draft (`expectedVersion` in the body; 409 on a stale write). |
+| `delete_<entity>` | Soft-delete. **Recoverable** — see `restore_<entity>`. |
+| `restore_<entity>` | Undo a delete. No version check. |
+| `list_deleted_<plural>` | Restore candidates. |
+| `discard_<entity>_draft` | Reset the draft to the last published state. |
 | `request_publish_<entity>` | Ask for a draft to be published — creates a pending approval; never publishes. |
 
+Exceptions: `persona` has no `create_persona` (create only via
+`create_agent_persona`); `flow` has no `request_publish_flow`, no
+`discard_flow_draft`, and no version family at all (a flow is live the moment
+you save it — see `clone_flow` below).
+
 Plus `apply_workflow_mutations` for structural workflow edits (add steps, connect
-edges) via mutation commands.
+edges) via mutation commands, sequenced and version-threaded for you.
 
-Also:
+### Version history, rollback, and version-level delete
 
-- **Personas** (agent-scoped, 1:1 with an agent): `read_agent_persona`,
-  `create_agent_persona`, `update_persona`.
+For the nine versioned entities (everything above except `flow`):
+
+| Tool | What it does |
+|------|--------------|
+| `list_<entity>_versions` | List version history (checkpoints + named majors). |
+| `read_<entity>_version` | Read one, by **integer checkpoint number**. |
+| `restore_<entity>_version` | Roll the draft back to an old version (`expectedVersion` in body). |
+| `delete_<entity>_version` | Remove one history entry. Draft and published version are protected. |
+| `list_deleted_<entity>_versions` | Restore candidates for the row above. |
+| `restore_deleted_<entity>_version` | Undo the delete above. No version check. |
+| `read_<entity>_published` | The live snapshot, as opposed to the draft. |
+
+`{version}` (an int) and `{versionId}` (a UUID) are two different identifiers
+across these routes — the tool parameter names say which.
+
+### Also
+
+- **Personas**: `read_agent_persona`, `create_agent_persona` — agent-scoped,
+  since a persona can only be created through its agent. Everything else about
+  a persona (list, read, update, delete/restore, versions) is the generic
+  entity family above.
 - **Connectors** (a tool of type `connector`): `create_connector`,
   `update_connector` — `authConfig` must be placeholders only; a human fills real
-  secrets in Axonity.
+  secrets in Axonity. (`create_tool`/`update_tool` carry the same guard, so a
+  connector authored either way is covered.)
 - **Attach / detach memory**: `attach_skill_to_agent`,
   `attach_skill_to_workflow`, `attach_policy_to_agent`,
   `attach_reference_to_agent`, and a `detach_*_from_*` for each. Detaching
   removes the link only — the skill or policy itself is untouched.
+- **Catalog & cloning**: `list_system_tools` (read-only catalog — enabling one
+  for an agent is `update_agent` with the id added to `systemToolIds`),
+  `clone_flow`, `clone_prompt_snippet`.
 
-### Validate before you publish
+### Validate and run before you publish
 
 | Tool | What it does |
 |------|--------------|
@@ -68,20 +109,8 @@ Also:
 | `analyze_workflow_reachable_outputs` | What a given step can read from upstream — bind inputs to real fields instead of guessing. |
 | `validate_tool_code` | Syntax and banned-pattern check for Python tool code. |
 | `format_tool_code` | Format tool code with Black. |
-
-### Version history and rollback
-
-For **workflow, agent, tool, skill, policy, reference_doc and persona**:
-`list_<entity>_versions`, `read_<entity>_version` (by integer checkpoint
-number), `restore_<entity>_version` (by version-row UUID), and
-`read_<entity>_published` to see what is actually live. Output schemas have no
-version history.
-
-### Output schemas
-
-`list_output_schemas`, `read_output_schema`, `create_output_schema`,
-`update_output_schema` — the reusable output contracts a validator references.
-They have no draft/publish cycle.
+| `execute_tool` | Actually RUN tool code (not just validate it) and see the real output. |
+| `execute_stored_connector` | Test-run an already-saved connector. The backend decrypts its real secret server-side — the agent supplies only input parameters and never sees the secret. |
 
 ### Triggers — what makes a workflow run
 
@@ -99,7 +128,8 @@ evaluation means reading a run's validator verdicts and its trace.
 
 ### Approvals
 
-`list_publish_approvals({ status? })` — how you find out whether a
+`list_publish_approvals({ status?, limit?, offset? })` and
+`get_publish_approval({ approvalId })` — how you find out whether a
 `request_publish_*` was approved or rejected. Approving and rejecting are
 human-only actions in Axonity.
 
@@ -128,7 +158,18 @@ These are enforced by the backend, not merely by convention:
 - **The token is tenant-bound.** An agent cannot reach another tenant.
 - **Secrets never pass through the agent.** A connector's `authConfig` accepts
   placeholders only; a write carrying something that looks like a real
-  credential is rejected before it leaves the connector.
+  credential is rejected before it leaves the connector. Tenant secrets
+  (`/api/v1/secrets`) aren't wrapped at all — the backend refuses any service
+  token there outright.
+- **Errors carry a machine-readable `code`, not just prose.** A 409 can mean a
+  stale write (retry) or a live reference conflict (don't — see
+  `axonity_conventions`); the connector tells them apart by `code`, never by
+  matching the message text.
+
+**One known exception, not enforced:** a framework-provided `flow` is meant to
+be read-only to a tenant, but the backend does not actually block
+`update_flow`/`delete_flow` against one. Prefer `clone_flow` over editing a
+framework flow in place.
 
 ## Development
 

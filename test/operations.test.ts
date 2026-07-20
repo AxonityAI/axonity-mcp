@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { AxonityClient } from "../src/client.js";
-import { registerAttachTools } from "../src/tools/extras.js";
+import { registerAttachTools, registerCatalogTools } from "../src/tools/extras.js";
 import { registerRunTools } from "../src/tools/runs.js";
 import { registerTriggerTools } from "../src/tools/triggers.js";
 
@@ -226,5 +226,25 @@ describe("attach / detach symmetry", () => {
     const names = [...handlers.keys()];
     expect(names).not.toContain("attach_reference_to_workflow");
     expect(names).not.toContain("detach_reference_from_workflow");
+  });
+});
+
+describe("catalog and cloning", () => {
+  it("lists the system-tools catalog", async () => {
+    const { handlers, client } = setup(registerCatalogTools);
+    await handlers.get("list_system_tools")!({});
+    expect(client.get).toHaveBeenCalledWith("/api/v1/system-tools");
+  });
+
+  it("clones a flow", async () => {
+    const { handlers, client } = setup(registerCatalogTools);
+    await handlers.get("clone_flow")!({ flowId: "f-1" });
+    expect(client.post).toHaveBeenCalledWith("/api/v1/flows/f-1/clone");
+  });
+
+  it("clones a prompt snippet", async () => {
+    const { handlers, client } = setup(registerCatalogTools);
+    await handlers.get("clone_prompt_snippet")!({ snippetId: "ps-1" });
+    expect(client.post).toHaveBeenCalledWith("/api/v1/prompt-snippets/ps-1/clone");
   });
 });

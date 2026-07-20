@@ -113,19 +113,97 @@ export function registerApprovalTools(
     "list_publish_approvals",
     "List this tenant's publish approvals and their status — how you find out " +
       "whether a request_publish_* was approved or rejected. Optionally filter " +
-      "by status. There is no single-approval read and no pagination: the full " +
-      "filtered list comes back, so match on entityId yourself. Approving and " +
-      "rejecting are human-only actions in Axonity; no tool can do them.",
+      "by status, and page through with limit/offset. Approving and rejecting " +
+      "are human-only actions in Axonity; no tool can do them.",
     {
       status: z
         .enum(["pending", "approved", "rejected"])
         .optional()
         .describe("Filter by status. Omit for all."),
+      limit: z.number().int().min(1).max(200).optional().describe("Default 50."),
+      offset: z.number().int().min(0).optional().describe("Default 0."),
     },
-    async ({ status }) =>
+    async ({ status, limit, offset }) =>
+      guard(async () =>
+        jsonResult(await client.get("/api/v1/publish-approvals", { status, limit, offset })),
+      ),
+  );
+
+  server.tool(
+    "get_publish_approval",
+    "Read one publish approval by id — lets you poll a specific request rather " +
+      "than re-fetching the whole list.",
+    { approvalId: z.string().describe("The approval's id, from request_publish_* or list_publish_approvals.") },
+    async ({ approvalId }) =>
+      guard(async () =>
+        jsonResult(await client.get(`/api/v1/publish-approvals/${approvalId}`)),
+      ),
+  );
+}
+
+export function registerExecutionTools(
+  server: McpServer,
+  client: AxonityClient,
+): void {
+  server.tool(
+    "execute_tool",
+    "Run tool code directly, without saving it — the way to test a tool you're " +
+      "authoring before create_tool/update_tool. Returns stdout/stderr, the " +
+      "result, and a typed errorType (timeout/memory/import/runtime/validation) " +
+      "on failure. Pass toolId to run against an already-saved tool's context.",
+    {
+      imports: z.string().optional().describe("The import block. Defaults to empty."),
+      functions: z
+        .array(z.object({ name: z.string(), code: z.string() }))
+        .describe("The functions to run (max 20)."),
+      classes: z
+        .array(z.object({ name: z.string(), code: z.string() }))
+        .optional()
+        .describe("Optional classes (max 20)."),
+      inputParams: z
+        .record(z.unknown())
+        .optional()
+        .describe("Parameters passed into the entry-point function."),
+      timeout: z.number().int().min(1).max(120).optional().describe("Seconds. Default 30."),
+      toolId: z.string().optional().describe("An existing tool id to run in context of."),
+    },
+    async ({ imports, functions, classes, inputParams, timeout, toolId }) =>
       guard(async () =>
         jsonResult(
-          await client.get("/api/v1/publish-approvals", status ? { status } : undefined),
+          await client.post("/api/v1/tools/execute", {
+            imports: imports ?? "",
+            functions,
+            ...(classes ? { classes } : {}),
+            ...(inputParams ? { inputParams } : {}),
+            ...(timeout ? { timeout } : {}),
+            ...(toolId ? { toolId } : {}),
+          }),
+        ),
+      ),
+  );
+
+  server.tool(
+    "execute_stored_connector",
+    "Test-run an ALREADY-SAVED connector by its tool id — the backend loads its " +
+      "stored authConfig and decrypts the real secret server-side; nothing " +
+      "credential-shaped ever passes through this tool or through you. Takes " +
+      "only input parameters, nothing else — there is no way to point this at a " +
+      "URL or auth config of your choosing (that admin-only, body-supplied form " +
+      "exists on the backend precisely so a client like this one can never reach " +
+      "it, since it would otherwise let a caller exfiltrate a decrypted secret).",
+    {
+      toolId: z.string().describe("The connector's tool id — must already be saved."),
+      inputParams: z
+        .record(z.unknown())
+        .optional()
+        .describe("Parameters for the connector call."),
+    },
+    async ({ toolId, inputParams }) =>
+      guard(async () =>
+        jsonResult(
+          await client.post(`/api/v1/tools/${toolId}/execute-connector`, {
+            ...(inputParams ? { inputParams } : {}),
+          }),
         ),
       ),
   );

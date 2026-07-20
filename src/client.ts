@@ -64,11 +64,10 @@ export class AxonityClient {
     const parsed = text ? safeJson(text) : undefined;
 
     if (!resp.ok) {
-      const detail =
-        parsed && typeof parsed === "object" && "detail" in parsed
-          ? (parsed as { detail: unknown }).detail
-          : parsed;
-      throw errorForStatus(resp.status, detail);
+      // Pass the FULL body — errorForStatus reads `code`/`retryable`/`message`
+      // off the structured error envelope when present, and falls back
+      // gracefully for a bare `detail` string/array from older routes.
+      throw errorForStatus(resp.status, parsed);
     }
     return parsed as T;
   }

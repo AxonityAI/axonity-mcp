@@ -27,7 +27,7 @@ function fakeClient() {
 }
 
 describe("persona tools", () => {
-  it("reads / creates agent-scoped and updates by id", async () => {
+  it("reads and creates agent-scoped", async () => {
     const { server, handlers } = fakeServer();
     const client = fakeClient();
     registerPersonaTools(server as never, client as unknown as AxonityClient);
@@ -37,21 +37,13 @@ describe("persona tools", () => {
 
     await handlers.get("create_agent_persona")!({ agentId: "ag-1", fields: { name: "V" } });
     expect(client.post).toHaveBeenCalledWith("/api/v1/agents/ag-1/persona", { name: "V" });
-
-    await handlers.get("update_persona")!({
-      personaId: "p-1",
-      expectedVersion: 2,
-      fields: { name: "V2" },
-    });
-    expect(client.put).toHaveBeenCalledWith("/api/v1/personas/p-1", {
-      expectedVersion: 2,
-      name: "V2",
-    });
   });
 
-  it("has no standalone persona list tool", () => {
+  it("does not register update_persona — the generic persona entity provides it", () => {
+    // Registering it here too would be a duplicate tool name.
     const { server, handlers } = fakeServer();
     registerPersonaTools(server as never, fakeClient() as unknown as AxonityClient);
+    expect([...handlers.keys()]).not.toContain("update_persona");
     expect([...handlers.keys()]).not.toContain("list_personas");
   });
 });
