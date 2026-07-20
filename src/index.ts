@@ -28,13 +28,18 @@ import { registerConventions } from "./tools/conventions.js";
 import { assertPlaceholderCredentials } from "./tools/credentials.js";
 import {
   registerAttachTools,
+  registerCatalogTools,
   registerConnectorTools,
   registerPersonaTools,
 } from "./tools/extras.js";
 import { type EntityDef, registerEntityTools } from "./tools/register.js";
 import { registerRunTools } from "./tools/runs.js";
 import { registerTriggerTools } from "./tools/triggers.js";
-import { registerApprovalTools, registerValidationTools } from "./tools/validation.js";
+import {
+  registerApprovalTools,
+  registerExecutionTools,
+  registerValidationTools,
+} from "./tools/validation.js";
 import { type VersionedEntity, registerVersionTools } from "./tools/versions.js";
 import { registerWorkflowMutations } from "./tools/workflowMutations.js";
 
@@ -49,12 +54,14 @@ const ENTITIES: EntityDef[] = [
     basePath: "/api/v1/workflows",
     updateMethod: "PATCH",
     label: "workflows (business processes)",
+    deleteVersionParam: "expectedVersion",
   },
   {
     singular: "agent",
     basePath: "/api/v1/agents",
     updateMethod: "PUT",
     label: "agents",
+    deleteVersionParam: "expectedVersion",
   },
   {
     singular: "tool",
@@ -64,40 +71,78 @@ const ENTITIES: EntityDef[] = [
     // A connector is just a tool, so create_tool/update_tool can carry an
     // authConfig too — they get the same credential guard as create_connector.
     guardFields: assertPlaceholderCredentials,
+    deleteVersionParam: "expectedVersion",
   },
   {
     singular: "skill",
     basePath: "/api/v1/skills",
     updateMethod: "PUT",
     label: "skills (reusable know-how for agents)",
+    deleteVersionParam: "expected_version",
   },
   {
     singular: "policy",
     basePath: "/api/v1/policies",
     updateMethod: "PUT",
     label: "policies (rules and guardrails for agents)",
+    plural: "policies",
+    deleteVersionParam: "expected_version",
   },
   {
     singular: "reference_doc",
     basePath: "/api/v1/reference-docs",
     updateMethod: "PUT",
     label: "reference docs (background knowledge for agents)",
+    deleteVersionParam: "expected_version",
   },
   {
     singular: "output_schema",
     basePath: "/api/v1/output-schemas",
     updateMethod: "PUT",
     label: "output schemas (reusable step/agent output contracts)",
-    // No publish route and not a valid approval entityType — it is live as soon
-    // as it exists, which is why validators can reference it immediately.
+    // Now fully version-controlled and in the publish-approval gateway
+    // alongside the memory entities — no longer live-on-write.
+    deleteVersionParam: "expected_version",
+  },
+  {
+    singular: "persona",
+    basePath: "/api/v1/personas",
+    updateMethod: "PUT",
+    label: "personas (an agent's character, 1:1 with the agent)",
+    // Created only through its agent (create_agent_persona) — there is no
+    // standalone POST /api/v1/personas.
+    creatable: false,
+    deleteVersionParam: "expected_version",
+  },
+  {
+    singular: "prompt_snippet",
+    basePath: "/api/v1/prompt-snippets",
+    updateMethod: "PATCH",
+    label: "prompt snippets (reusable prompt fragments)",
+    // No single-read route exists on the backend — list and filter client-side.
+    readable: false,
+    deleteVersionParam: "expectedVersion",
+    // No discard-draft route for this entity.
+    hasDiscardDraft: false,
+    // Its "list deleted" is `?deleted=true` on the main list route, not a
+    // dedicated /deleted collection like every other entity.
+    deletedListPath: "query",
+  },
+  {
+    singular: "flow",
+    basePath: "/api/v1/flows",
+    updateMethod: "PATCH",
+    label: "flows (reusable workflow fragments)",
+    // No versions and no publish route — a flow is live on write.
     publishable: false,
+    deleteVersionParam: "expectedVersion",
+    hasDiscardDraft: false,
   },
 ];
 
 /**
- * Entities with version history. Not the same list as ENTITIES: output schemas
- * have no `/versions*` routes, and personas are versioned but are not modelled
- * as a full CRUD entity (they are 1:1 with an agent).
+ * Entities with version history. Not the same list as ENTITIES: `flow` has no
+ * `/versions*` routes at all, so it is excluded here.
  */
 const VERSIONED: VersionedEntity[] = [
   { singular: "workflow", basePath: "/api/v1/workflows", publishedPath: "entity" },
@@ -111,6 +156,16 @@ const VERSIONED: VersionedEntity[] = [
     publishedPath: "versions",
   },
   { singular: "persona", basePath: "/api/v1/personas", publishedPath: "versions" },
+  {
+    singular: "output_schema",
+    basePath: "/api/v1/output-schemas",
+    publishedPath: "versions",
+  },
+  {
+    singular: "prompt_snippet",
+    basePath: "/api/v1/prompt-snippets",
+    publishedPath: "versions",
+  },
 ];
 
 export function buildServer(client: AxonityClient): McpServer {
@@ -124,12 +179,14 @@ export function buildServer(client: AxonityClient): McpServer {
   }
   registerWorkflowMutations(server, client);
   registerValidationTools(server, client);
+  registerExecutionTools(server, client);
   registerApprovalTools(server, client);
   registerTriggerTools(server, client);
   registerRunTools(server, client);
   registerPersonaTools(server, client);
   registerConnectorTools(server, client);
   registerAttachTools(server, client);
+  registerCatalogTools(server, client);
   return server;
 }
 

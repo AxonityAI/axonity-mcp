@@ -1,11 +1,13 @@
 /**
- * Secondary MCP tools (epic #652 C5): personas (agent-scoped), connectors
- * (a tool subtype), and attaching memory to a target.
+ * Secondary MCP tools: the agent-scoped persona create/read (personas
+ * themselves are a full generic entity — see index.ts — but creation and the
+ * by-agent read have no equivalent generic route), connectors (a tool
+ * subtype), attaching memory to a target, and a few standalone one-offs.
  *
  * These use routes with shapes that don't fit the generic entity registrar:
- * personas are 1:1 with an agent (no standalone list), connectors are a tool
- * with `type: "connector"` and MUST NOT carry real credentials, and attach is a
- * path-only link.
+ * a persona is created only through its agent, connectors are a tool with
+ * `type: "connector"` and MUST NOT carry real credentials, and attach/detach
+ * is a path-only link.
  */
 
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -15,7 +17,6 @@ import type { AxonityClient } from "../client.js";
 import { assertPlaceholderCredentials } from "./credentials.js";
 import { guard, jsonResult } from "./result.js";
 
-/** A value is a safe placeholder if it's empty or a `{{ … }}` template. */
 export function registerPersonaTools(
   server: McpServer,
   client: AxonityClient,
@@ -46,27 +47,11 @@ export function registerPersonaTools(
       ),
   );
 
-  server.tool(
-    "update_persona",
-    "Update a persona by its id (read the agent's persona first for its version).",
-    {
-      personaId: z.string().describe("The persona's id."),
-      expectedVersion: z
-        .number()
-        .int()
-        .describe("The version you last read — 409 if stale."),
-      fields: z.record(z.unknown()).describe("The fields to change (camelCase)."),
-    },
-    async ({ personaId, expectedVersion, fields }) =>
-      guard(async () =>
-        jsonResult(
-          await client.put(`/api/v1/personas/${personaId}`, {
-            expectedVersion,
-            ...fields,
-          }),
-        ),
-      ),
-  );
+  // Reading/updating a persona by its OWN id (list_personas, read_persona,
+  // update_persona, delete_persona, restore_persona, …) is generated generically
+  // from the "persona" EntityDef in index.ts — identical PUT semantics to what
+  // used to be hand-written here. Only the agent-scoped create/read above are
+  // bespoke, because personas have no standalone create route.
 }
 
 export function registerConnectorTools(
@@ -189,5 +174,41 @@ export function registerAttachTools(
     (agentId, refId) => `/api/v1/agents/${agentId}/reference-docs/${refId}`,
     "agentId",
     "refId",
+  );
+}
+
+/**
+ * Small standalone tools that don't fit any of the other groupings: the
+ * system-tools catalog (read-only — there is no grant/revoke route; enabling
+ * one for an agent means writing `systemToolIds` via `update_agent`), and
+ * cloning a flow/prompt-snippet into a tenant-owned copy.
+ */
+export function registerCatalogTools(server: McpServer, client: AxonityClient): void {
+  server.tool(
+    "list_system_tools",
+    "List the tenant's system-tool catalog (id, label, description, category). " +
+      "There is no grant/revoke tool — enable one for an agent by adding its id " +
+      "to `systemToolIds` via update_agent.",
+    {},
+    async () => guard(async () => jsonResult(await client.get("/api/v1/system-tools"))),
+  );
+
+  server.tool(
+    "clone_flow",
+    "Fork a flow into a new, tenant-owned copy — including a framework-provided " +
+      "one, which is otherwise read-only to your tenant.",
+    { flowId: z.string().describe("The flow's id.") },
+    async ({ flowId }) =>
+      guard(async () => jsonResult(await client.post(`/api/v1/flows/${flowId}/clone`))),
+  );
+
+  server.tool(
+    "clone_prompt_snippet",
+    "Duplicate a prompt snippet into a new, independent copy.",
+    { snippetId: z.string().describe("The prompt snippet's id.") },
+    async ({ snippetId }) =>
+      guard(async () =>
+        jsonResult(await client.post(`/api/v1/prompt-snippets/${snippetId}/clone`)),
+      ),
   );
 }
