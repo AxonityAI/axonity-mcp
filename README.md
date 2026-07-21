@@ -31,12 +31,16 @@ tenant + scope on every call, so the connector is not a trust boundary.
    `AXONITY_API_URL` is optional (defaults to the Axonity SaaS URL); set it if you
    self-host.
 
+   Do **not** pass extra CLI arguments to `axonity-mcp`; startup only reads
+   environment variables. If arguments are supplied, the process exits with a
+   clear usage-style error.
+
 3. Ask Claude Code things like *"list my Axonity workflows"*, *"create a workflow
    called Onboarding"*, or *"add a step to workflow X"*.
 
 ## Tools
 
-194 tools total. `axonity_conventions` (read this first) covers the authoring
+200+ tools total. `axonity_conventions` (read this first) covers the authoring
 rules — drafts vs live, optimistic locking, per-entity fields, delete/restore,
 and how to tell a retryable error from one that will never succeed.
 
@@ -59,16 +63,17 @@ entity gets every verb (see the per-entity notes below for the exceptions):
 | `request_publish_<entity>` | Ask for a draft to be published — creates a pending approval; never publishes. |
 
 Exceptions: `persona` has no `create_persona` (create only via
-`create_agent_persona`); `flow` has no `request_publish_flow`, no
-`discard_flow_draft`, and no version family at all (a flow is live the moment
-you save it — see `clone_flow` below).
+`create_agent_persona`).
 
-Plus `apply_workflow_mutations` for structural workflow edits (add steps, connect
-edges) via mutation commands, sequenced and version-threaded for you.
+Plus:
+- `apply_workflow_mutations` for structural workflow edits (add steps, connect
+  edges) via mutation commands, sequenced and version-threaded for you.
+- `replace_workflow_document` for one-shot full-document replacement in a single
+  atomic PUT.
 
 ### Version history, rollback, and version-level delete
 
-For the nine versioned entities (everything above except `flow`):
+For the ten versioned entities (including `flow`):
 
 | Tool | What it does |
 |------|--------------|
@@ -100,15 +105,18 @@ across these routes — the tool parameter names say which.
 - **Catalog & cloning**: `list_system_tools` (read-only catalog — enabling one
   for an agent is `update_agent` with the id added to `systemToolIds`),
   `clone_flow`, `clone_prompt_snippet`.
+- `list_deleted_prompt_snippets` calls `/api/v1/prompt-snippets/deleted`; the
+  backend returns it as `{ items: [... ] }`, and the tool forwards that response
+  unchanged.
 
 ### Validate and run before you publish
 
 | Tool | What it does |
 |------|--------------|
-| `validate_workflow` | Structural + schema check of a workflow document. Returns `launchable` and an `issues` list. Stateless, and does not verify that referenced agents/tools exist. |
-| `analyze_workflow_reachable_outputs` | What a given step can read from upstream — bind inputs to real fields instead of guessing. |
-| `validate_tool_code` | Syntax and banned-pattern check for Python tool code. |
-| `format_tool_code` | Format tool code with Black. |
+| `validate_workflow` | Structural + schema check of a workflow document. Stateless and read-only-token safe; does not verify referenced agents/tools exist. |
+| `analyze_workflow_reachable_outputs` | What a given step can read from upstream — bind inputs to real fields instead of guessing. Stateless and read-only-token safe. |
+| `validate_tool_code` | Syntax and banned-pattern check for Python tool code. Stateless and read-only-token safe. |
+| `format_tool_code` | Format tool code with Black. Stateless and read-only-token safe. |
 | `execute_tool` | Actually RUN tool code (not just validate it) and see the real output. |
 | `execute_stored_connector` | Test-run an already-saved connector. The backend decrypts its real secret server-side — the agent supplies only input parameters and never sees the secret. |
 
@@ -153,8 +161,11 @@ These are enforced by the backend, not merely by convention:
   approval**; a human approves it in Axonity, and only then does the draft go
   live. A direct publish from a service token is refused with a 403, so there is
   no tool for it and no way around it.
-- **A read-only token is genuinely read-only.** Any write from a token without
-  the `write` scope is refused with a 403.
+- **A read-only token is genuinely read-only for mutations.** Any write from a token
+  without the `write` scope is refused with a 403.
+- **The four stateless analysis tools are the exception:** `validate_workflow`,
+  `analyze_workflow_reachable_outputs`, `validate_tool_code`, and `format_tool_code`
+  can be called by read-only and write tokens because they never mutate state.
 - **The token is tenant-bound.** An agent cannot reach another tenant.
 - **Secrets never pass through the agent.** A connector's `authConfig` accepts
   placeholders only; a write carrying something that looks like a real

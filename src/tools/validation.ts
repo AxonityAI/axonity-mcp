@@ -22,8 +22,9 @@ export function registerValidationTools(
     "Check a workflow document for structural and schema problems. Returns " +
       "`launchable` plus an `issues` list (each with code, message, severity, " +
       "stepIds, edgeIds). STATELESS: it validates the document you pass, does " +
-      "not read or write the stored workflow, and does NOT verify that " +
-      "referenced agents or tools exist. Call it after apply_workflow_mutations " +
+      "not read or write the stored workflow, so read-only service tokens can call it. " +
+      "It does NOT verify that referenced agents or tools exist. Call it after " +
+      "apply_workflow_mutations " +
       "and before request_publish_workflow.",
     {
       document: z
@@ -40,7 +41,7 @@ export function registerValidationTools(
     "analyze_workflow_reachable_outputs",
     "List the outputs a given step can read — i.e. what upstream steps make " +
       "available to it. Use it to bind a step's inputs to real upstream outputs " +
-      "instead of guessing field names. Stateless.",
+      "instead of guessing field names. Stateless, and safe for read-only service tokens.",
     {
       document: z.record(z.unknown()).describe("The workflow document."),
       stepId: z.string().describe("The step whose reachable inputs you want."),
@@ -57,7 +58,8 @@ export function registerValidationTools(
     "validate_tool_code",
     "Check Python tool code for syntax errors and banned patterns before " +
       "saving it on a tool. Returns `valid` plus `errors` (line, column, " +
-      "message, severity, functionName). Stateless.",
+      "message, severity, functionName). Stateless and safe for read-only service " +
+      "tokens.",
     {
       imports: z
         .string()
@@ -96,7 +98,7 @@ export function registerValidationTools(
   server.tool(
     "format_tool_code",
     "Format Python tool code with Black and return the formatted source. " +
-      "Stateless — it does not save anything.",
+      "Stateless and safe for read-only service tokens — it does not save anything.",
     { code: z.string().describe("The Python source to format.") },
     async ({ code }) =>
       guard(async () =>

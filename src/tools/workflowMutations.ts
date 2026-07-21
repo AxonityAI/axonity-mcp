@@ -125,8 +125,8 @@ export function registerWorkflowMutations(
             "`type` and its arguments (camelCase), either nested under " +
             "`payload` or inline.",
         ),
-    },
-    async ({ id, expectedVersion, mutations }) =>
+  },
+  async ({ id, expectedVersion, mutations }) =>
       guard(async () => {
         // Reject the whole batch on a malformed command before applying any of
         // it — a shape error is the agent's mistake, not a partial failure.
@@ -149,5 +149,33 @@ export function registerWorkflowMutations(
 
         return jsonResult({ ...last, appliedCount: bodies.length });
       }),
+  );
+
+  server.tool(
+    "replace_workflow_document",
+    "Replace the ENTIRE workflow document in one atomic call. Read the workflow first to " +
+      "get the current version, then call this again only after rereading on a stale " +
+      "`409`.\n" +
+      "Unlike `apply_workflow_mutations`, this is a single PUT request and treats the " +
+      "payload as the complete editable document.",
+    {
+      id: z.string().describe("The workflow's id."),
+      expectedVersion: z
+        .number()
+        .int()
+        .describe("The version you read before replacing the document."),
+      document: z
+        .record(z.unknown())
+        .describe("The complete workflow document object to persist."),
+    },
+    async ({ id, expectedVersion, document }) =>
+      guard(async () =>
+        jsonResult(
+          await client.put(`/api/v1/workflows/${id}`, {
+            expectedVersion,
+            document,
+          }),
+        ),
+      ),
   );
 }

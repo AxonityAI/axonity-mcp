@@ -51,7 +51,7 @@ export interface EntityDef {
   /**
    * Whether this entity can be published. Default true. `flow` has no publish
    * route and is not a valid `entityType` for a publish approval, so generating
-   * `request_publish_flow` would ship a tool that always fails.
+   * this tool is suppressed there.
    */
   publishable?: boolean;
   /**

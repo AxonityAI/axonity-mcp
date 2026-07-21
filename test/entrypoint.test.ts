@@ -5,7 +5,7 @@ import { pathToFileURL } from "node:url";
 
 import { afterAll, describe, expect, it } from "vitest";
 
-import { isEntryPoint } from "../src/index.js";
+import { assertNoExtraArguments, isEntryPoint } from "../src/index.js";
 
 // Real directory on disk so realpathSync has something to resolve. On macOS the
 // tmp dir is itself behind a symlink (/var → /private/var), which is one of the
@@ -56,5 +56,18 @@ describe("isEntryPoint", () => {
     const url = moduleUrlOf(file);
     expect(isEntryPoint(url, undefined)).toBe(false);
     expect(isEntryPoint(url, join(dir, "does-not-exist.js"))).toBe(false);
+  });
+
+  describe("assertNoExtraArguments", () => {
+    it("passes when no arguments are provided", () => {
+      expect(() => assertNoExtraArguments([])).not.toThrow();
+    });
+
+    it("throws with a clear message when arguments are provided", () => {
+      expect(() => assertNoExtraArguments(["--help"]))
+        .toThrowError("This MCP server does not accept command-line arguments.");
+      expect(() => assertNoExtraArguments(["foo", "bar"]))
+        .toThrow(/Received arguments: foo bar/);
+    });
   });
 });
