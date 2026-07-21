@@ -36,6 +36,26 @@ function setup(register: (s: never, c: never, d?: never) => void, def?: unknown)
 }
 
 describe("validation tools", () => {
+  it("documents that the 4 stateless analysis tools are safe for read-only tokens", () => {
+    const captured: Record<string, string> = {};
+    const capturingServer = {
+      tool: (name: string, description: string) => {
+        if ([
+          "validate_workflow",
+          "analyze_workflow_reachable_outputs",
+          "validate_tool_code",
+          "format_tool_code",
+        ].includes(name)) {
+          captured[name] = description;
+        }
+      },
+    };
+    registerValidationTools(capturingServer as never, {} as never);
+    for (const tool of Object.keys(captured)) {
+      expect(captured[tool]).toMatch(/read-only/i);
+    }
+  });
+
   it("validates a workflow document at the right path", async () => {
     const { handlers, client } = setup(registerValidationTools);
     await handlers.get("validate_workflow")!({ document: { steps: [] } });
@@ -139,6 +159,21 @@ describe("execution tools", () => {
     expect(path).toBe("/api/v1/tools/t-1/execute-connector");
     expect(path).not.toBe("/api/v1/tools/execute-connector");
   });
+
+  it("does not describe execution tools as read-only compatible", () => {
+    const captured: Record<string, string> = {};
+    const capturingServer = {
+      tool: (name: string, description: string) => {
+        if (["execute_tool", "execute_stored_connector"].includes(name)) {
+          captured[name] = description;
+        }
+      },
+    };
+    registerExecutionTools(capturingServer as never, {} as never);
+    for (const tool of Object.keys(captured)) {
+      expect(captured[tool].toLowerCase()).not.toContain("read-only");
+    }
+  });
 });
 
 describe("approval readback", () => {
@@ -221,6 +256,17 @@ describe("version tools", () => {
     const { handlers, client } = setup(registerVersionTools, workflow);
     await handlers.get("read_workflow_published")!({ id: "w-1" });
     expect(client.get).toHaveBeenCalledWith("/api/v1/workflows/w-1/published");
+  });
+
+  it("reads flow published at /api/v1/flows/{id}/published", async () => {
+    const flow = {
+      singular: "flow",
+      basePath: "/api/v1/flows",
+      publishedPath: "entity" as const,
+    };
+    const { handlers, client } = setup(registerVersionTools, flow);
+    await handlers.get("read_flow_published")!({ id: "f-1" });
+    expect(client.get).toHaveBeenCalledWith("/api/v1/flows/f-1/published");
   });
 
   it("reads it at /{id}/versions/published for memory entities", async () => {

@@ -24,14 +24,16 @@ Read this before creating or updating anything.
 
 ## The authoring loop
 1. \`read_*\` the entity (and \`read_*_published\` if you need to see what is live).
-2. Edit the DRAFT: \`update_*\`, or \`apply_workflow_mutations\` for workflow structure.
-3. \`validate_workflow\` / \`validate_tool_code\` and fix what they report;
-   \`execute_tool\` / \`execute_stored_connector\` to actually run it before trusting it.
-4. Re-read and check the result matches your intent (see "After you write, verify").
-5. \`request_publish_*\` — this only QUEUES a human approval.
-6. \`list_publish_approvals\` / \`get_publish_approval\` to see whether it was
+2. Edit the DRAFT: \`update_*\`, or workflow-edit tools for workflow structure.
+3. Validate before publish: \`validate_workflow\` / \`analyze_workflow_reachable_outputs\` / 
+   \`validate_tool_code\` / \`format_tool_code\`. These four are stateless and work with
+   read-only tokens.
+4. Re-read and verify with a saved tool command: \`execute_tool\` / \`execute_stored_connector\`.
+5. Fix any issues and re-read again.
+6. \`request_publish_*\` — this only QUEUES a human approval.
+7. \`list_publish_approvals\` / \`get_publish_approval\` to see whether it was
    approved or rejected.
-7. If something went wrong:
+8. If something went wrong:
    - Bad edit, entity still exists → \`list_*_versions\` then \`restore_*_version\`
      to roll the draft back to an earlier version.
    - Never published, want a clean slate → \`discard_*_draft\` resets the draft to
@@ -41,9 +43,11 @@ Read this before creating or updating anything.
 
 ## Drafts, not live
 - \`create_*\` and \`update_*\` produce a DRAFT. The live runtime is unaffected
-  until a human publishes it in Axonity. You cannot publish directly — the
-  backend refuses a direct publish from a service token with a 403, so there is
-  no tool for it and no way around it.
+  until a human publishes it in Axonity. \`flow\` has the same rule: runtime uses
+  the published snapshot from \`read_flow_published\` until \`request_publish_flow\`
+  is approved.
+- You cannot publish directly — the backend refuses a direct publish from a service
+  token with a 403, so there is no tool for it and no way around it.
 - A read-only token can only read: any write returns 403. If you see that, ask
   your human for a write-scoped token rather than retrying.
 - \`request_publish_*\` does NOT publish — it creates a pending approval a human
@@ -118,9 +122,10 @@ Read this before creating or updating anything.
   lifecycle. Runs are the one exception with a true archive/unarchive (see below).
 
 ## Per entity
-- **workflow**: \`create_workflow\` makes a stub (name, description). Build its
-  steps/edges with \`apply_workflow_mutations\` (a list of mutation commands) —
-  the workflow document is edited through commands, never by replacing it wholesale.
+- **workflow**: \`create_workflow\` makes a stub (name, description). Edit its
+  document with either
+  - \`apply_workflow_mutations\` (LIST of command mutations, preserved order), or
+  - \`replace_workflow_document\` (full-document atomic PUT).
 - **agent**: fields include name, avatar, capabilityTier, creativityTier,
   learningMode, permissions, delegationTargetIds, toolIds, systemToolIds, tags,
   status. \`list_system_tools\` shows what can go in \`systemToolIds\` — there is
@@ -139,20 +144,16 @@ Read this before creating or updating anything.
 - **prompt_snippet**: reusable prompt fragments. A normal entity in every
   respect now (\`read_prompt_snippet\`, \`discard_prompt_snippet_draft\`,
   everything else). Only wire-level oddity: \`list_deleted_prompt_snippets\`
-  is implemented as \`?deleted=true\` on the list route rather than a
-  dedicated collection — you won't notice from the tool's shape.
+  uses a dedicated deleted collection and returns the backend \`items\` envelope.
 - **output_schema**: a reusable output contract, fully version-controlled and
   publishable like the other memory entities. A tool's \`outputValidators\` (or
   an agent's \`permissions.expected_output_schema_id\`) references one by id —
   create it before you need to point something at it.
-- **flow**: a reusable workflow fragment. No versions, no publish — a flow is
-  live the moment you save it. A framework-provided flow is meant to be
-  read-only, but that is NOT actually enforced on the backend — \`update_flow\`
-  and \`delete_flow\` will succeed against one, and doing so can change
-  something every tenant shares. Use \`clone_flow\` to fork one into your own
-  tenant-owned copy instead of editing it in place; never call update/delete
-  on a flow you didn't create yourself unless a human has explicitly asked you
-  to.
+- **flow**: a reusable workflow fragment in the authored-entity lifecycle.
+  \`create_flow\` and \`update_flow\` write draft state; execution uses
+  \`read_flow_published\` until approval completes. Use
+  \`request_publish_flow\` to request publish approval, and \`discard_flow_draft\`
+  when you need to reset the draft to last published state.
 
 ## Structural workflow edits
 - \`apply_workflow_mutations\` takes a LIST of commands and applies them in order,

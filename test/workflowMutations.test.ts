@@ -34,6 +34,12 @@ function apply(client: unknown) {
   return handlers.get("apply_workflow_mutations")!;
 }
 
+function replaceTool(client: unknown) {
+  const { server, handlers } = fakeServer();
+  registerWorkflowMutations(server as never, client as unknown as AxonityClient);
+  return handlers.get("replace_workflow_document")!;
+}
+
 function textOf(result: unknown): string {
   return (result as { content: { text: string }[] }).content[0].text;
 }
@@ -170,6 +176,21 @@ describe("apply_workflow_mutations", () => {
     });
     // The 4th mutation must not have been attempted after the failure.
     expect(client.post).toHaveBeenCalledTimes(3);
+  });
+
+  it("replaces the whole workflow document in one atomic PUT", async () => {
+    const client = {
+      put: vi.fn(async () => ({ id: "wf-1", version: 3 })),
+    };
+    await replaceTool(client)({
+      id: "wf-1",
+      expectedVersion: 2,
+      document: { id: "wf-1", version: 2, draft: true },
+    });
+    expect(client.put).toHaveBeenCalledWith("/api/v1/workflows/wf-1", {
+      expectedVersion: 2,
+      document: { id: "wf-1", version: 2, draft: true },
+    });
   });
 
   it("surfaces a 409 without swallowing it", async () => {

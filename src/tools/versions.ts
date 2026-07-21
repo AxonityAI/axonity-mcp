@@ -14,12 +14,11 @@
  *     guard.
  *
  * The published snapshot also lives in two places depending on the entity
- * family: `/{id}/published` for workflow/agent/tool, `/{id}/versions/published`
+ * family: `/{id}/published` for workflow/agent/tool/flow, `/{id}/versions/published`
  * for the memory entities (including output_schema and prompt_snippet, which
  * gained full versioning alongside them). `publishedPath` selects the right one.
  *
- * Only entities that actually expose `/versions*` get these verbs — `flow` has
- * no version system at all.
+ * Only entities that actually expose `/versions*` get these verbs.
  */
 
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";

@@ -120,19 +120,13 @@ const ENTITIES: EntityDef[] = [
     updateMethod: "PATCH",
     label: "prompt snippets (reusable prompt fragments)",
     deleteVersionParam: "expectedVersion",
-    // Its "list deleted" is `?deleted=true` on the main list route, not a
-    // dedicated /deleted collection like every other entity.
-    deletedListPath: "query",
   },
   {
     singular: "flow",
     basePath: "/api/v1/flows",
     updateMethod: "PATCH",
     label: "flows (reusable workflow fragments)",
-    // No versions and no publish route — a flow is live on write.
-    publishable: false,
     deleteVersionParam: "expectedVersion",
-    hasDiscardDraft: false,
   },
 ];
 
@@ -162,6 +156,7 @@ const VERSIONED: VersionedEntity[] = [
     basePath: "/api/v1/prompt-snippets",
     publishedPath: "versions",
   },
+  { singular: "flow", basePath: "/api/v1/flows", publishedPath: "entity" },
 ];
 
 export function buildServer(client: AxonityClient): McpServer {
@@ -187,6 +182,7 @@ export function buildServer(client: AxonityClient): McpServer {
 }
 
 async function main(): Promise<void> {
+  assertNoExtraArguments(process.argv.slice(2));
   const config = loadConfig();
   const client = new AxonityClient(config);
   const server = buildServer(client);
@@ -213,6 +209,23 @@ export function isEntryPoint(moduleUrl: string, argv1: string | undefined): bool
     // argv[1] isn't a readable path (e.g. `node --eval`); not our entry point.
     return false;
   }
+}
+
+export function assertNoExtraArguments(argv: string[]): void {
+  if (argv.length === 0) return;
+  throw new Error(
+    [
+      "This MCP server does not accept command-line arguments.",
+      "Usage:",
+      "  axonity-mcp",
+      "",
+      "Pass configuration through environment variables instead:",
+      "  AXONITY_TOKEN (required): the service token.",
+      "  AXONITY_API_URL (optional): API base URL.",
+      "",
+      `Received arguments: ${argv.join(" ")}`,
+    ].join("\n"),
+  );
 }
 
 // Only run when executed directly (not when imported by tests).

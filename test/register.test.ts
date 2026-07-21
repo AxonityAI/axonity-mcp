@@ -40,6 +40,13 @@ const WORKFLOW: EntityDef = {
   updateMethod: "PATCH",
   label: "workflows",
 };
+const FLOW: EntityDef = {
+  singular: "flow",
+  basePath: "/api/v1/flows",
+  updateMethod: "PATCH",
+  label: "flows",
+  deleteVersionParam: "expectedVersion",
+};
 
 describe("registerEntityTools", () => {
   it("registers the verbs for an entity, incl. request-publish", () => {
@@ -54,6 +61,14 @@ describe("registerEntityTools", () => {
     ]);
   });
 
+  it("registers full authored-entity flow lifecycle (draft, publish request, discard)", () => {
+    const { server, handlers } = fakeServer();
+    registerEntityTools(server as never, fakeClient() as unknown as AxonityClient, FLOW);
+    const names = [...handlers.keys()];
+    expect(names).toContain("request_publish_flow");
+    expect(names).toContain("discard_flow_draft");
+  });
+
   it("request_publish posts to the approvals queue, never a publish route", async () => {
     const { server, handlers } = fakeServer();
     const client = fakeClient();
@@ -63,6 +78,18 @@ describe("registerEntityTools", () => {
       entityType: "agent",
       entityId: "a-1",
       changeSummary: "why",
+    });
+  });
+
+  it("request_publish_flow posts with entityType flow", async () => {
+    const { server, handlers } = fakeServer();
+    const client = fakeClient();
+    registerEntityTools(server as never, client as unknown as AxonityClient, FLOW);
+    await handlers.get("request_publish_flow")!({ id: "f-1", changeSummary: "go live" });
+    expect(client.post).toHaveBeenCalledWith("/api/v1/publish-approvals", {
+      entityType: "flow",
+      entityId: "f-1",
+      changeSummary: "go live",
     });
   });
 
@@ -240,6 +267,24 @@ describe("registerEntityTools — delete/restore/list-deleted/discard-draft", ()
     expect(client.get).toHaveBeenCalledWith("/api/v1/workflows", { deleted: true });
   });
 
+  it("list_deleted_prompt_snippets uses the normalized /deleted collection", async () => {
+    const { server, handlers } = fakeServer();
+    const client = fakeClient();
+    registerEntityTools(
+      server as never,
+      client as unknown as AxonityClient,
+      {
+        singular: "prompt_snippet",
+        basePath: "/api/v1/prompt-snippets",
+        updateMethod: "PATCH",
+        label: "prompt snippets",
+        deleteVersionParam: "expectedVersion",
+      },
+    );
+    await handlers.get("list_deleted_prompt_snippets")!({});
+    expect(client.get).toHaveBeenCalledWith("/api/v1/prompt-snippets/deleted");
+  });
+
   it("discard-draft posts with no body", async () => {
     const { server, handlers } = fakeServer();
     const client = fakeClient();
@@ -322,21 +367,19 @@ describe("registerEntityTools — creatable/readable flags", () => {
     expect(names).toContain("list_deleted_widgets");
   });
 
-  it("flow: publishable false + no discard-draft, but still deletable", () => {
+  it("flow now has version/discard/publish lifecycle tools", () => {
     const FLOW: EntityDef = {
       singular: "flow",
       basePath: "/api/v1/flows",
       updateMethod: "PATCH",
       label: "flows",
-      publishable: false,
       deleteVersionParam: "expectedVersion",
-      hasDiscardDraft: false,
     };
     const { server, handlers } = fakeServer();
     registerEntityTools(server as never, fakeClient() as unknown as AxonityClient, FLOW);
     const names = [...handlers.keys()];
-    expect(names).not.toContain("request_publish_flow");
-    expect(names).not.toContain("discard_flow_draft");
+    expect(names).toContain("request_publish_flow");
+    expect(names).toContain("discard_flow_draft");
     expect(names).toContain("delete_flow");
     expect(names).toContain("restore_flow");
     expect(names).toContain("list_deleted_flows");
