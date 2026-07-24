@@ -49,9 +49,10 @@ export interface EntityDef {
    */
   guardFields?: (fields: Record<string, unknown>) => void;
   /**
-   * Whether this entity can be published. Default true. `flow` has no publish
-   * route and is not a valid `entityType` for a publish approval, so generating
-   * this tool is suppressed there.
+   * Whether `request_publish_<entity>` is generated. Default true, and true for
+   * every current entity: all ten (flow included) are valid `entityType`s for a
+   * publish approval on the backend (`ApprovalEntityType`). Set false only for a
+   * future entity that genuinely cannot be publish-approved.
    */
   publishable?: boolean;
   /**
@@ -62,7 +63,12 @@ export interface EntityDef {
   plural?: string;
   /** Whether `create_<entity>` is generated. Default true. False for `persona`, whose create is agent-scoped (`create_agent_persona`). */
   creatable?: boolean;
-  /** Whether `read_<entity>` is generated. Default true. False for `prompt_snippet`, which has no single-read route. */
+  /**
+   * Whether `read_<entity>` is generated. Default true, and true for every
+   * current entity — `prompt_snippet` does have a single-read route
+   * (`GET /api/v1/prompt-snippets/{id}`). Kept as an escape hatch for a future
+   * entity with no single-read route.
+   */
   readable?: boolean;
   /**
    * The query-string key DELETE expects for the optimistic lock. Its presence
@@ -74,15 +80,17 @@ export interface EntityDef {
    */
   deleteVersionParam?: "expectedVersion" | "expected_version";
   /**
-   * Whether `discard_<entity>_draft` is generated. Default true when the
-   * entity is deletable. False for `flow` and `prompt_snippet`, neither of
-   * which has a discard-draft route.
+   * Whether `discard_<entity>_draft` is generated. Default true when the entity
+   * is deletable, and true for every current entity — both `flow` and
+   * `prompt_snippet` have a discard-draft route
+   * (`POST .../{id}/discard-draft`). Escape hatch for a future entity lacking one.
    */
   hasDiscardDraft?: boolean;
   /**
    * How to list soft-deleted rows. `"collection"` (default) is `GET
-   * <basePath>/deleted`, used by every entity except `prompt_snippet`, which
-   * instead takes `?deleted=true` on the main list route (`"query"`).
+   * <basePath>/deleted` and is what every current entity uses, `prompt_snippet`
+   * included (`GET /api/v1/prompt-snippets/deleted`). `"query"` (`?deleted=true`
+   * on the main list) is retained for a future entity that needs it.
    */
   deletedListPath?: "collection" | "query";
 }
