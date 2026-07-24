@@ -70,6 +70,9 @@ Plus:
   edges) via mutation commands, sequenced and version-threaded for you.
 - `replace_workflow_document` for one-shot full-document replacement in a single
   atomic PUT.
+- `read_workflow_trigger_parameters` — what input a workflow's triggers expect.
+- `bulk_delete_workflows` — soft-delete several at once (each with its own
+  `expectedVersion`).
 
 ### Version history, rollback, and version-level delete
 
@@ -84,6 +87,7 @@ For the ten versioned entities (including `flow`):
 | `list_deleted_<entity>_versions` | Restore candidates for the row above. |
 | `restore_deleted_<entity>_version` | Undo the delete above. No version check. |
 | `read_<entity>_published` | The live snapshot, as opposed to the draft. |
+| `name_<entity>_major_version` | Give a major version a name (label a release). |
 
 `{version}` (an int) and `{versionId}` (a UUID) are two different identifiers
 across these routes — the tool parameter names say which.
@@ -101,7 +105,23 @@ across these routes — the tool parameter names say which.
 - **Attach / detach memory**: `attach_skill_to_agent`,
   `attach_skill_to_workflow`, `attach_policy_to_agent`,
   `attach_reference_to_agent`, and a `detach_*_from_*` for each. Detaching
-  removes the link only — the skill or policy itself is untouched.
+  removes the link only — the skill or policy itself is untouched. Read the
+  links back with `list_agent_skills`, `list_agent_policies`,
+  `list_agent_reference_docs`.
+- **Prompt elements (placement)**: a `prompt_snippet` is a library item; it only
+  takes effect once placed into a flow step's prompt stack.
+  `read_workflow_prompt_stacks` / `read_flow_prompt_stacks` resolve a
+  workflow/flow to its steps and each step's `system`/`user` stacks (this is how
+  you find the `flowStepId`s). Then `attach_prompt_snippet_to_flow_step`
+  (`target` = `system`|`user`, with an order), `update_flow_step_prompt`,
+  `reorder_flow_step_prompts`, `detach_prompt_snippet_from_flow_step`, and
+  `list_flow_step_prompts` / `list_wildcard_prompts`.
+- **Company** (the tenant's single company document — a singleton, no id):
+  `read_company`, `update_company` (whole-document save with `expectedVersion`),
+  `list_company_versions`, `read_company_version`, `restore_company_version`,
+  `read_company_published`, and `request_publish_company` (takes no id — the
+  server resolves your tenant's one company; direct company publish is closed to
+  service tokens).
 - **Catalog & cloning**: `list_system_tools` (read-only catalog — enabling one
   for an agent is `update_agent` with the id added to `systemToolIds`),
   `clone_flow`, `clone_prompt_snippet`.
@@ -129,10 +149,12 @@ no restore, and a webhook token is shown **once** at create or rotate.
 
 ### Runs — evaluating what you built
 
-`list_runs`, `list_workflow_runs`, `read_run`, `read_run_trace`,
-`read_run_cost`, `read_runs_summary`, `archive_run` / `unarchive_run`,
-`bulk_archive_runs` / `bulk_delete_runs`. There is no findings endpoint —
-evaluation means reading a run's validator verdicts and its trace.
+`start_workflow_run` (test a workflow you built — it runs the **published**
+workflow and really executes), `cancel_run`, `delete_run`, `list_runs`,
+`list_workflow_runs`, `read_run`, `read_run_trace`, `read_run_cost`,
+`read_runs_summary`, `archive_run` / `unarchive_run`, `bulk_archive_runs` /
+`bulk_delete_runs`. There is no findings endpoint — evaluation means reading a
+run's validator verdicts and its trace.
 
 ### Approvals
 
@@ -176,6 +198,13 @@ These are enforced by the backend, not merely by convention:
   stale write (retry) or a live reference conflict (don't — see
   `axonity_conventions`); the connector tells them apart by `code`, never by
   matching the message text.
+- **No tool crosses the authority boundary.** A test drives the whole registered
+  surface and fails the build if any tool targets a publish / approve / secret /
+  service-token / deploy route (`test/exclusions.test.ts`).
+- **Guidance can't silently drift from the backend.** The field/enum facts the
+  connector states are pinned to a vendored snapshot of the backend OpenAPI
+  schema; `test/conformance.test.ts` fails if a route or documented enum
+  diverges (see `test/fixtures/README.md`).
 
 **One known exception, not enforced:** a framework-provided `flow` is meant to
 be read-only to a tenant, but the backend does not actually block

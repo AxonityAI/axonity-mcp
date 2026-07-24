@@ -175,6 +175,36 @@ export function registerAttachTools(
     "agentId",
     "refId",
   );
+
+  /**
+   * The read side of the links above. `attach_*`/`detach_*` write a link but
+   * return nothing you can list later, so these are how an agent verifies a
+   * link landed — and how it reads a source agent's wiring to reproduce it as
+   * new. All three are plain GETs, safe for read-only tokens.
+   */
+  const listLinks = (
+    subject: string,
+    plural: string,
+    path: (agentId: string) => string,
+  ) => {
+    server.tool(
+      `list_agent_${plural}`,
+      `List the ${subject} currently scoped to an agent — the read-back for ` +
+        `attach_${subject}_to_agent. Use it to confirm a link took, or to read a ` +
+        `source agent's wiring before recreating it. Read-only.`,
+      { agentId: z.string().describe("The agent's id.") },
+      async ({ agentId }: { agentId: string }) =>
+        guard(async () => jsonResult(await client.get(path(agentId)))),
+    );
+  };
+
+  listLinks("skill", "skills", (id) => `/api/v1/agents/${id}/skills-v2`);
+  listLinks("policy", "policies", (id) => `/api/v1/agents/${id}/policies`);
+  listLinks(
+    "reference_doc",
+    "reference_docs",
+    (id) => `/api/v1/agents/${id}/reference-docs`,
+  );
 }
 
 /**

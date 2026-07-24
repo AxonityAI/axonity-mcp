@@ -25,6 +25,11 @@ import type { AxonityClient } from "../client.js";
 import { AxonityApiError } from "../errors.js";
 import { guard, jsonResult } from "./result.js";
 
+/** A required literal — an agent cannot satisfy it by filling in a default. */
+const CONFIRM = z
+  .literal(true)
+  .describe("Must be true. Acknowledges you understand this is destructive.");
+
 /** The response shape of a single mutation call. */
 interface MutationResponse {
   version: number;
@@ -176,6 +181,47 @@ export function registerWorkflowMutations(
             document,
           }),
         ),
+      ),
+  );
+
+  server.tool(
+    "read_workflow_trigger_parameters",
+    "Read the input parameters a workflow's triggers expect — what a caller must " +
+      "supply to start it. Use this before authoring a webhook/cron/conditional " +
+      "trigger, or before start_workflow_run, so the trigger input matches. Read-only.",
+    { workflowId: z.string().describe("The workflow's id.") },
+    async ({ workflowId }) =>
+      guard(async () =>
+        jsonResult(
+          await client.get(`/api/v1/workflows/${workflowId}/trigger-parameters`),
+        ),
+      ),
+  );
+
+  server.tool(
+    "bulk_delete_workflows",
+    "Soft-delete several workflows at once (each recoverable with " +
+      "restore_workflow, like single delete_workflow). Each target needs its own " +
+      "current version for optimistic locking — read each first. Returns a " +
+      "per-workflow success/error result; a partial failure is possible.",
+    {
+      workflows: z
+        .array(
+          z.object({
+            id: z.string().describe("The workflow's id."),
+            expectedVersion: z
+              .number()
+              .int()
+              .describe("That workflow's last-read version — 409 if stale."),
+          }),
+        )
+        .min(1)
+        .describe("The workflows to delete, each with its expectedVersion."),
+      confirm: CONFIRM,
+    },
+    async ({ workflows }) =>
+      guard(async () =>
+        jsonResult(await client.post("/api/v1/workflows/bulk-delete", { workflows })),
       ),
   );
 }
