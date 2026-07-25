@@ -22,6 +22,61 @@ const CONFIRM = z
 
 export function registerRunTools(server: McpServer, client: AxonityClient): void {
   server.tool(
+    "start_workflow_run",
+    "Start a real run of a workflow — the way to TEST a workflow you just " +
+      "authored. This EXECUTES: it runs the PUBLISHED workflow against live " +
+      "infrastructure (models, connectors), so it can incur cost and cause real " +
+      "side effects. It does not run your unpublished draft. After starting, " +
+      "follow it with read_run / read_run_trace / read_run_cost. Optionally pass " +
+      "triggerInput to feed the workflow's trigger.",
+    {
+      workflowId: z.string().describe("The workflow's id."),
+      triggerInput: z
+        .record(z.unknown())
+        .optional()
+        .describe("Input payload for the workflow's trigger. Omit for none."),
+      manualPhases: z
+        .boolean()
+        .optional()
+        .describe("Run with manual phase gating. Defaults to false."),
+    },
+    async ({ workflowId, triggerInput, manualPhases }) =>
+      guard(async () =>
+        jsonResult(
+          await client.post(`/api/v1/workflows/${workflowId}/runs`, {
+            ...(triggerInput ? { triggerInput } : {}),
+            ...(manualPhases === undefined ? {} : { manualPhases }),
+          }),
+        ),
+      ),
+  );
+
+  server.tool(
+    "cancel_run",
+    "Cancel an in-flight run. Stops further steps; already-completed steps and " +
+      "their side effects are not undone.",
+    { runId: z.string().describe("The run's id.") },
+    async ({ runId }) =>
+      guard(async () => jsonResult(await client.post(`/api/v1/runs/${runId}/cancel`))),
+  );
+
+  server.tool(
+    "delete_run",
+    "Delete ONE run. IRREVERSIBLE — the run and its trace and cost history go " +
+      "with it. Prefer archive_run unless a human has asked for deletion. For " +
+      "many at once use bulk_delete_runs.",
+    {
+      runId: z.string().describe("The run's id."),
+      confirm: CONFIRM,
+    },
+    async ({ runId }) =>
+      guard(async () => {
+        await client.del(`/api/v1/runs/${runId}`);
+        return jsonResult({ deleted: true, runId });
+      }),
+  );
+
+  server.tool(
     "list_runs",
     "List workflow runs across the tenant, newest first. Archived runs are " +
       "excluded unless includeArchived is true. To list runs of ONE workflow, " +

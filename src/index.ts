@@ -32,6 +32,8 @@ import {
   registerConnectorTools,
   registerPersonaTools,
 } from "./tools/extras.js";
+import { registerCompanyTools } from "./tools/company.js";
+import { registerPromptPlacementTools } from "./tools/promptPlacement.js";
 import { type EntityDef, registerEntityTools } from "./tools/register.js";
 import { registerRunTools } from "./tools/runs.js";
 import { registerTriggerTools } from "./tools/triggers.js";
@@ -131,8 +133,9 @@ const ENTITIES: EntityDef[] = [
 ];
 
 /**
- * Entities with version history. Not the same list as ENTITIES: `flow` has no
- * `/versions*` routes at all, so it is excluded here.
+ * Entities with version history. Every authored entity here exposes the
+ * `/versions*` routes, `flow` included (verified against the backend:
+ * `/api/v1/flows/{id}/versions…`), so all ten get the version tools.
  */
 const VERSIONED: VersionedEntity[] = [
   { singular: "workflow", basePath: "/api/v1/workflows", publishedPath: "entity" },
@@ -159,25 +162,40 @@ const VERSIONED: VersionedEntity[] = [
   { singular: "flow", basePath: "/api/v1/flows", publishedPath: "entity" },
 ];
 
-export function buildServer(client: AxonityClient): McpServer {
-  const server = new McpServer({ name: "axonity", version: "0.1.0" });
-  registerConventions(server);
+/**
+ * Register the whole tool surface onto a server. Split out from `buildServer`
+ * so a test can drive the real registration against a recording server — e.g.
+ * to assert no tool ever targets a deny-listed route (publish/approve/secret/…).
+ * `ServerLike` is the minimal `.tool()` surface both `McpServer` and a test
+ * double satisfy.
+ */
+type ServerLike = Pick<McpServer, "tool">;
+
+export function registerAll(server: ServerLike, client: AxonityClient): void {
+  registerConventions(server as McpServer);
   for (const def of ENTITIES) {
-    registerEntityTools(server, client, def);
+    registerEntityTools(server as McpServer, client, def);
   }
   for (const def of VERSIONED) {
-    registerVersionTools(server, client, def);
+    registerVersionTools(server as McpServer, client, def);
   }
-  registerWorkflowMutations(server, client);
-  registerValidationTools(server, client);
-  registerExecutionTools(server, client);
-  registerApprovalTools(server, client);
-  registerTriggerTools(server, client);
-  registerRunTools(server, client);
-  registerPersonaTools(server, client);
-  registerConnectorTools(server, client);
-  registerAttachTools(server, client);
-  registerCatalogTools(server, client);
+  registerWorkflowMutations(server as McpServer, client);
+  registerValidationTools(server as McpServer, client);
+  registerExecutionTools(server as McpServer, client);
+  registerApprovalTools(server as McpServer, client);
+  registerTriggerTools(server as McpServer, client);
+  registerRunTools(server as McpServer, client);
+  registerPersonaTools(server as McpServer, client);
+  registerConnectorTools(server as McpServer, client);
+  registerAttachTools(server as McpServer, client);
+  registerCatalogTools(server as McpServer, client);
+  registerPromptPlacementTools(server as McpServer, client);
+  registerCompanyTools(server as McpServer, client);
+}
+
+export function buildServer(client: AxonityClient): McpServer {
+  const server = new McpServer({ name: "axonity", version: "0.1.0" });
+  registerAll(server, client);
   return server;
 }
 

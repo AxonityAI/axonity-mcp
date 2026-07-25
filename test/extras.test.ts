@@ -23,6 +23,7 @@ function fakeClient() {
     post: vi.fn(async () => ({ ok: true })),
     put: vi.fn(async () => ({ ok: true })),
     patch: vi.fn(async () => ({ ok: true })),
+    del: vi.fn(async () => ({ ok: true })),
   };
 }
 
@@ -98,5 +99,29 @@ describe("attach tools", () => {
     registerAttachTools(server as never, client as unknown as AxonityClient);
     await handlers.get("attach_reference_to_agent")!({ agentId: "ag-1", refId: "rd-1" });
     expect(client.post).toHaveBeenCalledWith("/api/v1/agents/ag-1/reference-docs/rd-1");
+  });
+
+  it("reads back an agent's attached skills, policies, and reference docs", async () => {
+    const { server, handlers } = fakeServer();
+    const client = fakeClient();
+    registerAttachTools(server as never, client as unknown as AxonityClient);
+
+    await handlers.get("list_agent_skills")!({ agentId: "ag-1" });
+    expect(client.get).toHaveBeenCalledWith("/api/v1/agents/ag-1/skills-v2");
+
+    await handlers.get("list_agent_policies")!({ agentId: "ag-1" });
+    expect(client.get).toHaveBeenCalledWith("/api/v1/agents/ag-1/policies");
+
+    await handlers.get("list_agent_reference_docs")!({ agentId: "ag-1" });
+    expect(client.get).toHaveBeenCalledWith("/api/v1/agents/ag-1/reference-docs");
+  });
+
+  it("read-backs issue no write", async () => {
+    const { server, handlers } = fakeServer();
+    const client = fakeClient();
+    registerAttachTools(server as never, client as unknown as AxonityClient);
+    await handlers.get("list_agent_skills")!({ agentId: "ag-1" });
+    expect(client.post).not.toHaveBeenCalled();
+    expect(client.del).not.toHaveBeenCalled();
   });
 });

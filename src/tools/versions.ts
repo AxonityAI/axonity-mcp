@@ -164,6 +164,31 @@ export function registerVersionTools(
   );
 
   server.tool(
+    `name_${singular}_major_version`,
+    `Give a ${singular}'s major version a name — label a release so it is easy to ` +
+      `find in history. Targets a MAJOR version by its integer number (from ` +
+      `list_${singular}_versions), not a checkpoint or a versionId. This only ` +
+      `renames; it does not create, publish, or roll anything back.`,
+    {
+      id: z.string().describe(`The ${singular}'s id.`),
+      majorVersion: z
+        .number()
+        .int()
+        .describe("The major version's integer number, e.g. 2."),
+      name: z.string().min(1).max(255).describe("The new name for that major version."),
+    },
+    async ({ id, majorVersion, name }) =>
+      guard(async () =>
+        jsonResult(
+          await client.patch(
+            `${basePath}/${id}/versions/major/${majorVersion}`,
+            { name },
+          ),
+        ),
+      ),
+  );
+
+  server.tool(
     `read_${singular}_published`,
     `Read the LIVE published version of a ${singular} — what the runtime ` +
       `actually uses, as opposed to the draft that read_${singular} returns. ` +

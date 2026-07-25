@@ -2,10 +2,16 @@
  * The `axonity_conventions` guidance tool.
  *
  * An external agent needs the same authoring rules the internal Builder team
- * carries, or its drafts will be low quality. This is a static conventions
- * reference for the MLP; a single-sourced `discover_<entity>_operations` tool
- * backed by the platform's own discovery contract is a planned refinement
- * (epic #652 C4 — "prefer a thin backend read endpoint").
+ * carries, or its drafts will be low quality. This is agent-facing GUIDANCE:
+ * build order, "complete when…" bars, wiring, and the prompt-placement / Memory
+ * V2 model — the parts a schema can't express.
+ *
+ * The hard facts it references (field names, enum values, required-ness) are NOT
+ * a second source of truth: the backend OpenAPI schema is authoritative
+ * (axonity-flow#722, Option 1). `test/conformance.test.ts` pins the routes here
+ * and the enums quoted below to a vendored snapshot of that schema, so a drift
+ * between this prose and the backend fails CI rather than misleading an agent.
+ * Keep enum lists in this doc in step with what that test asserts.
  */
 
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -15,12 +21,20 @@ const CONVENTIONS = `# Authoring conventions for Axonity entities
 Read this before creating or updating anything.
 
 ## What this connector is for
-- AUTHORING: composing an entity from intent — drafting a workflow, an agent, a
-  tool, and wiring them together. That is what these tools are good at.
-- NOT bulk migration. Do not use this to move many entities verbatim from
-  somewhere else; Axonity's config import/export moves bytes without a model in
-  the path. Content can be subtly altered in transit through an agent, which is
-  exactly what you cannot afford in a fidelity migration.
+- AUTHORING: composing an entity from intent — drafting a tool, an agent, a
+  workflow, and wiring them together so the result is CORRECT and COMPLETE
+  (every required field set, every reference pointing at something real).
+- REPRODUCING a setup is just authoring it again, from scratch. To recreate an
+  agent/workflow/tool, CREATE NEW entities and wire them by their NEW ids —
+  never reuse an id you read. There is no "migration" and no "import an id":
+  this connector only ever acts in the ONE tenant its token points at (see
+  Tenant), and ids are tenant-local, so an id from anywhere else points at
+  nothing (or the wrong thing) here. Read the source for its SHAPE and intent —
+  names, field values, which tools an agent uses, which agents a workflow's
+  steps run — then build fresh and capture the ids the create calls return.
+  Recreating into a DIFFERENT tenant means running that build while the
+  connector is configured with THAT tenant's token — a separate session. See
+  "Reproducing a setup" below.
 
 ## The authoring loop
 1. \`read_*\` the entity (and \`read_*_published\` if you need to see what is live).
@@ -90,11 +104,20 @@ Read this before creating or updating anything.
 
 ## Field shape
 - All fields are camelCase JSON (e.g. \`capabilityTier\`, not \`capability_tier\`).
+  ONE documented exception: validator specs (\`permissions.outputValidators\`,
+  \`permissions.exposedValidatorTools\`) use snake_case keys (\`function\`,
+  \`target\`, \`args\`, \`error_message\`, \`tool_name\`, \`validator_name\`) — they are
+  the same shape at every level and are stored verbatim, so they are NOT
+  camel-aliased. Send them in snake_case.
 - \`update_*\` is a partial change for agents/tools and a partial patch for
-  workflows: send only the fields you are changing.
+  workflows: send only the fields you are changing (plus \`expectedVersion\`).
 - The backend validates fields; a 422 error names the offending field and why
-  (e.g. \`body.capabilityTier: Input should be 'standard' or 'advanced'\`). Fix
-  that field and retry — do not guess at the whole shape.
+  (e.g. \`body.capabilityTier: Input should be 'economy', 'standard', 'smart' or
+  'reasoning'\`). Fix that field and retry — do not guess at the whole shape.
+- **create/update for tool and agent are STRICT** (\`extra="forbid"\`): an
+  undeclared OR MISSPELLED key is a 422 that names it, not a silent drop. So
+  spelling matters and you get told when it is wrong — good. Other entities are
+  more lenient and may drop an unknown key silently; never rely on that.
 - \`agent.tags\` is not cosmetic: it drives which policies apply to the agent at
   runtime. An untagged agent looks correct everywhere in the UI and silently
   skips policies scoped to those tags. If you create or update an agent that
@@ -102,8 +125,19 @@ Read this before creating or updating anything.
 
 ## After you write, verify
 - A 200 means the request was accepted, NOT that it did what you meant. Re-read
-  the entity after a mutation and diff it against your intent — unknown fields
-  can be dropped silently, and a partial update only changes what you sent.
+  the entity after a mutation and diff it against your intent — a partial update
+  only changes what you sent, and on the lenient (non-tool/agent) entities an
+  unknown key can be dropped silently rather than rejected.
+- "Complete" is your job, not the backend's. A create succeeds with only the
+  required fields set; it does not tell you the entity is USABLE. An agent with
+  no \`toolIds\` runs with no tools; a connector tool with an empty
+  \`implementation\` has no endpoint to call; a workflow with steps but no
+  trigger never fires. After creating, check the entity has everything its
+  purpose needs — see the per-entity and wiring sections.
+- To test a whole workflow end to end, \`start_workflow_run\` then read the result
+  (\`read_run\` / \`read_run_trace\` / \`read_run_cost\`). Note it runs the PUBLISHED
+  workflow and really executes (cost, connector side effects), so publish first,
+  and only test-run when a human is expecting it.
 
 ## Delete is recoverable — but not everything is
 - \`delete_*\` soft-deletes: the entity disappears from \`list_*\` but is not gone.
@@ -121,39 +155,210 @@ Read this before creating or updating anything.
 - There is no "archive" state for these ten entities — delete + restore IS the
   lifecycle. Runs are the one exception with a true archive/unarchive (see below).
 
-## Per entity
-- **workflow**: \`create_workflow\` makes a stub (name, description). Edit its
-  document with either
-  - \`apply_workflow_mutations\` (LIST of command mutations, preserved order), or
-  - \`replace_workflow_document\` (full-document atomic PUT).
-- **agent**: fields include name, avatar, capabilityTier, creativityTier,
-  learningMode, permissions, delegationTargetIds, toolIds, systemToolIds, tags,
-  status. \`list_system_tools\` shows what can go in \`systemToolIds\` — there is
-  no separate grant/revoke tool, you set it via \`update_agent\`.
-- **tool**: fields include name, description, type
-  ("function" | "connector" | "validator" | "evaluator"), inputSchema,
-  outputSchema, implementation, authConfig, status. For a connector, set
-  \`type: "connector"\`; NEVER put real credentials in authConfig — use
-  placeholders and let a human fill secrets in the Axonity tool editor. Test it
-  with \`execute_tool\` (runs code you supply) or \`execute_stored_connector\`
-  (runs an already-saved connector using its real, server-side-decrypted
-  secret — you never see the secret, only the result).
-- **persona**: an agent's character — 1:1 with an agent. Created only through
-  its agent (\`create_agent_persona\`); once created it's a normal entity
-  (\`list_personas\`, \`read_persona\`, \`update_persona\`, delete/restore/versions).
-- **prompt_snippet**: reusable prompt fragments. A normal entity in every
-  respect now (\`read_prompt_snippet\`, \`discard_prompt_snippet_draft\`,
-  everything else). Only wire-level oddity: \`list_deleted_prompt_snippets\`
-  uses a dedicated deleted collection and returns the backend \`items\` envelope.
-- **output_schema**: a reusable output contract, fully version-controlled and
-  publishable like the other memory entities. A tool's \`outputValidators\` (or
-  an agent's \`permissions.expected_output_schema_id\`) references one by id —
-  create it before you need to point something at it.
-- **flow**: a reusable workflow fragment in the authored-entity lifecycle.
-  \`create_flow\` and \`update_flow\` write draft state; execution uses
-  \`read_flow_published\` until approval completes. Use
-  \`request_publish_flow\` to request publish approval, and \`discard_flow_draft\`
-  when you need to reset the draft to last published state.
+## Per entity — what to create, and what "complete" means
+
+Build in dependency order: a thing you will REFERENCE must exist before the
+thing that references it. So: tools and output-schemas first, then agents (which
+list tool ids), then workflows (whose steps name agents and tools), then
+triggers (which make a workflow fire). Skills/policies/reference-docs can be
+made any time before you attach them.
+
+### tool  (\`create_tool\`, strict body)
+- Required: \`name\`. Also: \`description\`, \`type\`, \`inputSchema\`,
+  \`outputSchema\`, \`implementation\`, \`authConfig\`, \`surfacing\`.
+- \`type\`: \`"function"\` (default) | \`"connector"\` | \`"validator"\` |
+  \`"evaluator"\`. \`surfacing\`: \`"always"\` (in the agent's tool list) |
+  \`"on_demand"\`.
+- \`inputSchema\` / \`outputSchema\` are JSON-Schema objects describing the tool's
+  params and result. Set them — an agent binds to a tool by its declared I/O; a
+  tool with no inputSchema is hard to call correctly.
+- \`implementation\` is what makes the tool DO something, and its shape depends on
+  \`type\`:
+  - **function** — carries the Python. Author and check the code with
+    \`validate_tool_code\` and \`format_tool_code\`, and prove it runs with
+    \`execute_tool\`, BEFORE \`create_tool\`. A function tool whose
+    \`implementation\` is empty is an inert stub.
+  - **connector** — carries the HTTP call: typically \`connectorType\`
+    ("rest"/"graphql"), \`baseUrl\`, \`method\`, \`path\`, \`headers\`,
+    \`queryParams\`, \`body\`, \`responseMapping\`, \`pagination\`. Prefer the
+    \`create_connector\` tool, which sets \`type:"connector"\` for you. NEVER put
+    a real credential in \`authConfig\` — placeholders only ("{{ MY_SECRET }}"
+    or ""); a human fills the secret in Axonity. Test with
+    \`execute_stored_connector\` (uses the real, server-side-decrypted secret;
+    you see only the result).
+  - **validator / evaluator** — a constrained kind that wraps a builtin;
+    \`implementation\` names the builtin registry key plus its args. Look at the
+    tenant's existing validator/evaluator tools (\`list_tools\`) for the keys in
+    use rather than inventing one.
+- Complete check: the tool has the I/O schemas its callers need AND a non-empty
+  implementation of the right shape for its type.
+
+### agent  (\`create_agent\`, strict body)
+- Required: \`name\`. Enumerated fields, with their ONLY valid values:
+  - \`capabilityTier\`: \`economy\` | \`standard\` (default) | \`smart\` | \`reasoning\`
+  - \`creativityTier\`: \`low\` | \`medium\` (default) | \`high\`
+  - \`learningMode\`: \`none\` (default) | \`adaptive\` | \`strict\`
+- \`avatar\`, \`tags\` (role tags — see Field shape; set them or policies silently
+  skip the agent), \`canOwnProcess\` (bool; must be true for an agent to own a
+  workflow step's flow), \`episodicMemoryEnabled\` (bool).
+- \`permissions\` (object): \`planning\`, \`delegation\`, \`verboseOutput\` (bools);
+  \`outputValidators\` / \`exposedValidatorTools\` (snake_case specs, see Field
+  shape); \`expectedOutputSchemaId\` (an output_schema id — MANDATORY whenever you
+  attach validators here).
+- Wiring fields — see the Wiring section: \`toolIds\`, \`systemToolIds\`,
+  \`delegationTargetIds\`.
+- Complete check: an agent with no \`toolIds\`/\`systemToolIds\` has no tools and
+  can only reason/talk. If it is meant to DO something, give it the tools.
+
+### workflow  (\`create_workflow\`, then edit the document)
+- \`create_workflow\` makes a STUB (name, description) with an empty document.
+  You then build the graph with either
+  - \`apply_workflow_mutations\` — a LIST of command mutations applied in order
+    (preferred: the backend validates each and threads the version), or
+  - \`replace_workflow_document\` — a full-document atomic PUT.
+- The document is a graph: \`steps.all[]\` (each \`{ id, type, name, ... }\`) and
+  \`steps.edges[]\` (each \`{ id, from, to, type? }\`) plus \`triggers\`. Step
+  \`type\` is one of: \`manual\`, \`agent\`, \`automation\`, \`subprocess\`,
+  \`connector\`, \`decision\`, \`loop\`, \`for_each\`, \`end\`.
+- Referential integrity is enforced: step and trigger ids must be unique, and
+  every edge \`from\`/\`to\` must reference an id that exists in the document
+  (\`from\` may be a trigger or step; \`to\` must be a step). A dangling edge is a
+  hard error.
+- Complete check: run \`validate_workflow\` on the document — it returns
+  \`launchable\` plus an \`issues\` list. A workflow is not done until it is
+  launchable AND has a trigger (see Triggers).
+
+### persona
+- An agent's character — 1:1 with an agent. Created only through its agent
+  (\`create_agent_persona\`: \`name\`, \`characterText\`); then a normal entity
+  (\`read_persona\`, \`update_persona\`, delete/restore/versions).
+
+### output_schema
+- A reusable output contract, versioned and publishable. Referenced BY id from a
+  tool's validators or an agent's \`permissions.expectedOutputSchemaId\` — so
+  create it first, then point things at the id the create call returns.
+
+### skill / policy / reference_doc
+- Memory entities attached to agents (and skills also to workflows). Create them,
+  then wire with the \`attach_*\` tools — see Wiring.
+
+### prompt_snippet
+- Reusable prompt fragments; a normal entity. Wire-level oddity:
+  \`list_deleted_prompt_snippets\` returns the backend \`items\` envelope.
+
+### flow
+- A reusable workflow fragment in the authored-entity lifecycle. \`create_flow\` /
+  \`update_flow\` write draft state; runtime uses \`read_flow_published\` until
+  approval. \`request_publish_flow\` to publish, \`discard_flow_draft\` to reset.
+
+### company
+- The tenant's single company document (mission, value streams, org structure).
+  A SINGLETON — one per tenant, no id, so there is no list/create/delete:
+  \`read_company\`, \`update_company\` (a WHOLE-document save with
+  \`expectedVersion\`, like \`replace_workflow_document\`), \`list_company_versions\`,
+  \`read_company_version\`, \`restore_company_version\`, \`read_company_published\`.
+  Publish it like anything else with \`request_publish_company\` — but because it
+  is a singleton this takes NO id (the server resolves your tenant's one
+  company). Direct company publish is closed to machine tokens, so the approval
+  queue is the only path.
+
+## Wiring — how the pieces connect
+There are THREE mechanisms, and using the wrong one silently no-ops. Know which
+each link uses.
+
+**A) Set a field on the entity (via create/update)** — an id or id-array that
+lives in the entity body:
+- tool → agent: add the tool's id to the agent's \`toolIds\`. This is how an
+  agent gets a (non-system) tool. There is no attach_tool_to_agent route.
+- system tool → agent: add the catalog id to \`systemToolIds\`. Get ids from
+  \`list_system_tools\`. No grant/revoke tool — you set the array via
+  \`update_agent\`. \`toolIds\` and \`systemToolIds\` are DIFFERENT lists; a
+  system-tool id does not go in \`toolIds\`.
+- agent → agent (delegation): add the callee agent's id to the caller's
+  \`delegationTargetIds\` (and set \`permissions.delegation: true\`).
+- output_schema → agent: \`permissions.expectedOutputSchemaId\` (a single id).
+- Changing any of these is read-then-write under optimistic locking: read the
+  agent, edit the field — an id-array is a FULL replace, so include the ids you
+  are keeping — then \`update_agent\` with \`expectedVersion\`.
+
+**B) Call an attach route (a link, not a field).** \`attach_*\`/\`detach_*\` POST/
+DELETE a link and do NOT touch the entity body:
+- skill → agent: \`attach_skill_to_agent\`; skill → workflow:
+  \`attach_skill_to_workflow\`.
+- policy → agent: \`attach_policy_to_agent\`.
+- reference_doc → agent: \`attach_reference_to_agent\` (agents only — there is no
+  workflow-scoped reference-doc route).
+
+**C) Reference an id INSIDE the workflow document** (this is how agents and tools
+get "into" a workflow — there is no attach route for it):
+- agent → workflow: an \`agent\` step names its agent in the step's
+  \`contract.owners[]\` as \`{ "type": "agent", "id": "<agentId>" }\`.
+- tool → workflow: on an \`agent\` step, list tool ids under
+  \`contract.tools.toolIds[]\` (and/or per plan-step \`contract.activities[]\`
+  entries of \`{ "kind": "tool", "toolId": "<id>" }\`). On an \`automation\` step,
+  set \`config.automationType: "tool"\` and \`config.toolId\`. A \`connector\` step
+  references a connector tool the same way.
+- Every id you place in a document must be a REAL id in THIS tenant. The workflow
+  validator flags a step whose owner agent or referenced tool no longer exists —
+  \`validate_workflow\` is how you catch a bad reference before publishing.
+- Prefer \`apply_workflow_mutations\` (e.g. \`add_step\`, \`update_step\`,
+  \`add_edge\`) over hand-building this JSON: the backend fills defaults and
+  validates each edit. Read the returned document to see the exact shape it
+  produced, then adjust.
+
+## Prompt elements & placement (Memory V2)
+A prompt snippet is a LIBRARY item — creating it changes nothing on its own. It
+only shapes a run once it is PLACED into a flow step's prompt stack. Placement is
+per flow step, in one of two channels, at an order:
+- \`read_workflow_prompt_stacks(workflowId)\` (or \`read_flow_prompt_stacks(flowId)\`)
+  resolves a workflow/flow to its steps and each step's system/user stacks — this
+  is how you DISCOVER the \`flowStepId\`s you place against. Start here.
+- \`attach_prompt_snippet_to_flow_step(flowStepId, snippetId, target, displayOrder?)\`
+  — \`target\` is \`"system"\` (instructions the model is steered by) or \`"user"\`
+  (content presented as the user turn).
+- \`list_flow_step_prompts\` shows a step's current system/user stacks (with each
+  attachment's \`linkId\`); \`update_flow_step_prompt(linkId, …)\` moves/reorders one;
+  \`reorder_flow_step_prompts(flowStepId, snippetIds)\` sets the whole order;
+  \`detach_prompt_snippet_from_flow_step(linkId)\` unlinks (the snippet survives).
+- A WILDCARD snippet applies to EVERY step (top of every stack) — use it for
+  cross-cutting instructions instead of attaching the same snippet everywhere.
+  \`list_wildcard_prompts\` shows them.
+
+Where each kind of instruction belongs — the decision map:
+- reusable voice/character for one agent → a **persona** (1:1 with the agent), or a
+  reusable **snippet** if it is shared prompt text.
+- a rule that must hold everywhere → a **wildcard** snippet, or a **policy** if it
+  is a guardrail (policies are governance; snippets are prompt text).
+- a step-specific instruction → a flow-step **\`system\`** prompt.
+- user-turn scaffolding for a step → a flow-step **\`user\`** prompt.
+- background knowledge the agent reads → a **reference doc** (attach to the agent).
+- a capability the agent uses → a **tool** (\`agent.toolIds\`) or **skill** (attach).
+- long-term recall for an agent → the agent's **\`episodicMemoryEnabled\`** flag
+  (Memory V2, opt-in). Session/workflow memory are RUNTIME, not authored — read
+  them per run (\`read_run\` and the run memory data), never set them here.
+
+## Reproducing a setup (recreate, never copy ids)
+To rebuild an agent/workflow/tool graph as NEW entities — in this tenant, or in
+another tenant by pointing the connector at THAT tenant's token in a separate
+session — author it fresh and wire by the NEW ids. An id from a read is
+meaningful only in the tenant it came from; sending it back in a create/update
+elsewhere points at nothing. Do this instead:
+1. Read the source graph (in the session pointed at it) for its SHAPE: names,
+   field values, which tools each agent lists, which agents/tools each workflow
+   step references.
+2. Create the leaf dependencies first (tools, output_schemas). Keep a map from
+   each OLD id to the NEW id the create call returns.
+3. Create agents, translating every referenced id through your map:
+   old toolId → new toolId in \`toolIds\`, etc. Never send an old id. If the
+   source agent has a persona, recreate it with \`create_agent_persona\` on the
+   new agent.
+4. Create workflows; when you add agent/tool references into the document,
+   translate through the map the same way.
+5. Attach skills/policies/reference-docs by the new ids.
+6. \`validate_workflow\` and re-read each entity to confirm every reference
+   resolved, then \`request_publish_*\`.
+The connector never carries a secret across: \`authConfig\` stays placeholders in
+the new tenant too, and a human fills the real value there.
 
 ## Structural workflow edits
 - \`apply_workflow_mutations\` takes a LIST of commands and applies them in order,
@@ -191,8 +396,12 @@ Read this before creating or updating anything.
 export function registerConventions(server: McpServer): void {
   server.tool(
     "axonity_conventions",
-    "Read the authoring conventions (drafts vs live, optimistic locking, field " +
-      "shapes per entity). Call this before creating or updating entities.",
+    "Read the authoring conventions BEFORE creating or updating anything: the " +
+      "draft→publish lifecycle, optimistic locking, per-entity create contracts " +
+      "(required fields, valid enum values, what 'complete' means), how to WIRE " +
+      "tools→agents, agents/tools→workflows and delegation, and how to reproduce " +
+      "a setup by creating new entities and remapping ids (never copy an id " +
+      "across tenants).",
     {},
     async () => ({ content: [{ type: "text" as const, text: CONVENTIONS }] }),
   );
