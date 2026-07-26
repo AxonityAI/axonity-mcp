@@ -116,6 +116,30 @@ describe("attach tools", () => {
     expect(client.get).toHaveBeenCalledWith("/api/v1/agents/ag-1/reference-docs");
   });
 
+  it("points each agent-scoped attach/detach at its read-back", () => {
+    // An attach returns 200 without proving the link resolved, and the link is
+    // not in the entity body — so the description has to name the read-back or an
+    // agent has no way to know one exists (#12).
+    const descriptions = new Map<string, string>();
+    const server = {
+      tool: (name: string, description: string) => descriptions.set(name, description),
+    };
+    registerAttachTools(server as never, fakeClient() as unknown as AxonityClient);
+
+    for (const [tool, readBack] of [
+      ["attach_skill_to_agent", "list_agent_skills"],
+      ["detach_skill_from_agent", "list_agent_skills"],
+      ["attach_policy_to_agent", "list_agent_policies"],
+      ["attach_reference_to_agent", "list_agent_reference_docs"],
+    ]) {
+      expect(descriptions.get(tool), `${tool} should mention ${readBack}`).toContain(readBack);
+    }
+
+    // The workflow-scoped variant has no list route on the backend, so it must
+    // not promise one.
+    expect(descriptions.get("attach_skill_to_workflow")).not.toMatch(/list_/);
+  });
+
   it("read-backs issue no write", async () => {
     const { server, handlers } = fakeServer();
     const client = fakeClient();

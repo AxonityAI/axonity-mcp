@@ -10922,7 +10922,49 @@
         "type": "object"
       },
       "SessionMemoryFile": {
-        "description": "One file from a run's session memory folder (#372).\n\nReturned by ``GET /api/v1/runs/{run_id}/session-memory``.\n``content`` is the human-readable text extracted from the file body\n(``body.markdown`` for note/document kinds, or a JSON dump for\nstructured bodies). ``tags`` mirrors the tags stored on the file.",
+        "description": "One row in a run's session-memory LISTING (#372, #440).\n\nReturned by ``GET /api/v1/runs/{run_id}/session-memory``. Metadata\nonly — deliberately no ``content``: serialising every file body just\nto draw a list is what made the run Memory panel slow (#440). Fetch a\nsingle file's text from\n``GET /api/v1/runs/{run_id}/session-memory/{file_id}``.\n\n``size_bytes`` is the body's serialised size in octets, so the list\ncan show how big a file is before anyone opens it. ``tags`` mirrors\nthe tags stored on the file.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "sizeBytes": {
+            "title": "Sizebytes",
+            "type": "integer"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tags",
+            "type": "array"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "updatedAt": {
+            "title": "Updatedat",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "kind",
+          "tags",
+          "sizeBytes",
+          "updatedAt"
+        ],
+        "title": "SessionMemoryFile",
+        "type": "object"
+      },
+      "SessionMemoryFileContent": {
+        "description": "One session-memory file WITH its text (#440).\n\nReturned by ``GET /api/v1/runs/{run_id}/session-memory/{file_id}``,\nfetched when the operator actually opens a file. ``content`` is the\nhuman-readable text extracted from the file body (``body.markdown``,\nthen ``body.value``, then a pretty-printed JSON fallback).",
         "properties": {
           "content": {
             "title": "Content",
@@ -10960,7 +11002,7 @@
           "content",
           "updatedAt"
         ],
-        "title": "SessionMemoryFile",
+        "title": "SessionMemoryFileContent",
         "type": "object"
       },
       "SessionMemoryResponse": {
@@ -30261,7 +30303,7 @@
     },
     "/api/v1/runs/{run_id}/session-memory": {
       "get": {
-        "description": "List files in a run's session memory folder (#372).\n\nReturns the title, tags, and content of every file the agent wrote to\nsession memory during this run. Used by the ask_user panel to resolve\n``memory_retrieve?scope=session&...`` pseudo-links the agent embeds in\nits question text.\n\nTenant isolation is double-enforced: ``get_run`` confirms the run\nbelongs to the tenant, then ``get_folder`` scopes the folder lookup.\nReturns an empty list when no session folder exists yet.",
+        "description": "List a run's session-memory files — metadata only (#372, #440).\n\nReturns the title, kind, tags, size and timestamp of every file the\nagent wrote to session memory during this run. Bodies are NOT\nincluded: serialising up to 200 full JSONB bodies just to draw a list\nis what made the Memory panel slow (#440). Fetch a single file's text\nfrom ``GET /runs/{run_id}/session-memory/{file_id}``.\n\nTenant isolation is enforced in the service (run pre-check, then\ntenant-scoped folder and file queries). Returns an empty list when no\nsession folder exists yet.",
         "operationId": "get_run_session_memory_api_v1_runs__run_id__session_memory_get",
         "parameters": [
           {
@@ -30303,6 +30345,65 @@
           }
         ],
         "summary": "Get Run Session Memory",
+        "tags": [
+          "runs"
+        ]
+      }
+    },
+    "/api/v1/runs/{run_id}/session-memory/{file_id}": {
+      "get": {
+        "description": "Fetch one session-memory file's text, on open (#440).\n\nThe listing counterpart to ``GET /runs/{run_id}/session-memory``.\n404s unless the run belongs to the caller's tenant, the file belongs\nto the caller's tenant, AND the file lives in THIS run's session\nfolder — so a file id borrowed from another run is not readable here.",
+        "operationId": "get_run_session_memory_file_api_v1_runs__run_id__session_memory__file_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "file_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "File Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionMemoryFileContent"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Run Session Memory File",
         "tags": [
           "runs"
         ]

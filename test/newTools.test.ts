@@ -57,6 +57,11 @@ describe("authoring guide (axonity_conventions) stays complete", () => {
       "start_workflow_run",
       "Wiring",
       "Reproducing a setup",
+      // The wiring read-backs (#12): a link lives outside the entity body, so the
+      // guide must name the tools that prove an attach landed.
+      "list_agent_skills",
+      "list_agent_policies",
+      "list_agent_reference_docs",
     ]) {
       expect(guide, `guide should mention: ${needle}`).toContain(needle);
     }
@@ -178,6 +183,14 @@ describe("company (singleton) tools", () => {
     // no entityId in the body — the server resolves the tenant's one company
     const body = client.post.mock.calls[0][1] as Record<string, unknown>;
     expect(body).not.toHaveProperty("entityId");
+  });
+
+  it("names a major version without an id (the singleton's version of the generic tool)", async () => {
+    const { handlers, client } = setup();
+    await handlers.get("name_company_major_version")!({ majorVersion: 2, name: "Q3 org" });
+    expect(client.patch).toHaveBeenCalledWith("/api/v1/company/versions/major/2", {
+      name: "Q3 org",
+    });
   });
 
   it("restores a version by versionId under a lock", async () => {

@@ -11,8 +11,11 @@ diff in review.
 
 ## Provenance
 
-- Generated from **axonity-flow `main`** at commit `0c301308`
-  (PR #726 — the backend half of epic axonity-mcp#10, stories #721–#724).
+- Generated from **axonity-flow `main`** at commit `c7fe5421`.
+  (First pinned at `0c301308`, PR #726 — the backend half of epic axonity-mcp#10,
+  stories #721–#724. Refreshed at `c7fe5421`: one added route,
+  `GET /runs/{run_id}/session-memory/{file_id}`, plus its schema. No route was
+  removed or retyped and the authoring contract is unchanged.)
 - Deterministic output (sorted keys, dev/test routes pruned): regenerating on
   the same backend commit produces a byte-identical file.
 
