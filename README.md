@@ -119,7 +119,8 @@ across these routes — the tool parameter names say which.
 - **Company** (the tenant's single company document — a singleton, no id):
   `read_company`, `update_company` (whole-document save with `expectedVersion`),
   `list_company_versions`, `read_company_version`, `restore_company_version`,
-  `read_company_published`, and `request_publish_company` (takes no id — the
+  `name_company_major_version`, `read_company_published`, and
+  `request_publish_company` (takes no id — the
   server resolves your tenant's one company; direct company publish is closed to
   service tokens).
 - **Catalog & cloning**: `list_system_tools` (read-only catalog — enabling one

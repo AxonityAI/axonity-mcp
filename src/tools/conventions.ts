@@ -128,6 +128,10 @@ Read this before creating or updating anything.
   the entity after a mutation and diff it against your intent — a partial update
   only changes what you sent, and on the lenient (non-tool/agent) entities an
   unknown key can be dropped silently rather than rejected.
+- Re-reading the ENTITY is not enough for an \`attach_*\`: those links are stored
+  outside the entity body and never appear in \`read_agent\`. Read them back with
+  \`list_agent_skills\` / \`list_agent_policies\` / \`list_agent_reference_docs\`
+  (see Wiring, mechanism B).
 - "Complete" is your job, not the backend's. A create succeeds with only the
   required fields set; it does not tell you the entity is USABLE. An agent with
   no \`toolIds\` runs with no tools; a connector tool with an empty
@@ -288,6 +292,14 @@ DELETE a link and do NOT touch the entity body:
 - policy → agent: \`attach_policy_to_agent\`.
 - reference_doc → agent: \`attach_reference_to_agent\` (agents only — there is no
   workflow-scoped reference-doc route).
+- VERIFY every one of these with the read-back before \`request_publish_*\`:
+  \`list_agent_skills\`, \`list_agent_policies\`, \`list_agent_reference_docs\`.
+  This is not optional politeness — because a link lives OUTSIDE the entity body,
+  \`read_agent\` will not show it, so the read-back is the only way to tell an
+  attach that landed from one that silently did nothing. (Mechanism A is
+  different: those ids ARE in the body, so re-reading the agent proves them.
+  \`attach_skill_to_workflow\` has no read-back — the backend has no list route
+  for it.)
 
 **C) Reference an id INSIDE the workflow document** (this is how agents and tools
 get "into" a workflow — there is no attach route for it):
@@ -334,8 +346,10 @@ Where each kind of instruction belongs — the decision map:
 - background knowledge the agent reads → a **reference doc** (attach to the agent).
 - a capability the agent uses → a **tool** (\`agent.toolIds\`) or **skill** (attach).
 - long-term recall for an agent → the agent's **\`episodicMemoryEnabled\`** flag
-  (Memory V2, opt-in). Session/workflow memory are RUNTIME, not authored — read
-  them per run (\`read_run\` and the run memory data), never set them here.
+  (Memory V2, opt-in). Session/workflow memory are RUNTIME, not authored: they are
+  written by a run, never set here. This connector does not expose them — the
+  backend serves them per run, but no tool wraps those reads yet, so do not
+  promise a user you can show them.
 
 ## Reproducing a setup (recreate, never copy ids)
 To rebuild an agent/workflow/tool graph as NEW entities — in this tenant, or in
@@ -345,7 +359,10 @@ meaningful only in the tenant it came from; sending it back in a create/update
 elsewhere points at nothing. Do this instead:
 1. Read the source graph (in the session pointed at it) for its SHAPE: names,
    field values, which tools each agent lists, which agents/tools each workflow
-   step references.
+   step references. For each source agent also read its LINKS —
+   \`list_agent_skills\`, \`list_agent_policies\`, \`list_agent_reference_docs\` —
+   they are not in the agent body, so a plain \`read_agent\` misses them and you
+   would rebuild an agent that quietly lost its skills and guardrails.
 2. Create the leaf dependencies first (tools, output_schemas). Keep a map from
    each OLD id to the NEW id the create call returns.
 3. Create agents, translating every referenced id through your map:
@@ -354,7 +371,8 @@ elsewhere points at nothing. Do this instead:
    new agent.
 4. Create workflows; when you add agent/tool references into the document,
    translate through the map the same way.
-5. Attach skills/policies/reference-docs by the new ids.
+5. Attach skills/policies/reference-docs by the new ids, then read them back
+   (\`list_agent_*\`) and diff against what you read in step 1.
 6. \`validate_workflow\` and re-read each entity to confirm every reference
    resolved, then \`request_publish_*\`.
 The connector never carries a secret across: \`authConfig\` stays placeholders in

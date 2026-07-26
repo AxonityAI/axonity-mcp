@@ -114,12 +114,23 @@ export function registerAttachTools(
     path: (a: string, b: string) => string,
     firstArg: string,
     secondArg: string,
+    /**
+     * The read-back tool for this link, when one exists. A 200 here does not
+     * prove the link resolved, so the description points at the tool that does —
+     * agent-scoped links have one, `skill → workflow` has no list route.
+     */
+    readBack?: string,
   ) => {
     const shape = { [firstArg]: z.string(), [secondArg]: z.string() };
 
     server.tool(
       `attach_${subject}_to_${target}`,
-      `Scope a ${subject.replace("_", " ")} to a ${target} so the ${target} uses it.`,
+      `Scope a ${subject.replace("_", " ")} to a ${target} so the ${target} uses it.` +
+        (readBack
+          ? ` Verify it landed with \`${readBack}\` before request_publish_${target} — ` +
+            `the link lives outside the entity body, so re-reading the ${target} will ` +
+            `not show it.`
+          : ""),
       shape,
       async (args: Record<string, string>) =>
         guard(async () =>
@@ -131,7 +142,8 @@ export function registerAttachTools(
       `detach_${subject}_from_${target}`,
       `Unscope a ${subject.replace("_", " ")} from a ${target}. This only ` +
         `removes the link — the ${subject.replace("_", " ")} itself is not deleted ` +
-        `and stays available to attach elsewhere.`,
+        `and stays available to attach elsewhere.` +
+        (readBack ? ` Confirm what is left with \`${readBack}\`.` : ""),
       shape,
       async (args: Record<string, string>) =>
         guard(async () => {
@@ -151,7 +163,10 @@ export function registerAttachTools(
     (agentId, skillId) => `/api/v1/agents/${agentId}/skills-v2/${skillId}`,
     "agentId",
     "skillId",
+    "list_agent_skills",
   );
+  // No read-back for the workflow-scoped variant: the backend has no
+  // GET /workflows/{id}/skills-v2, so there is nothing to point at.
   link(
     "skill",
     "workflow",
@@ -165,6 +180,7 @@ export function registerAttachTools(
     (agentId, policyId) => `/api/v1/agents/${agentId}/policies/${policyId}`,
     "agentId",
     "policyId",
+    "list_agent_policies",
   );
   // Reference docs attach to agents only — there is no workflow-scoped
   // reference-doc route on the backend, so no `*_to_workflow` pair here.
@@ -174,6 +190,7 @@ export function registerAttachTools(
     (agentId, refId) => `/api/v1/agents/${agentId}/reference-docs/${refId}`,
     "agentId",
     "refId",
+    "list_agent_reference_docs",
   );
 
   /**

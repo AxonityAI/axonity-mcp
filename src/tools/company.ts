@@ -114,6 +114,28 @@ export function registerCompanyTools(
   );
 
   server.tool(
+    "name_company_major_version",
+    "Give one of the company document's major versions a name — label a release " +
+      "so it is easy to find in history. Targets a MAJOR version by its integer " +
+      "number (from list_company_versions), not a checkpoint or a versionId. Like " +
+      "everything else on this singleton it takes no id. This only renames; it " +
+      "does not create, publish, or roll anything back.",
+    {
+      majorVersion: z
+        .number()
+        .int()
+        .describe("The major version's integer number, e.g. 2."),
+      name: z.string().min(1).max(255).describe("The new name for that major version."),
+    },
+    async ({ majorVersion, name }) =>
+      guard(async () =>
+        jsonResult(
+          await client.patch(`/api/v1/company/versions/major/${majorVersion}`, { name }),
+        ),
+      ),
+  );
+
+  server.tool(
     "request_publish_company",
     "Request that the company document be published. Like request_publish_* for " +
       "every other entity, this does NOT publish — it creates a pending approval " +
