@@ -1,4 +1,11 @@
-import { mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -68,6 +75,34 @@ describe("isEntryPoint", () => {
         .toThrowError("This MCP server does not accept command-line arguments.");
       expect(() => assertNoExtraArguments(["foo", "bar"]))
         .toThrow(/Received arguments: foo bar/);
+    });
+  });
+
+  /**
+   * `npx <pkg>` derives the command to run from the package NAME, not from the
+   * bin map: for `@axonity-ai/mcp` it looks for a bin called `mcp`. When no bin
+   * matches, npx exits 0 with no output — so the documented install command
+   * (`npx -y @axonity-ai/mcp`) started nothing, and Claude Code reported only
+   * `-32000: Connection closed` with an empty log. Shipping a bin under the
+   * name npx derives is what makes that command work at all.
+   */
+  describe("bin map is npx-resolvable", () => {
+    const pkg = JSON.parse(
+      readFileSync(new URL("../package.json", import.meta.url), "utf8"),
+    ) as { name: string; bin: Record<string, string> };
+
+    it("exposes a bin under the name npx derives from the package name", () => {
+      const derived = pkg.name.split("/").pop()!;
+      expect(
+        Object.keys(pkg.bin),
+        `npx runs "${derived}" for package "${pkg.name}"; bin has ${JSON.stringify(Object.keys(pkg.bin))}`,
+      ).toContain(derived);
+    });
+
+    it("every bin points at the built entry point", () => {
+      for (const target of Object.values(pkg.bin)) {
+        expect(target).toBe("dist/index.js");
+      }
     });
   });
 });
