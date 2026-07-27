@@ -8,12 +8,24 @@ on:
 jobs:
   build-test:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # 20 is the floor package.json promises (engines.node); 24 is what the
+        # maintainers run. Both, so a break on either shows up here.
+        node: [20, 24]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: ${{ matrix.node }}
           cache: npm
+      # The lockfile is written by whatever npm a maintainer runs locally (11.x).
+      # Node 20 bundles npm 10, whose resolver builds a different tree — it then
+      # rejects that lockfile outright ("Missing: @emnapi/runtime from lock file")
+      # and `npm ci` fails on a repo that is perfectly fine. Pin npm so the
+      # resolver is the same everywhere, whatever Node version is under test.
+      - run: npm install -g npm@11
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
