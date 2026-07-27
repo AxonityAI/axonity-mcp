@@ -220,3 +220,31 @@ npm run typecheck
 npm test
 npm run build   # emits dist/
 ```
+
+## Releasing
+
+Publishing runs from a maintainer's machine, not from CI. npm restricts tokens
+that bypass 2FA for direct publishing, so a stored `NPM_TOKEN` cannot ship this
+package; `npm login` is the supported path.
+
+Run `npm login` in a real terminal — it prints a URL and waits for you to finish
+in the browser, so it needs a session that stays attached (an editor's 2-minute
+command timeout will kill it mid-flow).
+
+```bash
+npm login                 # browser flow; must complete in an attached terminal
+npm whoami                # confirm the account
+
+git checkout main && git pull
+npm version <x.y.z> -m "%s"          # commits + tags, so the tag matches the tarball
+git push origin main --follow-tags
+npm publish                          # prepublishOnly builds dist/ fresh
+npm view @axonity-ai/mcp version     # confirm
+```
+
+Then cut a GitHub release for the tag. That triggers `Verify release`, which
+rebuilds and packs the tagged commit without publishing — it catches a tag that
+was cut from a state CI cannot install.
+
+Keep npm 11 locally: Node 20 bundles npm 10, whose resolver writes an
+incompatible lockfile tree. CI pins npm 11 for the same reason.

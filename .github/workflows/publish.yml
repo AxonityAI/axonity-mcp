@@ -1,22 +1,20 @@
-name: Publish to npm
+name: Verify release
 
-# Publishes @axonity-ai/mcp when a GitHub Release is published. Cut a release
-# whose tag matches the package version (e.g. v0.1.0) and this ships it.
+# Publishing is done by a maintainer from their machine (`npm publish` after
+# `npm login`), NOT from CI. npm restricts tokens that bypass 2FA for direct
+# publishing, so a stored NPM_TOKEN cannot ship this package — a CI publish step
+# would only ever fail and paint every release red.
 #
-# Requires an NPM_TOKEN repo secret with WRITE access to @axonity-ai/mcp. A
-# token without it fails here as `E404 ... PUT` — npm answers 404 rather than
-# 403 so it does not leak whether a package exists. Prefer a granular access
-# token: classic automation tokens that bypass 2FA are being restricted for
-# direct publishing.
-#
-# Note this checks out the RELEASE TAG, not main — a fix landed on main after
-# the tag was cut is not in this build. Re-tag or cut a new release.
+# This workflow instead proves the TAG is shippable: it builds and tests the
+# exact commit the release points at, and packs the tarball without sending it.
+# That is a real guard — v0.3.1 was tagged with a lockfile CI could not install,
+# and nothing caught it until the release already existed.
 on:
   release:
     types: [published]
 
 jobs:
-  publish:
+  verify:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -24,15 +22,13 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
-          registry-url: https://registry.npmjs.org
-      # Same npm pin as ci.yml — Node 20 bundles npm 10, which rejects a
-      # lockfile written by npm 11. Keep the two workflows in step.
+      # Same npm pin as ci.yml — keep the resolver identical everywhere.
       - run: npm install -g npm@11
       - run: npm ci
+      - run: npm run typecheck
       - run: npm test
-      # prepublishOnly builds; publishConfig makes it public.
-      - run: npm publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - run: npm run build
+      # Builds the tarball exactly as `npm publish` would, and stops there.
+      - run: npm pack --dry-run
