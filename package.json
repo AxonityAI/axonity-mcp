@@ -1,6 +1,6 @@
 {
   "name": "@axonity-ai/mcp",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "Model Context Protocol server for Axonity Flow — lets an external agent (e.g. Claude Code) read, draft, and update workflows, agents and tools in an Axonity tenant.",
   "license": "MIT",
   "repository": {
