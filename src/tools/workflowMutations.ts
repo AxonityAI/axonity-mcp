@@ -39,6 +39,83 @@ interface MutationResponse {
 }
 
 /**
+ * Why the document is not forwarded by default (#21).
+ *
+ * The backend answers every mutation with the WHOLE document. A real workflow
+ * runs past 100k characters, which overflows the client's response limit — so a
+ * change that SUCCEEDED came back as an error. Believing that error and retrying
+ * applies the change twice (with `add_step`, a duplicate step). It also made the
+ * deliberate non-transactional semantics far worse than they need to be: an
+ * unreadable failure on a partially-applied sequence.
+ *
+ * So the client projects the response down to what a caller acts on, and hands
+ * over the document only when asked. Two caps keep even the summary bounded:
+ * `validationIssues` is caller-controlled in size, and an API error message can
+ * carry the server's body (see `withDetail` in errors.ts) — which is another way
+ * a document can reach the response.
+ */
+const MAX_VALIDATION_ISSUES = 25;
+const MAX_REASON_CHARS = 1500;
+
+/** Shorten a string, saying so rather than truncating silently. */
+function cap(text: string, limit: number): string {
+  if (text.length <= limit) return text;
+  return `${text.slice(0, limit)}… [truncated ${text.length - limit} of ${text.length} characters]`;
+}
+
+/** Count array members at a path in the document, when it looks as expected. */
+function countAt(document: unknown, key: "all" | "edges"): number | undefined {
+  const steps = (document as { steps?: Record<string, unknown> } | undefined)?.steps;
+  const value = steps?.[key];
+  return Array.isArray(value) ? value.length : undefined;
+}
+
+/**
+ * Project a mutation response into the compact summary a caller acts on:
+ * the new version, what landed, the launchable verdict, validation issues, and
+ * cheap orientation counts taken from the document before it is dropped.
+ */
+export function summarizeMutation(
+  response: MutationResponse,
+  appliedCount: number,
+  returnDocument: boolean,
+): Record<string, unknown> {
+  const issues = Array.isArray(response.validationIssues) ? response.validationIssues : [];
+  const kept = issues.slice(0, MAX_VALIDATION_ISSUES);
+  const stepCount = countAt(response.document, "all");
+  const edgeCount = countAt(response.document, "edges");
+
+  return {
+    version: response.version,
+    appliedCount,
+    ...(response.launchable === undefined ? {} : { launchable: response.launchable }),
+    ...(stepCount === undefined ? {} : { stepCount }),
+    ...(edgeCount === undefined ? {} : { edgeCount }),
+    validationIssues: kept,
+    ...(issues.length > kept.length
+      ? {
+          validationIssuesTruncated: issues.length - kept.length,
+          validationIssuesTotal: issues.length,
+        }
+      : {}),
+    // Absent by default — say where it is rather than leaving the caller guessing.
+    ...(returnDocument
+      ? { document: response.document }
+      : { documentOmitted: "Summary only. Pass returnDocument: true, or call read_workflow." }),
+  };
+}
+
+/** The `returnDocument` opt-in, shared by both document-returning tools. */
+const RETURN_DOCUMENT = z
+  .boolean()
+  .optional()
+  .describe(
+    "Include the full workflow document in the response. Defaults to false — a " +
+      "real document can exceed the response limit and turn a successful call " +
+      "into an error. Prefer read_workflow when you need it.",
+  );
+
+/**
  * Split one command into the `{ type, payload }` pair the backend expects.
  *
  * Accepts both the explicit form (`{ type, payload: {...} }`) and the flat form
@@ -75,10 +152,15 @@ function sequenceError(
   version: number,
   cause: unknown,
 ): Error {
-  const reason =
+  // An AxonityApiError message can carry the server's response body, and that
+  // body is often the whole document — the very thing this tool refuses to
+  // forward. Cap it so a mid-sequence failure stays readable (#21).
+  const reason = cap(
     cause instanceof AxonityApiError || cause instanceof Error
       ? cause.message
-      : String(cause);
+      : String(cause),
+    MAX_REASON_CHARS,
+  );
   const applied = index;
   const summary = JSON.stringify(
     { appliedCount: applied, failedIndex: index, failedType: type, currentVersion: version },
@@ -104,15 +186,37 @@ export function registerWorkflowMutations(
       "connect edges, set conditions). Read the workflow first for its version. " +
       "Commands are applied IN ORDER, one backend call each, with the version " +
       "threaded automatically — pass the version you read, not one per command. " +
-      "Returns the new authoritative document, version, and validation state. " +
-      "Not transactional: if command N fails, commands before it stay applied and " +
-      "the error reports how many landed. On a 409 conflict, re-read and retry. " +
-      'Each command is `{ "type": "add_step", "payload": { … } }`; the flat form ' +
-      '`{ "type": "add_step", … }` is accepted too. Valid types: update_workflow, ' +
-      "add_trigger, update_trigger, remove_trigger, update_trigger_operator, " +
-      "group_triggers, ungroup_triggers, move_trigger, add_step, add_loop, " +
-      "update_step, remove_step, move_step, add_edge, update_edge, remove_edge, " +
-      "convert_to_loop, setup_loop_decision, advanced_edit.",
+      "\n\nRESPONSE IS A SUMMARY, not the document: version, appliedCount, " +
+      "launchable, validationIssues, stepCount, edgeCount. A real workflow " +
+      "document can exceed the response limit, which would turn a call that " +
+      "SUCCEEDED into an error you must not retry. Pass returnDocument: true, or " +
+      "call read_workflow, when you need the document itself. " +
+      "\n\nNot transactional: if command N fails, commands before it stay applied " +
+      "and the error reports how many landed and which index failed — resume from " +
+      "there, do NOT replay the list. On a 409 conflict, re-read and retry. " +
+      '\n\nEach command is `{ "type": "add_step", "payload": { … } }`; the flat ' +
+      'form `{ "type": "add_step", … }` is accepted too. Valid types: ' +
+      "update_workflow, add_trigger, update_trigger, remove_trigger, " +
+      "update_trigger_operator, group_triggers, ungroup_triggers, move_trigger, " +
+      "add_step, add_loop, update_step, remove_step, move_step, add_edge, " +
+      "update_edge, remove_edge, add_decision_condition, convert_to_loop, " +
+      "setup_loop_decision, advanced_edit, attach_output_schema, " +
+      "detach_output_schema." +
+      "\n\nA COMMAND PAYLOAD IS NOT SHAPED LIKE THE DOCUMENT — do not copy a step " +
+      "or edge out of the document and send it back:" +
+      "\n- add_step takes { name, position: {after|before: <stepId>, …}, type?, " +
+      "id?, config? }. `name` and `position` are REQUIRED. It does NOT accept " +
+      "inputs / outputs / contract, and an unknown key is IGNORED WITHOUT ERROR — " +
+      "set those in a follow-up update_step and read the step back to confirm." +
+      "\n- add_edge takes { fromStepId, toStepId } — NOT the document's from/to — " +
+      "plus optional edgeType/condition/order. It has no id field: the platform " +
+      "assigns the edge id, so one you supply is ignored." +
+      "\n- A bound input's contract, its description included, is DERIVED from the " +
+      "output it reads and cannot be authored on its own. Set the text on the " +
+      "PRODUCING step's output; editing the consuming input does not stick, and a " +
+      "downstream description changing by itself is this rule, not data loss." +
+      "\n- Every step is guaranteed to reach the END point: the platform wires that " +
+      "edge itself. A missing end connection is not yours to fix.",
     {
       id: z.string().describe("The workflow's id."),
       expectedVersion: z
@@ -130,8 +234,9 @@ export function registerWorkflowMutations(
             "`type` and its arguments (camelCase), either nested under " +
             "`payload` or inline.",
         ),
+      returnDocument: RETURN_DOCUMENT,
   },
-  async ({ id, expectedVersion, mutations }) =>
+  async ({ id, expectedVersion, mutations, returnDocument }) =>
       guard(async () => {
         // Reject the whole batch on a malformed command before applying any of
         // it — a shape error is the agent's mistake, not a partial failure.
@@ -152,17 +257,26 @@ export function registerWorkflowMutations(
           version = last.version;
         }
 
-        return jsonResult({ ...last, appliedCount: bodies.length });
+        return jsonResult(
+          summarizeMutation(
+            last ?? { version },
+            bodies.length,
+            returnDocument === true,
+          ),
+        );
       }),
   );
 
   server.tool(
     "replace_workflow_document",
-    "Replace the ENTIRE workflow document in one atomic call. Read the workflow first to " +
-      "get the current version, then call this again only after rereading on a stale " +
-      "`409`.\n" +
-      "Unlike `apply_workflow_mutations`, this is a single PUT request and treats the " +
-      "payload as the complete editable document.",
+    "Replace the ENTIRE workflow document in one atomic call. Read the workflow " +
+      "first to get the current version, then call this again only after rereading " +
+      "on a stale `409`. Unlike `apply_workflow_mutations`, this is a single PUT " +
+      "and treats the payload as the complete editable document — prefer the " +
+      "mutation commands, which the backend validates and normalises per edit. " +
+      "\n\nThe response is the same SUMMARY (version, launchable, " +
+      "validationIssues, stepCount, edgeCount), not the stored document; pass " +
+      "returnDocument: true or call read_workflow for that.",
     {
       id: z.string().describe("The workflow's id."),
       expectedVersion: z
@@ -172,16 +286,18 @@ export function registerWorkflowMutations(
       document: z
         .record(z.unknown())
         .describe("The complete workflow document object to persist."),
+      returnDocument: RETURN_DOCUMENT,
     },
-    async ({ id, expectedVersion, document }) =>
-      guard(async () =>
-        jsonResult(
-          await client.put(`/api/v1/workflows/${id}`, {
-            expectedVersion,
-            document,
-          }),
-        ),
-      ),
+    async ({ id, expectedVersion, document, returnDocument }) =>
+      guard(async () => {
+        const response = await client.put<MutationResponse>(
+          `/api/v1/workflows/${id}`,
+          { expectedVersion, document },
+        );
+        // One document written, so appliedCount is 1 — the same shape as a
+        // single-command sequence, which is what a caller compares against.
+        return jsonResult(summarizeMutation(response, 1, returnDocument === true));
+      }),
   );
 
   server.tool(

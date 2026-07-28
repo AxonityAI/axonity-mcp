@@ -222,3 +222,190 @@ describe("apply_workflow_mutations", () => {
     expect(client.post).not.toHaveBeenCalled();
   });
 });
+
+/**
+ * #21 — the response must always fit.
+ *
+ * The backend answers every mutation with the whole document. On a real
+ * workflow that is >100k characters, which overflows the caller's response
+ * limit: a change that SUCCEEDED comes back as an error, and retrying it
+ * applies the change twice. So the client forwards a summary and hands over the
+ * document only on request.
+ */
+describe("mutation responses stay small", () => {
+  /** A document big enough that forwarding it would blow any sane budget. */
+  function hugeDocument() {
+    return {
+      steps: {
+        all: Array.from({ length: 200 }, (_, i) => ({
+          id: `s-${i}`,
+          name: `Step ${i}`,
+          notes: "x".repeat(600),
+        })),
+        edges: Array.from({ length: 150 }, (_, i) => ({ id: `e-${i}`, from: "a", to: "b" })),
+      },
+    };
+  }
+
+  function hugeResponseClient(extra: Record<string, unknown> = {}) {
+    return {
+      post: vi.fn(async () => ({
+        version: 7,
+        document: hugeDocument(),
+        launchable: true,
+        validationIssues: [],
+        ...extra,
+      })),
+      put: vi.fn(async () => ({
+        version: 7,
+        document: hugeDocument(),
+        launchable: false,
+        validationIssues: [],
+        ...extra,
+      })),
+    };
+  }
+
+  const BUDGET = 4000; // bytes — a summary has no business exceeding this
+
+  it("omits the document by default and stays inside a byte budget", async () => {
+    const client = hugeResponseClient();
+    const raw = JSON.stringify(hugeDocument());
+    expect(raw.length).toBeGreaterThan(50_000); // the fixture is genuinely large
+
+    const result = await apply(client)({
+      id: "wf-1",
+      expectedVersion: 1,
+      mutations: [{ type: "add_step", payload: { name: "A" } }],
+    });
+
+    const text = textOf(result);
+    expect(isError(result)).toBe(false);
+    expect(text).not.toContain("Step 1");
+    expect(text.length).toBeLessThan(BUDGET);
+  });
+
+  it("carries the facts a caller acts on, including counts from the document", async () => {
+    const client = hugeResponseClient();
+    const summary = JSON.parse(
+      textOf(
+        await apply(client)({
+          id: "wf-1",
+          expectedVersion: 1,
+          mutations: [{ type: "add_step" }, { type: "add_edge" }],
+        }),
+      ),
+    );
+
+    expect(summary).toMatchObject({
+      version: 7,
+      appliedCount: 2,
+      launchable: true,
+      stepCount: 200,
+      edgeCount: 150,
+      validationIssues: [],
+    });
+    expect(summary.document).toBeUndefined();
+    expect(summary.documentOmitted).toMatch(/returnDocument/);
+  });
+
+  it("returns the document when explicitly asked", async () => {
+    const client = hugeResponseClient();
+    const summary = JSON.parse(
+      textOf(
+        await apply(client)({
+          id: "wf-1",
+          expectedVersion: 1,
+          mutations: [{ type: "add_step" }],
+          returnDocument: true,
+        }),
+      ),
+    );
+
+    expect(summary.document.steps.all).toHaveLength(200);
+    expect(summary.documentOmitted).toBeUndefined();
+  });
+
+  it("caps validation issues and says how many were dropped", async () => {
+    const issues = Array.from({ length: 60 }, (_, i) => ({
+      code: `issue_${i}`,
+      message: "y".repeat(200),
+      severity: "warning",
+    }));
+    const summary = JSON.parse(
+      textOf(
+        await apply(hugeResponseClient({ validationIssues: issues }))({
+          id: "wf-1",
+          expectedVersion: 1,
+          mutations: [{ type: "add_step" }],
+        }),
+      ),
+    );
+
+    expect(summary.validationIssues).toHaveLength(25);
+    expect(summary.validationIssuesTotal).toBe(60);
+    expect(summary.validationIssuesTruncated).toBe(35);
+  });
+
+  it("keeps a mid-sequence failure small even when the API error carries a document", async () => {
+    let calls = 0;
+    const client = {
+      post: vi.fn(async () => {
+        calls += 1;
+        if (calls <= 2) return { version: calls + 1, document: hugeDocument() };
+        // The error body is the document — errors.ts appends it to the message.
+        throw new AxonityApiError(
+          `Step is invalid. ${JSON.stringify(hugeDocument())}`,
+          422,
+        );
+      }),
+    };
+
+    const result = await apply(client)({
+      id: "wf-1",
+      expectedVersion: 1,
+      mutations: [
+        { type: "add_step" },
+        { type: "add_step" },
+        { type: "add_edge" },
+        { type: "add_step" },
+        { type: "add_step" },
+      ],
+    });
+
+    const text = textOf(result);
+    expect(isError(result)).toBe(true);
+    expect(text).toContain('"appliedCount": 2');
+    expect(text).toContain('"failedIndex": 2');
+    expect(text).toContain("add_edge");
+    expect(text).toContain('"currentVersion": 3');
+    expect(text).toContain("truncated");
+    expect(text.length).toBeLessThan(BUDGET);
+  });
+
+  it("replace_workflow_document summarises the same way", async () => {
+    const client = hugeResponseClient();
+    const summary = JSON.parse(
+      textOf(
+        await replaceTool(client)({
+          id: "wf-1",
+          expectedVersion: 1,
+          document: { steps: { all: [] } },
+        }),
+      ),
+    );
+
+    expect(summary).toMatchObject({
+      version: 7,
+      appliedCount: 1,
+      launchable: false,
+      stepCount: 200,
+      edgeCount: 150,
+    });
+    expect(summary.document).toBeUndefined();
+    expect(client.put).toHaveBeenCalledWith("/api/v1/workflows/wf-1", {
+      expectedVersion: 1,
+      document: { steps: { all: [] } },
+    });
+  });
+});

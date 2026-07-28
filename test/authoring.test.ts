@@ -6,7 +6,9 @@ import {
   registerExecutionTools,
   registerValidationTools,
 } from "../src/tools/validation.js";
+import { registerConventions } from "../src/tools/conventions.js";
 import { registerVersionTools } from "../src/tools/versions.js";
+import { registerWorkflowMutations } from "../src/tools/workflowMutations.js";
 
 function fakeServer() {
   const handlers = new Map<string, (args: Record<string, unknown>) => Promise<unknown>>();
@@ -300,5 +302,91 @@ describe("version tools", () => {
     expect(client.post).toHaveBeenCalledWith(
       "/api/v1/workflows/w-1/versions/8f1c-uuid/restore-deleted",
     );
+  });
+});
+
+/**
+ * #22 — a tool description is the only contract an authoring agent has.
+ *
+ * These pin the facts that cost real time during the Talentus migration: the
+ * add-vs-read shape difference, the edge field names, the derived-input rule and
+ * the END invariant. Asserted against the payload models in axonity-flow
+ * (`workflow_mutation_handlers.py`) as they stand — if the backend stories that
+ * change those models land, these tests are the reminder to rewrite the text.
+ */
+describe("tool descriptions state the contract the platform enforces", () => {
+  function describedTools(register: (s: never, c: never) => void) {
+    const descriptions: Record<string, string> = {};
+    const server = {
+      tool: (name: string, description: string) => {
+        descriptions[name] = description;
+      },
+    };
+    register(server as never, fakeClient() as never);
+    return descriptions;
+  }
+
+  it("apply_workflow_mutations names the real add_step / add_edge payloads", () => {
+    const text = describedTools(registerWorkflowMutations).apply_workflow_mutations;
+
+    // AddStepPayload: name + position required; inputs/outputs/contract absent
+    // from the model, and no extra="forbid", so unknown keys vanish quietly.
+    expect(text).toMatch(/name.*position|position.*name/s);
+    expect(text).toMatch(/IGNORED WITHOUT ERROR/);
+    expect(text).toMatch(/update_step/);
+    // AddEdgePayload: aliases fromStepId/toStepId, and it has no id field.
+    expect(text).toMatch(/fromStepId/);
+    expect(text).toMatch(/toStepId/);
+    expect(text).toMatch(/from\/to/);
+  });
+
+  it("apply_workflow_mutations states both platform invariants", () => {
+    const text = describedTools(registerWorkflowMutations).apply_workflow_mutations;
+    expect(text, "derived input contracts").toMatch(/DERIVED from the/);
+    expect(text, "END wiring").toMatch(/END point/);
+  });
+
+  it("apply_workflow_mutations says the response is a summary and how to get the document", () => {
+    const text = describedTools(registerWorkflowMutations).apply_workflow_mutations;
+    expect(text).toMatch(/SUMMARY/);
+    expect(text).toMatch(/returnDocument: true/);
+    expect(text).toMatch(/read_workflow/);
+  });
+
+  it("validate_workflow does not let `launchable` read as `runnable`", () => {
+    const text = describedTools(registerValidationTools).validate_workflow;
+    expect(text).toMatch(/STRUCTURAL/);
+    expect(text).toMatch(/does NOT verify/i);
+  });
+
+  it("labels the verdict in the response, not only in the description", async () => {
+    const { server, handlers } = fakeServer();
+    const client = {
+      ...fakeClient(),
+      post: vi.fn(async () => ({ launchable: true, issues: [] })),
+    };
+    registerValidationTools(server as never, client as unknown as AxonityClient);
+
+    const result = (await handlers.get("validate_workflow")!({ document: {} })) as {
+      content: { text: string }[];
+    };
+    const payload = JSON.parse(result.content[0].text);
+    expect(payload.launchable).toBe(true);
+    expect(payload.verdictScope).toBe("structural");
+    expect(payload.verdictNote).toMatch(/NOT resolved/);
+  });
+
+  it("the conventions guide carries the same two invariants", async () => {
+    const handlers = new Map<string, () => Promise<{ content: { text: string }[] }>>();
+    registerConventions({
+      tool: (name: string, _d: string, _s: unknown, h: () => Promise<{ content: { text: string }[] }>) =>
+        handlers.set(name, h),
+    } as never);
+    const guide = (await handlers.get("axonity_conventions")!()).content[0].text;
+
+    expect(guide).toMatch(/derived, not authored/i);
+    expect(guide).toMatch(/Every step reaches the END point/);
+    expect(guide).toMatch(/add_step/);
+    expect(guide).toMatch(/fromStepId/);
   });
 });
