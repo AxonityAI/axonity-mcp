@@ -19,22 +19,38 @@ export function registerValidationTools(
 ): void {
   server.tool(
     "validate_workflow",
-    "Check a workflow document for structural and schema problems. Returns " +
-      "`launchable` plus an `issues` list (each with code, message, severity, " +
-      "stepIds, edgeIds). STATELESS: it validates the document you pass, does " +
-      "not read or write the stored workflow, so read-only service tokens can call it. " +
-      "It does NOT verify that referenced agents or tools exist. Call it after " +
-      "apply_workflow_mutations " +
-      "and before request_publish_workflow.",
+    "Check a workflow document for STRUCTURAL problems only. Returns `launchable` " +
+      "plus an `issues` list (each with code, message, severity, stepIds, edgeIds). " +
+      "\n\nRead `launchable` as 'structurally sound', NOT as 'this will run'. It " +
+      "checks the graph — ids, edges, triggers, schemas — and does NOT verify that " +
+      "the agents, tools or output schemas the steps reference still exist. A " +
+      "workflow can be launchable here and fail at runtime on a dead reference, so " +
+      "do not report it to a user as ready. The response is labelled " +
+      "`verdictScope: \"structural\"` for the same reason. " +
+      "\n\nSTATELESS: it validates the document you pass and neither reads nor " +
+      "writes the stored workflow, so read-only service tokens can call it. Call it " +
+      "after apply_workflow_mutations and before request_publish_workflow.",
     {
       document: z
         .record(z.unknown())
         .describe("The workflow document to validate (as returned by read_workflow)."),
     },
     async ({ document }) =>
-      guard(async () =>
-        jsonResult(await client.post("/api/v1/workflows/validate", { document })),
-      ),
+      guard(async () => {
+        const result = await client.post<Record<string, unknown>>(
+          "/api/v1/workflows/validate",
+          { document },
+        );
+        // `launchable` reads as "can run" and that is what a reader remembers.
+        // Label the verdict in the payload too, not only in the description.
+        return jsonResult({
+          ...result,
+          verdictScope: "structural",
+          verdictNote:
+            "Structural check only — referenced agents, tools and output schemas " +
+            "are NOT resolved. Launchable here does not mean runnable.",
+        });
+      }),
   );
 
   server.tool(

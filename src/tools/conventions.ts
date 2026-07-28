@@ -384,6 +384,29 @@ the new tenant too, and a human fills the real value there.
 - It is NOT transactional. If command N fails, the ones before it stay applied;
   the error tells you how many landed and which index failed. Re-read and resume
   from that index rather than replaying the whole list.
+- The response is a SUMMARY (version, appliedCount, launchable, validationIssues,
+  stepCount, edgeCount), not the document. That is deliberate: a real workflow
+  document overflows the response limit, and a successful call would come back
+  looking like a failure — retrying that is how you end up with duplicate steps.
+  Ask for the document with \`returnDocument: true\` or \`read_workflow\`.
+- A command payload is NOT shaped like the document. Do not copy a step or edge
+  out of a read and send it back:
+  - \`add_step\` requires \`name\` and \`position\`; it ignores \`inputs\`,
+    \`outputs\` and \`contract\` — and ignores unknown keys WITHOUT an error, so a
+    step arrives emptier than you sent it. Follow with \`update_step\` for the
+    contract, then read the step back.
+  - \`add_edge\` wants \`fromStepId\`/\`toStepId\`, not the document's \`from\`/
+    \`to\`, and assigns the edge id itself.
+
+## Two platform invariants that look like bugs
+Both are deliberate. Knowing them saves you from "fixing" something that is working.
+- **A bound input's contract is derived, not authored.** An input that reads an
+  upstream output takes its contract — description included — FROM that output.
+  Write the text on the producing step's output; editing the consuming input does
+  not stick, and a downstream description changing when you edit an output is this
+  rule at work, not the platform overwriting you.
+- **Every step reaches the END point.** The platform guarantees it and wires that
+  edge itself. A missing end connection is not yours to add.
 
 ## Triggers
 - A published workflow still does nothing until it has a trigger. Add one with
