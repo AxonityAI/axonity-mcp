@@ -149,3 +149,85 @@ describe("attach tools", () => {
     expect(client.del).not.toHaveBeenCalled();
   });
 });
+
+/**
+ * #24 — a detach must report what the SERVER did.
+ *
+ * 27 detach commands during the Talentus migration all answered
+ * `detached: true`. Not one of those links existed: the documents applied
+ * tenant-wide, so there was nothing to detach and nothing was detached. The
+ * client was the reason the answer was always the same — it threw the response
+ * away and asserted success locally.
+ */
+describe("detach reports the backend's answer, not a local claim", () => {
+  function detachWith(body: unknown) {
+    const { server, handlers } = fakeServer();
+    const client = { ...fakeClient(), del: vi.fn(async () => body) };
+    registerAttachTools(server as never, client as unknown as AxonityClient);
+    return { handlers, client };
+  }
+
+  function payload(result: unknown) {
+    return JSON.parse((result as { content: { text: string }[] }).content[0].text);
+  }
+
+  it("says so when the backend reports nothing was removed", async () => {
+    // SkillLinkResponse carries `linked` — see backend schemas/skill_v2.py.
+    const { handlers } = detachWith({
+      skillId: "sk-1",
+      targetId: "ag-1",
+      targetType: "agent",
+      linked: true,
+    });
+    const result = await handlers.get("detach_skill_from_agent")!({
+      agentId: "ag-1",
+      skillId: "sk-1",
+    });
+
+    const body = payload(result);
+    expect(body.linked).toBe(true);
+    expect(body.detached).toBeUndefined();
+    expect(JSON.stringify(body)).not.toContain('"detached": true');
+  });
+
+  it("reflects a backend answer that a link WAS removed", async () => {
+    const { handlers } = detachWith({
+      skillId: "sk-1",
+      targetId: "ag-1",
+      targetType: "agent",
+      linked: false,
+    });
+    const body = payload(
+      await handlers.get("detach_skill_from_agent")!({ agentId: "ag-1", skillId: "sk-1" }),
+    );
+    expect(body.linked).toBe(false);
+  });
+
+  it("makes no claim about what changed when the route answers 204", async () => {
+    const { handlers } = detachWith(undefined);
+    const body = payload(
+      await handlers.get("detach_policy_from_agent")!({ agentId: "ag-1", policyId: "po-1" }),
+    );
+
+    expect(body.detached).toBeUndefined();
+    expect(body.completed).toBe(true);
+    expect(body.note).toMatch(/NOT a confirmation/);
+    expect(body.note).toMatch(/list_agent_policies/);
+    // The ids are echoed as the request, never as an outcome.
+    expect(body.request).toEqual({ agentId: "ag-1", policyId: "po-1" });
+  });
+
+  it("attach still forwards the backend body unchanged", async () => {
+    const { server, handlers } = fakeServer();
+    const client = {
+      ...fakeClient(),
+      post: vi.fn(async () => ({ skillId: "sk-1", targetId: "ag-1", linked: true })),
+    };
+    registerAttachTools(server as never, client as unknown as AxonityClient);
+
+    const body = payload(
+      await handlers.get("attach_skill_to_agent")!({ agentId: "ag-1", skillId: "sk-1" }),
+    );
+    expect(body).toEqual({ skillId: "sk-1", targetId: "ag-1", linked: true });
+  });
+});
