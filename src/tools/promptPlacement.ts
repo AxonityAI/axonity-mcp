@@ -15,7 +15,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 
 import type { AxonityClient } from "../client.js";
-import { guard, jsonResult } from "./result.js";
+import { detachResult, guard, jsonResult } from "./result.js";
 
 /** The two prompt channels a snippet can be placed in. */
 const TARGET = z
@@ -130,13 +130,18 @@ export function registerPromptPlacementTools(
     "detach_prompt_snippet_from_flow_step",
     "Remove a prompt snippet from a flow step's stack. This only unlinks it — the " +
       "snippet itself is not deleted and stays available to place elsewhere. " +
-      "Identify the link by its linkId (from list_flow_step_prompts).",
+      "Identify the link by its linkId (from list_flow_step_prompts). This route " +
+      "answers 204 with no body, so the result confirms the call was accepted and " +
+      "nothing more — read the stack back with list_flow_step_prompts to see what " +
+      "is actually attached.",
     { linkId: z.string().describe("The attachment's link id (not the snippet id).") },
     async ({ linkId }) =>
-      guard(async () => {
-        await client.del(`/api/v1/flow-step-prompts/${linkId}`);
-        return jsonResult({ detached: true, linkId });
-      }),
+      guard(async () =>
+        detachResult(await client.del(`/api/v1/flow-step-prompts/${linkId}`), {
+          readBack: "list_flow_step_prompts",
+          request: { linkId },
+        }),
+      ),
   );
 
   server.tool(

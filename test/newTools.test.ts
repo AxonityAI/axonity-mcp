@@ -131,7 +131,10 @@ describe("prompt-element placement", () => {
     });
     const res = await handlers.get("detach_prompt_snippet_from_flow_step")!({ linkId: "lk-1" });
     expect(client.del).toHaveBeenCalledWith("/api/v1/flow-step-prompts/lk-1");
-    expect(JSON.parse(text(res)).detached).toBe(true);
+    // Was `detached: true` — a claim this connector minted itself, which is the
+    // fiction #24 removes. This fake answers with a body, so the contract here is
+    // that the body is forwarded verbatim. The 204 path has its own test below.
+    expect(JSON.parse(text(res))).toEqual({ ok: true });
   });
 });
 
@@ -267,5 +270,26 @@ describe("workflow extras + version naming", () => {
     expect(client.patch).toHaveBeenCalledWith("/api/v1/skills/sk-1/versions/major/2", {
       name: "GA release",
     });
+  });
+});
+
+describe("prompt-snippet detach makes no unfounded claim (#24)", () => {
+  it("reports acceptance only — the route is 204 by design", async () => {
+    const { server, handlers } = fakeServer();
+    // DELETE /flow-step-prompts/{id} is declared 204_NO_CONTENT in
+    // prompt_snippets.py, so there is genuinely nothing to forward.
+    const client = { ...fakeClient(), del: vi.fn(async () => undefined) };
+    registerPromptPlacementTools(server as never, client as unknown as AxonityClient);
+
+    const result = await handlers.get("detach_prompt_snippet_from_flow_step")!({
+      linkId: "ln-1",
+    });
+    const body = JSON.parse(text(result));
+
+    expect(client.del).toHaveBeenCalledWith("/api/v1/flow-step-prompts/ln-1");
+    expect(body.detached).toBeUndefined();
+    expect(body.completed).toBe(true);
+    expect(body.note).toMatch(/list_flow_step_prompts/);
+    expect(body.request).toEqual({ linkId: "ln-1" });
   });
 });

@@ -15,7 +15,7 @@ import { z } from "zod";
 
 import type { AxonityClient } from "../client.js";
 import { assertPlaceholderCredentials } from "./credentials.js";
-import { guard, jsonResult } from "./result.js";
+import { detachResult, guard, jsonResult } from "./result.js";
 
 export function registerPersonaTools(
   server: McpServer,
@@ -142,18 +142,19 @@ export function registerAttachTools(
       `detach_${subject}_from_${target}`,
       `Unscope a ${subject.replace("_", " ")} from a ${target}. This only ` +
         `removes the link — the ${subject.replace("_", " ")} itself is not deleted ` +
-        `and stays available to attach elsewhere.` +
+        `and stays available to attach elsewhere. The response is the SERVER'S ` +
+        `answer, not a success claim by this connector: a detach that had nothing ` +
+        `to remove reports that instead of failing, so read the body rather than ` +
+        `assuming the link is gone.` +
         (readBack ? ` Confirm what is left with \`${readBack}\`.` : ""),
       shape,
       async (args: Record<string, string>) =>
-        guard(async () => {
-          await client.del(path(args[firstArg], args[secondArg]));
-          return jsonResult({
-            detached: true,
-            [firstArg]: args[firstArg],
-            [secondArg]: args[secondArg],
-          });
-        }),
+        guard(async () =>
+          detachResult(await client.del(path(args[firstArg], args[secondArg])), {
+            readBack,
+            request: { [firstArg]: args[firstArg], [secondArg]: args[secondArg] },
+          }),
+        ),
     );
   };
 
