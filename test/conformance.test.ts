@@ -120,6 +120,15 @@ describe("MCP route surface conforms to the backend OpenAPI snapshot", () => {
     expect(enumOf("AttachSnippetRequest", "target")).toEqual(["system", "user"]);
   });
 
+  it("both validation routes resolve (the harness cannot reach them)", () => {
+    // validate_workflow takes EXACTLY ONE of workflowId/document, and the shared
+    // ARGS fixture supplies both — so the handler rejects the call and neither
+    // route fires in the sweep above. Assert them directly rather than let two
+    // routes quietly drop out of the drift guard.
+    expect(schemaHas("POST", "/api/v1/workflows/validate")).toBe(true);
+    expect(schemaHas("POST", "/api/v1/workflows/wf-1/validate")).toBe(true);
+  });
+
   it("the matcher is sound (rejects a made-up route, accepts a real one)", () => {
     expect(schemaHas("GET", "/api/v1/agents/x/skills-v2")).toBe(true);
     expect(schemaHas("POST", "/api/v1/publish-approvals")).toBe(true);

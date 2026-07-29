@@ -389,24 +389,40 @@ the new tenant too, and a human fills the real value there.
   document overflows the response limit, and a successful call would come back
   looking like a failure — retrying that is how you end up with duplicate steps.
   Ask for the document with \`returnDocument: true\` or \`read_workflow\`.
-- A command payload is NOT shaped like the document. Do not copy a step or edge
-  out of a read and send it back:
-  - \`add_step\` requires \`name\` and \`position\`; it ignores \`inputs\`,
-    \`outputs\` and \`contract\` — and ignores unknown keys WITHOUT an error, so a
-    step arrives emptier than you sent it. Follow with \`update_step\` for the
-    contract, then read the step back.
-  - \`add_edge\` wants \`fromStepId\`/\`toStepId\`, not the document's \`from\`/
-    \`to\`, and assigns the edge id itself.
+- Command payloads are STRICT and complete:
+  - \`add_step\` builds a whole step in ONE call — \`name\` and \`position\` are
+    required, and \`id\`, \`type\`, \`config\`, \`contract\`, \`inputs\` and
+    \`outputs\` are accepted next to them. No follow-up \`update_step\` is needed
+    just to fill the step in.
+  - \`add_edge\` takes the document's own \`from\`/\`to\` as well as
+    \`fromStepId\`/\`toStepId\`, and keeps an \`id\` you supply.
+  - An unknown or misspelled key is a 422 naming it, not a silent drop — so
+    spelling matters and you are told when it is wrong.
 
 ## Two platform invariants that look like bugs
-Both are deliberate. Knowing them saves you from "fixing" something that is working.
+Both are deliberate, both run after EVERY edit, and both now report themselves in
+the mutation response under \`systemAdjustments\` — so you no longer have to diff
+a document to find out what the platform did.
 - **A bound input's contract is derived, not authored.** An input that reads an
   upstream output takes its contract — description included — FROM that output.
-  Write the text on the producing step's output; editing the consuming input does
-  not stick, and a downstream description changing when you edit an output is this
-  rule at work, not the platform overwriting you.
+  Write the text on the producing step's output; a downstream description changing
+  when you edit an output is this rule at work, not the platform overwriting you.
+  The inputs it re-derived come back in \`rederivedInputs\`.
 - **Every step reaches the END point.** The platform guarantees it and wires that
-  edge itself. A missing end connection is not yours to add.
+  edge itself; the edges it added or removed come back in \`addedEdges\` /
+  \`removedEdges\`. An edge you did not ask for is this, not corruption.
+
+## Validating: two questions, two calls
+- \`validate_workflow({ workflowId })\` checks the STORED workflow against the
+  tenant catalog — it confirms the agents, tools and flows the steps reference
+  actually exist. This is the "can this run?" answer, and it comes back with
+  \`catalogChecked: true\`.
+- \`validate_workflow({ document })\` is stateless and read-only-token safe, but
+  without a catalog it can only judge STRUCTURE: \`launchable\` there means the
+  graph is sound, not that it will run. It says so with \`catalogChecked: false\`.
+- Pass exactly one. Before telling a human a workflow is ready, check
+  \`catalogChecked\` — a green structural verdict is the easiest thing to
+  over-read.
 
 ## Triggers
 - A published workflow still does nothing until it has a trigger. Add one with

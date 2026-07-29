@@ -408,4 +408,44 @@ describe("mutation responses stay small", () => {
       document: { steps: { all: [] } },
     });
   });
+  it("forwards systemAdjustments when the platform changed something itself", async () => {
+    // #771 — the end-step wiring and the derived input contracts now report
+    // themselves, so an author does not have to diff the document to find them.
+    const client = hugeResponseClient({
+      systemAdjustments: {
+        addedEdges: [{ id: "e-end", from: "s-3", to: "end" }],
+        removedEdges: [],
+        rederivedInputs: [{ stepId: "s-4", name: "amount" }],
+      },
+    });
+    const summary = JSON.parse(
+      textOf(
+        await apply(client)({
+          id: "wf-1",
+          expectedVersion: 1,
+          mutations: [{ type: "add_step" }],
+        }),
+      ),
+    );
+
+    expect(summary.systemAdjustments.addedEdges).toHaveLength(1);
+    expect(summary.systemAdjustments.rederivedInputs).toHaveLength(1);
+    // Ids and names only, so it rides on the summary without reintroducing bulk.
+    expect(textOf(await apply(client)({ id: "wf-1", expectedVersion: 1, mutations: [{ type: "add_step" }] })).length)
+      .toBeLessThan(BUDGET);
+  });
+
+  it("omits systemAdjustments when nothing was adjusted", async () => {
+    const summary = JSON.parse(
+      textOf(
+        await apply(
+          hugeResponseClient({
+            systemAdjustments: { addedEdges: [], removedEdges: [], rederivedInputs: [] },
+          }),
+        )({ id: "wf-1", expectedVersion: 1, mutations: [{ type: "add_step" }] }),
+      ),
+    );
+    // An empty object on every response trains the reader to skip the field.
+    expect(summary.systemAdjustments).toBeUndefined();
+  });
 });

@@ -325,7 +325,7 @@
           },
           "policies": {
             "items": {
-              "$ref": "#/components/schemas/PolicyResponse"
+              "$ref": "#/components/schemas/PolicyForAgentResponse"
             },
             "title": "Policies",
             "type": "array"
@@ -357,7 +357,7 @@
           },
           "references": {
             "items": {
-              "$ref": "#/components/schemas/ReferenceDocResponse"
+              "$ref": "#/components/schemas/ReferenceDocForAgentResponse"
             },
             "title": "References",
             "type": "array"
@@ -4598,6 +4598,68 @@
         "title": "DisconnectResponse",
         "type": "object"
       },
+      "DismissBulkBody": {
+        "description": "Request body for ``POST /task-queue/dismiss-bulk``.\n\nSame ids-XOR-filter shape as :class:`ReplayBulkBody` on purpose: the\noperator picks rows and then decides *retry* or *put away*, so the\ntwo actions must take the same argument or the screen would need two\ndifferent selection models.",
+        "properties": {
+          "filter": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Filter"
+          },
+          "ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "maxItems": 500,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ids"
+          }
+        },
+        "title": "DismissBulkBody",
+        "type": "object"
+      },
+      "DismissBulkResult": {
+        "description": "Aggregate outcome of ``dismiss-bulk``.\n\n``skipped`` is deliberately distinct from ``errored``: a row that was\nalready dismissed, or that is not in a dismissable state, is not a\nfailure — it is a no-op the operator should see counted separately\nso \"12 put away, 3 were not dismissable\" reads honestly.",
+        "properties": {
+          "dismissed": {
+            "default": 0,
+            "title": "Dismissed",
+            "type": "integer"
+          },
+          "errored": {
+            "default": 0,
+            "title": "Errored",
+            "type": "integer"
+          },
+          "skipped": {
+            "default": 0,
+            "title": "Skipped",
+            "type": "integer"
+          },
+          "total": {
+            "default": 0,
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "title": "DismissBulkResult",
+        "type": "object"
+      },
       "DismissWakeTaskResponse": {
         "description": "Payload of ``POST /api/v1/admin/wake-tasks/{task_id}/dismiss``.\n\nReturns the post-dismiss row so the inspector can re-render without\na follow-up fetch.",
         "properties": {
@@ -8402,6 +8464,144 @@
         "title": "PlanTargetSchema",
         "type": "object"
       },
+      "PolicyForAgentResponse": {
+        "description": "A policy row plus the reason it applies to this agent (#778).\n\nA policy reaches an agent through five different routes — an explicit\n``agent_policies`` link, or tenant / agent / workflow / step scope. The\ncomposed list used to mix them with no way to tell which is which, so\nan operator could not answer \"is this attached, or does it just apply?\"\n— and therefore could not tell whether detaching it would change\nanything. Explicit link wins; see ``services/link_source.py``.",
+        "properties": {
+          "activation": {
+            "$ref": "#/components/schemas/ActivationGate"
+          },
+          "bodyMd": {
+            "title": "Bodymd",
+            "type": "string"
+          },
+          "createdAt": {
+            "title": "Createdat",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "isSystem": {
+            "default": false,
+            "title": "Issystem",
+            "type": "boolean"
+          },
+          "linkSource": {
+            "enum": [
+              "link",
+              "tenant",
+              "agent",
+              "workflow",
+              "step"
+            ],
+            "title": "Linksource",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "ownerId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ownerid"
+          },
+          "scope": {
+            "enum": [
+              "tenant",
+              "workflow",
+              "agent",
+              "step"
+            ],
+            "title": "Scope",
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "must",
+              "should",
+              "info"
+            ],
+            "title": "Severity",
+            "type": "string"
+          },
+          "source": {
+            "enum": [
+              "human",
+              "agent",
+              "framework"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "draft",
+              "active",
+              "archived"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "stepId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stepid"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
+          "tenantId": {
+            "title": "Tenantid",
+            "type": "string"
+          },
+          "updatedAt": {
+            "title": "Updatedat",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "tenantId",
+          "name",
+          "bodyMd",
+          "scope",
+          "severity",
+          "source",
+          "status",
+          "version",
+          "createdAt",
+          "updatedAt",
+          "linkSource"
+        ],
+        "title": "PolicyForAgentResponse",
+        "type": "object"
+      },
       "PolicyLinkResponse": {
         "description": "Response after linking / unlinking a policy from an agent.",
         "properties": {
@@ -8963,6 +9163,393 @@
         "title": "PublishedVersionInfo",
         "type": "object"
       },
+      "PurgeBulkBody": {
+        "description": "Request body for ``POST /task-queue/purge``.\n\nStep two of the two-step clean-up: dismiss puts a row away\n(reversible, still findable with ``include_dismissed``), purge\ndeletes it for good. Only ALREADY-DISMISSED rows are purgeable —\nthe service enforces that, so a mis-aimed filter cannot delete live\nwork. Same ids-XOR-filter shape as the other bulk bodies.",
+        "properties": {
+          "filter": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Filter"
+          },
+          "ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "maxItems": 500,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ids"
+          }
+        },
+        "title": "PurgeBulkBody",
+        "type": "object"
+      },
+      "PurgeBulkResult": {
+        "description": "Aggregate outcome of ``purge``.\n\n``skipped`` counts rows that were targeted but not dismissed yet —\nthey are left alone rather than deleted, which is the guard that\nmakes purge safe to point at a filter.",
+        "properties": {
+          "errored": {
+            "default": 0,
+            "title": "Errored",
+            "type": "integer"
+          },
+          "purged": {
+            "default": 0,
+            "title": "Purged",
+            "type": "integer"
+          },
+          "skipped": {
+            "default": 0,
+            "title": "Skipped",
+            "type": "integer"
+          },
+          "total": {
+            "default": 0,
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "title": "PurgeBulkResult",
+        "type": "object"
+      },
+      "QueueDispatchHealth": {
+        "description": "Dispatch liveness — \"is anything actually moving?\".\n\n``run_queue_depth`` is process-local (see module docstring). It is\npaired with the last observed worker heartbeat so the screen can say\n\"work is queued but not being processed\" instead of showing a\nsilently growing pending count.\n\n**Two shapes, by role — this is a tenant-isolation boundary.** The\nthree numeric fields describe the backend PROCESS, not the caller's\ntenant: polled every few seconds by any authenticated member they\ncompose into a platform-wide load-and-throughput timeseries that\nincludes every other tenant's activity. So:\n\n  * **administrator** — the full block: ``run_queue_depth``,\n    ``last_tick_at``, ``seconds_since_tick``, ``healthy``,\n    ``unhealthy_reason``.\n  * **member (anything that is not ``role == \"admin\"``)** — the three\n    numeric fields are ``None``; ``healthy`` and ``unhealthy_reason``\n    are unchanged.\n\n``healthy`` / ``unhealthy_reason`` are never degraded: they are the\noperational signal (\"dispatch is down\") a member needs to stop\nwaiting on a run, and they carry no volume information. The split is\napplied in ``QueueOverviewService.overview``; the frontend mirror\n(``frontend/src/lib/workflow/types/queues.ts``) must type the three\nnumeric fields as nullable for every caller.",
+        "properties": {
+          "healthy": {
+            "default": true,
+            "title": "Healthy",
+            "type": "boolean"
+          },
+          "lastTickAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lasttickat"
+          },
+          "runQueueDepth": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Runqueuedepth"
+          },
+          "secondsSinceTick": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Secondssincetick"
+          },
+          "unhealthyReason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unhealthyreason"
+          }
+        },
+        "title": "QueueDispatchHealth",
+        "type": "object"
+      },
+      "QueueOverview": {
+        "description": "Single payload behind the health tiles.",
+        "properties": {
+          "dispatch": {
+            "$ref": "#/components/schemas/QueueDispatchHealth"
+          },
+          "oldestRunAgeSeconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oldestrunageseconds"
+          },
+          "oldestTaskAgeSeconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oldesttaskageseconds"
+          },
+          "runs": {
+            "$ref": "#/components/schemas/QueueRunCounts"
+          },
+          "tasks": {
+            "$ref": "#/components/schemas/QueueTaskCounts"
+          }
+        },
+        "title": "QueueOverview",
+        "type": "object"
+      },
+      "QueueRunCounts": {
+        "description": "Per-status counts of non-terminal runs.",
+        "properties": {
+          "inputRequired": {
+            "default": 0,
+            "title": "Inputrequired",
+            "type": "integer"
+          },
+          "pending": {
+            "default": 0,
+            "title": "Pending",
+            "type": "integer"
+          },
+          "running": {
+            "default": 0,
+            "title": "Running",
+            "type": "integer"
+          },
+          "total": {
+            "default": 0,
+            "title": "Total",
+            "type": "integer"
+          },
+          "waiting": {
+            "default": 0,
+            "title": "Waiting",
+            "type": "integer"
+          }
+        },
+        "title": "QueueRunCounts",
+        "type": "object"
+      },
+      "QueueRunListResponse": {
+        "description": "Paginated \"In flight\" listing.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/QueueRunRow"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "default": 0,
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "title": "QueueRunListResponse",
+        "type": "object"
+      },
+      "QueueRunRow": {
+        "description": "One row in the \"In flight\" pane — a run that has not finished.\n\n``current_step_name`` / ``wait_reason`` are derived server-side from\nthe run's ``step_states`` so an operator can tell \"waiting for an\nanswer since 3h\" apart from \"running step 4 of 9\" without opening\nthe run.",
+        "properties": {
+          "ageSeconds": {
+            "default": 0,
+            "title": "Ageseconds",
+            "type": "integer"
+          },
+          "createdAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Createdat"
+          },
+          "createdByName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Createdbyname"
+          },
+          "currentStepName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currentstepname"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "default": "workflow",
+            "title": "Kind",
+            "type": "string"
+          },
+          "startedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Startedat"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "running",
+              "input_required",
+              "waiting"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "statusAgeSeconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Statusageseconds"
+          },
+          "stepCompleted": {
+            "default": 0,
+            "title": "Stepcompleted",
+            "type": "integer"
+          },
+          "stepTotal": {
+            "default": 0,
+            "title": "Steptotal",
+            "type": "integer"
+          },
+          "triggeredByType": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Triggeredbytype"
+          },
+          "waitReason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Waitreason"
+          },
+          "workflowId": {
+            "format": "uuid",
+            "title": "Workflowid",
+            "type": "string"
+          },
+          "workflowName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workflowname"
+          }
+        },
+        "required": [
+          "id",
+          "workflowId",
+          "status"
+        ],
+        "title": "QueueRunRow",
+        "type": "object"
+      },
+      "QueueTaskCounts": {
+        "description": "Per-state counts of active task-queue rows.\n\nMirrors ``schemas.task_queue.DashboardSummary`` plus a ``total`` so\nthe tiles can show throughput, not only problems. Dismissed rows are\nexcluded — the operator cares about the active backlog.",
+        "properties": {
+          "deadLetter": {
+            "default": 0,
+            "title": "Deadletter",
+            "type": "integer"
+          },
+          "failed": {
+            "default": 0,
+            "title": "Failed",
+            "type": "integer"
+          },
+          "inProgress": {
+            "default": 0,
+            "title": "Inprogress",
+            "type": "integer"
+          },
+          "pending": {
+            "default": 0,
+            "title": "Pending",
+            "type": "integer"
+          },
+          "succeeded": {
+            "default": 0,
+            "title": "Succeeded",
+            "type": "integer"
+          },
+          "total": {
+            "default": 0,
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "title": "QueueTaskCounts",
+        "type": "object"
+      },
       "ReachableOutputSource": {
         "description": "A source (step or trigger) with its declared outputs.",
         "properties": {
@@ -9022,6 +9609,175 @@
           }
         },
         "title": "ReachableOutputsResponse",
+        "type": "object"
+      },
+      "ReferenceDocForAgentResponse": {
+        "description": "A reference doc plus the reason it is in scope for this agent (#778).\n\nA doc reaches an agent through an explicit ``agent_reference_docs``\nlink, by being the agent's own ``scope='agent'`` doc, or by being\ntenant-wide. The composed list used to mix them with no discriminator,\nso \"detach this document\" looked like a sensible request for a doc that\nwas never linked — and the detach answered \"done\". Explicit link wins;\nsee ``services/link_source.py``.",
+        "properties": {
+          "autoInject": {
+            "default": false,
+            "title": "Autoinject",
+            "type": "boolean"
+          },
+          "autoInjectPriority": {
+            "default": 0,
+            "title": "Autoinjectpriority",
+            "type": "integer"
+          },
+          "bodyMd": {
+            "title": "Bodymd",
+            "type": "string"
+          },
+          "createdAt": {
+            "title": "Createdat",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "linkSource": {
+            "enum": [
+              "link",
+              "agent",
+              "tenant_wide"
+            ],
+            "title": "Linksource",
+            "type": "string"
+          },
+          "ownerId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ownerid"
+          },
+          "scope": {
+            "enum": [
+              "tenant_general",
+              "tenant_skills",
+              "workflow",
+              "agent"
+            ],
+            "title": "Scope",
+            "type": "string"
+          },
+          "source": {
+            "enum": [
+              "human",
+              "agent",
+              "framework"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "draft",
+              "active",
+              "archived"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "tags": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Tags",
+            "type": "array"
+          },
+          "tenantId": {
+            "title": "Tenantid",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "updatedAt": {
+            "title": "Updatedat",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "tenantId",
+          "title",
+          "bodyMd",
+          "description",
+          "scope",
+          "source",
+          "status",
+          "version",
+          "createdAt",
+          "updatedAt",
+          "linkSource"
+        ],
+        "title": "ReferenceDocForAgentResponse",
+        "type": "object"
+      },
+      "ReferenceDocLinkResponse": {
+        "description": "Answer to attaching / detaching a reference doc (#778).\n\n``detached`` / ``attached`` say what ACTUALLY happened, not what was\nasked for. ``still_in_scope`` is the other half of the truth: removing\na link does not switch off a doc that is also tenant-wide, and\n``link_source`` then names why it stays.",
+        "properties": {
+          "agentId": {
+            "title": "Agentid",
+            "type": "string"
+          },
+          "attached": {
+            "default": false,
+            "title": "Attached",
+            "type": "boolean"
+          },
+          "detached": {
+            "default": false,
+            "title": "Detached",
+            "type": "boolean"
+          },
+          "linkSource": {
+            "anyOf": [
+              {
+                "enum": [
+                  "link",
+                  "agent",
+                  "tenant_wide"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Linksource"
+          },
+          "referenceDocId": {
+            "title": "Referencedocid",
+            "type": "string"
+          },
+          "stillInScope": {
+            "default": false,
+            "title": "Stillinscope",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "agentId",
+          "referenceDocId"
+        ],
+        "title": "ReferenceDocLinkResponse",
         "type": "object"
       },
       "ReferenceDocResponse": {
@@ -9727,6 +10483,18 @@
             "title": "Agentinvocations",
             "type": "array"
           },
+          "cancelRequestedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancelrequestedat"
+          },
           "completedAt": {
             "anyOf": [
               {
@@ -9930,6 +10698,72 @@
           "stepOrder"
         ],
         "title": "RunDetail",
+        "type": "object"
+      },
+      "RunRestartResult": {
+        "description": "Outcome of re-dispatching a stuck run.\n\n``status='restarted'`` — the run was re-queued onto the RunQueue.\n``status='already_active'`` — it was already being processed, so the\ncall was an idempotent no-op (double-click safe).",
+        "properties": {
+          "runId": {
+            "format": "uuid",
+            "title": "Runid",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "restarted",
+              "already_active"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "runId"
+        ],
+        "title": "RunRestartResult",
+        "type": "object"
+      },
+      "RunStopBulkBody": {
+        "description": "Body of the bulk-stop call — explicit ids only, never a filter.\n\nCapped so one request cannot cancel an unbounded number of runs; the\nUI's selection model tops out at one page anyway.",
+        "properties": {
+          "runIds": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Runids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "runIds"
+        ],
+        "title": "RunStopBulkBody",
+        "type": "object"
+      },
+      "RunStopBulkResult": {
+        "description": "Per-outcome tally of a bulk stop.",
+        "properties": {
+          "alreadyTerminal": {
+            "default": 0,
+            "title": "Alreadyterminal",
+            "type": "integer"
+          },
+          "cancelled": {
+            "default": 0,
+            "title": "Cancelled",
+            "type": "integer"
+          },
+          "errored": {
+            "default": 0,
+            "title": "Errored",
+            "type": "integer"
+          }
+        },
+        "title": "RunStopBulkResult",
         "type": "object"
       },
       "RunSummary": {
@@ -10444,8 +11278,11 @@
         "type": "object"
       },
       "SaveWorkflowResponse": {
-        "description": "Response after saving workflow document.",
+        "description": "Response after saving workflow document.\n\n``systemAdjustments`` names the invariant repairs the save triggered —\non this path, the input contracts it re-derived (#771).",
         "properties": {
+          "systemAdjustments": {
+            "$ref": "#/components/schemas/SystemAdjustments"
+          },
           "version": {
             "title": "Version",
             "type": "integer"
@@ -11843,6 +12680,37 @@
         "title": "SuspendRunResponse",
         "type": "object"
       },
+      "SystemAdjustments": {
+        "description": "What the platform changed on its own, in this call (#771).\n\nTwo invariants run after every edit and are NOT optional:\n``ensure_end_step`` guarantees every step can reach the end point and\nwires the edge itself, and ``derive_input_contracts`` projects each\nbound input's contract from the output it is bound to. Both are\ncorrect; both used to be invisible, so an author copying one\nenvironment into another found edges they never asked for and\ndescriptions they never wrote, and could only find them by diffing the\nwhole document after every call.\n\nIds and names only — this rides on every mutation response, so it must\nstay small. Absent/empty means nothing was adjusted.",
+        "properties": {
+          "addedEdges": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Addededges",
+            "type": "array"
+          },
+          "rederivedInputs": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Rederivedinputs",
+            "type": "array"
+          },
+          "removedEdges": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Removededges",
+            "type": "array"
+          }
+        },
+        "title": "SystemAdjustments",
+        "type": "object"
+      },
       "SystemToolEntry": {
         "description": "One opt-in system tool the UI can render as a toggle.",
         "properties": {
@@ -12155,16 +13023,22 @@
             "title": "Wakeeventkind"
           },
           "workflowId": {
-            "format": "uuid",
-            "title": "Workflowid",
-            "type": "string"
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workflowid"
           }
         },
         "required": [
           "id",
           "tenantId",
           "ownerAgentId",
-          "workflowId",
           "stepId",
           "parentRunId",
           "batchId",
@@ -14828,8 +15702,13 @@
         "type": "object"
       },
       "ValidateDocumentResponse": {
-        "description": "Response from stateless document validation.",
+        "description": "Response from workflow validation.\n\n``catalog_checked`` says whether the CROSS-ENTITY checks ran — whether\nthe agents, tools and flows the steps reference were confirmed to\nexist. The stateless document-in route has no tenant catalog, so it\nanswers ``False`` there: its ``launchable`` speaks about structure\nonly and must not be read as \"this can run\" (#770). Validating a\nstored workflow by id answers ``True``.",
         "properties": {
+          "catalogChecked": {
+            "default": false,
+            "title": "Catalogchecked",
+            "type": "boolean"
+          },
           "issues": {
             "items": {
               "$ref": "#/components/schemas/ValidationIssueSchema"
@@ -15859,7 +16738,7 @@
         "type": "object"
       },
       "WorkflowMutationResponse": {
-        "description": "Response after applying a workflow mutation.\n\nReturns the new version AND the full authoritative document.\nThe backend owns all mutation logic — the frontend replaces its\nlocal state with this document to stay in sync.\n\nAlso includes real-time validation state so the frontend can\ndisplay validation warnings without a separate fetch.",
+        "description": "Response after applying a workflow mutation.\n\nReturns the new version AND the full authoritative document.\nThe backend owns all mutation logic — the frontend replaces its\nlocal state with this document to stay in sync.\n\nAlso includes real-time validation state so the frontend can\ndisplay validation warnings without a separate fetch, and\n``systemAdjustments``: the invariant repairs this call triggered.",
         "properties": {
           "document": {
             "additionalProperties": true,
@@ -15870,6 +16749,9 @@
             "default": false,
             "title": "Launchable",
             "type": "boolean"
+          },
+          "systemAdjustments": {
+            "$ref": "#/components/schemas/SystemAdjustments"
           },
           "validationIssues": {
             "items": {
@@ -17596,7 +18478,7 @@
     },
     "/api/v1/agents/{agent_id}/reference-docs/{ref_id}": {
       "delete": {
-        "description": "Detach a reference doc from an agent. Idempotent.",
+        "description": "Detach a reference doc from an agent. Idempotent.\n\nAnswers what ACTUALLY happened (#778): ``detached`` is false when\nthere was no link to remove, and ``stillInScope`` says whether the doc\nkeeps applying anyway — a tenant-wide doc is not switched off by\nremoving a link it never needed.",
         "operationId": "unlink_reference_from_agent_api_v1_agents__agent_id__reference_docs__ref_id__delete",
         "parameters": [
           {
@@ -17625,7 +18507,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/DeleteReferenceDocResponse"
+                  "$ref": "#/components/schemas/ReferenceDocLinkResponse"
                 }
               }
             },
@@ -17682,7 +18564,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/DeleteReferenceDocResponse"
+                  "$ref": "#/components/schemas/ReferenceDocLinkResponse"
                 }
               }
             },
@@ -28470,6 +29352,131 @@
         ]
       }
     },
+    "/api/v1/queues/overview": {
+      "get": {
+        "description": "Health header for the queues screen — counts, ages, dispatch state.\n\nOne request rather than three so a polled screen stays cheap. The\nrun and task counts are tenant-scoped; the ``dispatch`` block is a\nprocess-local liveness gauge — which is why its NUMBERS are\nadministrator-only. The caller's role is threaded into the service\nso that split is decided in one place (see\n``schemas.queues.QueueDispatchHealth``); every role still gets\n``healthy`` / ``unhealthyReason``.",
+        "operationId": "queue_overview_api_v1_queues_overview_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueueOverview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Queue Overview",
+        "tags": [
+          "queues"
+        ]
+      }
+    },
+    "/api/v1/queues/runs": {
+      "get": {
+        "description": "List the tenant's in-flight runs, oldest first.\n\n\"In flight\" = every run in a non-terminal status. Archived runs,\n``for_each`` sub-runs and Builder ``conversation`` runs are excluded\n(see ``RunRepository._in_flight_conditions`` for why each).\n\nOrdered OLDEST FIRST, unlike the run-history list: this is a queue\nview, so the item most at risk of being stuck belongs at the top.",
+        "operationId": "list_queue_runs_api_v1_queues_runs_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workflow",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Workflow"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueueRunListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Queue Runs",
+        "tags": [
+          "queues"
+        ]
+      }
+    },
     "/api/v1/reference-docs": {
       "get": {
         "operationId": "list_reference_docs_api_v1_reference_docs_get",
@@ -29811,6 +30818,53 @@
         ]
       }
     },
+    "/api/v1/runs/bulk/stop": {
+      "post": {
+        "description": "Stop a selection of runs — administrators only (epic #744).\n\nChanging the workspace's queue is an operator action, so this is\ngated on ``require_admin``; a member who wants to stop their OWN run\nuses ``POST /runs/{run_id}/cancel``, which allows admin-or-creator.\n\nPer-run outcomes are tallied (``cancelled`` / ``alreadyTerminal`` /\n``errored``) rather than aborting the batch on the first problem —\nan operator stopping 20 runs must not be blocked by one that\nfinished a second earlier.\n\n**Unlike ``/runs/bulk/archive`` this is NOT a single-commit route.**\n``RunService.bulk_stop`` commits after every run because cancelling\ntakes advisory ``xact`` locks on the run and all its descendants, and\nthose are only released by a real commit — batching them into one\ntransaction can exhaust the cluster-wide lock table (see the\n``bulk_stop`` docstring). The ``commit()`` below therefore only\npersists the ``runs_bulk_stopped`` summary audit event; it is kept\nbecause the route, not the service, owns that final boundary.",
+        "operationId": "bulk_stop_api_v1_runs_bulk_stop_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunStopBulkBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunStopBulkResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Bulk Stop",
+        "tags": [
+          "runs"
+        ]
+      }
+    },
     "/api/v1/runs/summary": {
       "get": {
         "description": "Get aggregate run counts for the operator dashboard.",
@@ -30040,7 +31094,7 @@
     },
     "/api/v1/runs/{run_id}/cancel": {
       "post": {
-        "description": "Cancel a running or waiting run.",
+        "description": "Accept a cancel request for a running or waiting run.\n\n**#725 — this ACCEPTS and returns; it does not wait for the cascade.**\nThe heavy lineage work (descendant walk, bulk settles, cost roll-up,\nmemory cleanup — seconds on a large FOR EACH) is drained on the\nexecutor from a durable ``task_queue`` job, off this event loop. The\nrun in this response is therefore still non-terminal, with\n``cancelRequestedAt`` set; ``status='cancelled'`` lands moments later\nover Realtime. Clients render \"Cancelling…\" from\n``cancelRequestedAt`` rather than assume a terminal status came back.\n\nDeliberately NOT admin-gated: stopping a run you started is an\nordinary member's right and the run-detail page offers it. The rule\n— **administrator OR the run's creator** — is enforced inside\n``RunService.request_cancel`` so every caller inherits it; a third\nparty gets 403. A run with no creator (cron / webhook) is admin-only.\nCancelling an already-terminal run stays a 422.",
         "operationId": "cancel_run_api_v1_runs__run_id__cancel_post",
         "parameters": [
           {
@@ -30296,6 +31350,55 @@
           }
         ],
         "summary": "Post Conversation Message",
+        "tags": [
+          "runs"
+        ]
+      }
+    },
+    "/api/v1/runs/{run_id}/restart": {
+      "post": {
+        "description": "Re-dispatch a stuck run — administrators only (epic #744).\n\nFor a run sitting in a non-terminal status that nothing is driving —\ntypically ``pending`` after a backend restart. The run is put back on\nthe RunQueue and resumes from its own step states; no new run is\ncreated. ``RunService.restart_run`` owns the mechanics (it reuses the\norphan-recovery rewind) and the idempotency decision.\n\nReturns ``already_active`` — a no-op, nothing enqueued — when a\nworker currently owns the run, so a double-click cannot double-\nadvance it. A terminal run is rejected with 422; an unknown or\ncross-tenant run with 404.\n\nA run PARKED on an open wait marker is also rejected with 422: it is\nsuspended by design and belongs to its wake ticket, not to this\nendpoint (``SUSPEND-RESUME-DESIGN.md`` §2). The message points the\noperator at the wake controls. A ``waiting`` run with no open marker\nis the genuinely stranded case and restarts normally.",
+        "operationId": "restart_run_api_v1_runs__run_id__restart_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunRestartResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Restart Run",
         "tags": [
           "runs"
         ]
@@ -32556,6 +33659,53 @@
         ]
       }
     },
+    "/api/v1/task-queue/dismiss-bulk": {
+      "post": {
+        "description": "Bulk dismiss — accepts ``ids`` OR ``filter`` (exactly one).\n\nStep one of the operator's two-step clean-up: put rows away without\nlosing them. Reversible (replay un-dismisses), so the blast radius is\na display change, not data loss — but it is still a change to the\nqueue, hence ``require_admin`` like every other write here (#744).\n\nPer-row outcomes are tallied, never raised: rows that are already\ndismissed or not in a dismissable state come back as ``skipped``.",
+        "operationId": "dismiss_bulk_api_v1_task_queue_dismiss_bulk_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DismissBulkBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DismissBulkResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Dismiss Bulk",
+        "tags": [
+          "task-queue"
+        ]
+      }
+    },
     "/api/v1/task-queue/export": {
       "get": {
         "description": "JSON export of filtered rows.\n\nCapped at ``INSPECTOR_MAX_LIMIT`` rows per request — multiple-\npage exports are out of scope (issue #332 \"Out of scope\" —\nanalytics is a separate epic). Response body is delivered through\na ``StreamingResponse`` so the JSON write happens row-by-row on\nthe wire rather than via a single ``json.dumps`` of the full\nlist; with the 100-row cap the difference is cosmetic, but the\nshape leaves room to lift the cap later without rewriting the\nhandler.",
@@ -32704,9 +33854,56 @@
         ]
       }
     },
+    "/api/v1/task-queue/purge": {
+      "post": {
+        "description": "Permanently delete dismissed rows — administrators only. No undo.\n\nStep two of the clean-up. Only rows that were ALREADY dismissed can\nbe deleted; the service enforces that and tallies everything else as\n``skipped``, so a mis-aimed filter cannot reach live work.\n\nThe filter form resolves with ``include_dismissed=True`` regardless\nof what the caller passed: the default inspector view HIDES dismissed\nrows, so honouring ``includeDismissed: false`` here would resolve to\nexactly the set of rows purge is forbidden to touch and always report\nzero. Purge only ever operates on the dismissed set by definition.",
+        "operationId": "purge_bulk_api_v1_task_queue_purge_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PurgeBulkBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PurgeBulkResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Purge Bulk",
+        "tags": [
+          "task-queue"
+        ]
+      }
+    },
     "/api/v1/task-queue/replay-bulk": {
       "post": {
-        "description": "Bulk replay — accepts ``ids`` OR ``filter`` (exactly one).\n\n``filter`` mirrors the GET ``/`` query parameters (state, owner,\nworkflow, batch, time-range). The route resolves the filter into a\nconcrete id list (capped at 500 to bound the operation) before\ndelegating to the service.",
+        "description": "Bulk replay — accepts ``ids`` OR ``filter`` (exactly one).\n\nAdministrators only (epic #744): reads are workspace-wide, writes\nare an operator's. The blast radius here is the argument — a filter\nform can re-run up to 500 rows in one click.\n\n``filter`` mirrors the GET ``/`` query parameters (state, owner,\nworkflow, batch, time-range). The route resolves the filter into a\nconcrete id list (capped at 500 to bound the operation) before\ndelegating to the service.",
         "operationId": "replay_bulk_api_v1_task_queue_replay_bulk_post",
         "requestBody": {
           "content": {
@@ -32802,7 +33999,7 @@
     },
     "/api/v1/task-queue/{task_id}/dismiss": {
       "post": {
-        "description": "Soft-archive a ``dead_letter`` row.\n\nReturns 422 (``ValidationError``) for non-dead-letter rows; 404 for\ncross-tenant or missing rows.",
+        "description": "Soft-archive a ``failed`` / ``dead_letter`` row — admins only (#744).\n\nDismissing is the decision that a piece of work will never be done;\nthat call belongs to the workspace's operator, not to anyone who can\nview the queue.\n\nReturns 422 (``ValidationError``) for rows in any other state (live\nor successful work is not clean-up); 404 for cross-tenant or missing\nrows.",
         "operationId": "dismiss_task_api_v1_task_queue__task_id__dismiss_post",
         "parameters": [
           {
@@ -32851,7 +34048,7 @@
     },
     "/api/v1/task-queue/{task_id}/replay": {
       "post": {
-        "description": "Reset a single task to ``pending`` (idempotent).",
+        "description": "Reset a single task to ``pending`` (idempotent) — admins only.\n\nEpic #744 permission split: every member of the workspace may SEE\nthe queue, only an administrator may CHANGE it. Replay re-runs work\nwith real side effects, so it is an operator action.",
         "operationId": "replay_task_api_v1_task_queue__task_id__replay_post",
         "parameters": [
           {
@@ -35192,7 +36389,7 @@
     },
     "/api/v1/workflows/validate": {
       "post": {
-        "description": "Validate a workflow document without saving.\n\nStateless endpoint — no database access. Accepts a raw workflow\ndocument and returns all validation issues with severity classification.\nUseful for the advanced JSON editor to get real-time validation feedback.",
+        "description": "Validate a workflow document without saving.\n\nStateless endpoint — no database access. Accepts a raw workflow\ndocument and returns all validation issues with severity classification.\nUseful for the advanced JSON editor to get real-time validation feedback.\n\nSTRUCTURE ONLY: with no tenant catalog, the cross-entity checks do not\nrun, so a green ``launchable`` here does not mean the workflow can run\n(#770). The response says so via ``catalogChecked``; validate a stored\nworkflow by id for the full answer.",
         "operationId": "validate_document_api_v1_workflows_validate_post",
         "requestBody": {
           "content": {
@@ -36327,6 +37524,55 @@
           }
         ],
         "summary": "Unpublish Workflow",
+        "tags": [
+          "workflows"
+        ]
+      }
+    },
+    "/api/v1/workflows/{workflow_id}/validate": {
+      "post": {
+        "description": "Validate a stored workflow against this tenant's catalog.\n\nUnlike the stateless route, this confirms that the agents, tools and\nflows the steps reference actually exist — the question \"can this\nactually run?\" (#770).",
+        "operationId": "validate_stored_workflow_api_v1_workflows__workflow_id__validate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workflow_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workflow Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidateDocumentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Validate Stored Workflow",
         "tags": [
           "workflows"
         ]

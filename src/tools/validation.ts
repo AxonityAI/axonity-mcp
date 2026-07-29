@@ -19,37 +19,55 @@ export function registerValidationTools(
 ): void {
   server.tool(
     "validate_workflow",
-    "Check a workflow document for STRUCTURAL problems only. Returns `launchable` " +
-      "plus an `issues` list (each with code, message, severity, stepIds, edgeIds). " +
-      "\n\nRead `launchable` as 'structurally sound', NOT as 'this will run'. It " +
-      "checks the graph — ids, edges, triggers, schemas — and does NOT verify that " +
-      "the agents, tools or output schemas the steps reference still exist. A " +
-      "workflow can be launchable here and fail at runtime on a dead reference, so " +
-      "do not report it to a user as ready. The response is labelled " +
-      "`verdictScope: \"structural\"` for the same reason. " +
-      "\n\nSTATELESS: it validates the document you pass and neither reads nor " +
-      "writes the stored workflow, so read-only service tokens can call it. Call it " +
-      "after apply_workflow_mutations and before request_publish_workflow.",
+    "Check a workflow for problems. Returns `launchable`, `catalogChecked`, and an " +
+      "`issues` list (each with code, message, severity, stepIds, edgeIds). " +
+      "\n\nPass EXACTLY ONE of workflowId or document — they answer different " +
+      "questions:" +
+      "\n- workflowId → validates the STORED workflow against this tenant's " +
+      "catalog. This is the real 'can this run?': it confirms the agents, tools " +
+      "and flows the steps reference actually exist. Answers catalogChecked: true." +
+      "\n- document → validates the document you pass, STATELESSLY. No database, " +
+      "so read-only service tokens can call it, but with no catalog the " +
+      "cross-entity checks cannot run: `launchable` here means 'structurally " +
+      "sound', NOT 'this will run'. Answers catalogChecked: false. Use it for a " +
+      "draft you have not saved, or for fast feedback while editing." +
+      "\n\nA green verdict is what a reader remembers, so check `catalogChecked` " +
+      "before telling anyone a workflow is ready. Call this after " +
+      "apply_workflow_mutations and before request_publish_workflow.",
     {
+      workflowId: z
+        .string()
+        .optional()
+        .describe(
+          "Validate this STORED workflow against the tenant catalog. Omit if you " +
+            "are passing a document.",
+        ),
       document: z
         .record(z.unknown())
-        .describe("The workflow document to validate (as returned by read_workflow)."),
+        .optional()
+        .describe(
+          "Validate this document statelessly (as returned by read_workflow). " +
+            "Omit if you are passing a workflowId.",
+        ),
     },
-    async ({ document }) =>
+    async ({ workflowId, document }) =>
       guard(async () => {
-        const result = await client.post<Record<string, unknown>>(
-          "/api/v1/workflows/validate",
-          { document },
+        // Refuse the ambiguous call rather than silently preferring one: the two
+        // routes answer different questions, and guessing would hand back a
+        // verdict for something the caller did not ask about.
+        if ((workflowId === undefined) === (document === undefined)) {
+          throw new Error(
+            "Pass exactly one of workflowId or document. workflowId validates the " +
+              "stored workflow against the tenant catalog (the 'can this run?' " +
+              "answer); document validates an unsaved document structurally.",
+          );
+        }
+
+        return jsonResult(
+          workflowId === undefined
+            ? await client.post("/api/v1/workflows/validate", { document })
+            : await client.post(`/api/v1/workflows/${workflowId}/validate`),
         );
-        // `launchable` reads as "can run" and that is what a reader remembers.
-        // Label the verdict in the payload too, not only in the description.
-        return jsonResult({
-          ...result,
-          verdictScope: "structural",
-          verdictNote:
-            "Structural check only — referenced agents, tools and output schemas " +
-            "are NOT resolved. Launchable here does not mean runnable.",
-        });
       }),
   );
 

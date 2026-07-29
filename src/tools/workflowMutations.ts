@@ -36,6 +36,26 @@ interface MutationResponse {
   document?: unknown;
   launchable?: boolean;
   validationIssues?: unknown[];
+  /**
+   * What the platform changed on its own in this call: the end-step edges it
+   * wired, and the bound inputs whose contract it re-derived. Ids and names
+   * only, by design, so it rides safely on the summary — and it is the whole
+   * point of forwarding it: an author who found edges they never asked for
+   * previously had to diff the entire document to see them.
+   */
+  systemAdjustments?: {
+    addedEdges?: unknown[];
+    removedEdges?: unknown[];
+    rederivedInputs?: unknown[];
+  };
+}
+
+/** True when the platform reported doing something of its own accord. */
+function hasAdjustments(a: MutationResponse["systemAdjustments"]): boolean {
+  if (!a) return false;
+  return Boolean(
+    a.addedEdges?.length || a.removedEdges?.length || a.rederivedInputs?.length,
+  );
 }
 
 /**
@@ -91,6 +111,11 @@ export function summarizeMutation(
     ...(response.launchable === undefined ? {} : { launchable: response.launchable }),
     ...(stepCount === undefined ? {} : { stepCount }),
     ...(edgeCount === undefined ? {} : { edgeCount }),
+    // Only when something actually happened — an empty object on every response
+    // trains a reader to skip the field.
+    ...(hasAdjustments(response.systemAdjustments)
+      ? { systemAdjustments: response.systemAdjustments }
+      : {}),
     validationIssues: kept,
     ...(issues.length > kept.length
       ? {
@@ -202,21 +227,24 @@ export function registerWorkflowMutations(
       "update_edge, remove_edge, add_decision_condition, convert_to_loop, " +
       "setup_loop_decision, advanced_edit, attach_output_schema, " +
       "detach_output_schema." +
-      "\n\nA COMMAND PAYLOAD IS NOT SHAPED LIKE THE DOCUMENT — do not copy a step " +
-      "or edge out of the document and send it back:" +
-      "\n- add_step takes { name, position: {after|before: <stepId>, …}, type?, " +
-      "id?, config? }. `name` and `position` are REQUIRED. It does NOT accept " +
-      "inputs / outputs / contract, and an unknown key is IGNORED WITHOUT ERROR — " +
-      "set those in a follow-up update_step and read the step back to confirm." +
-      "\n- add_edge takes { fromStepId, toStepId } — NOT the document's from/to — " +
-      "plus optional edgeType/condition/order. It has no id field: the platform " +
-      "assigns the edge id, so one you supply is ignored." +
+      "\n\nPAYLOAD CONTRACT:" +
+      "\n- add_step builds a COMPLETE step in ONE call: { name, position: " +
+      "{after|before: <stepId>, …} } are required, and id, type, typeId, config, " +
+      "contract, inputs, outputs and edgeType are all accepted alongside them. No " +
+      "follow-up update_step is needed merely to fill the step in." +
+      "\n- add_edge accepts the document's own from/to as well as " +
+      "fromStepId/toStepId, and HONOURS an id you supply rather than replacing it, " +
+      "so ids stay diffable against an environment you are reproducing." +
+      "\n- Payloads are STRICT: an unknown or misspelled key is a 422 that names " +
+      "it, never a silent drop. Read the error instead of assuming a value landed." +
+      "\n\nTWO INVARIANTS RUN AFTER EVERY EDIT, and the response reports what they " +
+      "did in `systemAdjustments` (addedEdges / removedEdges / rederivedInputs):" +
+      "\n- Every step is guaranteed to reach the END point; the platform wires that " +
+      "edge itself. An edge you did not ask for is this, and it is listed." +
       "\n- A bound input's contract, its description included, is DERIVED from the " +
       "output it reads and cannot be authored on its own. Set the text on the " +
-      "PRODUCING step's output; editing the consuming input does not stick, and a " +
-      "downstream description changing by itself is this rule, not data loss." +
-      "\n- Every step is guaranteed to reach the END point: the platform wires that " +
-      "edge itself. A missing end connection is not yours to fix.",
+      "PRODUCING step's output; a downstream description changing by itself is this " +
+      "rule at work, and the inputs it re-derived are listed.",
     {
       id: z.string().describe("The workflow's id."),
       expectedVersion: z
