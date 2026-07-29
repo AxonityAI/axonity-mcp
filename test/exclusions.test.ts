@@ -62,6 +62,7 @@ const ARGS: Record<string, unknown> = {
   workflows: [{ id: "x", expectedVersion: 1 }],
   functions: [{ name: "f", code: "def f(): pass" }],
   code: "x",
+  requests: [{ entityType: "tool", entityId: "x" }],
 };
 
 // A path is forbidden if it hits a route family the connector must never use.
@@ -70,6 +71,9 @@ const ARGS: Record<string, unknown> = {
 const FORBIDDEN: [string, RegExp][] = [
   ["direct publish/unpublish", /\/(publish|unpublish)$/],
   ["approve/reject an approval", /\/publish-approvals\/[^/]+\/(approve|reject)$/],
+  // The bulk decision routes exist for the human review UI. Requesting in bulk
+  // is fine (/publish-approvals/bulk); DECIDING in bulk is not ours to do.
+  ["bulk approve/reject", /\/publish-approvals\/bulk-(approve|reject)$/],
   ["direct version publish", /\/versions\/(publish|unpublish)(\/|$)/],
   ["secrets", /\/secrets(\/|$)/],
   ["service tokens", /\/service-tokens(\/|$)/],

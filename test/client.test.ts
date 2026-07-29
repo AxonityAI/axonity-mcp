@@ -97,3 +97,68 @@ describe("AxonityClient.request", () => {
     expect(err.status).toBe(0);
   });
 });
+
+/**
+ * #30 — an older backend must say so, not answer a bare 405.
+ *
+ * 0.3.4 shipped validate_workflow's workflowId form. Against a sandbox running
+ * a branch 15 commits behind it answered 405 on every attempt: the client was
+ * right, the backend was old, and nothing said so. The reader goes hunting for
+ * a bug in their own call while the most valuable check in the release is
+ * silently unavailable.
+ */
+describe("backend/connector version skew", () => {
+  function clientAnswering(status: number, body: unknown = { detail: "Method Not Allowed" }) {
+    const fetchMock = vi.fn(async () => ({
+      ok: false,
+      status,
+      text: async () => JSON.stringify(body),
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+    return new AxonityClient({ apiUrl: "https://api.test", token: "axs_x" });
+  }
+
+  it("names skew — not the caller's call — on a 405", async () => {
+    const client = clientAnswering(405);
+    await expect(client.post("/api/v1/workflows/wf-1/validate")).rejects.toThrow(
+      /backend is OLDER than this connector/,
+    );
+  });
+
+  it("names the route and what added it, so a human can check the deploy", async () => {
+    const client = clientAnswering(405);
+    const err = await client
+      .post("/api/v1/workflows/wf-1/validate")
+      .catch((e: Error) => e);
+    expect(err.message).toContain("POST /api/v1/workflows/wf-1/validate");
+    expect(err.message).toMatch(/axonity-flow#770/);
+    expect((err as { code?: string }).code).toBe("backend_version_skew");
+    // Retrying cannot help until the backend moves.
+    expect((err as { retryable?: boolean }).retryable).toBe(false);
+  });
+
+  it("reports a 404 as possible skew only for routes this version added", async () => {
+    const newRoute = clientAnswering(404, { detail: "Not Found" });
+    const err = await newRoute
+      .post("/api/v1/tools/tl-1/dry-run")
+      .catch((e: Error) => e);
+    expect(err.message).toMatch(/axonity-flow#792/);
+    // A 404 is ambiguous, so it says so rather than blaming the deploy outright.
+    expect(err.message).toMatch(/no such id/);
+  });
+
+  it("leaves an ordinary 404 alone — an unknown id is not a deployment problem", async () => {
+    const client = clientAnswering(404, { detail: "Not Found" });
+    const err = await client.get("/api/v1/agents/ag-1").catch((e: Error) => e);
+    expect(err.message).not.toMatch(/OLDER than this connector/);
+    expect(err.message).toMatch(/Not found/);
+  });
+
+  it("ignores the query string when matching a route", async () => {
+    const client = clientAnswering(405);
+    const err = await client
+      .del("/api/v1/workflows/wf-1/validate", { expectedVersion: 2 })
+      .catch((e: Error) => e);
+    expect(err.message).toMatch(/backend is OLDER/);
+  });
+});
