@@ -11,11 +11,13 @@ diff in review.
 
 ## Provenance
 
-- Generated from **axonity-flow `main`** at commit `c7fe5421`.
-  (First pinned at `0c301308`, PR #726 — the backend half of epic axonity-mcp#10,
-  stories #721–#724. Refreshed at `c7fe5421`: one added route,
-  `GET /runs/{run_id}/session-memory/{file_id}`, plus its schema. No route was
-  removed or retyped and the authoring contract is unchanged.)
+- Generated from **axonity-flow `main`** at commit `93fda3c4` — PR #780, the
+  backend half of epic axonity-flow#764 (stories B1–B8). That commit changed the
+  authoring contract itself: `add_step` accepts a complete step, `add_edge`
+  accepts `from`/`to` and honours a caller id, payload models became
+  `extra="forbid"`, mutation responses carry `systemAdjustments`, and
+  `POST /workflows/{id}/validate` was added alongside `catalogChecked`.
+  (Previously pinned at `0c301308` (PR #726) and `c7fe5421`.)
 - Deterministic output (sorted keys, dev/test routes pruned): regenerating on
   the same backend commit produces a byte-identical file.
 

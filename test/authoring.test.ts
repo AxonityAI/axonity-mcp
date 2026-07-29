@@ -329,21 +329,28 @@ describe("tool descriptions state the contract the platform enforces", () => {
   it("apply_workflow_mutations names the real add_step / add_edge payloads", () => {
     const text = describedTools(registerWorkflowMutations).apply_workflow_mutations;
 
-    // AddStepPayload: name + position required; inputs/outputs/contract absent
-    // from the model, and no extra="forbid", so unknown keys vanish quietly.
+    // AddStepPayload after #766: name + position required, and contract/inputs/
+    // outputs accepted alongside them, so a step is complete in one call.
     expect(text).toMatch(/name.*position|position.*name/s);
-    expect(text).toMatch(/IGNORED WITHOUT ERROR/);
-    expect(text).toMatch(/update_step/);
-    // AddEdgePayload: aliases fromStepId/toStepId, and it has no id field.
+    expect(text).toMatch(/ONE call/);
+    expect(text).toMatch(/contract, inputs, outputs/);
+    // extra="forbid" on the payload models — an unknown key is a 422, not a drop.
+    expect(text).toMatch(/STRICT/);
+    expect(text).toMatch(/422/);
+    // AddEdgePayload after #767: from/to accepted, caller id honoured.
     expect(text).toMatch(/fromStepId/);
-    expect(text).toMatch(/toStepId/);
     expect(text).toMatch(/from\/to/);
+    expect(text).toMatch(/HONOURS an id/);
   });
 
-  it("apply_workflow_mutations states both platform invariants", () => {
+  it("apply_workflow_mutations states both invariants AND that they report themselves", () => {
     const text = describedTools(registerWorkflowMutations).apply_workflow_mutations;
     expect(text, "derived input contracts").toMatch(/DERIVED from the/);
     expect(text, "END wiring").toMatch(/END point/);
+    // #771 — the adjustments ride on the response, so an author no longer has to
+    // diff the whole document to find an edge they did not ask for.
+    expect(text).toMatch(/systemAdjustments/);
+    expect(text).toMatch(/rederivedInputs/);
   });
 
   it("apply_workflow_mutations says the response is a summary and how to get the document", () => {
@@ -355,15 +362,42 @@ describe("tool descriptions state the contract the platform enforces", () => {
 
   it("validate_workflow does not let `launchable` read as `runnable`", () => {
     const text = describedTools(registerValidationTools).validate_workflow;
-    expect(text).toMatch(/STRUCTURAL/);
-    expect(text).toMatch(/does NOT verify/i);
+    expect(text).toMatch(/EXACTLY ONE/);
+    expect(text).toMatch(/catalogChecked/);
+    expect(text).toMatch(/structurally\s+sound/);
   });
 
-  it("labels the verdict in the response, not only in the description", async () => {
+  it("routes by workflowId to the catalog-aware route, by document to the stateless one", async () => {
+    const { handlers, client } = setup(registerValidationTools);
+
+    await handlers.get("validate_workflow")!({ workflowId: "wf-1" });
+    expect(client.post).toHaveBeenLastCalledWith("/api/v1/workflows/wf-1/validate");
+
+    await handlers.get("validate_workflow")!({ document: { steps: [] } });
+    expect(client.post).toHaveBeenLastCalledWith("/api/v1/workflows/validate", {
+      document: { steps: [] },
+    });
+  });
+
+  it("refuses both or neither rather than guessing which question was asked", async () => {
+    const { handlers, client } = setup(registerValidationTools);
+
+    for (const args of [{}, { workflowId: "wf-1", document: { steps: [] } }]) {
+      const result = (await handlers.get("validate_workflow")!(args)) as {
+        isError?: boolean;
+        content: { text: string }[];
+      };
+      expect(result.isError).toBe(true);
+      expect(result.content[0].text).toMatch(/exactly one/i);
+    }
+    expect(client.post).not.toHaveBeenCalled();
+  });
+
+  it("forwards the backend's own catalogChecked verdict", async () => {
     const { server, handlers } = fakeServer();
     const client = {
       ...fakeClient(),
-      post: vi.fn(async () => ({ launchable: true, issues: [] })),
+      post: vi.fn(async () => ({ launchable: true, catalogChecked: false, issues: [] })),
     };
     registerValidationTools(server as never, client as unknown as AxonityClient);
 
@@ -372,8 +406,9 @@ describe("tool descriptions state the contract the platform enforces", () => {
     };
     const payload = JSON.parse(result.content[0].text);
     expect(payload.launchable).toBe(true);
-    expect(payload.verdictScope).toBe("structural");
-    expect(payload.verdictNote).toMatch(/NOT resolved/);
+    // The backend says whether the catalog was consulted; the client does not
+    // invent a label of its own on top of it.
+    expect(payload.catalogChecked).toBe(false);
   });
 
   it("the conventions guide carries the same two invariants", async () => {
