@@ -150,7 +150,11 @@ export function registerApprovalTools(
     "List this tenant's publish approvals and their status — how you find out " +
       "whether a request_publish_* was approved or rejected. Optionally filter " +
       "by status, and page through with limit/offset. Approving and rejecting " +
-      "are human-only actions in Axonity; no tool can do them.",
+      "are human-only actions in Axonity; no tool can do them. " +
+      "\n\nReadiness is recomputed WHEN YOU READ, not frozen at request time: " +
+      "`readiness` is the verdict right now, `readinessAtRequest` is what the " +
+      "requester saw, and `readinessChanged` says whether it moved. So a blocker " +
+      "you saw an hour ago may already be resolved — and 'ready' means ready now.",
     {
       status: z
         .enum(["pending", "approved", "rejected"])
@@ -168,13 +172,76 @@ export function registerApprovalTools(
   server.tool(
     "get_publish_approval",
     "Read one publish approval by id — lets you poll a specific request rather " +
-      "than re-fetching the whole list.",
+      "than re-fetching the whole list. Its `readiness` is recomputed on this " +
+      "read, so it reflects the entity as it stands NOW; `readinessAtRequest` " +
+      "keeps what the requester saw and `readinessChanged` flags a difference. " +
+      "This is how you check whether a blocker (for a tool, typically " +
+      "`dry_run_required`) has since been cleared.",
     { approvalId: z.string().describe("The approval's id, from request_publish_* or list_publish_approvals.") },
     async ({ approvalId }) =>
       guard(async () =>
         jsonResult(await client.get(`/api/v1/publish-approvals/${approvalId}`)),
       ),
   );
+
+  server.tool(
+    "request_publish_bulk",
+    "Request publication of MANY entities in one call — the same human approval " +
+      "queue as request_publish_*, one entry per entity, up to 200. Taking a " +
+      "whole tenant live means hundreds of individual requests otherwise, which " +
+      "turns the human review it exists for into clicking through. This does NOT " +
+      "publish and does NOT approve: a human still decides, in Axonity. " +
+      "\n\nNOT TRANSACTIONAL: each entry carries its own outcome and one failure " +
+      "does not undo the entries before it. The response is " +
+      "`{ results: [{ id, success, status, error }], succeededCount, " +
+      "failedCount }`. Read the per-entry results — retrying the whole list " +
+      "because failedCount is non-zero double-requests everything that worked.",
+    {
+      requests: z
+        .array(
+          z.object({
+            entityType: z
+              .enum([
+                "workflow",
+                "agent",
+                "tool",
+                "skill",
+                "policy",
+                "reference_doc",
+                "persona",
+                "output_schema",
+                "prompt_snippet",
+                "flow",
+                "company",
+              ])
+              .describe("What kind of entity this entry publishes."),
+            entityId: z
+              .string()
+              .optional()
+              .describe(
+                "The entity's id. Omit ONLY for company, which is a singleton " +
+                  "the server resolves from your tenant.",
+              ),
+            changeSummary: z
+              .string()
+              .optional()
+              .describe("A short note for the approver on what changed and why."),
+          }),
+        )
+        .min(1)
+        .max(200)
+        .describe("One entry per entity to propose for publishing."),
+    },
+    async ({ requests }) =>
+      guard(async () =>
+        jsonResult(await client.post("/api/v1/publish-approvals/bulk", { requests })),
+      ),
+  );
+
+  // Deliberately absent: bulk approve and bulk reject. Those routes exist on the
+  // backend for the human review UI. Deciding an approval is a human action in
+  // Axonity and no tool of this connector may take it — the same boundary
+  // list_publish_approvals states, and test/exclusions.test.ts enforces.
 }
 
 export function registerExecutionTools(
@@ -183,10 +250,16 @@ export function registerExecutionTools(
 ): void {
   server.tool(
     "execute_tool",
-    "Run tool code directly, without saving it — the way to test a tool you're " +
-      "authoring before create_tool/update_tool. Returns stdout/stderr, the " +
+    "Run tool code directly, WITHOUT saving it — the way to test a tool you are " +
+      "authoring, before create_tool/update_tool. Returns stdout/stderr, the " +
       "result, and a typed errorType (timeout/memory/import/runtime/validation) " +
-      "on failure. Pass toolId to run against an already-saved tool's context.",
+      "on failure. Pass toolId to run against an already-saved tool's context. " +
+      "\n\nThis does NOT satisfy the publish gate, however cleanly it runs. It " +
+      "executes the functions YOU supply, which need not be the tool's stored " +
+      "code, so a pass here proves nothing about what would actually ship. To " +
+      "clear the `dry_run_required` blocker on a SAVED tool, use `dry_run_tool` — " +
+      "that runs the tool's own stored implementation and is the only run that " +
+      "counts.",
     {
       imports: z.string().optional().describe("The import block. Defaults to empty."),
       functions: z
@@ -213,6 +286,40 @@ export function registerExecutionTools(
             ...(inputParams ? { inputParams } : {}),
             ...(timeout ? { timeout } : {}),
             ...(toolId ? { toolId } : {}),
+          }),
+        ),
+      ),
+  );
+
+  server.tool(
+    "dry_run_tool",
+    "Prove a SAVED tool by running its OWN stored code in the sandbox. This is " +
+      "the run that satisfies the publish gate: a clean pass stamps the tool's " +
+      "current version and clears the `dry_run_required` blocker, so " +
+      "request_publish_tool can succeed. Nothing about the code is supplied by " +
+      "you — only sample input — which is exactly why it counts and why " +
+      "execute_tool does not.\n" +
+      "Editing the tool afterwards bumps its version and invalidates the proof, " +
+      "so dry-run again after your last edit, not before it.\n" +
+      "Expect a refusal for tools that have no code to prove: 403 for a " +
+      "platform-shipped (locked) tool, 422 for a connector, a builtin-backed " +
+      "validator, or a tool with an empty implementation.",
+    {
+      toolId: z.string().describe("The saved tool's id."),
+      inputParams: z
+        .record(z.unknown())
+        .optional()
+        .describe(
+          "Sample arguments for the tool's entry-point function. Omit for none — " +
+            "but give it realistic input: a run that never reaches the real work " +
+            "still stamps the version.",
+        ),
+    },
+    async ({ toolId, inputParams }) =>
+      guard(async () =>
+        jsonResult(
+          await client.post(`/api/v1/tools/${toolId}/dry-run`, {
+            inputParams: inputParams ?? {},
           }),
         ),
       ),

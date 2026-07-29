@@ -946,6 +946,44 @@
         "title": "BranchOptionSchema",
         "type": "object"
       },
+      "BulkApprovalRequest": {
+        "description": "POST /publish-approvals/bulk — request several publishes at once.",
+        "properties": {
+          "requests": {
+            "description": "One entry per entity to propose for publishing.",
+            "items": {
+              "$ref": "#/components/schemas/CreateApprovalRequest"
+            },
+            "maxItems": 200,
+            "title": "Requests",
+            "type": "array"
+          }
+        },
+        "required": [
+          "requests"
+        ],
+        "title": "BulkApprovalRequest",
+        "type": "object"
+      },
+      "BulkDecisionRequest": {
+        "description": "POST /publish-approvals/bulk-approve | bulk-reject.",
+        "properties": {
+          "approvalIds": {
+            "description": "The approvals to decide, by id.",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 200,
+            "title": "Approvalids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "approvalIds"
+        ],
+        "title": "BulkDecisionRequest",
+        "type": "object"
+      },
       "BulkDeleteResultItem": {
         "description": "Result for a single workflow in a bulk delete operation.",
         "properties": {
@@ -1037,6 +1075,79 @@
           "failedCount"
         ],
         "title": "BulkDeleteWorkflowsResponse",
+        "type": "object"
+      },
+      "BulkResultItem": {
+        "description": "What happened to ONE item of a bundle.\n\nPer-item, because a partial failure is normal and must be visible: item 3\nfailing does not roll back items 1 and 2, and the caller has to be able to\nsee exactly which is which (#795).",
+        "properties": {
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "pending",
+                  "approved",
+                  "rejected"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "success": {
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "success"
+        ],
+        "title": "BulkResultItem",
+        "type": "object"
+      },
+      "BulkResultResponse": {
+        "description": "The outcome of a bundled request or decision.\n\nNOT transactional: every item is attempted independently and reported on\nits own. Each one is still gated on its own FRESH readiness and audited\nindividually — bulk is a convenience for the human, never a way around\nthe gate.",
+        "properties": {
+          "failedCount": {
+            "title": "Failedcount",
+            "type": "integer"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/BulkResultItem"
+            },
+            "title": "Results",
+            "type": "array"
+          },
+          "succeededCount": {
+            "title": "Succeededcount",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "results",
+          "succeededCount",
+          "failedCount"
+        ],
+        "title": "BulkResultResponse",
         "type": "object"
       },
       "BulkRunRequest": {
@@ -1143,6 +1254,29 @@
           "icon"
         ],
         "title": "CapabilitySchema",
+        "type": "object"
+      },
+      "ChannelReplyRequest": {
+        "description": "An inbound reply from a non-chat channel (#777 S5).\n\nA channel adapter (email / WhatsApp webhook) POSTs the person's reply\nplus the wait ``token`` it received in the outbound message. The token —\nnot a user session — authorises the resume.",
+        "properties": {
+          "message": {
+            "maxLength": 1000000,
+            "minLength": 1,
+            "title": "Message",
+            "type": "string"
+          },
+          "token": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token",
+          "message"
+        ],
+        "title": "ChannelReplyRequest",
         "type": "object"
       },
       "CiPlanRequest": {
@@ -4713,6 +4847,101 @@
           "files"
         ],
         "title": "DraftMigrationPlanRequest",
+        "type": "object"
+      },
+      "DryRunToolRequest": {
+        "description": "POST /api/v1/tools/{tool_id}/dry-run — request body.\n\nNo code: the point of a dry-run is that it runs the tool's OWN stored\nimplementation. Only the sample input is supplied (#792).",
+        "properties": {
+          "inputParams": {
+            "additionalProperties": true,
+            "description": "Sample arguments for the tool's entry-point function.",
+            "title": "Inputparams",
+            "type": "object"
+          }
+        },
+        "title": "DryRunToolRequest",
+        "type": "object"
+      },
+      "DryRunToolResponse": {
+        "description": "POST /api/v1/tools/{tool_id}/dry-run — response body.\n\n``dryRunClean`` is the publish gate's verdict for the version that was\nrun: true means this tool's CURRENT code is proven and the\n``dry_run_required`` blocker is cleared. Editing the tool bumps its\nversion and invalidates the proof.",
+        "properties": {
+          "dryRunClean": {
+            "title": "Dryrunclean",
+            "type": "boolean"
+          },
+          "durationMs": {
+            "default": 0.0,
+            "title": "Durationms",
+            "type": "number"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "errorType": {
+            "anyOf": [
+              {
+                "enum": [
+                  "timeout",
+                  "memory",
+                  "import",
+                  "runtime",
+                  "validation"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Errortype"
+          },
+          "result": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result"
+          },
+          "stderr": {
+            "default": "",
+            "title": "Stderr",
+            "type": "string"
+          },
+          "stdout": {
+            "default": "",
+            "title": "Stdout",
+            "type": "string"
+          },
+          "success": {
+            "title": "Success",
+            "type": "boolean"
+          },
+          "toolId": {
+            "title": "Toolid",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "toolId",
+          "version",
+          "success",
+          "dryRunClean"
+        ],
+        "title": "DryRunToolResponse",
         "type": "object"
       },
       "EdgeSchema": {
@@ -9035,6 +9264,16 @@
             "title": "Readiness",
             "type": "object"
           },
+          "readinessAtRequest": {
+            "additionalProperties": true,
+            "title": "Readinessatrequest",
+            "type": "object"
+          },
+          "readinessChanged": {
+            "default": false,
+            "title": "Readinesschanged",
+            "type": "boolean"
+          },
           "requestedByKind": {
             "enum": [
               "service_token",
@@ -9489,9 +9728,16 @@
             "title": "Waitreason"
           },
           "workflowId": {
-            "format": "uuid",
-            "title": "Workflowid",
-            "type": "string"
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workflowid"
           },
           "workflowName": {
             "anyOf": [
@@ -9507,7 +9753,6 @@
         },
         "required": [
           "id",
-          "workflowId",
           "status"
         ],
         "title": "QueueRunRow",
@@ -10641,8 +10886,15 @@
             "type": "array"
           },
           "workflowId": {
-            "title": "Workflowid",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workflowid"
           },
           "workflowName": {
             "anyOf": [
@@ -10692,7 +10944,6 @@
         },
         "required": [
           "id",
-          "workflowId",
           "status",
           "stepStates",
           "stepOrder"
@@ -10856,8 +11107,15 @@
             "type": "integer"
           },
           "workflowId": {
-            "title": "Workflowid",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workflowid"
           },
           "workflowName": {
             "anyOf": [
@@ -10895,7 +11153,6 @@
         },
         "required": [
           "id",
-          "workflowId",
           "status"
         ],
         "title": "RunSummary",
@@ -13420,8 +13677,15 @@
             "type": "string"
           },
           "workflowId": {
-            "title": "Workflowid",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workflowid"
           },
           "workflowName": {
             "anyOf": [
@@ -13437,7 +13701,6 @@
         },
         "required": [
           "runId",
-          "workflowId",
           "stepId",
           "stepName",
           "stepType",
@@ -29205,6 +29468,147 @@
         ]
       }
     },
+    "/api/v1/publish-approvals/bulk": {
+      "post": {
+        "description": "Request several publishes in one call (#795).\n\nPer-item result: a partial failure is normal and visible. Declared BEFORE\n``/{approval_id}/...`` so the literal path is not swallowed by the id\nparameter.",
+        "operationId": "bulk_request_approvals_api_v1_publish_approvals_bulk_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkApprovalRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkResultResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Bulk Request Approvals",
+        "tags": [
+          "publish-approvals"
+        ]
+      }
+    },
+    "/api/v1/publish-approvals/bulk-approve": {
+      "post": {
+        "description": "Approve several pending requests. Admin-only.\n\nA convenience for the human, never a way around the gate: each id is\ndecided through the single-item path, so it keeps its own fresh readiness\ncheck and its own audit event.",
+        "operationId": "bulk_approve_approvals_api_v1_publish_approvals_bulk_approve_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkDecisionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkResultResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Bulk Approve Approvals",
+        "tags": [
+          "publish-approvals"
+        ]
+      }
+    },
+    "/api/v1/publish-approvals/bulk-reject": {
+      "post": {
+        "description": "Reject several pending requests. Admin-only. Nothing is published.",
+        "operationId": "bulk_reject_approvals_api_v1_publish_approvals_bulk_reject_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkDecisionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkResultResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Bulk Reject Approvals",
+        "tags": [
+          "publish-approvals"
+        ]
+      }
+    },
     "/api/v1/publish-approvals/{approval_id}": {
       "get": {
         "description": "Get a single approval — lets an agent poll one request, not the queue.",
@@ -31136,6 +31540,62 @@
           }
         ],
         "summary": "Cancel Run",
+        "tags": [
+          "runs"
+        ]
+      }
+    },
+    "/api/v1/runs/{run_id}/channel-reply": {
+      "post": {
+        "description": "Resume a parked conversation from an inbound channel reply (#777 S5).\n\nPUBLIC — there is deliberately NO ``get_auth_context`` dependency. This is\nthe inbound half of a non-chat ``yield_to_human`` channel: an email /\nWhatsApp adapter POSTs the person's reply plus the wait ``token`` it was\ngiven. The token — an unguessable uuid matched token-exact against the\nopen wait — is the authorisation; see ``RunService.post_channel_reply``.\nMirrors the message route's two-commit durability.",
+        "operationId": "channel_reply_api_v1_runs__run_id__channel_reply_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChannelReplyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Channel Reply Api V1 Runs  Run Id  Channel Reply Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Channel Reply",
         "tags": [
           "runs"
         ]
@@ -35096,6 +35556,65 @@
         "summary": "Discard Tool Draft",
         "tags": [
           "tools"
+        ]
+      }
+    },
+    "/api/v1/tools/{tool_id}/dry-run": {
+      "post": {
+        "description": "Prove a tool's STORED code by running it in the sandbox (#792).\n\nThis is the path that satisfies the publish gate. ``/tools/execute``\ncannot: it runs caller-supplied functions, which need not be the tool's\nstored code, so a stamp there would mean nothing. Here the code comes\nfrom the tool row loaded under ``auth.tenant_id`` and nothing about it is\ncaller-supplied — only the sample input is.\n\nA clean run stamps ``dry_run_passed_version`` at the tool's current\nversion; editing the tool afterwards bumps the version and invalidates\nthe proof. Gated on WRITE for the same reason as ``/tools/execute``: an\nexternal agent authors a tool through the connector and must be able to\nprove it, or it can never publish what it built.",
+        "operationId": "dry_run_tool_endpoint_api_v1_tools__tool_id__dry_run_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tool_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tool Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DryRunToolRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DryRunToolResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Dry Run Tool Endpoint",
+        "tags": [
+          "sandbox"
         ]
       }
     },

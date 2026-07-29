@@ -425,3 +425,101 @@ describe("tool descriptions state the contract the platform enforces", () => {
     expect(guide).toMatch(/fromStepId/);
   });
 });
+
+/**
+ * #28 — the verb that satisfies the publish gate.
+ *
+ * A code tool may not be published until its STORED code has run cleanly once.
+ * `execute_tool` cannot supply that proof by design: it runs caller-supplied
+ * functions, which need not be what is stored. 28 of 49 tools in the Talentus
+ * tenant sat blocked because this client had no way to call the run that counts.
+ */
+describe("dry_run_tool", () => {
+  it("runs the tool's stored code — no code in the request", async () => {
+    const { handlers, client } = setup(registerExecutionTools);
+    await handlers.get("dry_run_tool")!({
+      toolId: "tl-1",
+      inputParams: { invoice: "INV-1" },
+    });
+
+    expect(client.post).toHaveBeenCalledWith("/api/v1/tools/tl-1/dry-run", {
+      inputParams: { invoice: "INV-1" },
+    });
+    // The whole point: the payload carries sample input and nothing else.
+    const body = client.post.mock.calls[0][1] as Record<string, unknown>;
+    expect(Object.keys(body)).toEqual(["inputParams"]);
+  });
+
+  it("defaults inputParams to an empty object rather than omitting it", async () => {
+    const { handlers, client } = setup(registerExecutionTools);
+    await handlers.get("dry_run_tool")!({ toolId: "tl-1" });
+    expect(client.post).toHaveBeenCalledWith("/api/v1/tools/tl-1/dry-run", {
+      inputParams: {},
+    });
+  });
+
+  it("execute_tool says it does not satisfy the gate, and names the verb that does", () => {
+    const descriptions: Record<string, string> = {};
+    registerExecutionTools(
+      { tool: (n: string, d: string) => { descriptions[n] = d; } } as never,
+      fakeClient() as never,
+    );
+    expect(descriptions.execute_tool).toMatch(/does NOT satisfy the publish gate/);
+    expect(descriptions.execute_tool).toMatch(/dry_run_tool/);
+    expect(descriptions.dry_run_tool).toMatch(/dry_run_required/);
+  });
+});
+
+/** #29 — bulk publish requests, without touching the human decision. */
+describe("request_publish_bulk", () => {
+  it("posts the bundle to the bulk route", async () => {
+    const { handlers, client } = setup(registerApprovalTools);
+    await handlers.get("request_publish_bulk")!({
+      requests: [
+        { entityType: "tool", entityId: "tl-1" },
+        { entityType: "company", changeSummary: "mission" },
+      ],
+    });
+
+    expect(client.post).toHaveBeenCalledWith("/api/v1/publish-approvals/bulk", {
+      requests: [
+        { entityType: "tool", entityId: "tl-1" },
+        { entityType: "company", changeSummary: "mission" },
+      ],
+    });
+  });
+
+  it("warns that it is not transactional, so a blanket retry double-requests", () => {
+    const descriptions: Record<string, string> = {};
+    registerApprovalTools(
+      { tool: (n: string, d: string) => { descriptions[n] = d; } } as never,
+      fakeClient() as never,
+    );
+    expect(descriptions.request_publish_bulk).toMatch(/NOT TRANSACTIONAL/);
+    expect(descriptions.request_publish_bulk).toMatch(/double-requests/);
+  });
+
+  it("registers no bulk decision tool — approving stays human", () => {
+    const names: string[] = [];
+    registerApprovalTools(
+      { tool: (n: string) => names.push(n) } as never,
+      fakeClient() as never,
+    );
+    expect(names).toContain("request_publish_bulk");
+    for (const forbidden of ["bulk_approve_approvals", "approve_publish_approval", "bulk_reject_approvals"]) {
+      expect(names).not.toContain(forbidden);
+    }
+  });
+
+  it("readiness descriptions say the verdict is recomputed on read", () => {
+    const descriptions: Record<string, string> = {};
+    registerApprovalTools(
+      { tool: (n: string, d: string) => { descriptions[n] = d; } } as never,
+      fakeClient() as never,
+    );
+    for (const tool of ["list_publish_approvals", "get_publish_approval"]) {
+      expect(descriptions[tool], tool).toMatch(/recomputed/);
+      expect(descriptions[tool], tool).toMatch(/readinessAtRequest/);
+    }
+  });
+});

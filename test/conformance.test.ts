@@ -81,6 +81,7 @@ describe("MCP route surface conforms to the backend OpenAPI snapshot", () => {
       document: {}, fields: {}, mutations: [{ type: "add_step", payload: {} }],
       snippetIds: ["a"], runIds: ["a"], workflows: [{ id: "x", expectedVersion: 1 }],
       functions: [{ name: "f", code: "def f(): pass" }], code: "x",
+      requests: [{ entityType: "tool", entityId: "x" }],
     };
 
     for (const handler of handlers.values()) {

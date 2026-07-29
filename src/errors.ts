@@ -302,3 +302,87 @@ export function errorForStatus(status: number, body?: unknown): AxonityApiError 
       );
   }
 }
+
+/**
+ * 405/404 on a route this connector version depends on — the deployed backend
+ * is older than the client (#30).
+ *
+ * 0.3.4 shipped `validate_workflow`'s `workflowId` form. Against a sandbox
+ * running a branch 15 commits behind, it answered a bare 405 on every attempt.
+ * The client was right and the backend was old, but nothing said so: the reader
+ * goes looking for a bug in their own call, and the most valuable check in the
+ * release is silently unavailable to anyone who installed it.
+ *
+ * A 405 is the strong signal — the path exists, the method does not, which on an
+ * API this client is written against means the two are out of step. A 404 is
+ * weaker (an unknown id looks the same), so it is only reported as skew for the
+ * routes listed in `ROUTES_ADDED_IN`, and even then it says "if the id is right".
+ */
+export class BackendVersionSkewError extends AxonityApiError {
+  constructor(
+    method: string,
+    path: string,
+    status: number,
+    /** What added this route on the backend, so a human can check a deploy. */
+    addedBy?: string,
+    body?: unknown,
+  ) {
+    const ambiguous =
+      status === 404
+        ? " (a 404 also means 'no such id', so check the id first)"
+        : "";
+    super(
+      `The Axonity backend does not have \`${method} ${path}\`, which this ` +
+        `version of the connector needs${ambiguous}. The backend is OLDER than ` +
+        `this connector — this is a deployment mismatch, not a mistake in your ` +
+        `call.` +
+        (addedBy ? ` That route was added by ${addedBy}.` : "") +
+        " Tell your human which Axonity environment this token points at, and " +
+        "do not retry: the same call will keep failing until that backend is " +
+        "updated (or you pin an older connector).",
+      status,
+      body,
+      "backend_version_skew",
+      false,
+    );
+    this.name = "BackendVersionSkewError";
+  }
+}
+
+/**
+ * Routes newer than the oldest backend this connector still works against, and
+ * what added them. Only these turn a 404 into a skew report; a 405 does so on
+ * any path. Add an entry whenever a tool starts calling a route that a
+ * previously-supported backend would not have.
+ */
+export const ROUTES_ADDED_IN: { pattern: RegExp; addedBy: string }[] = [
+  {
+    pattern: /^\/api\/v1\/workflows\/[^/]+\/validate$/,
+    addedBy: "axonity-flow#770 (catalog-aware validation)",
+  },
+  {
+    pattern: /^\/api\/v1\/tools\/[^/]+\/dry-run$/,
+    addedBy: "axonity-flow#792 (dry-run that satisfies the publish gate)",
+  },
+  {
+    pattern: /^\/api\/v1\/publish-approvals\/bulk$/,
+    addedBy: "axonity-flow#795 (bulk publish requests)",
+  },
+];
+
+/** The skew error for this call, or undefined when the status says nothing. */
+export function skewErrorFor(
+  method: string,
+  path: string,
+  status: number,
+  body?: unknown,
+): BackendVersionSkewError | undefined {
+  const known = ROUTES_ADDED_IN.find((r) => r.pattern.test(path));
+  if (status === 405) {
+    return new BackendVersionSkewError(method, path, status, known?.addedBy, body);
+  }
+  if (status === 404 && known) {
+    return new BackendVersionSkewError(method, path, status, known.addedBy, body);
+  }
+  return undefined;
+}

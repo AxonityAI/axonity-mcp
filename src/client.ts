@@ -8,7 +8,7 @@
  */
 
 import type { AxonityConfig } from "./config.js";
-import { AxonityApiError, errorForStatus } from "./errors.js";
+import { AxonityApiError, errorForStatus, skewErrorFor } from "./errors.js";
 
 export type Json = Record<string, unknown>;
 
@@ -64,6 +64,13 @@ export class AxonityClient {
     const parsed = text ? safeJson(text) : undefined;
 
     if (!resp.ok) {
+      // Before the generic mapping: a route this connector needs that the
+      // deployed backend does not have. A bare 405 sends the reader hunting for
+      // a bug in their own call, when the real answer is that the two are out of
+      // step (#30). Checked first so it wins over the plain 404 mapping.
+      const skew = skewErrorFor(method, path.split("?")[0], resp.status, parsed);
+      if (skew) throw skew;
+
       // Pass the FULL body — errorForStatus reads `code`/`retryable`/`message`
       // off the structured error envelope when present, and falls back
       // gracefully for a bare `detail` string/array from older routes.

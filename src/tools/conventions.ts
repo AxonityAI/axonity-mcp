@@ -42,11 +42,33 @@ Read this before creating or updating anything.
 3. Validate before publish: \`validate_workflow\` / \`analyze_workflow_reachable_outputs\` / 
    \`validate_tool_code\` / \`format_tool_code\`. These four are stateless and work with
    read-only tokens.
-4. Re-read and verify with a saved tool command: \`execute_tool\` / \`execute_stored_connector\`.
+4. Re-read and verify with a saved tool command: \`execute_tool\` /
+   \`execute_stored_connector\`.
 5. Fix any issues and re-read again.
-6. \`request_publish_*\` — this only QUEUES a human approval.
-7. \`list_publish_approvals\` / \`get_publish_approval\` to see whether it was
-   approved or rejected.
+6. For a code tool, PROVE it: \`dry_run_tool\` — see "Proving a tool" below. Skip
+   this and \`request_publish_tool\` will sit blocked forever.
+7. \`request_publish_*\` — this only QUEUES a human approval. Publishing many
+   entities at once (taking a tenant live) is \`request_publish_bulk\`, up to 200
+   in one call; it is not transactional, so read the per-entry results.
+8. \`list_publish_approvals\` / \`get_publish_approval\` to see whether it was
+   approved or rejected. Readiness there is recomputed as you read it
+   (\`readiness\` now, \`readinessAtRequest\` then, \`readinessChanged\` if it
+   moved), so a blocker you saw earlier may already be gone.
+
+## Proving a tool (the publish gate)
+Before a code tool may be published, the platform requires that its stored code
+has run cleanly once, at its current version.
+- \`dry_run_tool(toolId)\` is the run that counts. It executes the tool's OWN
+  saved implementation; you supply only sample input. A clean pass clears the
+  \`dry_run_required\` blocker.
+- \`execute_tool\` does NOT count, however green it comes back. It runs the
+  functions YOU pass, which need not be what is stored — proving nothing about
+  what would ship. Use it while drafting code you have not saved yet.
+- Editing the tool afterwards bumps its version and invalidates the proof, so
+  dry-run AFTER your last edit.
+- Connectors, builtin-backed validators and platform-shipped tools have no code
+  of their own to prove and will refuse (422/403). That is expected, not a
+  failure to work around.
 8. If something went wrong:
    - Bad edit, entity still exists → \`list_*_versions\` then \`restore_*_version\`
      to roll the draft back to an earlier version.
