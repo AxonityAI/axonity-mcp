@@ -99,6 +99,62 @@ export function registerConnectorTools(
   );
 }
 
+/**
+ * The identity fields of a linked entity — enough to audit a tenant's wiring,
+ * without the bodies.
+ *
+ * Verifying that every link is where it belongs should cost what the LINKS
+ * cost, not what the documents behind them cost. The backend answers these
+ * read-backs with the whole entity, `bodyMd` included; a playbook runs 3-15 KB,
+ * so one agent costs ~20 KB and a fourteen-agent tenant exceeds the budget for
+ * the audit itself. That is not a tidiness problem: it is why a real check got
+ * downgraded to a sample of five agents, and the sixth had no skill attached at
+ * all (#33).
+ *
+ * Names differ per entity — a reference doc has `title` where a skill has
+ * `name`, a policy has `summary` where a skill has `description` — so both
+ * spellings are carried when present rather than renamed into a shape the
+ * backend does not use.
+ */
+const IDENTITY_FIELDS = [
+  "id",
+  "name",
+  "title",
+  "description",
+  "summary",
+  "status",
+  "source",
+  "linkSource",
+  "scope",
+] as const;
+
+/** Keep the envelope, project the rows down to identity. */
+export function projectLinkRows(
+  response: Record<string, unknown>,
+  rowsKey: string,
+): Record<string, unknown> {
+  const rows = response[rowsKey];
+  if (!Array.isArray(rows)) return response;
+
+  return {
+    ...response,
+    [rowsKey]: rows.map((row) => {
+      if (typeof row !== "object" || row === null) return row;
+      const source = row as Record<string, unknown>;
+      const kept: Record<string, unknown> = {};
+      for (const field of IDENTITY_FIELDS) {
+        if (source[field] !== undefined) kept[field] = source[field];
+      }
+      return kept;
+    }),
+    // Say what was dropped and how to get it — an omission the reader cannot
+    // see is the same trap as the cost this fixes.
+    bodiesOmitted:
+      'Identity only. Pass verbosity: "full" for the complete rows, or read a ' +
+      "single entity by id when you actually need its body.",
+  };
+}
+
 export function registerAttachTools(
   server: McpServer,
   client: AxonityClient,
@@ -204,24 +260,48 @@ export function registerAttachTools(
     subject: string,
     plural: string,
     path: (agentId: string) => string,
+    /** The key the backend nests the rows under (`skills` / `policies` / `references`). */
+    rowsKey: string,
   ) => {
     server.tool(
       `list_agent_${plural}`,
       `List the ${subject} currently scoped to an agent — the read-back for ` +
         `attach_${subject}_to_agent. Use it to confirm a link took, or to read a ` +
-        `source agent's wiring before recreating it. Read-only.`,
-      { agentId: z.string().describe("The agent's id.") },
-      async ({ agentId }: { agentId: string }) =>
-        guard(async () => jsonResult(await client.get(path(agentId)))),
+        `source agent's wiring before recreating it. Read-only. ` +
+        `\n\nReturns IDENTITY by default: id, name, description, status and ` +
+        `linkSource (why it is in scope — an explicit link, or tenant-wide). ` +
+        `Bodies are omitted, because auditing a tenant means asking this for ` +
+        `every agent and a single playbook can run to 15 KB. Read one body ` +
+        `deliberately with read_${subject === "reference_doc" ? "reference_doc" : subject} ` +
+        `when you actually intend to read it. Pass verbosity: "full" only when ` +
+        `you need every field of every row.`,
+      {
+        agentId: z.string().describe("The agent's id."),
+        verbosity: z
+          .enum(["identity", "full"])
+          .optional()
+          .describe(
+            'How much of each row to return. "identity" (default) is id, name, ' +
+              'description, status and linkSource. "full" is the entire entity, ' +
+              "bodies included — expensive, and rarely what an audit needs.",
+          ),
+      },
+      async ({ agentId, verbosity }: { agentId: string; verbosity?: "identity" | "full" }) =>
+        guard(async () => {
+          const response = await client.get<Record<string, unknown>>(path(agentId));
+          if (verbosity === "full") return jsonResult(response);
+          return jsonResult(projectLinkRows(response, rowsKey));
+        }),
     );
   };
 
-  listLinks("skill", "skills", (id) => `/api/v1/agents/${id}/skills-v2`);
-  listLinks("policy", "policies", (id) => `/api/v1/agents/${id}/policies`);
+  listLinks("skill", "skills", (id) => `/api/v1/agents/${id}/skills-v2`, "skills");
+  listLinks("policy", "policies", (id) => `/api/v1/agents/${id}/policies`, "policies");
   listLinks(
     "reference_doc",
     "reference_docs",
     (id) => `/api/v1/agents/${id}/reference-docs`,
+    "references",
   );
 }
 
