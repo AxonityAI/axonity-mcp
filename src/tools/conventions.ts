@@ -55,6 +55,14 @@ Read this before creating or updating anything.
    (\`readiness\` now, \`readinessAtRequest\` then, \`readinessChanged\` if it
    moved), so a blocker you saw earlier may already be gone.
 
+9. If something went wrong:
+   - Bad edit, entity still exists → \`list_*_versions\` then \`restore_*_version\`
+     to roll the draft back to an earlier version.
+   - Never published, want a clean slate → \`discard_*_draft\` resets the draft to
+     the last published state (fails if it was never published — there's nothing
+     to fall back to).
+   - Deleted by mistake → \`restore_*\` (see "Delete is recoverable" below).
+
 ## Proving a tool (the publish gate)
 Before a code tool may be published, the platform requires that its stored code
 has run cleanly once, at its current version.
@@ -69,13 +77,6 @@ has run cleanly once, at its current version.
 - Connectors, builtin-backed validators and platform-shipped tools have no code
   of their own to prove and will refuse (422/403). That is expected, not a
   failure to work around.
-8. If something went wrong:
-   - Bad edit, entity still exists → \`list_*_versions\` then \`restore_*_version\`
-     to roll the draft back to an earlier version.
-   - Never published, want a clean slate → \`discard_*_draft\` resets the draft to
-     the last published state (fails if it was never published — there's nothing
-     to fall back to).
-   - Deleted by mistake → \`restore_*\` (see "Delete is recoverable" below).
 
 ## Drafts, not live
 - \`create_*\` and \`update_*\` produce a DRAFT. The live runtime is unaffected
@@ -406,6 +407,12 @@ the new tenant too, and a human fills the real value there.
 - It is NOT transactional. If command N fails, the ones before it stay applied;
   the error tells you how many landed and which index failed. Re-read and resume
   from that index rather than replaying the whole list.
+- \`replace_workflow_document\` does NOT store the document's metadata. \`name\`,
+  \`description\`, \`stageId\`, \`capabilityId\`, \`valueStreamId\` and
+  \`onFailure\` are dropped by the server while parsing and it still answers 200
+  (axonity-flow#805). Change name/description with \`update_workflow\`, in a
+  separate call from structure. The tool names any of these it saw in your
+  document so the loss is never silent — but it cannot make them stick.
 - The response is a SUMMARY (version, appliedCount, launchable, validationIssues,
   stepCount, edgeCount), not the document. That is deliberate: a real workflow
   document overflows the response limit, and a successful call would come back

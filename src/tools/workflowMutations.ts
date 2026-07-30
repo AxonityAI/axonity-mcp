@@ -130,6 +130,56 @@ export function summarizeMutation(
   };
 }
 
+/**
+ * Document keys that `PUT /workflows/{id}` accepts and does not store.
+ *
+ * `SaveWorkflowRequest.document` is typed as `WorkflowDocumentSchema`, which
+ * declares only `definitionOfDone`, `owners`, `steps` and `triggers`, with no
+ * `extra="allow"`. The route does `body.document.model_dump()`, so every other
+ * key is discarded during parsing — before the service that would have stored
+ * it is ever entered. The workflow keeps its previous values and answers 200
+ * (axonity-flow#805).
+ *
+ * We cannot make the server keep them, and we must not pretend otherwise. What
+ * we can do is refuse to be silent, which is the part that cost a migration:
+ * a use case was signed off carrying a description of the PREVIOUS
+ * implementation, and it was found only by diffing the entity field by field.
+ *
+ * Not an error and not stripped: every read overlays `name` and `description`
+ * onto the document (`_overlay_workflow_metadata`), so a normal
+ * read-edit-write round trip always carries them. Refusing would break every
+ * honest caller to catch the one who changed something. Remove this once #805
+ * lands — the conformance snapshot is where you will see it has.
+ */
+const METADATA_NOT_PERSISTED = [
+  "name",
+  "description",
+  "stageId",
+  "capabilityId",
+  "valueStreamId",
+  "onFailure",
+] as const;
+
+/** Which non-persisted metadata keys this document carries, if any. */
+export function metadataWarningFor(
+  document: Record<string, unknown>,
+): Record<string, unknown> | undefined {
+  const present = METADATA_NOT_PERSISTED.filter((key) => key in document);
+  if (present.length === 0) return undefined;
+
+  return {
+    fields: present,
+    warning:
+      `This route does NOT store ${present.join(", ")} — the server drops ` +
+      "them while parsing and still answers 200. If you CHANGED any of them, " +
+      "the change did not land: set name/description with update_workflow, and " +
+      "the stage/capability/valueStream/onFailure linkage with the workflow " +
+      "PATCH surface. Unchanged values are harmless — a read puts them in the " +
+      "document, so round-tripping one always carries them. Verify with " +
+      "read_workflow either way.",
+  };
+}
+
 /** The `returnDocument` opt-in, shared by both document-returning tools. */
 const RETURN_DOCUMENT = z
   .boolean()
@@ -304,7 +354,13 @@ export function registerWorkflowMutations(
       "mutation commands, which the backend validates and normalises per edit. " +
       "\n\nThe response is the same SUMMARY (version, launchable, " +
       "validationIssues, stepCount, edgeCount), not the stored document; pass " +
-      "returnDocument: true or call read_workflow for that.",
+      "returnDocument: true or call read_workflow for that." +
+      "\n\nIT DOES NOT STORE THE DOCUMENT'S METADATA: name, description, " +
+      "stageId, capabilityId, valueStreamId and onFailure are dropped by the " +
+      "server while parsing, and it still answers 200. Use update_workflow for " +
+      "name and description. The response names any of these it saw, so you are " +
+      "not left guessing — but the safe habit is to change metadata and " +
+      "structure in separate calls.",
     {
       id: z.string().describe("The workflow's id."),
       expectedVersion: z
@@ -324,7 +380,9 @@ export function registerWorkflowMutations(
         );
         // One document written, so appliedCount is 1 — the same shape as a
         // single-command sequence, which is what a caller compares against.
-        return jsonResult(summarizeMutation(response, 1, returnDocument === true));
+        const summary = summarizeMutation(response, 1, returnDocument === true);
+        const metadata = metadataWarningFor(document);
+        return jsonResult(metadata ? { ...summary, metadataNotPersisted: metadata } : summary);
       }),
   );
 
