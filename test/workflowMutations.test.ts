@@ -449,3 +449,78 @@ describe("mutation responses stay small", () => {
     expect(summary.systemAdjustments).toBeUndefined();
   });
 });
+
+/**
+ * #33 M2 / axonity-flow#805 — the server drops document metadata and answers 200.
+ *
+ * `SaveWorkflowRequest.document` is typed as `WorkflowDocumentSchema`, which
+ * declares four fields and no `extra="allow"`. The route re-serialises the
+ * parsed model, so name/description/linkage never reach the service that would
+ * store them. A use case was signed off carrying a description of the previous
+ * implementation because nothing said so.
+ *
+ * We cannot make it persist. We can refuse to be silent.
+ */
+describe("replace_workflow_document warns about metadata the server drops", () => {
+  function setup() {
+    const { server, handlers } = fakeServer();
+    const client = {
+      put: vi.fn(async () => ({ version: 4, launchable: true, validationIssues: [] })),
+    };
+    registerWorkflowMutations(server as never, client as unknown as AxonityClient);
+    return { handler: handlers.get("replace_workflow_document")!, client };
+  }
+
+  it("names every non-persisted key the document carried", async () => {
+    const { handler } = setup();
+    const summary = JSON.parse(
+      textOf(
+        await handler({
+          id: "wf-1",
+          expectedVersion: 1,
+          document: {
+            name: "Price Indexation",
+            description: "Matches on employee number",
+            stageId: "st-1",
+            steps: { all: [], edges: [] },
+          },
+        }),
+      ),
+    );
+
+    expect(summary.metadataNotPersisted.fields).toEqual([
+      "name",
+      "description",
+      "stageId",
+    ]);
+    expect(summary.metadataNotPersisted.warning).toMatch(/update_workflow/);
+    expect(summary.metadataNotPersisted.warning).toMatch(/did not land/);
+    // The save itself still happened and is still reported.
+    expect(summary.version).toBe(4);
+  });
+
+  it("sends the document through untouched — the server's contract is not ours to fake", async () => {
+    const { handler, client } = setup();
+    const document = { name: "X", steps: { all: [], edges: [] } };
+    await handler({ id: "wf-1", expectedVersion: 1, document });
+
+    expect(client.put).toHaveBeenCalledWith("/api/v1/workflows/wf-1", {
+      expectedVersion: 1,
+      document,
+    });
+  });
+
+  it("stays quiet when the document carries no metadata", async () => {
+    const { handler } = setup();
+    const summary = JSON.parse(
+      textOf(
+        await handler({
+          id: "wf-1",
+          expectedVersion: 1,
+          document: { steps: { all: [], edges: [] }, triggers: [] },
+        }),
+      ),
+    );
+    expect(summary.metadataNotPersisted).toBeUndefined();
+  });
+});
