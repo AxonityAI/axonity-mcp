@@ -121,6 +121,43 @@ describe("MCP route surface conforms to the backend OpenAPI snapshot", () => {
     expect(enumOf("AttachSnippetRequest", "target")).toEqual(["system", "user"]);
   });
 
+  /**
+   * The gap that let axonity-flow#802 ship: apply_workflow_mutations names every
+   * valid command type in its description, the backend's boundary enum was
+   * hand-maintained and three narrower, and no test compared the two. So the
+   * tool advertised add_decision_condition, attach_output_schema and
+   * detach_output_schema while the route answered 422 for all three.
+   *
+   * #808 derives the enum from the handler registry on the backend side. This is
+   * the other half: the description and the schema are compared directly, so
+   * neither a type we stop advertising nor one the backend drops can pass
+   * unnoticed. Parsed from the live description rather than a second hand-kept
+   * list here — a copy would drift exactly the way the original did.
+   */
+  it("every mutation type the tool advertises exists in the schema, and vice versa", () => {
+    const descriptions = new Map<string, string>();
+    const server = {
+      tool: (name: string, description: string) => descriptions.set(name, description),
+    };
+    registerAll(server as never, {} as unknown as AxonityClient);
+
+    const description = descriptions.get("apply_workflow_mutations");
+    expect(description, "apply_workflow_mutations is not registered").toBeDefined();
+
+    const advertised = description!
+      .match(/Valid types: ([^.]+)\./)?.[1]
+      .split(",")
+      .map((t) => t.replace(/\s+/g, ""))
+      .filter(Boolean);
+    expect(advertised, "could not parse the 'Valid types:' list").toBeDefined();
+
+    const schemaTypes =
+      snapshot.components.schemas.WorkflowMutationRequest?.properties?.type?.enum;
+    expect(schemaTypes, "WorkflowMutationRequest.type has no enum").toBeDefined();
+
+    expect([...advertised!].sort()).toEqual([...schemaTypes!].sort());
+  });
+
   it("both validation routes resolve (the harness cannot reach them)", () => {
     // validate_workflow takes EXACTLY ONE of workflowId/document, and the shared
     // ARGS fixture supplies both — so the handler rejects the call and neither
