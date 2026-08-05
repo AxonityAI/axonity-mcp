@@ -2432,6 +2432,42 @@
         "title": "ConnectorResponseTransform",
         "type": "object"
       },
+      "ContractResponse": {
+        "description": "GET /api/v1/contract — the smallest thing a client needs to know whether\nthe backend it is pointed at speaks the contract its version requires.\n\nA commit SHA alone is not a contract (it says nothing about which routes\nexist), and ``/openapi.json`` is ~1 MB and 404s in production. This is the\nproportionate middle: the build, the environment, and the mounted route set,\nplus a hash the client caches on. ``routes`` is derived from the running app,\nnever hand-maintained — a hand-written list would drift exactly the way the\nmutation vocabulary did in #802.",
+        "properties": {
+          "buildVersion": {
+            "description": "The deployed commit (short SHA), or 'dev' locally.",
+            "title": "Buildversion",
+            "type": "string"
+          },
+          "contractHash": {
+            "description": "Content fingerprint of the sorted route set; stable across identical deploys, changes when the route surface changes.",
+            "title": "Contracthash",
+            "type": "string"
+          },
+          "environment": {
+            "description": "Deployment environment name (e.g. 'staging', 'production').",
+            "title": "Environment",
+            "type": "string"
+          },
+          "routes": {
+            "description": "Sorted 'METHOD /path' entries for every mounted API route.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Routes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "buildVersion",
+          "environment",
+          "routes",
+          "contractHash"
+        ],
+        "title": "ContractResponse",
+        "type": "object"
+      },
       "ConversationMessageRequest": {
         "description": "A user's conversational turn to a Builder-team chat (epic #593, S3).",
         "properties": {
@@ -16751,7 +16787,8 @@
         "type": "object"
       },
       "WorkflowDocumentSchema": {
-        "description": "Full workflow JSONB document with referential integrity validation.\n\nValidates:\n- All step IDs are unique\n- All trigger IDs are unique\n- Edge from/to reference valid step or trigger IDs",
+        "additionalProperties": true,
+        "description": "Full workflow JSONB document with referential integrity validation.\n\nValidates:\n- All step IDs are unique\n- All trigger IDs are unique\n- Edge from/to reference valid step or trigger IDs\n\n``extra=\"allow\"`` is load-bearing, not decorative (#805). The stored\ndocument is a superset of the four fields validated here — it also carries\ncolumn-authoritative metadata (``name``, ``description``, ``stageId``,\n``capabilityId``, ``valueStreamId``, ``onFailure``) that ride along on every\nread, plus the ``output_schemas`` registry. ``PUT /workflows/{id}`` dumps\nthis model back to a dict before handing it to the service; under the\ndefault ``extra=\"ignore\"`` that dump silently DROPPED every undeclared key,\nso the #768 metadata-sync fix and ``_reject_unhonoured_metadata`` — both\nreading those keys off the document in the service — could never see them.\nOnly keys the caller actually sent survive the round-trip, so the service's\n\"absent key = leave unchanged\" contract is preserved. Do NOT narrow this to\nan enumerated field list: that reinstates the exact hand-maintained-schema\ndrift #802/#805 are about (and would re-drop ``output_schemas``).",
         "properties": {
           "definitionOfDone": {
             "anyOf": [
@@ -16977,16 +17014,19 @@
               "ungroup_triggers",
               "move_trigger",
               "add_step",
-              "add_loop",
               "update_step",
               "remove_step",
               "move_step",
               "update_edge",
               "remove_edge",
               "add_edge",
+              "add_decision_condition",
+              "add_loop",
               "convert_to_loop",
               "setup_loop_decision",
-              "advanced_edit"
+              "advanced_edit",
+              "attach_output_schema",
+              "detach_output_schema"
             ],
             "title": "Type",
             "type": "string"
@@ -17033,6 +17073,63 @@
           "document"
         ],
         "title": "WorkflowMutationResponse",
+        "type": "object"
+      },
+      "WorkflowOperationItem": {
+        "description": "One editable operation the engine can apply to a workflow.\n\nSourced from the mutation registry, so it never drifts from what the route\nactually accepts: ``type`` is the command name to pass to the mutations\nendpoint, ``description`` is the handler's own one-line docstring, and\n``payloadSchema`` is the live JSON Schema of that command's payload.",
+        "properties": {
+          "description": {
+            "description": "One-line human summary of what the operation does.",
+            "title": "Description",
+            "type": "string"
+          },
+          "payloadSchema": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "JSON Schema for the command's payload, or null if none.",
+            "title": "Payloadschema"
+          },
+          "type": {
+            "description": "The mutation command name (e.g. 'add_step').",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "description"
+        ],
+        "title": "WorkflowOperationItem",
+        "type": "object"
+      },
+      "WorkflowOperationsResponse": {
+        "description": "GET /api/v1/workflows/operations — the mutation catalog over HTTP.\n\nLets a service token read the exact set of mutations this deploy accepts\n(with their payload schemas) instead of restating the vocabulary itself.\n``rulesVersion`` is a content hash over the catalog: stable across identical\ndeploys, and it changes exactly when the catalog does — so a client caches\non \"same rulesVersion → nothing to re-fetch\".",
+        "properties": {
+          "operations": {
+            "items": {
+              "$ref": "#/components/schemas/WorkflowOperationItem"
+            },
+            "title": "Operations",
+            "type": "array"
+          },
+          "rulesVersion": {
+            "description": "Content fingerprint of the catalog; stable across identical deploys, changes when a handler is added or removed.",
+            "title": "Rulesversion",
+            "type": "string"
+          }
+        },
+        "required": [
+          "operations",
+          "rulesVersion"
+        ],
+        "title": "WorkflowOperationsResponse",
         "type": "object"
       },
       "WorkflowPromptStacksResponse": {
@@ -21185,6 +21282,33 @@
         "summary": "List Config Sources",
         "tags": [
           "config-deploy"
+        ]
+      }
+    },
+    "/api/v1/contract": {
+      "get": {
+        "description": "What contract this deploy speaks: build, environment, routes, and a hash.\n\nAuthenticated but tenant-agnostic — a service token is enough, because this\ndescribes the DEPLOY, not any tenant's data. A connector calls it once at\nstartup to decide whether the backend has the routes its version needs,\nbefore a user is mid-task on the one call that mattered. ``contractHash``\nlets the client cache: unchanged hash, nothing to re-check.",
+        "operationId": "read_contract_api_v1_contract_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Read Contract",
+        "tags": [
+          "system"
         ]
       }
     },
@@ -36854,6 +36978,33 @@
           }
         ],
         "summary": "List Deleted Workflows",
+        "tags": [
+          "workflows"
+        ]
+      }
+    },
+    "/api/v1/workflows/operations": {
+      "get": {
+        "description": "The catalog of mutations this deploy accepts, with their payload schemas.\n\nSourced from the engine's mutation registry — the single source of truth the\n``/{workflow_id}/mutations`` route validates against — so a client (the MCP\nconnector) can read the vocabulary here instead of restating it (#802 B4).\n``rulesVersion`` is a content hash the client caches on: unchanged hash,\nnothing to re-fetch.\n\nDeclared BEFORE ``/{workflow_id}`` so the literal ``operations`` segment is\nnot swallowed by the id path parameter — the same care ``/bulk`` needed in\n``publish_approvals.py``. No DB and no tenant data: this describes the\nDEPLOY, not a tenant's workflows, so a service token is enough\n(``get_auth_context`` admits them).",
+        "operationId": "list_workflow_operation_catalog_api_v1_workflows_operations_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowOperationsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Workflow Operation Catalog",
         "tags": [
           "workflows"
         ]

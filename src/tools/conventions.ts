@@ -407,12 +407,13 @@ the new tenant too, and a human fills the real value there.
 - It is NOT transactional. If command N fails, the ones before it stay applied;
   the error tells you how many landed and which index failed. Re-read and resume
   from that index rather than replaying the whole list.
-- \`replace_workflow_document\` does NOT store the document's metadata. \`name\`,
-  \`description\`, \`stageId\`, \`capabilityId\`, \`valueStreamId\` and
-  \`onFailure\` are dropped by the server while parsing and it still answers 200
-  (axonity-flow#805). Change name/description with \`update_workflow\`, in a
-  separate call from structure. The tool names any of these it saw in your
-  document so the loss is never silent — but it cannot make them stick.
+- \`replace_workflow_document\` stores the document's \`name\` and
+  \`description\` — they sync onto the workflow's own columns, an omitted key
+  leaves the stored value alone, and an explicit \`""\` clears it. \`stageId\`,
+  \`capabilityId\`, \`valueStreamId\` and \`onFailure\` are PATCH-only: changing
+  one through this route is REFUSED with a 422 naming the field, and
+  round-tripping it unchanged passes. Read, edit, write is therefore safe;
+  re-linking a workflow to another stage or capability is its own call.
 - The response is a SUMMARY (version, appliedCount, launchable, validationIssues,
   stepCount, edgeCount), not the document. That is deliberate: a real workflow
   document overflows the response limit, and a successful call would come back

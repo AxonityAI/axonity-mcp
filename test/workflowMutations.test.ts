@@ -451,17 +451,18 @@ describe("mutation responses stay small", () => {
 });
 
 /**
- * #33 M2 / axonity-flow#805 — the server drops document metadata and answers 200.
+ * #33 M2 / axonity-flow#805, closed by axonity-flow#808.
  *
- * `SaveWorkflowRequest.document` is typed as `WorkflowDocumentSchema`, which
- * declares four fields and no `extra="allow"`. The route re-serialises the
- * parsed model, so name/description/linkage never reach the service that would
- * store them. A use case was signed off carrying a description of the previous
- * implementation because nothing said so.
- *
- * We cannot make it persist. We can refuse to be silent.
+ * The server used to drop the document's metadata and answer 200, so this tool
+ * added a local pre-flight warning naming the keys that would not land. #808 put
+ * `extra="allow"` on `WorkflowDocumentSchema`: `name` and `description` now
+ * persist, and changing a PATCH-only key (`stageId`, `capabilityId`,
+ * `valueStreamId`, `onFailure`) is refused with a 422 naming it. The warning was
+ * removed with the bug — what remains to guard is that this tool adds nothing of
+ * its own to the document, so whichever answer the server gives is the one the
+ * caller sees.
  */
-describe("replace_workflow_document warns about metadata the server drops", () => {
+describe("replace_workflow_document passes the document straight through", () => {
   function setup() {
     const { server, handlers } = fakeServer();
     const client = {
@@ -471,56 +472,37 @@ describe("replace_workflow_document warns about metadata the server drops", () =
     return { handler: handlers.get("replace_workflow_document")!, client };
   }
 
-  it("names every non-persisted key the document carried", async () => {
-    const { handler } = setup();
+  it("sends a metadata-carrying document through verbatim and reports the save", async () => {
+    const { handler, client } = setup();
+    const document = {
+      name: "Price Indexation",
+      description: "Matches on employee number",
+      stageId: "st-1",
+      steps: { all: [], edges: [] },
+    };
     const summary = JSON.parse(
-      textOf(
-        await handler({
-          id: "wf-1",
-          expectedVersion: 1,
-          document: {
-            name: "Price Indexation",
-            description: "Matches on employee number",
-            stageId: "st-1",
-            steps: { all: [], edges: [] },
-          },
-        }),
-      ),
+      textOf(await handler({ id: "wf-1", expectedVersion: 1, document })),
     );
 
-    expect(summary.metadataNotPersisted.fields).toEqual([
-      "name",
-      "description",
-      "stageId",
-    ]);
-    expect(summary.metadataNotPersisted.warning).toMatch(/update_workflow/);
-    expect(summary.metadataNotPersisted.warning).toMatch(/did not land/);
-    // The save itself still happened and is still reported.
+    // The keys reach the server untouched — it is the server that decides
+    // whether each one persists (name/description) or is refused (stageId).
+    expect(client.put).toHaveBeenCalledWith("/api/v1/workflows/wf-1", {
+      expectedVersion: 1,
+      document,
+    });
     expect(summary.version).toBe(4);
+    // The pre-#808 warning is gone; nothing is invented on top of the summary.
+    expect(summary.metadataNotPersisted).toBeUndefined();
   });
 
-  it("sends the document through untouched — the server's contract is not ours to fake", async () => {
+  it("passes a document with no metadata through the same way", async () => {
     const { handler, client } = setup();
-    const document = { name: "X", steps: { all: [], edges: [] } };
+    const document = { steps: { all: [], edges: [] }, triggers: [] };
     await handler({ id: "wf-1", expectedVersion: 1, document });
 
     expect(client.put).toHaveBeenCalledWith("/api/v1/workflows/wf-1", {
       expectedVersion: 1,
       document,
     });
-  });
-
-  it("stays quiet when the document carries no metadata", async () => {
-    const { handler } = setup();
-    const summary = JSON.parse(
-      textOf(
-        await handler({
-          id: "wf-1",
-          expectedVersion: 1,
-          document: { steps: { all: [], edges: [] }, triggers: [] },
-        }),
-      ),
-    );
-    expect(summary.metadataNotPersisted).toBeUndefined();
   });
 });
