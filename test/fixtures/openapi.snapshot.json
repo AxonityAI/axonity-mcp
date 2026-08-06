@@ -5833,6 +5833,82 @@
         "title": "ExposedValidatorTool",
         "type": "object"
       },
+      "FanOutProgress": {
+        "description": "Per-state item counts for a fan-out — the shape the progress badge reads.\n\n``total`` is the sum of all states (the \"12 / 1500 done\" denominator);\neach per-state field is the count of ``task_queue`` rows in that state.\n\nONE shape for both scopes the UI asks about — a single batch on the run\npage (:class:`BatchProgress`) and a whole launch on the runs list\n(``RunSummary.for_each_progress``, epic #811 S1) — so the frontend\nrenders both through the same badge instead of growing a second one.\nTenant scoping is applied by the caller's repository query.",
+        "properties": {
+          "deadLetter": {
+            "title": "Deadletter",
+            "type": "integer"
+          },
+          "failed": {
+            "title": "Failed",
+            "type": "integer"
+          },
+          "inProgress": {
+            "title": "Inprogress",
+            "type": "integer"
+          },
+          "pending": {
+            "title": "Pending",
+            "type": "integer"
+          },
+          "succeeded": {
+            "title": "Succeeded",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "pending",
+          "inProgress",
+          "succeeded",
+          "failed",
+          "deadLetter"
+        ],
+        "title": "FanOutProgress",
+        "type": "object"
+      },
+      "FanOutRateResponse": {
+        "description": "The tenant-default fan-out pace (#817 S6).\n\n``ratePerMinute`` is ``null`` when no default is set — the shipped\nstate, meaning fan-outs run as fast as the concurrency caps allow.",
+        "properties": {
+          "ratePerMinute": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rateperminute"
+          }
+        },
+        "required": [
+          "ratePerMinute"
+        ],
+        "title": "FanOutRateResponse",
+        "type": "object"
+      },
+      "FanOutRateUpdate": {
+        "description": "Body for ``PATCH /for-each-rate``. ``0`` removes the default.",
+        "properties": {
+          "ratePerMinute": {
+            "maximum": 100000.0,
+            "minimum": 0.0,
+            "title": "Rateperminute",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "ratePerMinute"
+        ],
+        "title": "FanOutRateUpdate",
+        "type": "object"
+      },
       "FileListResponse": {
         "properties": {
           "files": {
@@ -8144,6 +8220,42 @@
           "commonClasses"
         ],
         "title": "PackageInfoResponse",
+        "type": "object"
+      },
+      "Page_RunSummary_": {
+        "properties": {
+          "hasMore": {
+            "default": false,
+            "title": "Hasmore",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RunSummary"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          },
+          "pageSize": {
+            "title": "Pagesize",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "pageSize"
+        ],
+        "title": "Page[RunSummary]",
         "type": "object"
       },
       "PatchWorkflowRequest": {
@@ -11101,6 +11213,16 @@
               }
             ],
             "title": "Createdbyname"
+          },
+          "forEachProgress": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FanOutProgress"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "id": {
             "title": "Id",
@@ -34903,6 +35025,78 @@
         ]
       }
     },
+    "/api/v1/tenant-settings/for-each-rate": {
+      "get": {
+        "description": "Return the tenant-default items-started-per-minute ceiling.",
+        "operationId": "get_for_each_rate_api_v1_tenant_settings_for_each_rate_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FanOutRateResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get For Each Rate",
+        "tags": [
+          "tenant-settings"
+        ]
+      },
+      "patch": {
+        "description": "Set (or clear, with ``0``) the tenant-default fan-out pace.\n\nAdmin-only, like the concurrency cap and for the same reason: a low\nvalue throttles every fan-out in the tenant. Reads stay open to\nevery member so an operator looking at a slow launch can confirm it\nis paced rather than stuck.",
+        "operationId": "update_for_each_rate_api_v1_tenant_settings_for_each_rate_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FanOutRateUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FanOutRateResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update For Each Rate",
+        "tags": [
+          "tenant-settings"
+        ]
+      }
+    },
     "/api/v1/tenant-settings/model-tier-map": {
       "get": {
         "description": "Return the tenant's effective tier map.\n\nFalls back to the global default when no override exists.",
@@ -37857,7 +38051,7 @@
     },
     "/api/v1/workflows/{workflow_id}/runs": {
       "get": {
-        "description": "List runs for a workflow. Use ?archived_only=true for archived runs.",
+        "description": "One page of a workflow's LAUNCHES, newest first (epic #811 S1).\n\nA launch is a run a person or a schedule started. The item results a\nFOR EACH produces are runs too, but they belong INSIDE their launch and\nnever appear here — a launch over 4,415 people is exactly one entry,\ncarrying ``forEachProgress`` so the row can show \"3,180 of 4,415\nprocessed · 12 failed\" without a request of its own.\n\nUse ``?archived_only=true`` for archived launches. Paging is keyset:\nfollow ``nextCursor``, never an offset (see\n:mod:`src.repositories.paging`).\n\nCost is flat in page size: one query for the page, one grouped roll-up,\none workflow-name lookup and one batched user-name lookup — not the\nper-row pair this endpoint used to do.",
         "operationId": "list_runs_api_v1_workflows__workflow_id__runs_get",
         "parameters": [
           {
@@ -37879,6 +38073,42 @@
               "title": "Archived Only",
               "type": "boolean"
             }
+          },
+          {
+            "description": "Page size (max 200).",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Page size (max 200).",
+              "title": "Limit"
+            }
+          },
+          {
+            "description": "Opaque continuation cursor from a previous response's nextCursor. Omit for the first page.",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Opaque continuation cursor from a previous response's nextCursor. Omit for the first page.",
+              "title": "Cursor"
+            }
           }
         ],
         "responses": {
@@ -37886,11 +38116,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/RunSummary"
-                  },
-                  "title": "Response List Runs Api V1 Workflows  Workflow Id  Runs Get",
-                  "type": "array"
+                  "$ref": "#/components/schemas/Page_RunSummary_"
                 }
               }
             },

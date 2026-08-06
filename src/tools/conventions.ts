@@ -165,6 +165,14 @@ has run cleanly once, at its current version.
   (\`read_run\` / \`read_run_trace\` / \`read_run_cost\`). Note it runs the PUBLISHED
   workflow and really executes (cost, connector side effects), so publish first,
   and only test-run when a human is expecting it.
+- A LIST is not the whole list. \`list_workflow_runs\` returns a page —
+  \`{ items, nextCursor, pageSize, hasMore }\`, 20 by default — so counting or
+  concluding from page one while \`hasMore\` is true is how you answer confidently
+  and wrongly. Follow \`nextCursor\` until it is null. Two further traps: that
+  route lists LAUNCHES (a 4,415-item FOR EACH is ONE entry carrying
+  \`forEachProgress\`, so rows are not runs), and the offset-style lists
+  (\`list_runs\`, \`list_publish_approvals\`) cap silently — a full page means
+  there may be more, and nothing in the response says so.
 
 ## Delete is recoverable — but not everything is
 - \`delete_*\` soft-deletes: the entity disappears from \`list_*\` but is not gone.

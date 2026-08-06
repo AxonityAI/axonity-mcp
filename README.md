@@ -157,6 +157,15 @@ workflow and really executes), `cancel_run`, `delete_run`, `list_runs`,
 `bulk_delete_runs`. There is no findings endpoint — evaluation means reading a
 run's validator verdicts and its trace.
 
+`list_workflow_runs({ workflowId, archivedOnly?, limit?, cursor? })` returns one
+**page** — `{ items, nextCursor, pageSize, hasMore }`, 20 by default and 200 at
+most — so follow `nextCursor` while `hasMore` is true rather than treating the
+first page as the answer. It also lists **launches**, not runs: the per-item runs
+a FOR EACH creates stay inside their launch, so a launch over 4,415 people is one
+entry carrying `forEachProgress`. `list_runs` is the tenant-wide list and is
+*not* paged this way — it answers with a bare array, capped at 200, walked with
+`offset`.
+
 ### Approvals
 
 `list_publish_approvals({ status?, limit?, offset? })` and
