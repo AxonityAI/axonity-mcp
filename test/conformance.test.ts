@@ -26,9 +26,17 @@ const snapshot = JSON.parse(
     "utf8",
   ),
 ) as {
-  paths: Record<string, Record<string, unknown>>;
+  paths: Record<string, Record<string, PathOperation>>;
   components: { schemas: Record<string, { properties?: Record<string, { enum?: string[] }> }> };
 };
+
+interface PathOperation {
+  parameters?: { name: string; in?: string }[];
+  responses?: Record<
+    string,
+    { content?: { "application/json"?: { schema?: { $ref?: string } } } }
+  >;
+}
 
 /** Split a path into segments, dropping any query string. */
 function segs(path: string): string[] {
@@ -56,6 +64,23 @@ function schemaHas(method: string, path: string): boolean {
   );
 }
 
+/**
+ * One filled-in argument per name any tool takes, so a blind sweep reaches as
+ * much of the route surface as possible. A handler that rejects these is simply
+ * skipped — only the routes that actually fired are asserted on.
+ */
+const ARGS: Record<string, unknown> = {
+  id: "x", workflowId: "x", agentId: "x", toolId: "x", runId: "x", approvalId: "x",
+  flowId: "x", snippetId: "x", flowStepId: "x", linkId: "x", webhookId: "x",
+  scheduleId: "x", triggerId: "x", versionId: "x", version: 1, majorVersion: 1,
+  expectedVersion: 1, displayOrder: 0, name: "x", cronExpr: "0 0 * * *",
+  conditionText: "x", repeatIntervalMinutes: 5, target: "system", confirm: true,
+  document: {}, fields: {}, mutations: [{ type: "add_step", payload: {} }],
+  snippetIds: ["a"], runIds: ["a"], workflows: [{ id: "x", expectedVersion: 1 }],
+  functions: [{ name: "f", code: "def f(): pass" }], code: "x",
+  requests: [{ entityType: "tool", entityId: "x" }],
+};
+
 describe("MCP route surface conforms to the backend OpenAPI snapshot", () => {
   it("every route a tool calls exists in the schema (path + method)", async () => {
     const calls: { method: string; path: string }[] = [];
@@ -71,18 +96,6 @@ describe("MCP route surface conforms to the backend OpenAPI snapshot", () => {
         handlers.set(name, h as (a: Record<string, unknown>) => Promise<unknown>),
     };
     registerAll(server as never, client as unknown as AxonityClient);
-
-    const ARGS: Record<string, unknown> = {
-      id: "x", workflowId: "x", agentId: "x", toolId: "x", runId: "x", approvalId: "x",
-      flowId: "x", snippetId: "x", flowStepId: "x", linkId: "x", webhookId: "x",
-      scheduleId: "x", triggerId: "x", versionId: "x", version: 1, majorVersion: 1,
-      expectedVersion: 1, displayOrder: 0, name: "x", cronExpr: "0 0 * * *",
-      conditionText: "x", repeatIntervalMinutes: 5, target: "system", confirm: true,
-      document: {}, fields: {}, mutations: [{ type: "add_step", payload: {} }],
-      snippetIds: ["a"], runIds: ["a"], workflows: [{ id: "x", expectedVersion: 1 }],
-      functions: [{ name: "f", code: "def f(): pass" }], code: "x",
-      requests: [{ entityType: "tool", entityId: "x" }],
-    };
 
     for (const handler of handlers.values()) {
       try {
@@ -156,6 +169,93 @@ describe("MCP route surface conforms to the backend OpenAPI snapshot", () => {
     expect(schemaTypes, "WorkflowMutationRequest.type has no enum").toBeDefined();
 
     expect([...advertised!].sort()).toEqual([...schemaTypes!].sort());
+  });
+
+  /**
+   * axonity-flow#811/#816 — no paged route may be consumed as if it were a list.
+   *
+   * #822 converted `GET /workflows/{id}/runs` to the `Page` envelope and #816
+   * is bringing the same treatment to the remaining list endpoints, one at a
+   * time. Each conversion is invisible to a pass-through tool: nothing crashes,
+   * the tool just starts answering with page 1 of N and no way to say so (#37).
+   *
+   * So the guard is on the SNAPSHOT, not on a list we maintain: whenever a
+   * route the MCP calls starts returning a `Page_*`, the tool that calls it
+   * must expose a cursor. A converted endpoint we have not caught up with
+   * fails here, at snapshot-refresh time, instead of in a tenant.
+   */
+  it("every paged route the MCP calls is called by a cursor-aware tool", async () => {
+    // Which routes each tool touches, recorded per tool rather than in bulk.
+    const perTool = new Map<string, { method: string; path: string }[]>();
+    const descriptions = new Map<string, string>();
+    const schemas = new Map<string, Record<string, unknown>>();
+    let current = "";
+
+    const rec = (method: string) =>
+      vi.fn(async (path: string) => {
+        perTool.get(current)?.push({ method, path });
+        return { ok: true };
+      });
+    const client = { get: rec("GET"), post: rec("POST"), put: rec("PUT"), patch: rec("PATCH"), del: rec("DELETE") };
+    const handlers = new Map<string, (a: Record<string, unknown>) => Promise<unknown>>();
+    const server = {
+      tool: (name: string, d: string, s: Record<string, unknown>, h: (a: never) => Promise<unknown>) => {
+        handlers.set(name, h as (a: Record<string, unknown>) => Promise<unknown>);
+        descriptions.set(name, d);
+        schemas.set(name, s);
+      },
+    };
+    registerAll(server as never, client as unknown as AxonityClient);
+
+    for (const [name, handler] of handlers) {
+      current = name;
+      perTool.set(name, []);
+      try {
+        await handler(ARGS);
+      } catch {
+        /* arg-shape mismatch is fine — only the routes that fired are checked */
+      }
+    }
+
+    /** The OpenAPI operation for a concrete path, if the snapshot has one. */
+    const operationFor = (method: string, path: string): PathOperation | undefined => {
+      const parts = segs(path);
+      for (const [tmpl, ops] of Object.entries(snapshot.paths)) {
+        const t = segs(tmpl);
+        const matches =
+          t.length === parts.length &&
+          t.every((seg, i) => (seg.startsWith("{") && seg.endsWith("}")) || seg === parts[i]);
+        if (matches && ops[method.toLowerCase()]) return ops[method.toLowerCase()];
+      }
+      return undefined;
+    };
+
+    const offenders: string[] = [];
+    let pagedRoutesSeen = 0;
+
+    for (const [name, calls] of perTool) {
+      for (const { method, path } of calls) {
+        const op = operationFor(method, path);
+        const ref = op?.responses?.["200"]?.content?.["application/json"]?.schema?.$ref ?? "";
+        if (!ref.includes("/Page_")) continue;
+        pagedRoutesSeen++;
+
+        // The route is paged. The tool must let a caller ask for the next page
+        // AND tell them there is one.
+        const takesCursor = "cursor" in (schemas.get(name) ?? {});
+        const saysSo = /nextCursor/.test(descriptions.get(name) ?? "");
+        if (!takesCursor || !saysSo) {
+          offenders.push(
+            `${name} calls paged ${method} ${path} (${ref.split("/").pop()}) but ` +
+              `${!takesCursor ? "takes no cursor argument" : "never mentions nextCursor"}`,
+          );
+        }
+      }
+    }
+
+    expect(offenders, offenders.join("\n")).toEqual([]);
+    // The sweep must actually have reached a paged route, or this passes vacuously.
+    expect(pagedRoutesSeen).toBeGreaterThan(0);
   });
 
   it("both validation routes resolve (the harness cannot reach them)", () => {

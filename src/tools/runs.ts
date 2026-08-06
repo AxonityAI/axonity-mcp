@@ -80,7 +80,14 @@ export function registerRunTools(server: McpServer, client: AxonityClient): void
     "list_runs",
     "List workflow runs across the tenant, newest first. Archived runs are " +
       "excluded unless includeArchived is true. To list runs of ONE workflow, " +
-      "use list_workflow_runs instead — this route has no workflow filter.",
+      "use list_workflow_runs instead — this route has no workflow filter." +
+      "\n\nTHIS ONE IS NOT PAGED THE SAME WAY: it answers with a BARE ARRAY, " +
+      "no envelope, no total and no cursor. You get at most limit rows (default " +
+      "50, and a larger value is silently clamped to 200), so a result whose " +
+      "length equals the limit you asked for is the signal that MORE MAY EXIST " +
+      "— nothing in the response says so. Walk it with offset until you get a " +
+      "short page. Unlike list_workflow_runs, this route does list per-item " +
+      "FOR EACH runs alongside their launches.",
     {
       status: z
         .string()
@@ -91,8 +98,22 @@ export function registerRunTools(server: McpServer, client: AxonityClient): void
       createdAfter: z.string().optional().describe("ISO date lower bound."),
       createdBefore: z.string().optional().describe("ISO date upper bound."),
       includeArchived: z.boolean().optional().describe("Defaults to false."),
-      limit: z.number().int().optional().describe("Default 50, capped at 200."),
-      offset: z.number().int().optional().describe("Default 0."),
+      limit: z
+        .number()
+        .int()
+        .optional()
+        .describe(
+          "Rows to return. Defaults to 50, silently clamped to 200 — asking " +
+            "for more does not fail, it just returns 200.",
+        ),
+      offset: z
+        .number()
+        .int()
+        .optional()
+        .describe(
+          "Rows to skip. Defaults to 0. Advance it by the page size to walk " +
+            "the whole list; stop when a page comes back short.",
+        ),
     },
     async ({ status, createdAfter, createdBefore, includeArchived, limit, offset }) =>
       guard(async () =>
@@ -111,20 +132,57 @@ export function registerRunTools(server: McpServer, client: AxonityClient): void
 
   server.tool(
     "list_workflow_runs",
-    "List the runs of one workflow. Note this route takes archivedOnly (show " +
-      "ONLY archived runs), which is not the same as list_runs' includeArchived.",
+    "List one workflow's LAUNCHES, newest first. Note this route takes " +
+      "archivedOnly (show ONLY archived launches), which is not the same as " +
+      "list_runs' includeArchived." +
+      "\n\nTHE RESPONSE IS ONE PAGE, NOT THE FULL LIST: " +
+      "{ items, nextCursor, pageSize, hasMore }. Default page size is 20, max " +
+      "200. While hasMore is true you have NOT seen every launch — pass the " +
+      "response's nextCursor back as cursor to get the next page, and repeat " +
+      "until nextCursor is null. Counting or concluding anything (\"how many " +
+      "failed?\") from a single page with hasMore: true gives a confidently " +
+      "wrong answer." +
+      "\n\nA LAUNCH IS NOT A RUN. A launch is what a person or a schedule " +
+      "started. The per-item runs a FOR EACH creates live INSIDE their launch " +
+      "and never appear here, so a launch over 4,415 people is exactly ONE " +
+      "entry — not 4,415. That entry carries forEachProgress " +
+      "({ total, pending, inProgress, succeeded, failed, … }), which is where " +
+      "per-item counts come from. Do not read the number of items on a page as " +
+      "a number of runs.",
     {
       workflowId: z.string().describe("The workflow's id."),
       archivedOnly: z
         .boolean()
         .optional()
-        .describe("True to list only archived runs. Defaults to false."),
+        .describe("True to list only archived launches. Defaults to false."),
+      limit: z
+        .number()
+        .int()
+        .optional()
+        .describe(
+          "Page size. Defaults to 20, capped at 200 — a larger value is " +
+            "clamped, not rejected.",
+        ),
+      cursor: z
+        .string()
+        .optional()
+        .describe(
+          "Opaque continuation token: pass back the previous response's " +
+            "nextCursor verbatim. Omit for the first page. It marks a POSITION, " +
+            "not an offset, so it stays correct while new runs are being " +
+            "inserted. A token you built or edited yourself is a 400.",
+        ),
     },
-    async ({ workflowId, archivedOnly }) =>
+    async ({ workflowId, archivedOnly, limit, cursor }) =>
       guard(async () =>
+        // The page envelope is forwarded WHOLE. Unwrapping to items would drop
+        // hasMore/nextCursor and recreate, one layer up, exactly the silent
+        // truncation this tool exists to make visible (#37).
         jsonResult(
           await client.get(`/api/v1/workflows/${workflowId}/runs`, {
             archived_only: archivedOnly,
+            limit,
+            cursor,
           }),
         ),
       ),
