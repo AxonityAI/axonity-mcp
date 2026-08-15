@@ -131,15 +131,37 @@ describe("the run lists say what kind of answer they are (#37)", () => {
     expect(d).toMatch(/forEachProgress/);
   });
 
-  it("list_runs discloses its bare array and silent clamp", () => {
+  it("list_runs states it is one page, walked by cursor", () => {
     const { descriptions } = setup();
     const d = descriptions.get("list_runs")!;
 
-    // This route was NOT converted by #822: no envelope, no cursor, and an
-    // over-sized limit is clamped rather than refused. Nothing in its response
-    // reveals that, so the description has to.
-    expect(d).toMatch(/BARE ARRAY/);
-    expect(d).toMatch(/MORE MAY EXIST/);
-    expect(d).toMatch(/offset/);
+    // This route WAS converted since (axonity-flow B-NB8 / epic #811): it now
+    // answers `Page[RunSummary]` and takes `cursor`, not `offset`. The old
+    // description told an agent to walk it with an offset the backend no longer
+    // reads — so it would re-read page one until it decided it had seen
+    // everything. The snapshot conformance test is what caught the drift.
+    expect(d).toMatch(/ONE PAGE/);
+    expect(d).toMatch(/nextCursor/);
+    expect(d).toMatch(/hasMore/);
+    expect(d).toMatch(/\b20\b/); // the default page size
+    expect(d).toMatch(/200/); // the cap
+    expect(d).not.toMatch(/BARE ARRAY/);
+  });
+
+  it("list_runs walks by cursor and sends no offset", async () => {
+    const { handlers, client } = setup();
+
+    await handlers.get("list_runs")!({ limit: 20, cursor: "c-1" });
+
+    const [path, params] = client.get.mock.calls[0] as [
+      string,
+      Record<string, unknown>,
+    ];
+    expect(path).toBe("/api/v1/runs");
+    expect(params.cursor).toBe("c-1");
+    // The backend stopped reading `offset` when this route became keyset-paged.
+    // Sending one is not harmless: it is what let an agent believe it was
+    // advancing while re-reading page one.
+    expect(params).not.toHaveProperty("offset");
   });
 });
