@@ -72,7 +72,7 @@ function schemaHas(method: string, path: string): boolean {
 const ARGS: Record<string, unknown> = {
   id: "x", workflowId: "x", agentId: "x", toolId: "x", runId: "x", approvalId: "x",
   flowId: "x", snippetId: "x", flowStepId: "x", linkId: "x", webhookId: "x",
-  scheduleId: "x", triggerId: "x", versionId: "x", version: 1, majorVersion: 1,
+  scheduleId: "x", triggerId: "x", secretId: "x", versionId: "x", version: 1, majorVersion: 1,
   expectedVersion: 1, displayOrder: 0, name: "x", cronExpr: "0 0 * * *",
   conditionText: "x", repeatIntervalMinutes: 5, target: "system", confirm: true,
   document: {}, fields: {}, mutations: [{ type: "add_step", payload: {} }],

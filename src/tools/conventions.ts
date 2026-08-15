@@ -482,6 +482,19 @@ a document to find out what the platform did.
   only ("{{ MY_SECRET }}" or ""); a human fills the real value in Axonity. This
   is enforced — a write carrying something that looks like a real secret is
   rejected before it leaves this connector.
+- You CAN read the catalogue: \`list_secrets\` (id, name, authType) and
+  \`read_secret\`. That is how you get the id for a connector's
+  \`authConfig.secretId\` — do not ask a human to copy one out of the UI.
+- Before you wire a connector to a secret, check \`valueKeys\` on
+  \`read_secret\`. An empty list means nobody has filled the secret in yet: the
+  connector will author fine and fail at RUN time. Say so to your human, with the
+  secret's name, rather than reporting the wiring as done.
+- You cannot create, change or delete a secret. That is a human act in Axonity →
+  Settings → Secrets, and the backend refuses it from this connector's token.
+- A secret's \`metadata\` (connection config, e.g. a session_cookie handshake)
+  comes back with credential-shaped entries withheld, listed under
+  \`metadataRedacted\`. If you need one of those values, a human reads it in
+  Axonity — do not try another route to it.
 
 ## Tenant
 - Your token fixes the tenant. You cannot act across tenants; never send a

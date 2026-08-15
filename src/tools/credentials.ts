@@ -96,6 +96,62 @@ export function findCredentialViolations(value: unknown, path = "authConfig"): s
   return findings;
 }
 
+/** What a redacted leaf is replaced with. Names where the real value lives. */
+export const REDACTION = "[redacted by the connector — read it in Axonity]";
+
+export interface Redaction {
+  /** The input with every credential-ish leaf replaced by `REDACTION`. */
+  value: unknown;
+  /** Where a replacement happened, e.g. `metadata.handshakeHeaders.Authorization`. */
+  redactedPaths: string[];
+}
+
+/**
+ * The mirror image of `findCredentialViolations`: same walk, same rules, but it
+ * rewrites what it finds instead of throwing. For data coming BACK from Axonity.
+ *
+ * A secret's `metadata` is stored unencrypted and returned verbatim by a route
+ * every user in the tenant can call (axonity-flow#908), and the handshake form
+ * invites an `Authorization` header straight into it. Returning that to an agent
+ * would put a real credential in its context through the one surface built on
+ * the promise that values never leave the server — so the structure comes back
+ * (an agent needs to see WHICH fields a handshake has) and the credential does not.
+ */
+export function redactCredentials(value: unknown, path = "metadata"): Redaction {
+  const redactedPaths: string[] = [];
+
+  const walk = (node: unknown, at: string, keyIsCredential: boolean): unknown => {
+    if (Array.isArray(node)) {
+      return node.map((item, i) => walk(item, `${at}[${i}]`, keyIsCredential));
+    }
+
+    if (node !== null && typeof node === "object") {
+      const out: Record<string, unknown> = {};
+      for (const [key, child] of Object.entries(node as Record<string, unknown>)) {
+        out[key] = walk(child, `${at}.${key}`, isCredentialKey(key));
+      }
+      return out;
+    }
+
+    if (typeof node === "string" && SECRET_PATTERNS.some(([, re]) => re.test(node))) {
+      redactedPaths.push(at);
+      return REDACTION;
+    }
+
+    // A credential-named leaf goes whatever its type — but a placeholder or an
+    // empty string is not a credential, and blanking it would hide that the
+    // field is unfilled, which is exactly what a reader is checking for.
+    if (keyIsCredential && !isPlaceholder(node)) {
+      redactedPaths.push(at);
+      return REDACTION;
+    }
+
+    return node;
+  };
+
+  return { value: walk(value, path, false), redactedPaths };
+}
+
 /**
  * Throw if a connector's fields carry anything that looks like a real
  * credential. Safe to call with any tool's fields — it is a no-op when there is

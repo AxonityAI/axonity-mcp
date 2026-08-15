@@ -6,12 +6,20 @@ import { registerAll } from "../src/index.js";
 /**
  * Security guard: no registered tool may target a deny-listed route family.
  *
- * The connector must never publish directly, decide an approval, touch secrets,
+ * The connector must never publish directly, decide an approval, write secrets,
  * mint tokens, or reach the deploy/config surface — those are human-gated or
  * out of scope by design. This drives the REAL registration (`registerAll`) with
  * a recording client, invokes every handler with permissive args, and asserts
- * none of the paths that reach the client match a forbidden pattern. A new tool
+ * none of the calls that reach the client match a forbidden pattern. A new tool
  * that crosses the line fails the build.
+ *
+ * Most entries are method-blind: a path this connector must not touch, it must
+ * not touch with any verb. Secrets are the exception, and the reason the guard
+ * records a METHOD at all — reading the catalogue is safe by construction (no
+ * secrets route returns a value) and is how an agent finds the id a connector's
+ * `authConfig.secretId` points at, while writing secret material stays a human
+ * act. Blocking the reads too was over-broad, not safe: it is what left an agent
+ * asking a human to copy an id out of the UI.
  */
 
 interface Recorded {
@@ -43,6 +51,7 @@ const ARGS: Record<string, unknown> = {
   webhookId: "x",
   scheduleId: "x",
   triggerId: "x",
+  secretId: "x",
   versionId: "x",
   version: 1,
   majorVersion: 1,
@@ -65,22 +74,50 @@ const ARGS: Record<string, unknown> = {
   requests: [{ entityType: "tool", entityId: "x" }],
 };
 
-// A path is forbidden if it hits a route family the connector must never use.
-// Note: request_publish_* posts to `/publish-approvals` (creating an approval),
-// which is ALLOWED — only the direct publish/approve/secret/etc. routes are not.
-const FORBIDDEN: [string, RegExp][] = [
-  ["direct publish/unpublish", /\/(publish|unpublish)$/],
-  ["approve/reject an approval", /\/publish-approvals\/[^/]+\/(approve|reject)$/],
+/**
+ * A call is forbidden if it hits a route family the connector must never use.
+ * A rule with no `methods` forbids every verb.
+ *
+ * Note: request_publish_* posts to `/publish-approvals` (creating an approval),
+ * which is ALLOWED — only the direct publish/approve/secret-write/etc. routes
+ * are not.
+ */
+interface Rule {
+  label: string;
+  path: RegExp;
+  /** Verbs this rule forbids. Omitted means all of them. */
+  methods?: string[];
+}
+
+const WRITE_METHODS = ["POST", "PUT", "PATCH", "DELETE"];
+
+const FORBIDDEN: Rule[] = [
+  { label: "direct publish/unpublish", path: /\/(publish|unpublish)$/ },
+  {
+    label: "approve/reject an approval",
+    path: /\/publish-approvals\/[^/]+\/(approve|reject)$/,
+  },
   // The bulk decision routes exist for the human review UI. Requesting in bulk
   // is fine (/publish-approvals/bulk); DECIDING in bulk is not ours to do.
-  ["bulk approve/reject", /\/publish-approvals\/bulk-(approve|reject)$/],
-  ["direct version publish", /\/versions\/(publish|unpublish)(\/|$)/],
-  ["secrets", /\/secrets(\/|$)/],
-  ["service tokens", /\/service-tokens(\/|$)/],
-  ["deployment", /\/deployment(\/|$)/],
-  ["config / migration surface", /\/config\//],
-  ["arbitrary connector execution", /\/tools\/execute-connector$/],
+  { label: "bulk approve/reject", path: /\/publish-approvals\/bulk-(approve|reject)$/ },
+  { label: "direct version publish", path: /\/versions\/(publish|unpublish)(\/|$)/ },
+  // Writing secret material is a human act — the backend refuses it from a
+  // service token too (`forbid_service_token_for_secrets`). Reading the
+  // catalogue is not: no route there returns a value. See axonity-mcp#39.
+  { label: "secret writes", path: /\/secrets(\/|$)/, methods: WRITE_METHODS },
+  { label: "service tokens", path: /\/service-tokens(\/|$)/ },
+  { label: "deployment", path: /\/deployment(\/|$)/ },
+  // `/config/secrets` lives behind this rule and stays closed to every verb —
+  // it is the deploy-time surface, not the tenant's secret catalogue.
+  { label: "config / migration surface", path: /\/config\// },
+  { label: "arbitrary connector execution", path: /\/tools\/execute-connector$/ },
 ];
+
+function forbids(method: string, path: string): boolean {
+  return FORBIDDEN.some(
+    (rule) => rule.path.test(path) && (rule.methods ?? [method]).includes(method),
+  );
+}
 
 describe("registered surface stays inside its authority boundary", () => {
   it("no tool targets a deny-listed route family", async () => {
@@ -103,18 +140,28 @@ describe("registered surface stays inside its authority boundary", () => {
       }
     }
 
-    const violations = calls.filter((c) =>
-      FORBIDDEN.some(([, re]) => re.test(c.path)),
-    );
+    const violations = calls.filter((c) => forbids(c.method, c.path));
     expect(violations, JSON.stringify(violations, null, 2)).toHaveLength(0);
   });
 
   it("the guard actually catches a forbidden path (poison check)", () => {
-    const bad = "/api/v1/tools/execute-connector";
-    expect(FORBIDDEN.some(([, re]) => re.test(bad))).toBe(true);
-    const good = "/api/v1/tools/abc/execute-connector"; // stored connector — allowed
-    expect(FORBIDDEN.some(([, re]) => re.test(good))).toBe(false);
-    const approvalCreate = "/api/v1/publish-approvals"; // request_publish_* — allowed
-    expect(FORBIDDEN.some(([, re]) => re.test(approvalCreate))).toBe(false);
+    expect(forbids("POST", "/api/v1/tools/execute-connector")).toBe(true);
+    // A stored connector's own execute route — allowed.
+    expect(forbids("POST", "/api/v1/tools/abc/execute-connector")).toBe(false);
+    // request_publish_* creates an approval — allowed.
+    expect(forbids("POST", "/api/v1/publish-approvals")).toBe(false);
+  });
+
+  it("secrets are readable and unwritable, by method", () => {
+    expect(forbids("GET", "/api/v1/secrets")).toBe(false);
+    expect(forbids("GET", "/api/v1/secrets/abc")).toBe(false);
+
+    for (const method of WRITE_METHODS) {
+      expect(forbids(method, "/api/v1/secrets"), method).toBe(true);
+      expect(forbids(method, "/api/v1/secrets/abc"), method).toBe(true);
+    }
+
+    // The deploy-time secret surface stays closed to reads as well.
+    expect(forbids("GET", "/api/v1/config/secrets")).toBe(true);
   });
 });

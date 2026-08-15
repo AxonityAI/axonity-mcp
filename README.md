@@ -123,6 +123,11 @@ across these routes — the tool parameter names say which.
   `request_publish_company` (takes no id — the
   server resolves your tenant's one company; direct company publish is closed to
   service tokens).
+- **Secrets** (read-only): `list_secrets`, `read_secret` — the catalogue a
+  connector's `authConfig.secretId` points at. Values are never returned by any
+  Axonity route; `valueKeys` says which keys a human has filled in, so you can
+  tell an unfinished secret from a finished one before wiring to it. Creating or
+  changing a secret is a human act in Axonity (#39).
 - **Catalog & cloning**: `list_system_tools` (read-only catalog — enabling one
   for an agent is `update_agent` with the id added to `systemToolIds`),
   `clone_flow`, `clone_prompt_snippet`.
@@ -202,15 +207,22 @@ These are enforced by the backend, not merely by convention:
 - **Secrets never pass through the agent.** A connector's `authConfig` accepts
   placeholders only; a write carrying something that looks like a real
   credential is rejected before it leaves the connector. Tenant secrets
-  (`/api/v1/secrets`) aren't wrapped at all — the backend refuses any service
-  token there outright.
+  (`/api/v1/secrets`) are **readable and unwritable**: `list_secrets` /
+  `read_secret` give the catalogue and `valueKeys` (which keys are filled, never
+  their values) so an agent can point `authConfig.secretId` at the right entry,
+  and no tool can create, change or delete one — the backend refuses a service
+  token there too. A secret's `metadata` is stored unencrypted and readable
+  tenant-wide (axonity-flow#908), so credential-shaped entries in it are
+  withheld on read and listed under `metadataRedacted`.
 - **Errors carry a machine-readable `code`, not just prose.** A 409 can mean a
   stale write (retry) or a live reference conflict (don't — see
   `axonity_conventions`); the connector tells them apart by `code`, never by
   matching the message text.
 - **No tool crosses the authority boundary.** A test drives the whole registered
-  surface and fails the build if any tool targets a publish / approve / secret /
-  service-token / deploy route (`test/exclusions.test.ts`).
+  surface and fails the build if any tool targets a publish / approve /
+  secret-write / service-token / deploy route (`test/exclusions.test.ts`). The
+  rules are method-aware: `GET /api/v1/secrets` is allowed, every write verb on
+  it is not.
 - **Guidance can't silently drift from the backend.** The field/enum facts the
   connector states are pinned to a vendored snapshot of the backend OpenAPI
   schema; `test/conformance.test.ts` fails if a route or documented enum
