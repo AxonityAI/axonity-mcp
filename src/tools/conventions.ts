@@ -477,6 +477,39 @@ a document to find out what the platform did.
 - Runs are the only thing with a real archive state — \`archive_run\` is
   reversible, \`bulk_delete_runs\` is not.
 
+## Subworkflows — one workflow calling another
+Both halves live in the workflow DOCUMENT, so both are ordinary
+\`apply_workflow_mutations\` work. There is no separate "link" route.
+- **To make a workflow callable**, give it a trigger with
+  \`typeId: "subprocess-invocation"\` (\`add_trigger\`) whose \`parameters\` are
+  what a caller must pass: \`{ name, label, type, required, description }\`. That
+  list IS the signature — there is no other place to declare it.
+- **It must also be PUBLISHED.** The catalogue reads the published document, so
+  a draft-only workflow comes back \`callable: false\` with "Never published".
+  Authoring the caller first and publishing the callee later is a run-time
+  failure waiting to happen.
+- **To call it**, add a step with \`type: "subprocess"\` and
+  \`config: { targetWorkflowId, ownerAgentId }\` — both required, both workflow/
+  agent ids. Bind the step's \`inputs\` by NAME to the callee's \`parameters\`;
+  that is the whole mapping, there is no separate argument block.
+- \`config.waitForCompletion\` is **IGNORED** if you write it. Drawing a step
+  after this one already means "after", so waiting is implied. The one thing the
+  graph cannot say is fire-and-forget: \`config.fireAndForget: true\`, and then
+  nothing downstream may depend on the result.
+- \`config.errorStrategy\` ("fail" | "skip") is only honoured when the step
+  ITERATES (\`config.iteration.enabled\`). On a single call "skip" would report
+  a failed child as success, so it is forced to fail-fast.
+- **A workflow cannot call itself** — every run would spawn a child that reaches
+  the same step again. Pass \`exclude: <the workflow you are editing>\` to
+  \`list_callable_workflows\` and it is kept out of the list.
+- **What comes back** is the callee's \`outcomes\`: its end steps, each with the
+  fields bound into it. WHICH end was reached is itself part of the answer.
+- **The gap to know about:** \`validate_workflow\` does NOT check any of this.
+  It accepts \`subprocess\` as a step type and stops there — a missing
+  \`targetWorkflowId\`, or a target with no invocation trigger, validates clean
+  and fails at RUN time. \`list_callable_workflows\` is the check; run it before
+  you author the step, not after a run fails.
+
 ## Secrets
 - Never handle a real credential. A connector's \`authConfig\` takes placeholders
   only ("{{ MY_SECRET }}" or ""); a human fills the real value in Axonity. This

@@ -123,6 +123,13 @@ across these routes — the tool parameter names say which.
   `request_publish_company` (takes no id — the
   server resolves your tenant's one company; direct company publish is closed to
   service tokens).
+- **Subworkflows**: `list_callable_workflows` — which workflows a `subprocess`
+  step may call, each with its `parameters` and `outcomes`, and a
+  `blockedReason` for the ones that cannot (never published, or no
+  `subprocess-invocation` trigger). Authoring both halves is ordinary
+  `apply_workflow_mutations` work; `axonity_conventions` carries the config
+  contract, including that `validate_workflow` does **not** check a subprocess
+  step's target.
 - **Secrets** (read-only): `list_secrets`, `read_secret` — the catalogue a
   connector's `authConfig.secretId` points at. Values are never returned by any
   Axonity route; `valueKeys` says which keys a human has filled in, so you can
