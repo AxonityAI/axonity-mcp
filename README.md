@@ -66,6 +66,11 @@ Exceptions: `persona` has no `create_persona` (create only via
 `create_agent_persona`).
 
 Plus:
+- `get_workflow_authoring_spec` — the mutation commands **this deploy** accepts,
+  read live from the server (`GET /workflows/operations`, generated from the
+  engine's own registry). The connector states no vocabulary of its own, so a new
+  server operation is discoverable without a release here. Index by default;
+  pass `types` for a command's live payload schema.
 - `apply_workflow_mutations` for structural workflow edits (add steps, connect
   edges) via mutation commands, sequenced and version-threaded for you.
 - `replace_workflow_document` for one-shot full-document replacement in a single

@@ -410,6 +410,15 @@ The connector never carries a secret across: \`authConfig\` stays placeholders i
 the new tenant too, and a human fills the real value there.
 
 ## Structural workflow edits
+- **Start by reading the spec.** \`get_workflow_authoring_spec\` returns the
+  commands THIS deploy accepts, generated from the engine's own registry. Neither
+  this guide nor the tool descriptions list them: a list kept in the connector is
+  right only by maintenance, and it was already wrong once in the direction that
+  costs an agent a 422 on a field it was told to use. Pass \`types\` for the live
+  payload schema of a command you are about to write.
+- \`rulesVersion\` in that response is a content hash. While it is unchanged there
+  is nothing to re-fetch; re-read the spec when it changes, or when a mutation
+  fails with a 422 suggesting your idea of a command is stale.
 - \`apply_workflow_mutations\` takes a LIST of commands and applies them in order,
   threading the version for you — pass the version you read, not one per command.
 - It is NOT transactional. If command N fails, the ones before it stay applied;

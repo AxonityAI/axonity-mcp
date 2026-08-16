@@ -135,19 +135,20 @@ describe("MCP route surface conforms to the backend OpenAPI snapshot", () => {
   });
 
   /**
-   * The gap that let axonity-flow#802 ship: apply_workflow_mutations names every
+   * The gap that let axonity-flow#802 ship: apply_workflow_mutations named every
    * valid command type in its description, the backend's boundary enum was
    * hand-maintained and three narrower, and no test compared the two. So the
    * tool advertised add_decision_condition, attach_output_schema and
    * detach_output_schema while the route answered 422 for all three.
    *
-   * #808 derives the enum from the handler registry on the backend side. This is
-   * the other half: the description and the schema are compared directly, so
-   * neither a type we stop advertising nor one the backend drops can pass
-   * unnoticed. Parsed from the live description rather than a second hand-kept
-   * list here — a copy would drift exactly the way the original did.
+   * That was guarded by pinning the prose to the schema enum. It is now closed
+   * one level down instead: the connector states no vocabulary at all and reads
+   * `GET /workflows/operations` (#8, axonity-flow#802 B4). A list you do not keep
+   * cannot drift, so the pin has nothing left to compare — and this test guards
+   * the property that replaced it. Re-introducing a hand-kept list would
+   * silently re-open #32, so the absence is asserted rather than assumed.
    */
-  it("every mutation type the tool advertises exists in the schema, and vice versa", () => {
+  it("the connector states no mutation vocabulary of its own", () => {
     const descriptions = new Map<string, string>();
     const server = {
       tool: (name: string, description: string) => descriptions.set(name, description),
@@ -156,19 +157,38 @@ describe("MCP route surface conforms to the backend OpenAPI snapshot", () => {
 
     const description = descriptions.get("apply_workflow_mutations");
     expect(description, "apply_workflow_mutations is not registered").toBeDefined();
+    expect(description).toContain("get_workflow_authoring_spec");
+    expect(description, "a hand-kept type list is back — see #32").not.toMatch(
+      /Valid types:/,
+    );
 
-    const advertised = description!
-      .match(/Valid types: ([^.]+)\./)?.[1]
-      .split(",")
-      .map((t) => t.replace(/\s+/g, ""))
-      .filter(Boolean);
-    expect(advertised, "could not parse the 'Valid types:' list").toBeDefined();
-
+    // Naming a command to state its BEHAVIOUR is guidance the schemas do not
+    // carry ("add_step builds a complete step in one call") and must stay. What
+    // must not come back is an ENUMERATION — commands strung together by commas,
+    // which is a claim about what exists and the exact thing that went stale.
+    // So the guard is on the shape, not on a count of mentions.
     const schemaTypes =
-      snapshot.components.schemas.WorkflowMutationRequest?.properties?.type?.enum;
-    expect(schemaTypes, "WorkflowMutationRequest.type has no enum").toBeDefined();
+      snapshot.components.schemas.WorkflowMutationRequest?.properties?.type?.enum ?? [];
+    expect(schemaTypes.length, "the enum vanished — check the snapshot").toBeGreaterThan(
+      10,
+    );
 
-    expect([...advertised!].sort()).toEqual([...schemaTypes!].sort());
+    const alternation = schemaTypes.join("|");
+    const enumeration = new RegExp(`(${alternation})(,\\s*(${alternation})){2,}`);
+
+    // The guard bites: this is the shape the old description had.
+    expect(
+      "Valid types: update_workflow, add_trigger, add_step, add_edge.".match(enumeration),
+    ).not.toBeNull();
+
+    for (const [name, text] of descriptions) {
+      const found = text.match(enumeration)?.[0];
+      expect(
+        found,
+        `${name} lists the mutation vocabulary ("${found}") — read it from ` +
+          "get_workflow_authoring_spec instead (#32)",
+      ).toBeUndefined();
+    }
   });
 
   /**
