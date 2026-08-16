@@ -167,9 +167,10 @@ run's validator verdicts and its trace.
 most — so follow `nextCursor` while `hasMore` is true rather than treating the
 first page as the answer. It also lists **launches**, not runs: the per-item runs
 a FOR EACH creates stay inside their launch, so a launch over 4,415 people is one
-entry carrying `forEachProgress`. `list_runs` is the tenant-wide list and is
-*not* paged this way — it answers with a bare array, capped at 200, walked with
-`offset`.
+entry carrying `forEachProgress`. `list_runs` is the tenant-wide list and is now
+paged the same way — `{ items, nextCursor, pageSize, hasMore }`, walked with
+`cursor`. It stopped answering with a bare array when the backend converted the
+route; the `offset` it used to take is no longer read.
 
 ### Approvals
 
@@ -177,6 +178,21 @@ entry carrying `forEachProgress`. `list_runs` is the tenant-wide list and is
 `get_publish_approval({ approvalId })` — how you find out whether a
 `request_publish_*` was approved or rejected. Approving and rejecting are
 human-only actions in Axonity.
+
+`request_publish_release({ workflowId, changeSummary? })` proposes a **release**:
+a workflow *and everything its run needs* — the agents it runs, their tools and
+personas, the flows it pins, the memory scoped to those agents — as ONE approval.
+Prefer it over a request per entity. Taking a tenant live entity-by-entity means
+a hundred-odd approvals, none of which means anything on its own, and a human
+asked that many times is not reviewing.
+
+Unlike `request_publish_bulk`, a release is **all-or-nothing and in dependency
+order**: approving it publishes every member or none, so a workflow can never go
+live calling a tool that did not. The response carries the bundle's verdict —
+`ready`, `changedCount` of `totalCount` (unchanged members are already live and
+ride along), `members` with why each is there, and `blockers` that name the
+member in the way. Requesting is ours; deciding stays human, like everywhere
+else here.
 
 ## What this is for — and what it is not
 

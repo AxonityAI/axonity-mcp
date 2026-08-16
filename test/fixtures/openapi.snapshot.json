@@ -885,6 +885,51 @@
         "title": "AuthUser",
         "type": "object"
       },
+      "BatchProgress": {
+        "description": ":class:`FanOutProgress` for ONE identified FOR EACH batch.",
+        "properties": {
+          "batchId": {
+            "format": "uuid",
+            "title": "Batchid",
+            "type": "string"
+          },
+          "deadLetter": {
+            "title": "Deadletter",
+            "type": "integer"
+          },
+          "failed": {
+            "title": "Failed",
+            "type": "integer"
+          },
+          "inProgress": {
+            "title": "Inprogress",
+            "type": "integer"
+          },
+          "pending": {
+            "title": "Pending",
+            "type": "integer"
+          },
+          "succeeded": {
+            "title": "Succeeded",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "pending",
+          "inProgress",
+          "succeeded",
+          "failed",
+          "deadLetter",
+          "batchId"
+        ],
+        "title": "BatchProgress",
+        "type": "object"
+      },
       "Body_upload_attachment_api_v1_conversation_attachments_post": {
         "properties": {
           "file": {
@@ -4387,6 +4432,40 @@
         "title": "DeletedVersionSchema",
         "type": "object"
       },
+      "DependentAgent": {
+        "description": "One agent that currently depends on a library item (#845 S5).",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "DependentAgent",
+        "type": "object"
+      },
+      "DependentAgentsResponse": {
+        "description": "Who depends on this library item.\n\n# paging-exempt: the dependants of ONE library item, bounded by the\n# tenant's agent roster (~28 here, O(100) at any plausible scale). It\n# grows with deliberate human authoring, not with machine activity —\n# the incident B-NB8 exists for was 4,415 rows minted by a single\n# launch. An agent cannot link to the same item twice (the live-row\n# partial unique index), so this cannot exceed the roster.",
+        "properties": {
+          "items": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/DependentAgent"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "title": "DependentAgentsResponse",
+        "type": "object"
+      },
       "DeployConfigRequest": {
         "description": "Deploy a config version to a target tenant.\n\nSupply EXACTLY ONE source: ``files`` (a POSTed ``{path: content}`` file-tree\n— what CI produces after checking out the repo, or the app after\nserializing) OR ``source`` (a repo ref the backend fetches). ``targetTenantId``,\nwhen set, is a guard, not a selector: it MUST equal the tenant the caller is\nauthorized for (the admin's own tenant, or the deploy credential's single\ntenant) — a credential for env A can never deploy env B. ``configRef`` is an\noptional human label for the posted-tree path (e.g. the CI commit sha); the\nrepo path derives it from the resolved commit.\n\n``expectedPlanId`` (optional) pins the deploy to a previously previewed plan\n(#548): the tree's content hash must match or the publish is rejected (409)\nrather than silently applying drifted config. Honored on the admin ``/deploy``\npath (\"review → deploy\"); the credentialed ``/ci/deploy`` path deliberately\ndoes NOT pin (no interactive plan step) — see that route.\n\nThere is no approver field: a PROTECTED (production) environment is gated on\nthe caller being an interactive admin SESSION (#616 C2), which the request\nbody cannot assert.",
         "properties": {
@@ -7459,6 +7538,29 @@
         "title": "InstantiateTemplateRequest",
         "type": "object"
       },
+      "InvocationMessagesResponse": {
+        "description": "One agent invocation's transcript, fetched on open (#875).\n\nThe body behind a row in ``RunDetail.agent_invocations``, which\ncarries metadata and a ``messageCount`` and no message bodies at all.\nSame shape as :class:`RunValueResponse` and the session-memory file\nread: the collection view carries handles, a body arrives when\nsomeone asks to see it.\n\n``messages`` is the FULLY DECODED conversation — a transcript stored\nafter #855 is marker-encoded on disk, and the repository resolves it,\nso a caller never has to know which shape the row was written in.\nEmpty list for an invocation that has not taken a turn yet.",
+        "properties": {
+          "invocationId": {
+            "title": "Invocationid",
+            "type": "string"
+          },
+          "messages": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Messages",
+            "type": "array"
+          }
+        },
+        "required": [
+          "invocationId",
+          "messages"
+        ],
+        "title": "InvocationMessagesResponse",
+        "type": "object"
+      },
       "LayerSchema": {
         "description": "Layer within the company framework.\n\nLayers are dynamic: users can add, remove, reorder, and hide them.\nEach layer has a row/position for layout and per-view visibility flags.",
         "properties": {
@@ -8054,6 +8156,17 @@
             ],
             "title": "Producedby"
           },
+          "publishedMajorVersion": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publishedmajorversion"
+          },
           "schemaBody": {
             "additionalProperties": true,
             "title": "Schemabody",
@@ -8222,6 +8335,150 @@
         "title": "PackageInfoResponse",
         "type": "object"
       },
+      "Page_AuditEventItem_": {
+        "properties": {
+          "hasMore": {
+            "default": false,
+            "title": "Hasmore",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AuditEventItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          },
+          "pageSize": {
+            "title": "Pagesize",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "pageSize"
+        ],
+        "title": "Page[AuditEventItem]",
+        "type": "object"
+      },
+      "Page_NotificationOut_": {
+        "properties": {
+          "hasMore": {
+            "default": false,
+            "title": "Hasmore",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/NotificationOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          },
+          "pageSize": {
+            "title": "Pagesize",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "pageSize"
+        ],
+        "title": "Page[NotificationOut]",
+        "type": "object"
+      },
+      "Page_ReleaseApprovalSummary_": {
+        "properties": {
+          "hasMore": {
+            "default": false,
+            "title": "Hasmore",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ReleaseApprovalSummary"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          },
+          "pageSize": {
+            "title": "Pagesize",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "pageSize"
+        ],
+        "title": "Page[ReleaseApprovalSummary]",
+        "type": "object"
+      },
+      "Page_RunItemResult_": {
+        "properties": {
+          "hasMore": {
+            "default": false,
+            "title": "Hasmore",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RunItemResult"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          },
+          "pageSize": {
+            "title": "Pagesize",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "pageSize"
+        ],
+        "title": "Page[RunItemResult]",
+        "type": "object"
+      },
       "Page_RunSummary_": {
         "properties": {
           "hasMore": {
@@ -8256,6 +8513,42 @@
           "pageSize"
         ],
         "title": "Page[RunSummary]",
+        "type": "object"
+      },
+      "Page_TodoItem_": {
+        "properties": {
+          "hasMore": {
+            "default": false,
+            "title": "Hasmore",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/TodoItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          },
+          "pageSize": {
+            "title": "Pagesize",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "pageSize"
+        ],
+        "title": "Page[TodoItem]",
         "type": "object"
       },
       "PatchWorkflowRequest": {
@@ -8890,6 +9183,17 @@
             ],
             "title": "Ownerid"
           },
+          "publishedMajorVersion": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publishedmajorversion"
+          },
           "scope": {
             "enum": [
               "tenant",
@@ -9040,6 +9344,17 @@
               }
             ],
             "title": "Ownerid"
+          },
+          "publishedMajorVersion": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publishedmajorversion"
           },
           "scope": {
             "enum": [
@@ -10053,6 +10368,17 @@
             ],
             "title": "Ownerid"
           },
+          "publishedMajorVersion": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publishedmajorversion"
+          },
           "scope": {
             "enum": [
               "tenant_general",
@@ -10212,6 +10538,17 @@
             ],
             "title": "Ownerid"
           },
+          "publishedMajorVersion": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publishedmajorversion"
+          },
           "scope": {
             "enum": [
               "tenant_general",
@@ -10295,6 +10632,359 @@
           "refreshToken"
         ],
         "title": "RefreshRequest",
+        "type": "object"
+      },
+      "ReleaseApprovalItem": {
+        "description": "A pending/decided release, with its aggregate verdict and members.",
+        "properties": {
+          "blockers": {
+            "items": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "title": "Blockers",
+            "type": "array"
+          },
+          "changeSummary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Changesummary"
+          },
+          "changedCount": {
+            "default": 0,
+            "title": "Changedcount",
+            "type": "integer"
+          },
+          "createdAt": {
+            "title": "Createdat",
+            "type": "string"
+          },
+          "decidedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decidedat"
+          },
+          "decidedByName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decidedbyname"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "members": {
+            "items": {
+              "$ref": "#/components/schemas/ReleaseMemberItem"
+            },
+            "title": "Members",
+            "type": "array"
+          },
+          "ready": {
+            "title": "Ready",
+            "type": "boolean"
+          },
+          "requestedByKind": {
+            "title": "Requestedbykind",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "approved",
+              "rejected"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "totalCount": {
+            "default": 0,
+            "title": "Totalcount",
+            "type": "integer"
+          },
+          "workflowId": {
+            "title": "Workflowid",
+            "type": "string"
+          },
+          "workflowName": {
+            "title": "Workflowname",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "workflowId",
+          "workflowName",
+          "status",
+          "ready",
+          "requestedByKind",
+          "createdAt"
+        ],
+        "title": "ReleaseApprovalItem",
+        "type": "object"
+      },
+      "ReleaseApprovalSummary": {
+        "description": "One row of the release queue — the counts, never the closure.\n\nDeliberately WITHOUT ``members``. A release's closure grows with what the\ntenant has authored (Talentus: 162 entities), so embedding it once per row\nwould make the queue's response grow with the tenant — the nested\nunbounded collection B-NB8 exists to keep off the wire. The members are\nwhat the approver reads to decide, and deciding happens on one release:\n``GET /publish-approvals/release/{id}`` carries them.\n\nThe verdict here is the one RECORDED when the release was requested, and\n``readiness_as_of`` says when that was. Recomputing it would mean walking\na full closure per row on every poll of the queue. The two moments that\nmust be true now — showing the decision and taking it — are the detail\nroute and ``approve``, both of which recompute (#793).",
+        "properties": {
+          "blockerCount": {
+            "default": 0,
+            "title": "Blockercount",
+            "type": "integer"
+          },
+          "changeSummary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Changesummary"
+          },
+          "changedCount": {
+            "default": 0,
+            "title": "Changedcount",
+            "type": "integer"
+          },
+          "createdAt": {
+            "title": "Createdat",
+            "type": "string"
+          },
+          "decidedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decidedat"
+          },
+          "decidedByName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decidedbyname"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "readinessAsOf": {
+            "title": "Readinessasof",
+            "type": "string"
+          },
+          "ready": {
+            "title": "Ready",
+            "type": "boolean"
+          },
+          "requestedByKind": {
+            "title": "Requestedbykind",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "approved",
+              "rejected"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "totalCount": {
+            "default": 0,
+            "title": "Totalcount",
+            "type": "integer"
+          },
+          "workflowId": {
+            "title": "Workflowid",
+            "type": "string"
+          },
+          "workflowName": {
+            "title": "Workflowname",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "workflowId",
+          "workflowName",
+          "status",
+          "ready",
+          "readinessAsOf",
+          "requestedByKind",
+          "createdAt"
+        ],
+        "title": "ReleaseApprovalSummary",
+        "type": "object"
+      },
+      "ReleaseDecisionResponse": {
+        "description": "Outcome of approving/rejecting a release.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "published": {
+            "items": {
+              "$ref": "#/components/schemas/ReleasePublishedMember"
+            },
+            "title": "Published",
+            "type": "array"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "approved",
+              "rejected"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status"
+        ],
+        "title": "ReleaseDecisionResponse",
+        "type": "object"
+      },
+      "ReleaseMemberItem": {
+        "description": "One entity in a release, plus what this release would do to it.",
+        "properties": {
+          "blockers": {
+            "items": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "title": "Blockers",
+            "type": "array"
+          },
+          "changedFields": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Changedfields",
+            "type": "array"
+          },
+          "entityId": {
+            "title": "Entityid",
+            "type": "string"
+          },
+          "entityType": {
+            "title": "Entitytype",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "ready": {
+            "default": true,
+            "title": "Ready",
+            "type": "boolean"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "changed",
+              "unchanged",
+              "never_published",
+              "missing"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "entityType",
+          "entityId",
+          "name",
+          "reason",
+          "state"
+        ],
+        "title": "ReleaseMemberItem",
+        "type": "object"
+      },
+      "ReleasePublishedMember": {
+        "description": "One member actually published by approving a release.",
+        "properties": {
+          "entityId": {
+            "title": "Entityid",
+            "type": "string"
+          },
+          "entityType": {
+            "title": "Entitytype",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "entityType",
+          "entityId",
+          "name"
+        ],
+        "title": "ReleasePublishedMember",
+        "type": "object"
+      },
+      "ReleaseRequest": {
+        "description": "Propose releasing a workflow and everything its run needs.",
+        "properties": {
+          "changeSummary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Changesummary"
+          },
+          "workflowId": {
+            "title": "Workflowid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "workflowId"
+        ],
+        "title": "ReleaseRequest",
         "type": "object"
       },
       "RenameVersionRequest": {
@@ -11099,6 +11789,110 @@
         "title": "RunDetail",
         "type": "object"
       },
+      "RunItemResult": {
+        "description": "One row inside a launch: what happened to one item (epic #811 S3).\n\nA deliberately THIN projection of a child run. The list it feeds can be\nthousands of rows long, so it carries what an operator scans for —\nwhich person, what happened, when — and nothing else. Anything deeper\nlives one click away, on that item's own run detail at ``id``.\n\n``status`` is the child run's own status and drives the status badge.\n``skipped`` is the fact the status cannot carry: a gate deliberately\ndeclined this item (``SKIP <category>: <reason>``), which the run\ncorrectly records as a clean success. Without the flag every\ndeliberately skipped person would read as processed. ``skip_reason``\nis the parsed BUSINESS reason only — never the raw exception text.",
+        "properties": {
+          "completedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completedat"
+          },
+          "createdAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Createdat"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "itemLabel": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Itemlabel"
+          },
+          "iterationIndex": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Iterationindex"
+          },
+          "skipCategory": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skipcategory"
+          },
+          "skipReason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skipreason"
+          },
+          "skipped": {
+            "default": false,
+            "title": "Skipped",
+            "type": "boolean"
+          },
+          "startedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Startedat"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status"
+        ],
+        "title": "RunItemResult",
+        "type": "object"
+      },
       "RunRestartResult": {
         "description": "Outcome of re-dispatching a stuck run.\n\n``status='restarted'`` — the run was re-queued onto the RunQueue.\n``status='already_active'`` — it was already being processed, so the\ncall was an idempotent no-op (double-click safe).",
         "properties": {
@@ -11163,6 +11957,45 @@
           }
         },
         "title": "RunStopBulkResult",
+        "type": "object"
+      },
+      "RunStorageResponse": {
+        "description": "What this tenant's run history costs, split by retention class.\n\nBacks the operator view behind ``GET /api/v1/runs/storage`` (#863 S2).\nThe split is the point: retention keeps CONVERSATIONS forever and\nexpires the OPERATIONAL payload, so a single total tells an operator\nnothing about what a horizon would actually reclaim.\n\nBytes are as-stored (post-compression), i.e. what a sweep would give\nback — not uncompressed payload, and not the table size, which\nincludes indexes and per-row overhead this cannot attribute to a\ntenant.",
+        "properties": {
+          "conversationBytes": {
+            "title": "Conversationbytes",
+            "type": "integer"
+          },
+          "operationalBytes": {
+            "title": "Operationalbytes",
+            "type": "integer"
+          },
+          "reclaimableShare": {
+            "title": "Reclaimableshare",
+            "type": "number"
+          },
+          "runs": {
+            "title": "Runs",
+            "type": "integer"
+          },
+          "skeletonBytes": {
+            "title": "Skeletonbytes",
+            "type": "integer"
+          },
+          "totalBytes": {
+            "title": "Totalbytes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "runs",
+          "conversationBytes",
+          "operationalBytes",
+          "skeletonBytes",
+          "totalBytes",
+          "reclaimableShare"
+        ],
+        "title": "RunStorageResponse",
         "type": "object"
       },
       "RunSummary": {
@@ -11613,6 +12446,50 @@
           "entries"
         ],
         "title": "RunTraceResponse",
+        "type": "object"
+      },
+      "RunValueMarkerSchema": {
+        "additionalProperties": false,
+        "description": "The stand-in a large value leaves behind in ``step_states`` (#839).\n\n``GET /runs/{run_id}`` serves ``step_states`` as STORED. Every subtree\nat or above the run-value threshold was replaced by this three-key\nmarker on write (``src/repositories/run_values.py``), so a list\nmentioned in three places crosses the wire ONCE — as three identical\n~90-byte markers — instead of three times in full. Whoever opens it\nfetches the body from ``GET /runs/{run_id}/values/{digest}``.\n\nTwo deliberate choices:\n\n* **Explicit ``$``-prefixed aliases, not camelCase.** The realtime hub\n  publishes the JSONB column verbatim, so the marker reaches the client\n  that way regardless; matching it here means ONE client-side reader\n  handles the REST response and the realtime row.\n* **``extra=\"forbid\"``**, mirroring ``run_values.is_marker``. Tenant\n  data may legitimately carry a ``$run_value`` field of its own, and a\n  loose model would swallow the rest of that object's keys.",
+        "properties": {
+          "$bytes": {
+            "title": "$Bytes",
+            "type": "integer"
+          },
+          "$run_value": {
+            "pattern": "^[0-9a-f]{32}$",
+            "title": "$Run Value",
+            "type": "string"
+          },
+          "$shape": {
+            "title": "$Shape",
+            "type": "string"
+          }
+        },
+        "required": [
+          "$run_value",
+          "$bytes",
+          "$shape"
+        ],
+        "title": "RunValueMarkerSchema",
+        "type": "object"
+      },
+      "RunValueResponse": {
+        "description": "One stored run value, fetched when someone opens it (#839 S2).\n\n``value`` is the value as STORED, so a value that wraps another large\nvalue carries its marker in turn — the client resolves one level at a\ntime rather than pulling a whole tree it may not display. Size and\nshape are not repeated here: the marker the caller already holds\ncarries both.",
+        "properties": {
+          "digest": {
+            "title": "Digest",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value"
+          }
+        },
+        "required": [
+          "digest",
+          "value"
+        ],
+        "title": "RunValueResponse",
         "type": "object"
       },
       "RunWaitingOnResponse": {
@@ -12387,6 +13264,17 @@
             "title": "Name",
             "type": "string"
           },
+          "publishedMajorVersion": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publishedmajorversion"
+          },
           "source": {
             "enum": [
               "human",
@@ -12495,6 +13383,17 @@
           "name": {
             "title": "Name",
             "type": "string"
+          },
+          "publishedMajorVersion": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publishedmajorversion"
           },
           "source": {
             "enum": [
@@ -12739,7 +13638,7 @@
         "type": "object"
       },
       "StepStateSchema": {
-        "description": "State of a single step within a run.",
+        "description": "State of a single step within a run.\n\n``| RunValueMarkerSchema`` appears on every field whose value can be\nLARGE and whose declared type is not already object-shaped (#839 S2).\nThe run-detail route serves the stored form, and a marker is a\nthree-key object: it validates as-is against ``dict``-typed fields\n(``structured_outputs``, ``resolved_inputs``, ``phases``, …) but not\nagainst ``str`` or ``list[...]``, which is where the union earns its\nplace. A client reads the marker and fetches the body from\n``GET /runs/{run_id}/values/{digest}``.",
         "properties": {
           "askUserState": {
             "anyOf": [
@@ -12773,6 +13672,9 @@
                 "type": "array"
               },
               {
+                "$ref": "#/components/schemas/RunValueMarkerSchema"
+              },
+              {
                 "type": "null"
               }
             ],
@@ -12782,6 +13684,9 @@
             "anyOf": [
               {
                 "type": "string"
+              },
+              {
+                "$ref": "#/components/schemas/RunValueMarkerSchema"
               },
               {
                 "type": "null"
@@ -12855,6 +13760,9 @@
                 "type": "array"
               },
               {
+                "$ref": "#/components/schemas/RunValueMarkerSchema"
+              },
+              {
                 "type": "null"
               }
             ],
@@ -12864,6 +13772,9 @@
             "anyOf": [
               {
                 "type": "string"
+              },
+              {
+                "$ref": "#/components/schemas/RunValueMarkerSchema"
               },
               {
                 "type": "null"
@@ -12889,9 +13800,13 @@
                 "$ref": "#/components/schemas/PlanArtifactSchema"
               },
               {
+                "$ref": "#/components/schemas/RunValueMarkerSchema"
+              },
+              {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "Plan"
           },
           "planApprovalState": {
             "anyOf": [
@@ -12915,6 +13830,9 @@
                 "type": "array"
               },
               {
+                "$ref": "#/components/schemas/RunValueMarkerSchema"
+              },
+              {
                 "type": "null"
               }
             ],
@@ -12927,6 +13845,9 @@
                   "$ref": "#/components/schemas/PlanStepRecordSchema"
                 },
                 "type": "array"
+              },
+              {
+                "$ref": "#/components/schemas/RunValueMarkerSchema"
               },
               {
                 "type": "null"
@@ -19909,7 +20830,7 @@
     },
     "/api/v1/audit-events": {
       "get": {
-        "description": "A page of the tenant's audit trail, newest first.\n\n``actorKind=service_token`` shows only what external agents did;\n``serviceTokenId`` narrows that to one credential.",
+        "description": "One page of the tenant's audit trail, newest first (#811 S5).\n\n``actorKind=service_token`` shows only what external agents did;\n``serviceTokenId`` narrows that to one credential.\n\nPaging is keyset: follow ``nextCursor``, never an offset (see\n:mod:`src.repositories.paging`). The trail is append-only and never\npruned, so it is the collection an offset window handles worst — rows\nland above the window continuously, shifting every later page.\n\nFilters are applied in the QUERY, before the page is cut: the question\n\"what did this token do\" must reach an event buried under a page of\nnewer, unrelated activity.",
         "operationId": "list_audit_events_api_v1_audit_events_get",
         "parameters": [
           {
@@ -19968,26 +20889,39 @@
             }
           },
           {
+            "description": "Page size (max 200).",
             "in": "query",
             "name": "limit",
             "required": false,
             "schema": {
-              "default": 50,
-              "maximum": 200,
-              "minimum": 1,
-              "title": "Limit",
-              "type": "integer"
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Page size (max 200).",
+              "title": "Limit"
             }
           },
           {
+            "description": "Opaque continuation cursor from a previous response's nextCursor. Omit for the first page.",
             "in": "query",
-            "name": "offset",
+            "name": "cursor",
             "required": false,
             "schema": {
-              "default": 0,
-              "minimum": 0,
-              "title": "Offset",
-              "type": "integer"
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Opaque continuation cursor from a previous response's nextCursor. Omit for the first page.",
+              "title": "Cursor"
             }
           }
         ],
@@ -19996,11 +20930,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/AuditEventItem"
-                  },
-                  "title": "Response List Audit Events Api V1 Audit Events Get",
-                  "type": "array"
+                  "$ref": "#/components/schemas/Page_AuditEventItem_"
                 }
               }
             },
@@ -21735,7 +22665,7 @@
     },
     "/api/v1/conversations": {
       "get": {
-        "description": "List the tenant's Builder-team conversations, newest first (S11).",
+        "description": "One page of the tenant's Builder-team conversations (S11, #811 S5).\n\nA conversation is a run, and the history grows one row per chat with\nno pruning — so the list that offers to resume one has to be able to\nsay \"there is more\" instead of ending at an arbitrary point.\n\nName resolution is batched across the page, not per row.",
         "operationId": "list_conversations_api_v1_conversations_get",
         "parameters": [
           {
@@ -21754,6 +22684,42 @@
               ],
               "title": "Workflowid"
             }
+          },
+          {
+            "description": "Page size (max 200).",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Page size (max 200).",
+              "title": "Limit"
+            }
+          },
+          {
+            "description": "Opaque continuation cursor from a previous response's nextCursor. Omit for the first page.",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Opaque continuation cursor from a previous response's nextCursor. Omit for the first page.",
+              "title": "Cursor"
+            }
           }
         ],
         "responses": {
@@ -21761,11 +22727,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/RunSummary"
-                  },
-                  "title": "Response List Conversations Api V1 Conversations Get",
-                  "type": "array"
+                  "$ref": "#/components/schemas/Page_RunSummary_"
                 }
               }
             },
@@ -25026,7 +25988,7 @@
     },
     "/api/v1/notifications": {
       "get": {
-        "description": "List the tenant's notifications, newest first.",
+        "description": "One page of the tenant's notifications, newest first (#811 S5).\n\nNotifications accumulate without anyone doing anything — a\ndead-letter sweep can mint hundreds in a burst — so the list is\npaged and says whether more exist. Follow ``nextCursor``; never an\noffset (see :mod:`src.repositories.paging`).\n\n``unread_only`` narrows the query ahead of the page cut.",
         "operationId": "list_notifications_api_v1_notifications_get",
         "parameters": [
           {
@@ -25040,15 +26002,39 @@
             }
           },
           {
+            "description": "Page size (max 200).",
             "in": "query",
             "name": "limit",
             "required": false,
             "schema": {
-              "default": 50,
-              "maximum": 200,
-              "minimum": 1,
-              "title": "Limit",
-              "type": "integer"
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Page size (max 200).",
+              "title": "Limit"
+            }
+          },
+          {
+            "description": "Opaque continuation cursor from a previous response's nextCursor. Omit for the first page.",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Opaque continuation cursor from a previous response's nextCursor. Omit for the first page.",
+              "title": "Cursor"
             }
           }
         ],
@@ -25057,11 +26043,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/NotificationOut"
-                  },
-                  "title": "Response List Notifications Api V1 Notifications Get",
-                  "type": "array"
+                  "$ref": "#/components/schemas/Page_NotificationOut_"
                 }
               }
             },
@@ -27615,6 +28597,55 @@
         ]
       }
     },
+    "/api/v1/policies/{policy_id}/dependent-agents": {
+      "get": {
+        "description": "Which agents currently depend on this policy (#845 S5).\n\nThe reverse of ``/agents/{id}/policys``. Until now the\nrelationship was queryable agent-first only, so \"what breaks if I\nchange this\" was unanswerable — the question an author most needs\nbefore editing a SHARED library item.\n\nLive links only: unlinking closes the interval rather than deleting\nthe row (#825 S3b), and a stale dependency list is worse than none.",
+        "operationId": "list_dependent_agents_api_v1_policies__policy_id__dependent_agents_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "policy_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Policy Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DependentAgentsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Dependent Agents",
+        "tags": [
+          "policies"
+        ]
+      }
+    },
     "/api/v1/policies/{policy_id}/discard-draft": {
       "post": {
         "description": "Discard working-draft edits, reverting to the published policy.\n\nThe published content is not touched, and the discarded draft is kept\nas a version rather than destroyed. Refuses (400) when the policy has\nnever been published — its draft is then the only copy of that work.",
@@ -29855,6 +30886,294 @@
         ]
       }
     },
+    "/api/v1/publish-approvals/release": {
+      "get": {
+        "description": "One page of the tenant's release queue, newest first (B-NB8).\n\nRows carry the counts — \"6 changed of 162\" — not the closure itself, and\nthe verdict each shows is the one recorded at request time (see\n``readinessAsOf``). Open a release to read its members and get the verdict\nrecomputed as of now (#793).\n\nFollow ``nextCursor``; never an offset (see :mod:`src.repositories.paging`).\n``status`` narrows the query ahead of the page cut.",
+        "operationId": "list_releases_api_v1_publish_approvals_release_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "pending",
+                    "approved",
+                    "rejected"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "description": "Page size (max 200).",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Page size (max 200).",
+              "title": "Limit"
+            }
+          },
+          {
+            "description": "Opaque continuation cursor from a previous response's nextCursor. Omit for the first page.",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Opaque continuation cursor from a previous response's nextCursor. Omit for the first page.",
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_ReleaseApprovalSummary_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Releases",
+        "tags": [
+          "publish-approvals"
+        ]
+      },
+      "post": {
+        "description": "Request a release of a workflow and its closure. Never publishes.\n\nComputes the closure, diffs each member against what is live, and returns\none approval whose readiness aggregates the members — ready only if every\nmember that must publish is ready.",
+        "operationId": "request_release_api_v1_publish_approvals_release_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReleaseRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReleaseApprovalItem"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Request Release",
+        "tags": [
+          "publish-approvals"
+        ]
+      }
+    },
+    "/api/v1/publish-approvals/release/{release_id}": {
+      "get": {
+        "description": "Get one release, its readiness recomputed as of now (#793).",
+        "operationId": "get_release_api_v1_publish_approvals_release__release_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "release_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Release Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReleaseApprovalItem"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Release",
+        "tags": [
+          "publish-approvals"
+        ]
+      }
+    },
+    "/api/v1/publish-approvals/release/{release_id}/approve": {
+      "post": {
+        "description": "Approve a release → publish its whole closure in dependency order,\nall-or-nothing. Admin-only.",
+        "operationId": "approve_release_api_v1_publish_approvals_release__release_id__approve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "release_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Release Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReleaseDecisionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Approve Release",
+        "tags": [
+          "publish-approvals"
+        ]
+      }
+    },
+    "/api/v1/publish-approvals/release/{release_id}/reject": {
+      "post": {
+        "description": "Reject a pending release → nothing is published. Admin-only.",
+        "operationId": "reject_release_api_v1_publish_approvals_release__release_id__reject_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "release_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Release Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReleaseDecisionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Reject Release",
+        "tags": [
+          "publish-approvals"
+        ]
+      }
+    },
     "/api/v1/publish-approvals/{approval_id}": {
       "get": {
         "description": "Get a single approval — lets an agent poll one request, not the queue.",
@@ -30427,6 +31746,55 @@
           }
         ],
         "summary": "Update Reference Doc",
+        "tags": [
+          "reference_docs"
+        ]
+      }
+    },
+    "/api/v1/reference-docs/{ref_id}/dependent-agents": {
+      "get": {
+        "description": "Which agents currently depend on this reference doc (#845 S5).\n\nThe reverse of ``/agents/{id}/reference-docs``. Until now the\nrelationship was queryable agent-first only, so \"what breaks if I\nchange this\" was unanswerable — the question an author most needs\nbefore editing a SHARED library item.\n\nLive links only: unlinking closes the interval rather than deleting\nthe row (#825 S3b), and a stale dependency list is worse than none.",
+        "operationId": "list_dependent_agents_api_v1_reference_docs__ref_id__dependent_agents_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ref_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ref Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DependentAgentsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Dependent Agents",
         "tags": [
           "reference_docs"
         ]
@@ -31251,7 +32619,7 @@
     },
     "/api/v1/runs": {
       "get": {
-        "description": "List runs across all workflows for the tenant.\n\nOptional filters:\n- status: comma-separated, e.g. ?status=running,pending\n- created_after / created_before: ISO date strings, e.g. ?created_after=2026-04-14\n- include_archived: bool, default false",
+        "description": "One page of the tenant's runs across every workflow (#811 S5).\n\nThe cross-workflow sibling of ``GET /workflows/{id}/runs``, in the\nsame envelope and on the same keyset cursor — follow ``nextCursor``,\nnever an offset (see :mod:`src.repositories.paging`). Item results a\nFOR EACH produced never appear here; they belong inside their launch.\n\nOptional filters, all applied in the QUERY ahead of the page cut:\n- status: comma-separated, e.g. ?status=running,pending\n- created_after / created_before: ISO date strings, e.g. ?created_after=2026-04-14\n- include_archived: bool, default false\n\nCost is flat in page size: one query for the page plus a bounded set\nof name lookups — not the per-row pair this list used to do.",
         "operationId": "list_all_runs_api_v1_runs_get",
         "parameters": [
           {
@@ -31313,23 +32681,39 @@
             }
           },
           {
+            "description": "Page size (max 200).",
             "in": "query",
             "name": "limit",
             "required": false,
             "schema": {
-              "default": 50,
-              "title": "Limit",
-              "type": "integer"
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Page size (max 200).",
+              "title": "Limit"
             }
           },
           {
+            "description": "Opaque continuation cursor from a previous response's nextCursor. Omit for the first page.",
             "in": "query",
-            "name": "offset",
+            "name": "cursor",
             "required": false,
             "schema": {
-              "default": 0,
-              "title": "Offset",
-              "type": "integer"
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Opaque continuation cursor from a previous response's nextCursor. Omit for the first page.",
+              "title": "Cursor"
             }
           }
         ],
@@ -31338,11 +32722,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/RunSummary"
-                  },
-                  "title": "Response List All Runs Api V1 Runs Get",
-                  "type": "array"
+                  "$ref": "#/components/schemas/Page_RunSummary_"
                 }
               }
             },
@@ -31515,6 +32895,33 @@
         ]
       }
     },
+    "/api/v1/runs/storage": {
+      "get": {
+        "description": "What this tenant's run history costs, split by retention class.\n\nAdmin-gated: it reports the tenant's total data footprint, which is\noperational information rather than something a member needs to do\ntheir work.\n\nThe split is the point (#863). Retention keeps CONVERSATIONS forever\nand expires the OPERATIONAL payload, so a single total tells an\noperator nothing about what setting a horizon would reclaim — and the\ntwo are NOT separable from table sizes, because ``run_values`` holds\nboth a step's fetched dataset and, since #853, an externalised\ntranscript.\n\nDeclared BEFORE ``/runs/{run_id}`` — FastAPI matches in declaration\norder, and \"storage\" would otherwise be parsed as a run id and\nrejected as a malformed UUID.",
+        "operationId": "get_run_storage_api_v1_runs_storage_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunStorageResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Run Storage",
+        "tags": [
+          "runs"
+        ]
+      }
+    },
     "/api/v1/runs/summary": {
       "get": {
         "description": "Get aggregate run counts for the operator dashboard.",
@@ -31544,17 +32951,43 @@
     },
     "/api/v1/runs/todo": {
       "get": {
-        "description": "List steps needing user input across all waiting/input_required runs.",
+        "description": "One page of the steps waiting on a human (epic #811 S5).\n\nPaged over the waiting RUNS, not over the to-do items: the cursor\nnames a position in ``(created_at, id)``, which is a run's\ncoordinates. One waiting run can carry several waiting steps, so\n``items`` may outnumber ``pageSize`` — ``pageSize`` bounds what was\nread, which is what keeps the response bounded.\n\nA fan-out can park thousands of items on a manual step at once, and\nnothing bounds how long they wait, so this list needs its\ncontinuation marker as much as the run list does.",
         "operationId": "list_todo_items_api_v1_runs_todo_get",
         "parameters": [
           {
+            "description": "Runs to scan (max 200).",
             "in": "query",
             "name": "limit",
             "required": false,
             "schema": {
-              "default": 50,
-              "title": "Limit",
-              "type": "integer"
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Runs to scan (max 200).",
+              "title": "Limit"
+            }
+          },
+          {
+            "description": "Opaque continuation cursor from a previous response's nextCursor. Omit for the first page.",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Opaque continuation cursor from a previous response's nextCursor. Omit for the first page.",
+              "title": "Cursor"
             }
           }
         ],
@@ -31563,11 +32996,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/TodoItem"
-                  },
-                  "title": "Response List Todo Items Api V1 Runs Todo Get",
-                  "type": "array"
+                  "$ref": "#/components/schemas/Page_TodoItem_"
                 }
               }
             },
@@ -31646,7 +33075,7 @@
         ]
       },
       "get": {
-        "description": "Get run detail with step states.",
+        "description": "Get run detail with step states, as STORED (#839 S2).\n\n``step_states`` is served in its stored form: every value at or above\nthe run-value threshold is a marker, and the body is fetched from\n``GET /runs/{run_id}/values/{digest}`` when someone opens it. Because\neach mention of one value collapses to the same marker, the response\ndeduplicates on the wire for free — this response measured 6,377 kB on\nrun ``29d20efd``, 99.75% of it one employee list mentioned three times.\n\nTHIS route is the only reader that opts out of decoding; every other\ncaller of ``RunService.get_run`` still sees exactly what was written.",
         "operationId": "get_run_api_v1_runs__run_id__get",
         "parameters": [
           {
@@ -31975,7 +33404,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/BatchProgress"
+                }
               }
             },
             "description": "Successful Response"
@@ -31997,6 +33428,216 @@
           }
         ],
         "summary": "Get For Each Progress",
+        "tags": [
+          "runs"
+        ]
+      }
+    },
+    "/api/v1/runs/{run_id}/invocations/{invocation_id}/messages": {
+      "get": {
+        "description": "One agent invocation's transcript, on open (#875).\n\n``GET /runs/{run_id}`` lists every invocation with its metadata and a\n``messageCount``; this serves the conversation behind one of those\nrows. Before it existed, the run page downloaded every transcript in\nthe run to draw a list — 287,416 B of a 307,069 B response on run\n``369e81be``, none of it displayed until an operator opened a step.\n\nSame contract as ``GET /runs/{run_id}/values/{digest}`` (#839 S2) and\n``GET /runs/{run_id}/session-memory/{file_id}`` (#440): a collection\nview carries handles, a body transfers when someone asks for it.\n\n404s unless the run belongs to the caller's tenant AND the invocation\nbelongs to THAT run — an invocation id observed elsewhere reads\nnothing here.",
+        "operationId": "get_invocation_messages_api_v1_runs__run_id__invocations__invocation_id__messages_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "invocation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Invocation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvocationMessagesResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Invocation Messages",
+        "tags": [
+          "runs"
+        ]
+      }
+    },
+    "/api/v1/runs/{run_id}/items": {
+      "get": {
+        "description": "One page of a launch's ITEM RESULTS, newest first (epic #811 S3).\n\nThe inside of a launch: one row per item its FOR EACH processed, in the\nsame page envelope and with the same cursor rule as the launch list\nthat got the operator here (``GET /workflows/{id}/runs``). Each row's\n``id`` is a real run — open it for that one item's full detail.\n\n``outcome`` is answered by the DATABASE. That is the point of the\nparameter: on a 4,415-item launch the twelve failures are scattered\nthrough the middle, so a client filtering what it has downloaded would\nshow an operator nothing and call it \"no failures\".\n\nA launch that never fanned out returns an empty last page — never a\ncursor that keeps a scrolling client asking.",
+        "operationId": "list_run_items_api_v1_runs__run_id__items_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Which items to return. 'failed' covers items that never produced a result; 'skipped' covers items a gate deliberately declined. Applied in the query, not to the returned page.",
+            "in": "query",
+            "name": "outcome",
+            "required": false,
+            "schema": {
+              "default": "all",
+              "description": "Which items to return. 'failed' covers items that never produced a result; 'skipped' covers items a gate deliberately declined. Applied in the query, not to the returned page.",
+              "enum": [
+                "all",
+                "failed",
+                "skipped"
+              ],
+              "title": "Outcome",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Page size (max 200).",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Page size (max 200).",
+              "title": "Limit"
+            }
+          },
+          {
+            "description": "Opaque continuation cursor from a previous response's nextCursor. Omit for the first page.",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Opaque continuation cursor from a previous response's nextCursor. Omit for the first page.",
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_RunItemResult_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Run Items",
+        "tags": [
+          "runs"
+        ]
+      }
+    },
+    "/api/v1/runs/{run_id}/items/summary": {
+      "get": {
+        "description": "The launch's roll-up — the headline above its item list (#811 S3).\n\n\"4,415 processed · 12 failed\". The SAME grouped count the runs list\nputs on the launch's line, so the two surfaces can never disagree.\n\nSeparate from the item page on purpose: the page envelope is shared\nacross every paged surface in the product and does not grow a\nper-surface summary field. A launch with no items reports zeroes,\nwhich is what the empty state renders.",
+        "operationId": "get_run_items_summary_api_v1_runs__run_id__items_summary_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FanOutProgress"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Run Items Summary",
         "tags": [
           "runs"
         ]
@@ -32581,6 +34222,67 @@
           }
         ],
         "summary": "Unarchive Run",
+        "tags": [
+          "runs"
+        ]
+      }
+    },
+    "/api/v1/runs/{run_id}/values/{digest}": {
+      "get": {
+        "description": "Fetch one large step value, on open (#839 S2).\n\nThe body behind a marker in ``GET /runs/{run_id}``'s ``step_states``.\nModelled on ``GET /runs/{run_id}/session-memory/{file_id}`` (#440),\nwhich exists for the same reason: a collection view carries handles,\nand a body is transferred when someone asks to see it.\n\n404s unless the run belongs to the caller's tenant AND the digest is\nstored against THIS run — a digest observed in another tenant's run is\nnot readable here. A malformed digest is rejected by the path\nconstraint before any lookup happens.",
+        "operationId": "get_run_value_api_v1_runs__run_id__values__digest__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Content digest from a step-state marker's $run_value.",
+            "in": "path",
+            "name": "digest",
+            "required": true,
+            "schema": {
+              "description": "Content digest from a step-state marker's $run_value.",
+              "pattern": "^[0-9a-f]{32}$",
+              "title": "Digest",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunValueResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Run Value",
         "tags": [
           "runs"
         ]
@@ -33312,6 +35014,55 @@
           }
         ],
         "summary": "Update Skill",
+        "tags": [
+          "skills"
+        ]
+      }
+    },
+    "/api/v1/skills/{skill_id}/dependent-agents": {
+      "get": {
+        "description": "Which agents currently depend on this skill (#845 S5).\n\nThe reverse of ``/agents/{id}/skills``. Until now the\nrelationship was queryable agent-first only, so \"what breaks if I\nchange this\" was unanswerable — the question an author most needs\nbefore editing a SHARED library item.\n\nLive links only: unlinking closes the interval rather than deleting\nthe row (#825 S3b), and a stale dependency list is worse than none.",
+        "operationId": "list_dependent_agents_api_v1_skills__skill_id__dependent_agents_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "skill_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Skill Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DependentAgentsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Dependent Agents",
         "tags": [
           "skills"
         ]
@@ -38051,7 +39802,7 @@
     },
     "/api/v1/workflows/{workflow_id}/runs": {
       "get": {
-        "description": "One page of a workflow's LAUNCHES, newest first (epic #811 S1).\n\nA launch is a run a person or a schedule started. The item results a\nFOR EACH produces are runs too, but they belong INSIDE their launch and\nnever appear here — a launch over 4,415 people is exactly one entry,\ncarrying ``forEachProgress`` so the row can show \"3,180 of 4,415\nprocessed · 12 failed\" without a request of its own.\n\nUse ``?archived_only=true`` for archived launches. Paging is keyset:\nfollow ``nextCursor``, never an offset (see\n:mod:`src.repositories.paging`).\n\nCost is flat in page size: one query for the page, one grouped roll-up,\none workflow-name lookup and one batched user-name lookup — not the\nper-row pair this endpoint used to do.",
+        "description": "One page of a workflow's LAUNCHES, newest first (epic #811 S1).\n\nA launch is a run a person or a schedule started. The item results a\nFOR EACH produces are runs too, but they belong INSIDE their launch and\nnever appear here — a launch over 4,415 people is exactly one entry,\ncarrying ``forEachProgress`` so the row can show \"3,180 of 4,415\nprocessed · 12 failed\" without a request of its own.\n\nUse ``?archived_only=true`` for archived launches, and ``?status=`` —\nrepeatable — to narrow to particular run statuses. The status filter is\napplied in the QUERY, before the page is cut (epic #811 S2): the\noperator's \"failed only\" view must reach a failure buried under a page\nof newer completions, which a client-side filter over the rows already\ndownloaded could never do.\n\nPaging is keyset: follow ``nextCursor``, never an offset (see\n:mod:`src.repositories.paging`).\n\nCost is flat in page size: one query for the page, one grouped roll-up,\none workflow-name lookup and one batched user-name lookup — not the\nper-row pair this endpoint used to do.",
         "operationId": "list_runs_api_v1_workflows__workflow_id__runs_get",
         "parameters": [
           {
@@ -38072,6 +39823,37 @@
               "default": false,
               "title": "Archived Only",
               "type": "boolean"
+            }
+          },
+          {
+            "description": "Restrict to these run statuses. Repeat the parameter for a union (?status=pending&status=running). Omit for every status.",
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "enum": [
+                      "pending",
+                      "running",
+                      "waiting",
+                      "input_required",
+                      "completed",
+                      "failed",
+                      "cancelled",
+                      "expired"
+                    ],
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Restrict to these run statuses. Repeat the parameter for a union (?status=pending&status=running). Omit for every status.",
+              "title": "Status"
             }
           },
           {

@@ -5,6 +5,7 @@ import { registerCompanyTools } from "../src/tools/company.js";
 import { registerConventions } from "../src/tools/conventions.js";
 import { registerPromptPlacementTools } from "../src/tools/promptPlacement.js";
 import { registerRunTools } from "../src/tools/runs.js";
+import { registerApprovalTools } from "../src/tools/validation.js";
 import { registerVersionTools } from "../src/tools/versions.js";
 import { registerWorkflowMutations } from "../src/tools/workflowMutations.js";
 
@@ -291,5 +292,62 @@ describe("prompt-snippet detach makes no unfounded claim (#24)", () => {
     expect(body.completed).toBe(true);
     expect(body.note).toMatch(/list_flow_step_prompts/);
     expect(body.request).toEqual({ linkId: "ln-1" });
+  });
+});
+
+describe("release bundles — one approval for a workflow and its closure (#799)", () => {
+  it("proposes a release by workflow id and never publishes", async () => {
+    const { server, handlers } = fakeServer();
+    const client = fakeClient();
+    registerApprovalTools(server as never, client as unknown as AxonityClient);
+
+    await handlers.get("request_publish_release")!({
+      workflowId: "wf-1",
+      changeSummary: "the refreshed rewrite prompt",
+    });
+
+    expect(client.post).toHaveBeenCalledWith("/api/v1/publish-approvals/release", {
+      workflowId: "wf-1",
+      changeSummary: "the refreshed rewrite prompt",
+    });
+    // Requesting only. Nothing in this tool may decide.
+    expect(client.post).toHaveBeenCalledTimes(1);
+  });
+
+  it("omits changeSummary rather than sending an empty one", async () => {
+    const { server, handlers } = fakeServer();
+    const client = fakeClient();
+    registerApprovalTools(server as never, client as unknown as AxonityClient);
+
+    await handlers.get("request_publish_release")!({ workflowId: "wf-1" });
+
+    expect(client.post).toHaveBeenCalledWith("/api/v1/publish-approvals/release", {
+      workflowId: "wf-1",
+    });
+  });
+
+  it("registers no tool that decides a release", async () => {
+    const { server, handlers } = fakeServer();
+    registerApprovalTools(server as never, fakeClient() as unknown as AxonityClient);
+
+    const deciding = [...handlers.keys()].filter((name) =>
+      /approve|reject/.test(name),
+    );
+    expect(deciding).toEqual([]);
+  });
+
+  it("tells the agent what a release is for, in its own description", async () => {
+    // The tool description IS the interface: an agent that cannot tell this
+    // apart from request_publish_bulk will keep making 162 requests.
+    const descriptions = new Map<string, string>();
+    const server = {
+      tool: (name: string, description: string) => descriptions.set(name, description),
+    };
+    registerApprovalTools(server as never, fakeClient() as unknown as AxonityClient);
+
+    const description = descriptions.get("request_publish_release")!;
+    expect(description).toMatch(/all-or-nothing/);
+    expect(description).toMatch(/does NOT publish/);
+    expect(description).toMatch(/changedCount/);
   });
 });

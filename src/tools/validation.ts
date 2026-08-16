@@ -238,9 +238,53 @@ export function registerApprovalTools(
       ),
   );
 
-  // Deliberately absent: bulk approve and bulk reject. Those routes exist on the
-  // backend for the human review UI. Deciding an approval is a human action in
-  // Axonity and no tool of this connector may take it — the same boundary
+  server.tool(
+    "request_publish_release",
+    "Request that a WORKFLOW AND EVERYTHING IT NEEDS go live as one release — " +
+      "the agents it runs, their tools and personas, the flows it pins, and the " +
+      "memory scoped to those agents. Prefer this over a request per entity: " +
+      "taking a tenant live entity-by-entity means a hundred-odd separate " +
+      "approvals, none of which means anything on its own, and a human asked " +
+      "that many times is not reviewing. " +
+      "\n\nThis does NOT publish and does NOT approve — it creates ONE pending " +
+      "approval a human decides in Axonity. Approving it publishes every member " +
+      "in dependency order, all-or-nothing: unlike request_publish_bulk, a " +
+      "failure on any member leaves NOTHING published, so a workflow can never " +
+      "go live calling a tool that did not. " +
+      "\n\nThe response is the bundle's verdict: `ready` for the whole release, " +
+      "`changedCount` of `totalCount` (only members that actually differ from " +
+      "what is live get published — the rest are already live and ride along), " +
+      "`members` with what each one's state is and why it is in the release, and " +
+      "`blockers` that NAME the member in the way. If it is not ready, fix the " +
+      "member the blocker names and request again — nothing was recorded as " +
+      "approved. " +
+      "\n\nA tenant-wide policy or reference doc is deliberately NOT in a " +
+      "release: it applies to every agent regardless of this workflow, so it is " +
+      "part of the environment and is published on its own.",
+    {
+      workflowId: z
+        .string()
+        .describe("The workflow to release. Its closure is computed by the server."),
+      changeSummary: z
+        .string()
+        .optional()
+        .describe("A short note for the approver on what changed and why."),
+    },
+    async ({ workflowId, changeSummary }) =>
+      guard(async () =>
+        jsonResult(
+          await client.post("/api/v1/publish-approvals/release", {
+            workflowId,
+            ...(changeSummary ? { changeSummary } : {}),
+          }),
+        ),
+      ),
+  );
+
+  // Deliberately absent: bulk approve and bulk reject, and the release
+  // approve/reject that came with them (axonity-flow#799). Those routes exist on
+  // the backend for the human review UI. Deciding an approval is a human action
+  // in Axonity and no tool of this connector may take it — the same boundary
   // list_publish_approvals states, and test/exclusions.test.ts enforces.
 }
 

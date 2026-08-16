@@ -81,13 +81,19 @@ export function registerRunTools(server: McpServer, client: AxonityClient): void
     "List workflow runs across the tenant, newest first. Archived runs are " +
       "excluded unless includeArchived is true. To list runs of ONE workflow, " +
       "use list_workflow_runs instead — this route has no workflow filter." +
-      "\n\nTHIS ONE IS NOT PAGED THE SAME WAY: it answers with a BARE ARRAY, " +
-      "no envelope, no total and no cursor. You get at most limit rows (default " +
-      "50, and a larger value is silently clamped to 200), so a result whose " +
-      "length equals the limit you asked for is the signal that MORE MAY EXIST " +
-      "— nothing in the response says so. Walk it with offset until you get a " +
-      "short page. Unlike list_workflow_runs, this route does list per-item " +
-      "FOR EACH runs alongside their launches.",
+      "\n\nTHE RESPONSE IS ONE PAGE, NOT THE FULL LIST: " +
+      "{ items, nextCursor, pageSize, hasMore }. Default page size is 20, max " +
+      "200. While hasMore is true you have NOT seen every run — pass the " +
+      "response's nextCursor back as cursor to get the next page, and repeat " +
+      "until nextCursor is null. Counting or concluding anything (\"how many " +
+      "failed?\") from a single page with hasMore: true gives a confidently " +
+      "wrong answer. " +
+      "\n\nRuns arrive at ~78/min during a fan-out, which is why the position " +
+      "is a cursor and not an offset: an offset window under that rate skips " +
+      "and repeats rows between pages. Never build a cursor — echo back the " +
+      "one you were given. " +
+      "\n\nUnlike list_workflow_runs, this route does list per-item FOR EACH " +
+      "runs alongside their launches.",
     {
       status: z
         .string()
@@ -103,19 +109,18 @@ export function registerRunTools(server: McpServer, client: AxonityClient): void
         .int()
         .optional()
         .describe(
-          "Rows to return. Defaults to 50, silently clamped to 200 — asking " +
-            "for more does not fail, it just returns 200.",
+          "Page size. Defaults to 20, silently clamped to 200 — asking for " +
+            "more does not fail, it just returns 200.",
         ),
-      offset: z
-        .number()
-        .int()
+      cursor: z
+        .string()
         .optional()
         .describe(
-          "Rows to skip. Defaults to 0. Advance it by the page size to walk " +
-            "the whole list; stop when a page comes back short.",
+          "Opaque continuation cursor from the previous response's nextCursor. " +
+            "Omit for the first page. Do not parse or construct one.",
         ),
     },
-    async ({ status, createdAfter, createdBefore, includeArchived, limit, offset }) =>
+    async ({ status, createdAfter, createdBefore, includeArchived, limit, cursor }) =>
       guard(async () =>
         jsonResult(
           await client.get("/api/v1/runs", {
@@ -124,7 +129,7 @@ export function registerRunTools(server: McpServer, client: AxonityClient): void
             created_before: createdBefore,
             include_archived: includeArchived,
             limit,
-            offset,
+            cursor,
           }),
         ),
       ),

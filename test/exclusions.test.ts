@@ -97,6 +97,15 @@ const FORBIDDEN: Rule[] = [
     label: "approve/reject an approval",
     path: /\/publish-approvals\/[^/]+\/(approve|reject)$/,
   },
+  // A RELEASE decision is the same act one level up, and the rule above cannot
+  // see it: its `[^/]+` matches ONE segment, while the release route carries
+  // two (`/publish-approvals/release/{id}/approve`). Worth its own rule
+  // precisely because it is the biggest decision on the surface — approving a
+  // release publishes a whole workflow closure at once (axonity-flow#799).
+  {
+    label: "approve/reject a release",
+    path: /\/publish-approvals\/release\/[^/]+\/(approve|reject)$/,
+  },
   // The bulk decision routes exist for the human review UI. Requesting in bulk
   // is fine (/publish-approvals/bulk); DECIDING in bulk is not ours to do.
   { label: "bulk approve/reject", path: /\/publish-approvals\/bulk-(approve|reject)$/ },
@@ -150,6 +159,14 @@ describe("registered surface stays inside its authority boundary", () => {
     expect(forbids("POST", "/api/v1/tools/abc/execute-connector")).toBe(false);
     // request_publish_* creates an approval — allowed.
     expect(forbids("POST", "/api/v1/publish-approvals")).toBe(false);
+
+    // A release: proposing one is ours, deciding it is not. Both spellings are
+    // planted here because the single-segment rule above silently misses the
+    // release paths, and a boundary rule nobody has seen bite is not a rule.
+    expect(forbids("POST", "/api/v1/publish-approvals/release")).toBe(false);
+    expect(forbids("GET", "/api/v1/publish-approvals/release/r-1")).toBe(false);
+    expect(forbids("POST", "/api/v1/publish-approvals/release/r-1/approve")).toBe(true);
+    expect(forbids("POST", "/api/v1/publish-approvals/release/r-1/reject")).toBe(true);
   });
 
   it("secrets are readable and unwritable, by method", () => {
