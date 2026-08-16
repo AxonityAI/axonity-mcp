@@ -1214,6 +1214,57 @@
         "title": "BulkRunRequest",
         "type": "object"
       },
+      "CallableWorkflowItem": {
+        "description": "A workflow as seen by the picker on a sub-process step.\n\nNon-callable workflows are LISTED, not filtered out, each with the reason.\nHiding them makes an author hunt for a workflow that is right there and\nsay \"where is it?\"; showing it disabled says \"here, and here is what to\nfix\" — which is a two-second answer instead of a support question.",
+        "properties": {
+          "blockedReason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blockedreason"
+          },
+          "callable": {
+            "title": "Callable",
+            "type": "boolean"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "outcomes": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/SubworkflowOutcome"
+            },
+            "title": "Outcomes",
+            "type": "array"
+          },
+          "parameters": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/SubworkflowField"
+            },
+            "title": "Parameters",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "callable"
+        ],
+        "title": "CallableWorkflowItem",
+        "type": "object"
+      },
       "CapabilitySchema": {
         "description": "Capability — organizational ability (two-level hierarchy).",
         "properties": {
@@ -10700,6 +10751,10 @@
             "title": "Members",
             "type": "array"
           },
+          "readinessAsOf": {
+            "title": "Readinessasof",
+            "type": "string"
+          },
           "ready": {
             "title": "Ready",
             "type": "boolean"
@@ -10737,6 +10792,7 @@
           "workflowName",
           "status",
           "ready",
+          "readinessAsOf",
           "requestedByKind",
           "createdAt"
         ],
@@ -10968,6 +11024,7 @@
           "changeSummary": {
             "anyOf": [
               {
+                "maxLength": 2000,
                 "type": "string"
               },
               {
@@ -10977,6 +11034,7 @@
             "title": "Changesummary"
           },
           "workflowId": {
+            "format": "uuid",
             "title": "Workflowid",
             "type": "string"
           }
@@ -13964,6 +14022,85 @@
           }
         },
         "title": "StepsSchema",
+        "type": "object"
+      },
+      "SubworkflowField": {
+        "description": "One value crossing the boundary — a parameter in, or a returned field.",
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "required": {
+            "default": false,
+            "title": "Required",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "SubworkflowField",
+        "type": "object"
+      },
+      "SubworkflowOutcome": {
+        "description": "One way the workflow can finish, and what it carries.",
+        "properties": {
+          "fields": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/SubworkflowField"
+            },
+            "title": "Fields",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "stepId": {
+            "title": "Stepid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "stepId",
+          "name"
+        ],
+        "title": "SubworkflowOutcome",
         "type": "object"
       },
       "SuspendRunBody": {
@@ -38896,6 +39033,67 @@
           }
         ],
         "summary": "Bulk Delete Workflows",
+        "tags": [
+          "workflows"
+        ]
+      }
+    },
+    "/api/v1/workflows/callable": {
+      "get": {
+        "description": "Workflows a sub-process step may call, and why the others may not.",
+        "operationId": "list_callable_workflows_api_v1_workflows_callable_get",
+        "parameters": [
+          {
+            "description": "Workflow being edited — never offer it to itself",
+            "in": "query",
+            "name": "exclude",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Workflow being edited — never offer it to itself",
+              "title": "Exclude"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CallableWorkflowItem"
+                  },
+                  "title": "Response List Callable Workflows Api V1 Workflows Callable Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Callable Workflows",
         "tags": [
           "workflows"
         ]
