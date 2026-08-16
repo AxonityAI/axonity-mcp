@@ -368,6 +368,18 @@ export const ROUTES_ADDED_IN: { pattern: RegExp; addedBy: string }[] = [
     pattern: /^\/api\/v1\/publish-approvals\/bulk$/,
     addedBy: "axonity-flow#795 (bulk publish requests)",
   },
+  {
+    pattern: /^\/api\/v1\/publish-approvals\/release$/,
+    addedBy: "axonity-flow#799 (approve a release, not 162 rows)",
+  },
+  {
+    pattern: /^\/api\/v1\/workflows\/callable$/,
+    addedBy: "axonity-flow#898 (workflows can call each other)",
+  },
+  {
+    pattern: /^\/api\/v1\/workflows\/operations$/,
+    addedBy: "axonity-flow#802 (the mutation catalog over HTTP)",
+  },
 ];
 
 /** The skew error for this call, or undefined when the status says nothing. */

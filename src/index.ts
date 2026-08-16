@@ -32,6 +32,7 @@ import {
   registerConnectorTools,
   registerPersonaTools,
 } from "./tools/extras.js";
+import { registerAuthoringSpecTools } from "./tools/authoringSpec.js";
 import { registerCompanyTools } from "./tools/company.js";
 import { registerPromptPlacementTools } from "./tools/promptPlacement.js";
 import { type EntityDef, registerEntityTools } from "./tools/register.js";
@@ -181,6 +182,7 @@ export function registerAll(server: ServerLike, client: AxonityClient): void {
   for (const def of VERSIONED) {
     registerVersionTools(server as McpServer, client, def);
   }
+  registerAuthoringSpecTools(server as McpServer, client);
   registerWorkflowMutations(server as McpServer, client);
   registerValidationTools(server as McpServer, client);
   registerExecutionTools(server as McpServer, client);

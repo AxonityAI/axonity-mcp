@@ -247,14 +247,15 @@ export function registerWorkflowMutations(
       "and the error reports how many landed and which index failed — resume from " +
       "there, do NOT replay the list. On a 409 conflict, re-read and retry. " +
       '\n\nEach command is `{ "type": "add_step", "payload": { … } }`; the flat ' +
-      'form `{ "type": "add_step", … }` is accepted too. Valid types: ' +
-      "update_workflow, add_trigger, update_trigger, remove_trigger, " +
-      "update_trigger_operator, group_triggers, ungroup_triggers, move_trigger, " +
-      "add_step, add_loop, update_step, remove_step, move_step, add_edge, " +
-      "update_edge, remove_edge, add_decision_condition, convert_to_loop, " +
-      "setup_loop_decision, advanced_edit, attach_output_schema, " +
-      "detach_output_schema." +
-      "\n\nPAYLOAD CONTRACT:" +
+      'form `{ "type": "add_step", … }` is accepted too. ' +
+      "\n\nWHICH COMMANDS EXIST is answered by `get_workflow_authoring_spec`, " +
+      "read live from this deploy — this description deliberately does not list " +
+      "them. A list kept here can only be right by maintenance, and it was " +
+      "already wrong once in the dangerous direction: it advertised three " +
+      "operations the API rejected. Read the spec at the start of an authoring " +
+      "task and pass `types` for the payload schema of a command you are about " +
+      "to write." +
+      "\n\nPAYLOAD CONTRACT (behaviour the schemas do not state):" +
       "\n- add_step builds a COMPLETE step in ONE call: { name, position: " +
       "{after|before: <stepId>, …} } are required, and id, type, typeId, config, " +
       "contract, inputs, outputs and edgeType are all accepted alongside them. No " +
