@@ -281,11 +281,70 @@ export function registerApprovalTools(
       ),
   );
 
+  server.tool(
+    "list_publish_releases",
+    "List this tenant's RELEASE approvals — the read-back for " +
+      "request_publish_release, which had none: the connector could propose a " +
+      "release and then had no way to see what became of it. Newest first, " +
+      "optionally filtered by status. Approving and rejecting a release are " +
+      "human-only actions in Axonity; no tool can take them. " +
+      "\n\nTHE RESPONSE IS ONE PAGE: { items, nextCursor, pageSize, hasMore }. " +
+      "Follow nextCursor until it is null. " +
+      "\n\nRows carry COUNTS (\"6 changed of 162\"), not the closure, and the " +
+      "verdict each shows is the one recorded when it was requested — see " +
+      "`readinessAsOf`. Open one with get_publish_release for its members and a " +
+      "verdict recomputed as of now.",
+    {
+      status: z
+        .enum(["pending", "approved", "rejected"])
+        .optional()
+        .describe("Filter by status. Omit for all."),
+      limit: z.number().int().optional().describe("Page size. Default 20, max 200."),
+      cursor: z
+        .string()
+        .optional()
+        .describe(
+          "Opaque continuation cursor from the previous response's nextCursor. " +
+            "Omit for the first page. Do not parse or construct one.",
+        ),
+    },
+    async ({ status, limit, cursor }) =>
+      guard(async () =>
+        jsonResult(
+          await client.get("/api/v1/publish-approvals/release", {
+            status,
+            limit,
+            cursor,
+          }),
+        ),
+      ),
+  );
+
+  server.tool(
+    "get_publish_release",
+    "Read ONE release approval: its members, why each is in the release, and " +
+      "its readiness RECOMPUTED as you read — so a blocker you saw when you " +
+      "requested it may already be gone. This is how you follow up on a " +
+      "request_publish_release rather than re-listing the queue. " +
+      "\n\nApproving publishes every member in dependency order, all-or-nothing, " +
+      "and only a human can do it in Axonity.",
+    {
+      releaseId: z
+        .string()
+        .describe("The release's id, from request_publish_release or list_publish_releases."),
+    },
+    async ({ releaseId }) =>
+      guard(async () =>
+        jsonResult(await client.get(`/api/v1/publish-approvals/release/${releaseId}`)),
+      ),
+  );
+
   // Deliberately absent: bulk approve and bulk reject, and the release
   // approve/reject that came with them (axonity-flow#799). Those routes exist on
   // the backend for the human review UI. Deciding an approval is a human action
   // in Axonity and no tool of this connector may take it — the same boundary
-  // list_publish_approvals states, and test/exclusions.test.ts enforces.
+  // list_publish_approvals states, and test/exclusions.test.ts enforces. Reading
+  // a release back is not deciding it, which is why the two tools above are here.
 }
 
 export function registerExecutionTools(

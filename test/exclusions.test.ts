@@ -72,6 +72,15 @@ const ARGS: Record<string, unknown> = {
   functions: [{ name: "f", code: "def f(): pass" }],
   code: "x",
   requests: [{ entityType: "tool", entityId: "x" }],
+  entityKind: "skill",
+  entityId: "x",
+  batchId: "x",
+  stepId: "x",
+  answer: "x",
+  message: "x",
+  templateId: "x",
+  releaseId: "x",
+  payload: {},
 };
 
 /**
@@ -114,6 +123,19 @@ const FORBIDDEN: Rule[] = [
   // service token too (`forbid_service_token_for_secrets`). Reading the
   // catalogue is not: no route there returns a value. See axonity-mcp#39.
   { label: "secret writes", path: /\/secrets(\/|$)/, methods: WRITE_METHODS },
+  // A plan waiting on human review. #45 M9(2) asked for a DECISION on the four
+  // run-write routes rather than leaving them an omission, and this is the one
+  // that lands on the same line as the publish queue: the step exists because a
+  // person was asked to look at the agent's plan before it runs. An agent
+  // approving it removes the review it was created to get — and it would often
+  // be approving its OWN plan. Supplying input a run asked for is a different
+  // act, which is why `answer_run_question` and `send_run_message` ARE here.
+  { label: "decide a plan approval", path: /\/steps\/[^/]+\/plan-approval$/ },
+  // Re-dispatching a stuck run is `require_admin` on the backend, and a service
+  // token is deliberately `role="member"` — so this is not a boundary we are
+  // choosing, it is one that cannot be crossed. Recorded rather than left to be
+  // rediscovered as a 403 by whoever wonders why there is no tool for it.
+  { label: "restart a run (admin-only)", path: /\/runs\/[^/]+\/restart$/ },
   { label: "service tokens", path: /\/service-tokens(\/|$)/ },
   { label: "deployment", path: /\/deployment(\/|$)/ },
   // `/config/secrets` lives behind this rule and stays closed to every verb —
@@ -167,6 +189,22 @@ describe("registered surface stays inside its authority boundary", () => {
     expect(forbids("GET", "/api/v1/publish-approvals/release/r-1")).toBe(false);
     expect(forbids("POST", "/api/v1/publish-approvals/release/r-1/approve")).toBe(true);
     expect(forbids("POST", "/api/v1/publish-approvals/release/r-1/reject")).toBe(true);
+  });
+
+  it("a run can be answered but not decided or restarted (poison check)", () => {
+    // Unparking a run by giving it the input it asked for is ours.
+    expect(forbids("POST", "/api/v1/runs/r-1/steps/s-1/answer")).toBe(false);
+    expect(forbids("POST", "/api/v1/runs/r-1/message")).toBe(false);
+    // Deciding a plan a human was asked to review is not.
+    expect(forbids("POST", "/api/v1/runs/r-1/steps/s-1/plan-approval")).toBe(true);
+    // Neither is re-dispatching a run — `require_admin`, and a service token is
+    // always role="member".
+    expect(forbids("POST", "/api/v1/runs/r-1/restart")).toBe(true);
+    // The restart rule must not swallow the RESTORE routes it looks like.
+    expect(forbids("POST", "/api/v1/workflows/w-1/restore")).toBe(false);
+    expect(forbids("POST", "/api/v1/skills/s-1/versions/v-1/restore-deleted")).toBe(
+      false,
+    );
   });
 
   it("secrets are readable and unwritable, by method", () => {

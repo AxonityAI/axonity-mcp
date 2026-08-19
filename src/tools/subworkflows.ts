@@ -4,10 +4,11 @@
  * Workflows can call each other (axonity-flow#898). Both halves of that live in
  * the workflow DOCUMENT and are therefore already authorable over this
  * connector: `add_trigger` with `typeId: "subprocess-invocation"` declares the
- * callee's signature, and `add_step` with `type: "subprocess"` makes the call.
- * What an agent could not do was find out WHICH workflow to call — the same gap
- * the secret catalogue closed (#39): the platform can express the wiring, the
- * agent cannot find the id.
+ * callee's signature — in that one call, `parameters` included, since
+ * axonity-flow#961 S3 — and `add_step` with `type: "subprocess"` makes the
+ * call. What an agent could not do was find out WHICH workflow to call — the
+ * same gap the secret catalogue closed (#39): the platform can express the
+ * wiring, the agent cannot find the id.
  *
  * `GET /workflows/callable` answers it, and answers the harder half too: a
  * workflow that CANNOT be called is listed with the reason rather than filtered
@@ -34,9 +35,12 @@ export function registerSubworkflowTools(
       "cannot be called is listed too, with `callable: false` and a " +
       "`blockedReason` — usually that it has never been published, or has no " +
       "`subprocess-invocation` trigger. " +
-      "Call this BEFORE authoring a sub-process step: `validate_workflow` does " +
-      "NOT check a subprocess step's target, so a call to a workflow that is not " +
-      "callable validates clean and fails at RUN time.",
+      "\n\nCall this BEFORE authoring a sub-process step. `validate_workflow` " +
+      "does check the target now — a missing one, a self-call, a target that is " +
+      "deleted, unpublished or not callable each have their own issue code — " +
+      "but it can only tell you AFTERWARDS that the workflow you picked was " +
+      "wrong. This is how you pick, and how you read the interface you are " +
+      "about to bind the calling step's inputs to.",
     {
       exclude: z
         .string()

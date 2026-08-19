@@ -30,12 +30,17 @@ import {
   registerAttachTools,
   registerCatalogTools,
   registerConnectorTools,
+  registerDependencyTools,
   registerPersonaTools,
 } from "./tools/extras.js";
 import { registerAuthoringSpecTools } from "./tools/authoringSpec.js";
 import { registerCompanyTools } from "./tools/company.js";
 import { registerPromptPlacementTools } from "./tools/promptPlacement.js";
-import { type EntityDef, registerEntityTools } from "./tools/register.js";
+import {
+  type EntityDef,
+  type ListFilter,
+  registerEntityTools,
+} from "./tools/register.js";
 import { registerRunTools } from "./tools/runs.js";
 import { registerSecretTools } from "./tools/secrets.js";
 import { registerSubworkflowTools } from "./tools/subworkflows.js";
@@ -49,6 +54,37 @@ import { type VersionedEntity, registerVersionTools } from "./tools/versions.js"
 import { registerWorkflowMutations } from "./tools/workflowMutations.js";
 
 /**
+ * Policies and reference docs are scoped library items: each says WHAT it
+ * governs and, when that is not the whole tenant, which entity owns it. Both
+ * routes take the same pair, so the pair is defined once.
+ *
+ * Neither `scope` value is enumerated here. The valid values are the entity's
+ * own `scope` field and differ between the two — restating them would be a
+ * fourth hand-kept list of the kind #32/#44 removed, and a wrong one is a 422
+ * that names what the route accepts.
+ */
+const SCOPED_LIBRARY_FILTERS: ListFilter[] = [
+  {
+    arg: "scope",
+    query: "scope",
+    type: "string",
+    description:
+      "Only items with this scope — the same value the entity's own `scope` " +
+      "field carries (read one, or read the 422 a wrong value returns). This " +
+      "is how you separate the tenant-wide items, which reach every agent, " +
+      "from the ones attached to a single owner.",
+  },
+  {
+    arg: "ownerId",
+    query: "owner_id",
+    type: "string",
+    description:
+      "Only items owned by this entity — the agent or workflow id the scope " +
+      "points at. Pair it with `scope`.",
+  },
+];
+
+/**
  * The entities the connector covers. Core entities (C4) plus memory
  * entities (C5) — skills, policies, reference docs — which have the same
  * draft→publish lifecycle via #443's unified versioning.
@@ -60,6 +96,24 @@ const ENTITIES: EntityDef[] = [
     updateMethod: "PATCH",
     label: "workflows (business processes)",
     deleteVersionParam: "expectedVersion",
+    listFilters: [
+      {
+        arg: "stageId",
+        query: "stage_id",
+        type: "string",
+        description:
+          "Only workflows linked to this stage of the company's value stream. " +
+          "Stage ids come from read_company.",
+      },
+      {
+        arg: "capabilityId",
+        query: "capability_id",
+        type: "string",
+        description:
+          "Only workflows linked to this capability. Capability ids come from " +
+          "read_company.",
+      },
+    ],
   },
   {
     singular: "agent",
@@ -67,6 +121,18 @@ const ENTITIES: EntityDef[] = [
     updateMethod: "PUT",
     label: "agents",
     deleteVersionParam: "expectedVersion",
+    listFilters: [
+      {
+        arg: "includeSystem",
+        query: "includeSystem",
+        type: "boolean",
+        description:
+          "Include the platform's own system agents (the Builder team) " +
+          "alongside the tenant's. Defaults to false. They are readable, not " +
+          "yours to edit — useful when a workflow step names one and you are " +
+          "wondering what it is.",
+      },
+    ],
   },
   {
     singular: "tool",
@@ -92,6 +158,7 @@ const ENTITIES: EntityDef[] = [
     label: "policies (rules and guardrails for agents)",
     plural: "policies",
     deleteVersionParam: "expected_version",
+    listFilters: SCOPED_LIBRARY_FILTERS,
   },
   {
     singular: "reference_doc",
@@ -99,6 +166,7 @@ const ENTITIES: EntityDef[] = [
     updateMethod: "PUT",
     label: "reference docs (background knowledge for agents)",
     deleteVersionParam: "expected_version",
+    listFilters: SCOPED_LIBRARY_FILTERS,
   },
   {
     singular: "output_schema",
@@ -192,6 +260,7 @@ export function registerAll(server: ServerLike, client: AxonityClient): void {
   registerPersonaTools(server as McpServer, client);
   registerConnectorTools(server as McpServer, client);
   registerAttachTools(server as McpServer, client);
+  registerDependencyTools(server as McpServer, client);
   registerCatalogTools(server as McpServer, client);
   registerPromptPlacementTools(server as McpServer, client);
   registerCompanyTools(server as McpServer, client);

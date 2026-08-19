@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { AxonityClient } from "../src/client.js";
 import { registerAll } from "../src/index.js";
+import { projectCatalog } from "../src/tools/authoringSpec.js";
 
 /**
  * Drift guard (axonity-mcp#17, contract from axonity-flow#722, Option 1).
@@ -79,6 +80,12 @@ const ARGS: Record<string, unknown> = {
   snippetIds: ["a"], runIds: ["a"], workflows: [{ id: "x", expectedVersion: 1 }],
   functions: [{ name: "f", code: "def f(): pass" }], code: "x",
   requests: [{ entityType: "tool", entityId: "x" }],
+  // The reverse-dependency, run-inspection and release surfaces (#45 M7/M9).
+  // `entityKind` picks a real branch: the tool maps it to a base path, so an
+  // absent one would sweep a route made of the word "undefined" and the guard
+  // would flag the fixture rather than the connector.
+  entityKind: "skill", entityId: "x", batchId: "x", stepId: "x", answer: "x",
+  message: "x", templateId: "x", releaseId: "x", payload: {},
 };
 
 describe("MCP route surface conforms to the backend OpenAPI snapshot", () => {
@@ -189,6 +196,146 @@ describe("MCP route surface conforms to the backend OpenAPI snapshot", () => {
           "get_workflow_authoring_spec instead (#32)",
       ).toBeUndefined();
     }
+  });
+
+  /**
+   * The same property, three vocabularies further (#45 M3, axonity-flow#961 S1).
+   *
+   * `axonity_conventions` used to name nine step types. SEVEN validate: `loop`
+   * and `for_each` both come back `step_invalid_type`, so an agent following
+   * the guide got a rejection on a value the guide had just handed it. That is
+   * #32 again — a hand-kept list, wrong in the direction that costs a call —
+   * and it went unnoticed for the same reason: nothing compared the prose to
+   * anything.
+   *
+   * `GET /workflows/operations` now serves `stepTypes`, `triggerTypes` and
+   * `scheduleRuleKinds` beside `operations`, each generated from the registry
+   * that ENFORCES it. So the fix is the same as #44's: state nothing, and guard
+   * the absence.
+   *
+   * WHAT IS BANNED IS AN ENUMERATION, not a mention — the line #44 drew and the
+   * one this holds. "Give it a trigger with `typeId: subprocess-invocation`" is
+   * behaviour no catalogue carries: the catalogue can say the id exists, not
+   * that it is the one that makes a workflow callable. A comma-run of ids is a
+   * different claim — it says "these are the ones there are" — and that is the
+   * claim that went stale.
+   *
+   * Alphabets: the step-type one is read from the SNAPSHOT and is deliberately
+   * the wider of the two lists on the backend. `StepSchema.type` still enums
+   * all nine while the validator accepts seven — the transport schema is
+   * permissive and the validator is the authority, which is precisely why the
+   * old drift guard could not see this. A wider alphabet only makes this guard
+   * catch more. The other two alphabets are written out here because no route
+   * in the snapshot carries them; a value added on the backend is invisible to
+   * them, which weakens the guard but can never make it lie.
+   */
+  it("the connector states no step-type, trigger-type or schedule-rule vocabulary", async () => {
+    const descriptions = new Map<string, string>();
+    const handlers = new Map<string, () => Promise<{ content: { text: string }[] }>>();
+    const server = {
+      tool: (
+        name: string,
+        description: string,
+        _s: unknown,
+        h: () => Promise<{ content: { text: string }[] }>,
+      ) => {
+        descriptions.set(name, description);
+        handlers.set(name, h);
+      },
+    };
+    registerAll(server as never, {} as unknown as AxonityClient);
+
+    const stepTypes =
+      snapshot.components.schemas.StepSchema?.properties?.type?.enum ?? [];
+    expect(stepTypes.length, "the step-type enum vanished — check the snapshot").toBe(
+      9,
+    );
+
+    const triggerTypes = [
+      "manual-start", "manual-button", "conditional-data", "conditional-poll",
+      "webhook-http", "mailhook-email", "subprocess-invocation",
+      "scheduled-interval", "scheduled-cron",
+      "manual", "conditional", "webhook", "subprocess", "scheduled",
+    ];
+    const ruleKinds = [
+      "every", "at", "every_weeks", "nth_weekday", "day_of_month", "yearly", "once",
+    ];
+
+    /** Three or more of these ids strung together by commas — a claim about what exists. */
+    const enumerationOf = (values: string[]): RegExp => {
+      const alt = values.map((v) => v.replace(/[-]/g, "\\-")).join("|");
+      return new RegExp(`\\b(${alt})\\b[^\\n]{0,12}?,[^\\n]{0,12}?\\b(${alt})\\b[^\\n]{0,12}?,[^\\n]{0,12}?\\b(${alt})\\b`);
+    };
+
+    const vocabularies: [string, RegExp][] = [
+      ["step types", enumerationOf(stepTypes)],
+      ["trigger types", enumerationOf(triggerTypes)],
+      ["schedule-rule kinds", enumerationOf(ruleKinds)],
+    ];
+
+    // The guard bites: this is the sentence conventions.ts actually carried.
+    expect(
+      "Step `type` is one of: `manual`, `agent`, `automation`, `subprocess`, `end`.".match(
+        vocabularies[0][1],
+      ),
+      "the step-type guard does not fire on the list it was written for",
+    ).not.toBeNull();
+
+    // Every tool description, PLUS the guide's own body — which is served by
+    // its handler, not its description, and is where the nine-value list lived.
+    const sources = new Map<string, string>(descriptions);
+    const guide = await handlers.get("axonity_conventions")!();
+    const guideText = guide.content[0].text;
+    // Without this the whole sweep can pass on an empty string — the guide's
+    // body is the one place all three lists actually lived.
+    expect(guideText.length, "the guide body did not come through").toBeGreaterThan(
+      10_000,
+    );
+    sources.set("axonity_conventions (guide body)", guideText);
+
+    for (const [where, text] of sources) {
+      for (const [label, pattern] of vocabularies) {
+        const found = text.match(pattern)?.[0];
+        expect(
+          found,
+          `${where} enumerates ${label} ("${found}") — read them from ` +
+            "get_workflow_authoring_spec instead (#45 M3)",
+        ).toBeUndefined();
+      }
+    }
+  });
+
+  /**
+   * The four lists must SURVIVE the projection, or the guard above just makes
+   * the connector silent instead of accurate. `projectCatalog` trims the
+   * payload schemas off `operations`; everything beside it rides through.
+   */
+  it("the authoring spec forwards every vocabulary the server sends", async () => {
+    const catalog = {
+      operations: [{ type: "add_step", description: "d", payloadSchema: { a: 1 } }],
+      rulesVersion: "v1",
+      triggerTypes: [{ id: "manual-start", category: false }],
+      stepTypes: [{ id: "for_each", authorable: false, reason: "use config.iteration" }],
+      scheduleRuleKinds: [{ kind: "every", example: {}, describes: "every day" }],
+      // A list this connector has never heard of must ride along too.
+      somethingNew: [{ id: "x" }],
+    };
+
+    const index = projectCatalog(catalog) as Record<string, unknown>;
+    const filtered = projectCatalog(catalog, ["add_step"]) as Record<string, unknown>;
+
+    for (const answer of [index, filtered]) {
+      expect(answer.triggerTypes).toEqual(catalog.triggerTypes);
+      expect(answer.stepTypes).toEqual(catalog.stepTypes);
+      expect(answer.scheduleRuleKinds).toEqual(catalog.scheduleRuleKinds);
+      expect(answer.somethingNew).toEqual(catalog.somethingNew);
+      expect(answer.rulesVersion).toBe("v1");
+    }
+
+    // Only the schemas are dropped, and only from the index.
+    expect(index.operations).toEqual([{ type: "add_step", description: "d" }]);
+    expect((filtered.operations as { payloadSchema?: unknown }[])[0].payloadSchema)
+      .toEqual({ a: 1 });
   });
 
   /**

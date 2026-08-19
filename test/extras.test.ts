@@ -135,9 +135,13 @@ describe("attach tools", () => {
       expect(descriptions.get(tool), `${tool} should mention ${readBack}`).toContain(readBack);
     }
 
-    // The workflow-scoped variant has no list route on the backend, so it must
-    // not promise one.
-    expect(descriptions.get("attach_skill_to_workflow")).not.toMatch(/list_/);
+    // The workflow-scoped variant has a list route now (axonity-flow#961 S8),
+    // so it points at it like the agent-scoped ones. Before that it promised
+    // nothing, which was correct then and is a missing read-back now: an
+    // attach with no read-back cannot be told from one that did nothing.
+    for (const tool of ["attach_skill_to_workflow", "detach_skill_from_workflow"]) {
+      expect(descriptions.get(tool), tool).toContain("list_workflow_skills");
+    }
   });
 
   it("read-backs issue no write", async () => {

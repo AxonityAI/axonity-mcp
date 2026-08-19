@@ -33,6 +33,29 @@ const CONFIRM = z
   .literal(true)
   .describe("Must be true. Acknowledges you understand this is destructive.");
 
+/**
+ * One narrowing a `list_<plural>` route accepts.
+ *
+ * Filtering in the QUERY is not the same as filtering the answer: the backend
+ * applies it before the rows come back, so "which policies are tenant-scoped"
+ * is one call rather than a fetch-everything-and-sift — and on the paged routes
+ * it is the difference between an answer and page one of an answer.
+ *
+ * `arg` is the camelCase name the tool takes; `query` is the spelling the route
+ * declares, which is snake_case on some routes and camelCase on others. That
+ * inconsistency is real and is exactly what a caller should not have to know.
+ */
+export interface ListFilter {
+  /** The tool argument's name (camelCase). */
+  arg: string;
+  /** The query-string key the route expects. */
+  query: string;
+  /** What kind of value it takes. */
+  type: "string" | "boolean";
+  /** Agent-facing description of what the filter does. */
+  description: string;
+}
+
 export interface EntityDef {
   /** Singular tool noun, e.g. "workflow". */
   singular: string;
@@ -93,6 +116,11 @@ export interface EntityDef {
    * on the main list) is retained for a future entity that needs it.
    */
   deletedListPath?: "collection" | "query";
+  /**
+   * Query-string narrowings `list_<plural>` accepts, when the route declares
+   * any. Omit for an entity whose list route takes no parameters.
+   */
+  listFilters?: ListFilter[];
 }
 
 export function registerEntityTools(
@@ -106,11 +134,39 @@ export function registerEntityTools(
   const creatable = def.creatable !== false;
   const readable = def.readable !== false;
 
+  const listFilters = def.listFilters ?? [];
+
   server.tool(
     `list_${plural}`,
-    `List all ${label} in your Axonity tenant (id, name, status, version).`,
-    {},
-    async () => guard(async () => jsonResult(await client.get(basePath))),
+    `List all ${label} in your Axonity tenant (id, name, status, version).` +
+      (listFilters.length > 0
+        ? ` Narrow it with ${listFilters
+            .map((f) => `\`${f.arg}\``)
+            .join(" / ")} — the filter is applied by the backend, so it answers ` +
+          `the narrower question rather than handing you everything to sift.`
+        : ""),
+    Object.fromEntries(
+      listFilters.map((filter) => [
+        filter.arg,
+        (filter.type === "boolean" ? z.boolean() : z.string())
+          .optional()
+          .describe(filter.description),
+      ]),
+    ),
+    async (args: Record<string, string | boolean | undefined>) =>
+      guard(async () => {
+        // No filters declared → call the route exactly as before, with no query
+        // argument at all rather than an empty one.
+        if (listFilters.length === 0) return jsonResult(await client.get(basePath));
+        return jsonResult(
+          await client.get(
+            basePath,
+            Object.fromEntries(
+              listFilters.map((filter) => [filter.query, args[filter.arg]]),
+            ),
+          ),
+        );
+      }),
   );
 
   if (readable) {

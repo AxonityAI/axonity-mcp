@@ -3,8 +3,11 @@
  * streams, org structure). Unlike the other authored entities it is a
  * SINGLETON: one per tenant, addressed at `/api/v1/company` with no id, so it
  * has no list / create / delete / restore / discard routes. It is
- * version-controlled like the memory entities, and edited as a whole document
- * (a full-document PUT under optimistic locking), not field-by-field.
+ * version-controlled like the memory entities, and editable two ways: command
+ * mutations (`apply_company_mutation`, preferred — the backend validates each
+ * and threads the version) or a whole-document PUT (`update_company`). Workflow
+ * has had both for a long time; company was whole-document-only here even
+ * though `POST /api/v1/company/mutations` existed.
  *
  * Publishing: company is currently NOT a publish-approval entity type on the
  * backend, so there is no request_publish_company — a company change is
@@ -107,6 +110,88 @@ export function registerCompanyTools(
       guard(async () =>
         jsonResult(
           await client.post(`/api/v1/company/versions/${versionId}/restore`, {
+            expectedVersion,
+          }),
+        ),
+      ),
+  );
+
+  server.tool(
+    "create_company_major_version",
+    "Cut a new NAMED major version of the company document — \"Save As\" for " +
+      "the current draft, so a milestone is findable by name instead of by " +
+      "hunting through checkpoints. Takes no id (singleton). This does NOT " +
+      "publish: what is live stays live until a human approves a " +
+      "request_publish_company.",
+    {
+      name: z
+        .string()
+        .min(1)
+        .max(255)
+        .describe('What to call this release, e.g. "Q3 operating model".'),
+      description: z
+        .string()
+        .optional()
+        .describe("A longer note on what this version represents."),
+    },
+    async ({ name, description }) =>
+      guard(async () =>
+        jsonResult(
+          await client.post("/api/v1/company/versions", {
+            name,
+            ...(description ? { description } : {}),
+          }),
+        ),
+      ),
+  );
+
+  server.tool(
+    "ensure_company_major_version",
+    "Make sure the company document has a working draft major version, " +
+      "creating an unnamed one if it has none. IDEMPOTENT — safe to call before " +
+      "a run of edits; when one already exists nothing changes. Returns the " +
+      "draft's major version number and name.",
+    {},
+    async () =>
+      guard(async () => jsonResult(await client.post("/api/v1/company/versions/ensure"))),
+  );
+
+  server.tool(
+    "apply_company_mutation",
+    "Apply ONE structural command to the company document — the validated, " +
+      "version-safe way to change its layers, value streams, stages and " +
+      "capabilities, and to link workflows to them. Prefer this over " +
+      "update_company: that route is a whole-document PUT, which is the same " +
+      "reason apply_workflow_mutations is preferred for a workflow. Read the " +
+      "company first for its version. " +
+      "\n\nOne command per call — this route has no batch form, unlike the " +
+      "workflow one. Apply a sequence yourself, using the version each response " +
+      "returns as the next call's expectedVersion. " +
+      "\n\nWHICH COMMANDS EXIST is not listed here and this connector keeps no " +
+      "copy: unlike workflows, company has no catalogue route to read, so a " +
+      "wrong `type` is a 422 that names every value the route accepts. Read " +
+      "that error rather than guessing twice.",
+    {
+      type: z
+        .string()
+        .describe(
+          "The command name. A value this deploy does not accept comes back as " +
+            "a 422 listing the ones it does.",
+        ),
+      payload: z
+        .record(z.unknown())
+        .describe("The command's arguments (camelCase keys)."),
+      expectedVersion: z
+        .number()
+        .int()
+        .describe("The version you last read — rejected with 409 if stale."),
+    },
+    async ({ type, payload, expectedVersion }) =>
+      guard(async () =>
+        jsonResult(
+          await client.post("/api/v1/company/mutations", {
+            type,
+            payload,
             expectedVersion,
           }),
         ),
