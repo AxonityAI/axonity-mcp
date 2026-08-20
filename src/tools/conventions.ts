@@ -464,10 +464,23 @@ the new tenant too, and a human fills the real value there.
   are about to write.
 - **The payload schemas describe themselves.** What may go inside
   \`parameters\`, \`inputs\`, \`outputs\` and \`contract\` is IN those schemas —
-  a trigger parameter's \`kind\`, \`label\`, \`description\`, \`defaultValue\`
-  and \`constant\`; the fact that a bound input DERIVES its contract from the
-  output it reads. Ask the spec for the command's \`types\` rather than looking
-  for prose about the shape here; there deliberately is none.
+  including the fact that a bound input DERIVES its contract from the output it
+  reads. Ask the spec for the command's \`types\` rather than looking for prose
+  about the shape here; there deliberately is none.
+- **One thing the schemas do not make obvious: which KEY carries the value's
+  type, because it is not the same key everywhere.**
+  - A TRIGGER PARAMETER and a WORKFLOW CONSTANT use \`type\`.
+  - A step INPUT or OUTPUT uses \`kind\`.
+  - Where a field carries a nested \`schema\` object, \`schema.kind\` is what
+    wins.
+
+  This asymmetry is real, not a typo to normalise: the shapes came from
+  different surfaces, and the vocabularies behind the three keys are not
+  interchangeable either — one knows \`constant\`, another does not, and they
+  disagree on how to spell a yes/no. Writing \`kind\` on a trigger parameter is
+  not a 422; it is a key nothing reads, so the value silently falls back to text
+  and the workflow runs with the wrong thing. Check which of the three you are
+  writing before you write it.
 - \`rulesVersion\` in that response is a content hash over all four lists. While
   it is unchanged there is nothing to re-fetch; re-read the spec when it changes,
   or when a mutation fails with a 422 suggesting your idea of a command is stale.
@@ -517,10 +530,16 @@ show must not become an injection point for anyone who learns its name.
   with no value was never written into the run at all, so the workflow validated
   clean, published, and ran without it.
 - ABSENCE, not falsiness. \`0\`, \`""\`, \`false\` and \`[]\` are values and pass.
-- A trigger parameter with \`constant: true\` is the same idea one level down —
-  the author owns it, the caller must not send it. \`read_workflow_trigger_parameters\`
-  marks those \`pinned\`, on both the workflow's constants and each start's
-  parameters.
+- The value lives in \`defaultValue\`. On a constant that is not a fallback —
+  it IS the value, written on every run. A constant carries no \`required\`
+  (nobody is being asked to fill it in) and needs no flag saying it is one.
+- **A trigger parameter can be pinned the same way**, and the platform reads
+  TWO spellings: \`constant: true\`, or the older \`type: "constant"\`. Both
+  mean the author owns it and the caller must not send it, so treat a parameter
+  carrying either as off-limits when you build \`triggerInput\`.
+  \`read_workflow_trigger_parameters\` collapses both into \`pinned\`, on the
+  workflow's constants and on each start's parameters — read that rather than
+  checking the two spellings yourself.
 
 ## Two platform invariants that look like bugs
 Both are deliberate, both run after EVERY edit, and both now report themselves in

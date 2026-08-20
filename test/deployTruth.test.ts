@@ -133,6 +133,46 @@ describe("the three false instructions are gone (M2)", () => {
 // ---------------------------------------------------------------------------
 
 describe("the guide carries what replaced those claims", () => {
+  /**
+   * The key that carries a value's type is NOT the same key everywhere, and the
+   * first version of this guide got it wrong in the exact way #45 is about.
+   *
+   * It said a trigger parameter has a `kind`. Every reader in the platform takes
+   * a parameter's type from `type` — `workflow_graph_engine` does
+   * `param.get("type", "text")`, `run_service` tests `param.get("type") ==
+   * "constant"`, `workflow_interface` prefers `type` over `kind`. So `kind` on a
+   * parameter is not a 422 that tells you: it is a key nothing reads, the value
+   * falls back to text, and the workflow runs with the wrong thing. That is the
+   * silent-wrong class this whole epic exists to close, reintroduced by the work
+   * meant to close it (axonity-flow#964).
+   */
+  it("names `type` for a parameter and `kind` for step I/O, never the reverse", async () => {
+    const guide = await guideText();
+
+    expect(
+      guide,
+      "a trigger parameter is keyed by `type` — `kind` is a key no reader reads",
+    ).not.toMatch(/trigger parameter's `kind`/);
+
+    // The asymmetry has to be stated, because the payload schemas do not make
+    // it obvious and the three vocabularies behind the keys differ.
+    expect(guide).toMatch(/A TRIGGER PARAMETER and a WORKFLOW CONSTANT use `type`/);
+    expect(guide).toMatch(/A step INPUT or OUTPUT uses `kind`/);
+    expect(guide).toMatch(/`schema\.kind`/);
+
+    // And the failure mode, which is what makes it worth a paragraph at all.
+    expect(guide).toMatch(/silently falls back to text|nothing reads/);
+  });
+
+  it("says a pinned parameter has two spellings, so neither is missed", async () => {
+    const guide = await guideText();
+    // run_service.py: `param.get("constant") is True or param.get("type") == "constant"`.
+    // Checking only one leaves half the pinned parameters looking fillable.
+    expect(guide).toMatch(/`constant: true`/);
+    expect(guide).toMatch(/`type: "constant"`/);
+    expect(guide).toMatch(/collapses both into `pinned`/);
+  });
+
   it("explains constants, including that absence is the error and 0 is not", async () => {
     const guide = await guideText();
     expect(guide).toContain("set_workflow_constants");
