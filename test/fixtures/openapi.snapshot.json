@@ -18827,8 +18827,24 @@
             "title": "Operations",
             "type": "array"
           },
+          "outputKinds": {
+            "description": "What a step output or input may hold, in its `kind` field. Narrower than `parameterTypes`, and a different key: the two shapes came from different surfaces.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Outputkinds",
+            "type": "array"
+          },
+          "parameterTypes": {
+            "description": "What a trigger parameter or a workflow constant may hold, in its `type` field. This is the key the platform reads on those two shapes — `kind` is not.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Parametertypes",
+            "type": "array"
+          },
           "rulesVersion": {
-            "description": "Content fingerprint of the catalog; stable across identical deploys, changes when any of the four lists changes.",
+            "description": "Content fingerprint of the catalog; stable across identical deploys, changes when any of the lists changes.",
             "title": "Rulesversion",
             "type": "string"
           },
@@ -18838,6 +18854,14 @@
               "$ref": "#/components/schemas/ScheduleRuleKindItem"
             },
             "title": "Schedulerulekinds",
+            "type": "array"
+          },
+          "schemaFieldKinds": {
+            "description": "The canonical builder's vocabulary, used inside a field's `schema`. Where a `schema` is present it wins over the legacy `type` / `kind` beside it.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Schemafieldkinds",
             "type": "array"
           },
           "stepTypes": {
@@ -19310,374 +19334,6 @@
         "summary": "Root",
         "tags": [
           "system"
-        ]
-      }
-    },
-    "/api/v1/_test/install-stub-provider": {
-      "post": {
-        "description": "Install the stub LLM provider with the supplied response queue.",
-        "operationId": "install_stub_provider_api_v1__test_install_stub_provider_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/InstallStubRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": {
-                    "type": "integer"
-                  },
-                  "title": "Response Install Stub Provider Api V1  Test Install Stub Provider Post",
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Install Stub Provider",
-        "tags": [
-          "test-seam"
-        ]
-      }
-    },
-    "/api/v1/_test/reset-stub-provider": {
-      "post": {
-        "description": "Clear the stub provider — the next ``get_provider_registry()``\ncall falls back to the production Mistral lazy registry.",
-        "operationId": "reset_stub_provider_api_v1__test_reset_stub_provider_post",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": {
-                    "type": "string"
-                  },
-                  "title": "Response Reset Stub Provider Api V1  Test Reset Stub Provider Post",
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "summary": "Reset Stub Provider",
-        "tags": [
-          "test-seam"
-        ]
-      }
-    },
-    "/api/v1/_test/seed-agent": {
-      "post": {
-        "operationId": "seed_agent_api_v1__test_seed_agent_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SeedAgentRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SeedAgentResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Seed Agent",
-        "tags": [
-          "test-seam"
-        ]
-      }
-    },
-    "/api/v1/_test/seed-flow": {
-      "post": {
-        "operationId": "seed_flow_api_v1__test_seed_flow_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SeedFlowRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SeedFlowResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Seed Flow",
-        "tags": [
-          "test-seam"
-        ]
-      }
-    },
-    "/api/v1/_test/seed-published-workflow": {
-      "post": {
-        "operationId": "seed_published_workflow_api_v1__test_seed_published_workflow_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SeedPublishedWorkflowRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SeedPublishedWorkflowResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Seed Published Workflow",
-        "tags": [
-          "test-seam"
-        ]
-      }
-    },
-    "/api/v1/_test/seed-test-user": {
-      "post": {
-        "operationId": "seed_test_user_api_v1__test_seed_test_user_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SeedTestUserRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SeedTestUserResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Seed Test User",
-        "tags": [
-          "test-seam"
-        ]
-      }
-    },
-    "/api/v1/_test/stub-stats": {
-      "get": {
-        "description": "Return the number of LLM calls made + responses still queued.\nUseful for verifying the framework actually exercised the stub.",
-        "operationId": "stub_stats_api_v1__test_stub_stats_get",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": {
-                    "type": "integer"
-                  },
-                  "title": "Response Stub Stats Api V1  Test Stub Stats Get",
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "summary": "Stub Stats",
-        "tags": [
-          "test-seam"
-        ]
-      }
-    },
-    "/api/v1/_test/suspend-run": {
-      "post": {
-        "description": "Create a synthetic Run that lands directly in ``waiting`` status.\n\nMirrors what the future ``wait_here_for_test`` framework tool will\ndo inside the agent loop — the difference being that here we\nshort-circuit the workflow-engine + agent + LLM round-trip and\nwrite the suspended Run state directly. Functionally equivalent\nfor exercising the wake-task primitive end-to-end.\n\nTenant isolation: the Run is created under ``auth.tenant_id`` and\nevery downstream wake-task must also be planted under that tenant\n(the wake endpoint enforces the same constraint via\n``AuthContext``).",
-        "operationId": "suspend_run_endpoint_api_v1__test_suspend_run_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SuspendRunBody"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SuspendRunResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Suspend Run Endpoint",
-        "tags": [
-          "dev:wake"
-        ]
-      }
-    },
-    "/api/v1/_test/wake/{run_id}": {
-      "post": {
-        "description": "Plant a wake-task targeting ``run_id``.\n\nThe queue-tick claims it within ~60s and resumes the Run via\n``resume_for_queue_task``. The endpoint returns immediately — the\nactual wake happens out-of-band.\n\nTenant isolation:\n  - ``auth.tenant_id`` is the only tenant_id used; the path\n    parameter ``run_id`` is looked up under it. A cross-tenant\n    ``run_id`` reads as 404 (no leak).\n  - The wake-task row's ``tenant_id`` matches the suspended Run's\n    tenant. Plant-and-claim cannot cross tenants because both the\n    plant and the queue-tick claim filter by ``tenant_id``.",
-        "operationId": "wake_run_endpoint_api_v1__test_wake__run_id__post",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "run_id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Run Id",
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/WakeRunBody"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WakeRunResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Wake Run Endpoint",
-        "tags": [
-          "dev:wake"
         ]
       }
     },

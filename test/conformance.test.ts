@@ -220,6 +220,12 @@ describe("MCP route surface conforms to the backend OpenAPI snapshot", () => {
    * different claim — it says "these are the ones there are" — and that is the
    * claim that went stale.
    *
+   * axonity-flow#964 adds three more (`parameterTypes`, `outputKinds`,
+   * `schemaFieldKinds`) and they are the sharpest case yet, because getting
+   * them wrong is SILENT: `kind` on a trigger parameter is not a 422, it is a
+   * key nothing reads. This connector shipped exactly that in #46 and had to
+   * correct it in #47 — so the absence is guarded here too.
+   *
    * Alphabets: the step-type one is read from the SNAPSHOT and is deliberately
    * the wider of the two lists on the backend. `StepSchema.type` still enums
    * all nine while the validator accepts seven — the transport schema is
@@ -229,7 +235,7 @@ describe("MCP route surface conforms to the backend OpenAPI snapshot", () => {
    * in the snapshot carries them; a value added on the backend is invisible to
    * them, which weakens the guard but can never make it lie.
    */
-  it("the connector states no step-type, trigger-type or schedule-rule vocabulary", async () => {
+  it("the connector states none of the deploy's vocabularies of its own", async () => {
     const descriptions = new Map<string, string>();
     const handlers = new Map<string, () => Promise<{ content: { text: string }[] }>>();
     const server = {
@@ -267,10 +273,20 @@ describe("MCP route surface conforms to the backend OpenAPI snapshot", () => {
       return new RegExp(`\\b(${alt})\\b[^\\n]{0,12}?,[^\\n]{0,12}?\\b(${alt})\\b[^\\n]{0,12}?,[^\\n]{0,12}?\\b(${alt})\\b`);
     };
 
+    // axonity-flow#964's three value vocabularies. Their alphabets overlap
+    // ordinary English (`text`, `number`, `date`, `list`, `object`), so the
+    // guard uses only the DISTINCTIVE members: no useful enumeration of these
+    // omits all of them, and none of them reads as prose. A guard that cried
+    // wolf on the word "list" would be turned off within a week.
+    const valueVocabulary = [
+      "long-text", "yes-no", "multi-choice", "datetime", "constant", "boolean",
+    ];
+
     const vocabularies: [string, RegExp][] = [
       ["step types", enumerationOf(stepTypes)],
       ["trigger types", enumerationOf(triggerTypes)],
       ["schedule-rule kinds", enumerationOf(ruleKinds)],
+      ["value types/kinds", enumerationOf(valueVocabulary)],
     ];
 
     // The guard bites: this is the sentence conventions.ts actually carried.
@@ -317,6 +333,13 @@ describe("MCP route surface conforms to the backend OpenAPI snapshot", () => {
       triggerTypes: [{ id: "manual-start", category: false }],
       stepTypes: [{ id: "for_each", authorable: false, reason: "use config.iteration" }],
       scheduleRuleKinds: [{ kind: "every", example: {}, describes: "every day" }],
+      // The three value vocabularies (axonity-flow#964). Plain string lists,
+      // and the ONE place the connector must not conflate them: `constant`
+      // exists in the first and nowhere else, and the yes/no idea is spelled
+      // differently between the first and the other two.
+      parameterTypes: ["text", "boolean", "constant"],
+      outputKinds: ["text", "yes-no"],
+      schemaFieldKinds: ["text", "yes-no", "datetime"],
       // A list this connector has never heard of must ride along too.
       somethingNew: [{ id: "x" }],
     };
@@ -328,6 +351,9 @@ describe("MCP route surface conforms to the backend OpenAPI snapshot", () => {
       expect(answer.triggerTypes).toEqual(catalog.triggerTypes);
       expect(answer.stepTypes).toEqual(catalog.stepTypes);
       expect(answer.scheduleRuleKinds).toEqual(catalog.scheduleRuleKinds);
+      expect(answer.parameterTypes).toEqual(catalog.parameterTypes);
+      expect(answer.outputKinds).toEqual(catalog.outputKinds);
+      expect(answer.schemaFieldKinds).toEqual(catalog.schemaFieldKinds);
       expect(answer.somethingNew).toEqual(catalog.somethingNew);
       expect(answer.rulesVersion).toBe("v1");
     }

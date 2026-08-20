@@ -20,6 +20,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { AxonityClient } from "../src/client.js";
 import { registerCompanyTools } from "../src/tools/company.js";
 import { registerConventions } from "../src/tools/conventions.js";
+import { registerAuthoringSpecTools } from "../src/tools/authoringSpec.js";
 import { registerAttachTools, registerDependencyTools, registerCatalogTools } from "../src/tools/extras.js";
 import { registerRunTools } from "../src/tools/runs.js";
 import { type EntityDef, registerEntityTools } from "../src/tools/register.js";
@@ -162,6 +163,31 @@ describe("the guide carries what replaced those claims", () => {
 
     // And the failure mode, which is what makes it worth a paragraph at all.
     expect(guide).toMatch(/silently falls back to text|nothing reads/);
+  });
+
+  it("points at the three value vocabularies rather than restating them", async () => {
+    // axonity-flow#964 serves one list per key. The guide must name the LISTS
+    // (so an agent knows where to look) without naming their VALUES — the same
+    // line held for the mutation commands and the step types.
+    const guide = await guideText();
+    for (const list of ["parameterTypes", "outputKinds", "schemaFieldKinds"]) {
+      expect(guide, `the guide never mentions ${list}`).toContain(list);
+    }
+
+    const { server, descriptions } = fakeServer();
+    registerAuthoringSpecTools(
+      server as never,
+      fakeClient() as unknown as AxonityClient,
+    );
+    const spec = descriptions.get("get_workflow_authoring_spec")!;
+
+    // The tool that serves them has to say which key each one governs, because
+    // that is the part the lists themselves cannot tell you.
+    expect(spec).toMatch(/TRIGGER PARAMETER or a WORKFLOW CONSTANT.*`type`/s);
+    expect(spec).toMatch(/step OUTPUT or INPUT.*`kind`/s);
+    expect(spec).toMatch(/`schema`.*WINS/s);
+    // And that the failure is silent, which is why it needs saying at all.
+    expect(spec).toMatch(/not a 422/);
   });
 
   it("says a pinned parameter has two spellings, so neither is missed", async () => {
