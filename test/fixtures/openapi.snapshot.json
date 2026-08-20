@@ -1414,7 +1414,7 @@
         "type": "object"
       },
       "ChannelReplyRequest": {
-        "description": "An inbound reply from a non-chat channel (#777 S5).\n\nA channel adapter (email / WhatsApp webhook) POSTs the person's reply\nplus the wait ``token`` it received in the outbound message. The token —\nnot a user session — authorises the resume.",
+        "description": "An inbound reply from a non-chat channel (#777 S5, hardened by #986).\n\nA channel adapter (email / WhatsApp webhook) POSTs the person's reply, the\nreply secret it received in the outbound message, and **who the provider\nsays sent it**. There is no user session, so those two together are the\nauthorisation: the secret proves possession, the sender proves it came back\nfrom the person we actually asked.\n\n``sender`` is not optional and not advisory. Without it a forwarded reply\nlink is a complete credential, which is the property #986 removes.",
         "properties": {
           "message": {
             "maxLength": 1000000,
@@ -1422,7 +1422,15 @@
             "title": "Message",
             "type": "string"
           },
+          "sender": {
+            "description": "The channel identity the provider reports for the sender — an email address or phone number. Matched against the recipient the outbound message was addressed to; a mismatch is refused.",
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Sender",
+            "type": "string"
+          },
           "token": {
+            "description": "The reply secret from the outbound message. NOT the run's wait token — that is a correlation id the platform stores in the clear.",
             "maxLength": 512,
             "minLength": 1,
             "title": "Token",
@@ -1431,7 +1439,8 @@
         },
         "required": [
           "token",
-          "message"
+          "message",
+          "sender"
         ],
         "title": "ChannelReplyRequest",
         "type": "object"
@@ -3622,6 +3631,8 @@
             "items": {
               "enum": [
                 "read",
+                "author",
+                "operate",
                 "write"
               ],
               "type": "string"
@@ -3661,6 +3672,8 @@
             "items": {
               "enum": [
                 "read",
+                "author",
+                "operate",
                 "write"
               ],
               "type": "string"
@@ -13533,6 +13546,8 @@
             "items": {
               "enum": [
                 "read",
+                "author",
+                "operate",
                 "write"
               ],
               "type": "string"
@@ -33888,7 +33903,7 @@
     },
     "/api/v1/runs/{run_id}/channel-reply": {
       "post": {
-        "description": "Resume a parked conversation from an inbound channel reply (#777 S5).\n\nPUBLIC — there is deliberately NO ``get_auth_context`` dependency. This is\nthe inbound half of a non-chat ``yield_to_human`` channel: an email /\nWhatsApp adapter POSTs the person's reply plus the wait ``token`` it was\ngiven. The token — an unguessable uuid matched token-exact against the\nopen wait — is the authorisation; see ``RunService.post_channel_reply``.\nMirrors the message route's two-commit durability.",
+        "description": "Resume a parked conversation from an inbound channel reply (#777 S5).\n\nPUBLIC — there is deliberately NO ``get_auth_context`` dependency. This is\nthe inbound half of a non-chat ``yield_to_human`` channel: an email /\nWhatsApp adapter POSTs the person's reply, the reply secret it was given,\nand who the provider says sent it. Those last two are the authorisation —\nsee ``RunService.post_channel_reply`` and ``services/channel_binding.py``.\nMirrors the message route's two-commit durability.\n\nRate-limited BEFORE any database work (#986), the same treatment\n``POST /api/v1/triggers/{token}`` has had since security M3 and for the\nsame two reasons: an unauthenticated caller must not be able to hammer the\nrun lookup, and a leaked secret must not be able to churn runs. Keyed\nindependently per client IP and per secret, so neither budget covers for\nthe other.",
         "operationId": "channel_reply_api_v1_runs__run_id__channel_reply_post",
         "parameters": [
           {
@@ -36843,7 +36858,7 @@
     },
     "/api/v1/task-queue/dismiss-bulk": {
       "post": {
-        "description": "Bulk dismiss — accepts ``ids`` OR ``filter`` (exactly one).\n\nStep one of the operator's two-step clean-up: put rows away without\nlosing them. Reversible (replay un-dismisses), so the blast radius is\na display change, not data loss — but it is still a change to the\nqueue, hence ``require_admin`` like every other write here (#744).\n\nPer-row outcomes are tallied, never raised: rows that are already\ndismissed or not in a dismissable state come back as ``skipped``.",
+        "description": "Bulk dismiss — accepts ``ids`` OR ``filter`` (exactly one).\n\nStep one of the operator's two-step clean-up: put rows away without\nlosing them. Reversible (replay un-dismisses), so the blast radius is\na display change, not data loss — but it is still a change to the\nqueue, hence an admin or an ``operate``-scoped token, like every other\nrecovery write here (#744, #976).\n\nPer-row outcomes are tallied, never raised: rows that are already\ndismissed or not in a dismissable state come back as ``skipped``.",
         "operationId": "dismiss_bulk_api_v1_task_queue_dismiss_bulk_post",
         "requestBody": {
           "content": {

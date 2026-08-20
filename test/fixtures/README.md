@@ -11,9 +11,15 @@ diff in review.
 
 ## Provenance
 
-- Generated from **axonity-flow `main`** at commit `7dcdad92` — epic
-  axonity-flow#961 (the nine authoring-API stories consumed by axonity-mcp#45),
-  plus #964 and #978.
+- Generated from **axonity-flow `main`** at commit `ae0923b6`. No operation
+  moved since `7dcdad92`; four component schemas did (`ChannelReplyRequest`
+  gained a required `sender`, and three service-token models changed), none of
+  which this connector calls — `channel-reply` is uncovered and service tokens
+  are deny-listed in `test/exclusions.test.ts`. Refreshed anyway, because the
+  conformance test pins enums to this file and a snapshot that is "stale but
+  only in the parts we do not use" is how it goes stale in the parts we do.
+- The surface itself comes from epic axonity-flow#961 (the nine authoring-API
+  stories consumed by axonity-mcp#45), plus #964 and #978.
 - **#964** is why the catalogue now carries three vocabularies for a value's
   type: `parameterTypes` (a trigger parameter's / constant's `type`),
   `outputKinds` (a step output's / input's `kind` — narrower, *different key*)
