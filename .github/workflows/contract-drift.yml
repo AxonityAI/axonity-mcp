@@ -38,21 +38,62 @@ jobs:
       - name: Check out the connector
         uses: actions/checkout@v4
 
-      # Fail EARLY and in words. Without the token the checkout below fails with
-      # a bare "repository not found", which reads as "the repo was deleted"
-      # rather than "this job was never given credentials".
-      - name: Require a token for the backend checkout
+      # Fail EARLY and in the RIGHT words.
+      #
+      # The first version of this step only checked that the secret was
+      # non-empty, and said "not set" when the secret was set perfectly well and
+      # the token behind it lacked a Contents grant. A guard that names the wrong
+      # cause costs more than no guard: it sends you to fix something that was
+      # never broken. So this asks the API what the token can actually do, and
+      # distinguishes the three ways it goes wrong — which is also what makes an
+      # EXPIRED token, a year from now, diagnose itself in one line.
+      - name: Check the token can read axonity-flow
         env:
           TOKEN: ${{ secrets.AXONITY_FLOW_READ_TOKEN }}
         run: |
-          if [ -z "$TOKEN" ]; then
+          set -u
+          if [ -z "${TOKEN}" ]; then
             echo "::error::AXONITY_FLOW_READ_TOKEN is not set."
-            echo "axonity-flow is a private repository, so this job needs a token"
-            echo "with read access to it (a fine-grained PAT with Contents: Read,"
-            echo "or a GitHub App installation token). Add it as a repository"
-            echo "secret named AXONITY_FLOW_READ_TOKEN. See axonity-mcp#48 M1."
+            echo "axonity-flow is private, so this job needs a token that can read it."
+            echo "Add a repository secret of that name. See axonity-mcp#48 M1."
             exit 1
           fi
+
+          api() {
+            curl -sS -o /dev/null -w '%{http_code}' \
+              -H "Authorization: Bearer ${TOKEN}" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/$1"
+          }
+
+          repo=$(api "repos/AxonityAI/axonity-flow")
+          # Metadata alone is enough to see the repo. Reading a FILE is the
+          # permission the checkout actually needs, so that is what is probed.
+          contents=$(api "repos/AxonityAI/axonity-flow/contents/backend/scripts/dump_openapi.py")
+          echo "repo=${repo} contents=${contents}"
+
+          if [ "${repo}" = "200" ] && [ "${contents}" = "200" ]; then
+            echo "Token can read axonity-flow."
+            exit 0
+          fi
+
+          echo "::error::AXONITY_FLOW_READ_TOKEN cannot read AxonityAI/axonity-flow."
+          if [ "${repo}" = "401" ]; then
+            echo "401: the token is invalid, revoked, or EXPIRED. Mint a new one."
+          elif [ "${repo}" = "200" ]; then
+            echo "The repository is visible but its files are not (contents=${contents})."
+            echo "The token is missing the 'Contents: Read-only' repository permission."
+            echo "Note that 'Metadata: Read-only' is granted automatically and is NOT enough."
+          else
+            echo "The token cannot see the repository at all (repo=${repo})."
+            echo "Two usual causes, in order:"
+            echo "  1. It is PENDING organisation approval. An AxonityAI owner approves it at"
+            echo "     https://github.com/organizations/AxonityAI/settings/personal-access-token-requests"
+            echo "  2. Its resource owner is a personal account rather than AxonityAI, or"
+            echo "     axonity-flow is not in its selected repositories."
+            echo "Check the token at https://github.com/settings/personal-access-tokens"
+          fi
+          exit 1
 
       - name: Check out axonity-flow
         uses: actions/checkout@v4
