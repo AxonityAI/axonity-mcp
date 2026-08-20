@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { AxonityClient } from "../src/client.js";
+import { PROBE_ARGS as ARGS } from "../src/contract.js";
 import { registerAll } from "../src/index.js";
 
 /**
@@ -35,53 +36,6 @@ function recordingClient(calls: Recorded[]) {
     });
   return { get: rec("GET"), post: rec("POST"), put: rec("PUT"), patch: rec("PATCH"), del: rec("DELETE") };
 }
-
-/** Permissive args so most handlers reach the client regardless of their shape. */
-const ARGS: Record<string, unknown> = {
-  id: "x",
-  workflowId: "x",
-  agentId: "x",
-  toolId: "x",
-  runId: "x",
-  approvalId: "x",
-  flowId: "x",
-  snippetId: "x",
-  flowStepId: "x",
-  linkId: "x",
-  webhookId: "x",
-  scheduleId: "x",
-  triggerId: "x",
-  secretId: "x",
-  versionId: "x",
-  version: 1,
-  majorVersion: 1,
-  expectedVersion: 1,
-  displayOrder: 0,
-  name: "x",
-  cronExpr: "0 0 * * *",
-  conditionText: "x",
-  repeatIntervalMinutes: 5,
-  target: "system",
-  confirm: true,
-  document: {},
-  fields: {},
-  mutations: [{ type: "add_step", payload: {} }],
-  snippetIds: ["a"],
-  runIds: ["a"],
-  workflows: [{ id: "x", expectedVersion: 1 }],
-  functions: [{ name: "f", code: "def f(): pass" }],
-  code: "x",
-  requests: [{ entityType: "tool", entityId: "x" }],
-  entityKind: "skill",
-  entityId: "x",
-  batchId: "x",
-  stepId: "x",
-  answer: "x",
-  message: "x",
-  templateId: "x",
-  releaseId: "x",
-  payload: {},
-};
 
 /**
  * A call is forbidden if it hits a route family the connector must never use.

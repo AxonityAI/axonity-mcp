@@ -1,7 +1,7 @@
 {
   "name": "@axonity-ai/mcp",
   "version": "0.6.0",
-  "description": "Model Context Protocol server for Axonity Flow — lets an external agent (e.g. Claude Code) read, draft, and update workflows, agents and tools in an Axonity tenant.",
+  "description": "Model Context Protocol server for Axonity Flow \u2014 lets an external agent (e.g. Claude Code) read, draft, and update workflows, agents and tools in an Axonity tenant.",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -38,6 +38,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "check:contract": "node scripts/check-contract-drift.mjs --flow \"${AXONITY_FLOW_PATH:-../axonity-flow}\"",
+    "generate:filters": "node scripts/generate-list-filters.mjs",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {

@@ -24,6 +24,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 
 import { AxonityClient } from "./client.js";
 import { loadConfig } from "./config.js";
+import { reportContractSkew } from "./contract.js";
 import { registerConventions } from "./tools/conventions.js";
 import { assertPlaceholderCredentials } from "./tools/credentials.js";
 import {
@@ -36,11 +37,8 @@ import {
 import { registerAuthoringSpecTools } from "./tools/authoringSpec.js";
 import { registerCompanyTools } from "./tools/company.js";
 import { registerPromptPlacementTools } from "./tools/promptPlacement.js";
-import {
-  type EntityDef,
-  type ListFilter,
-  registerEntityTools,
-} from "./tools/register.js";
+import { LIST_FILTERS } from "./generated/listFilters.js";
+import { type EntityDef, registerEntityTools } from "./tools/register.js";
 import { registerRunTools } from "./tools/runs.js";
 import { registerSecretTools } from "./tools/secrets.js";
 import { registerSubworkflowTools } from "./tools/subworkflows.js";
@@ -54,37 +52,6 @@ import { type VersionedEntity, registerVersionTools } from "./tools/versions.js"
 import { registerWorkflowMutations } from "./tools/workflowMutations.js";
 
 /**
- * Policies and reference docs are scoped library items: each says WHAT it
- * governs and, when that is not the whole tenant, which entity owns it. Both
- * routes take the same pair, so the pair is defined once.
- *
- * Neither `scope` value is enumerated here. The valid values are the entity's
- * own `scope` field and differ between the two — restating them would be a
- * fourth hand-kept list of the kind #32/#44 removed, and a wrong one is a 422
- * that names what the route accepts.
- */
-const SCOPED_LIBRARY_FILTERS: ListFilter[] = [
-  {
-    arg: "scope",
-    query: "scope",
-    type: "string",
-    description:
-      "Only items with this scope — the same value the entity's own `scope` " +
-      "field carries (read one, or read the 422 a wrong value returns). This " +
-      "is how you separate the tenant-wide items, which reach every agent, " +
-      "from the ones attached to a single owner.",
-  },
-  {
-    arg: "ownerId",
-    query: "owner_id",
-    type: "string",
-    description:
-      "Only items owned by this entity — the agent or workflow id the scope " +
-      "points at. Pair it with `scope`.",
-  },
-];
-
-/**
  * The entities the connector covers. Core entities (C4) plus memory
  * entities (C5) — skills, policies, reference docs — which have the same
  * draft→publish lifecycle via #443's unified versioning.
@@ -96,24 +63,6 @@ const ENTITIES: EntityDef[] = [
     updateMethod: "PATCH",
     label: "workflows (business processes)",
     deleteVersionParam: "expectedVersion",
-    listFilters: [
-      {
-        arg: "stageId",
-        query: "stage_id",
-        type: "string",
-        description:
-          "Only workflows linked to this stage of the company's value stream. " +
-          "Stage ids come from read_company.",
-      },
-      {
-        arg: "capabilityId",
-        query: "capability_id",
-        type: "string",
-        description:
-          "Only workflows linked to this capability. Capability ids come from " +
-          "read_company.",
-      },
-    ],
   },
   {
     singular: "agent",
@@ -121,18 +70,6 @@ const ENTITIES: EntityDef[] = [
     updateMethod: "PUT",
     label: "agents",
     deleteVersionParam: "expectedVersion",
-    listFilters: [
-      {
-        arg: "includeSystem",
-        query: "includeSystem",
-        type: "boolean",
-        description:
-          "Include the platform's own system agents (the Builder team) " +
-          "alongside the tenant's. Defaults to false. They are readable, not " +
-          "yours to edit — useful when a workflow step names one and you are " +
-          "wondering what it is.",
-      },
-    ],
   },
   {
     singular: "tool",
@@ -158,7 +95,6 @@ const ENTITIES: EntityDef[] = [
     label: "policies (rules and guardrails for agents)",
     plural: "policies",
     deleteVersionParam: "expected_version",
-    listFilters: SCOPED_LIBRARY_FILTERS,
   },
   {
     singular: "reference_doc",
@@ -166,7 +102,6 @@ const ENTITIES: EntityDef[] = [
     updateMethod: "PUT",
     label: "reference docs (background knowledge for agents)",
     deleteVersionParam: "expected_version",
-    listFilters: SCOPED_LIBRARY_FILTERS,
   },
   {
     singular: "output_schema",
@@ -245,7 +180,13 @@ type ServerLike = Pick<McpServer, "tool">;
 export function registerAll(server: ServerLike, client: AxonityClient): void {
   registerConventions(server as McpServer);
   for (const def of ENTITIES) {
-    registerEntityTools(server as McpServer, client, def);
+    // Filters are GENERATED from the pinned schema (#48 M4), never declared on
+    // the EntityDef — a filter the backend adds reaches an agent as soon as the
+    // snapshot is refreshed, which the drift job now guarantees happens.
+    registerEntityTools(server as McpServer, client, {
+      ...def,
+      listFilters: LIST_FILTERS[def.singular],
+    });
   }
   for (const def of VERSIONED) {
     registerVersionTools(server as McpServer, client, def);
@@ -279,6 +220,20 @@ async function main(): Promise<void> {
   const config = loadConfig();
   const client = new AxonityClient(config);
   const server = buildServer(client);
+
+  // Ask the deploy what it mounts BEFORE the transport is connected, so a
+  // missing route is reported at startup rather than on the twentieth tool call
+  // (#48 M2). It cannot fail and cannot hang: every path inside degrades to
+  // today's behaviour and the whole thing is bounded by a timeout.
+  // `registerAll` wants McpServer's overloaded `.tool()`; the probe server has
+  // the one four-argument form every registrar here actually uses. The cast is
+  // the same one every test that drives registerAll makes.
+  await reportContractSkew(
+    client,
+    (probe, probeClient) => registerAll(probe as never, probeClient),
+    { apiUrl: config.apiUrl },
+  );
+
   const transport = new StdioServerTransport();
   await server.connect(transport);
   // Log to stderr — stdout is the MCP channel and must stay clean.
