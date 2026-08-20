@@ -171,9 +171,10 @@ export function registerAttachTools(
     firstArg: string,
     secondArg: string,
     /**
-     * The read-back tool for this link, when one exists. A 200 here does not
-     * prove the link resolved, so the description points at the tool that does —
-     * agent-scoped links have one, `skill → workflow` has no list route.
+     * The read-back tool for this link. A 200 here does not prove the link
+     * resolved, so the description points at the tool that does. Every link
+     * has one since axonity-flow#961 S8 gave the workflow-scoped variant its
+     * list route; the parameter stays optional for a future link that does not.
      */
     readBack?: string,
   ) => {
@@ -222,14 +223,18 @@ export function registerAttachTools(
     "skillId",
     "list_agent_skills",
   );
-  // No read-back for the workflow-scoped variant: the backend has no
-  // GET /workflows/{id}/skills-v2, so there is nothing to point at.
+  // The workflow-scoped variant HAS a read-back now (axonity-flow#961 S8).
+  // Attaching and detaching both had a route while reading back did not, so
+  // nothing distinguished a link that landed from one that silently did
+  // nothing — the shape of axonity-flow#778, where 27 detaches all reported
+  // `detached: true` and not one link had ever existed.
   link(
     "skill",
     "workflow",
     (workflowId, skillId) => `/api/v1/workflows/${workflowId}/skills-v2/${skillId}`,
     "workflowId",
     "skillId",
+    "list_workflow_skills",
   );
   link(
     "policy",
@@ -274,9 +279,20 @@ export function registerAttachTools(
         `every agent and a single playbook can run to 15 KB. Read one body ` +
         `deliberately with read_${subject === "reference_doc" ? "reference_doc" : subject} ` +
         `when you actually intend to read it. Pass verbosity: "full" only when ` +
-        `you need every field of every row.`,
+        `you need every field of every row.` +
+        `\n\nPass workflowId to see the agent as it is composed INSIDE that ` +
+        `workflow — the runtime view, including anything scoped to the workflow ` +
+        `rather than to the agent. Without it you see the agent on its own, ` +
+        `which is not what a run of that workflow assembles.`,
       {
         agentId: z.string().describe("The agent's id."),
+        workflowId: z
+          .string()
+          .optional()
+          .describe(
+            "Compose the runtime view for this workflow. Omit for the agent's " +
+              "own scope only.",
+          ),
         verbosity: z
           .enum(["identity", "full"])
           .optional()
@@ -286,9 +302,21 @@ export function registerAttachTools(
               "bodies included — expensive, and rarely what an audit needs.",
           ),
       },
-      async ({ agentId, verbosity }: { agentId: string; verbosity?: "identity" | "full" }) =>
+      async ({
+        agentId,
+        workflowId,
+        verbosity,
+      }: {
+        agentId: string;
+        workflowId?: string;
+        verbosity?: "identity" | "full";
+      }) =>
         guard(async () => {
-          const response = await client.get<Record<string, unknown>>(path(agentId));
+          const response = workflowId
+            ? await client.get<Record<string, unknown>>(path(agentId), {
+                workflow_id: workflowId,
+              })
+            : await client.get<Record<string, unknown>>(path(agentId));
           if (verbosity === "full") return jsonResult(response);
           return jsonResult(projectLinkRows(response, rowsKey));
         }),
@@ -302,6 +330,125 @@ export function registerAttachTools(
     "reference_docs",
     (id) => `/api/v1/agents/${id}/reference-docs`,
     "references",
+  );
+
+  /**
+   * The workflow-scoped read-back (axonity-flow#961 S8).
+   *
+   * Deliberately without `linkSource`: unlike the agent view there is only one
+   * way a skill reaches a workflow — an explicit link — so a field that always
+   * says the same thing would train a reader to skip it. Live links only, for
+   * the reason `list_agent_skills` gives: detaching closes the interval rather
+   * than deleting the row, and a stale dependency list is worse than none.
+   */
+  server.tool(
+    "list_workflow_skills",
+    "List the skills currently scoped to a WORKFLOW — the read-back for " +
+      "attach_skill_to_workflow. A 200 from an attach does not prove the link " +
+      "resolved, and the link lives outside the workflow document, so " +
+      "read_workflow will never show it: this is the only way to tell an attach " +
+      "that landed from one that silently did nothing. Read-only. " +
+      "\n\nReturns IDENTITY by default; pass verbosity: \"full\" for whole " +
+      "bodies, which a skill's playbook makes expensive.",
+    {
+      workflowId: z.string().describe("The workflow's id."),
+      verbosity: z
+        .enum(["identity", "full"])
+        .optional()
+        .describe(
+          'How much of each row to return. "identity" (default) is id, name, ' +
+            'description and status. "full" is the entire skill, body included.',
+        ),
+    },
+    async ({ workflowId, verbosity }) =>
+      guard(async () => {
+        const response = await client.get<Record<string, unknown>>(
+          `/api/v1/workflows/${workflowId}/skills-v2`,
+        );
+        if (verbosity === "full") return jsonResult(response);
+        return jsonResult(projectLinkRows(response, "skills"));
+      }),
+  );
+}
+
+/**
+ * "What breaks if I change this" — the reverse look-up, for both halves of the
+ * catalogue (axonity-flow#845 S5 and #961 S8).
+ *
+ * A shared library item is edited on the assumption that someone knows what
+ * uses it. Three items could answer that agent-first; the rest of the catalogue
+ * could not answer it at all, and there a broken reference stops a RUN rather
+ * than merely thinning a prompt. The only way to find out was to validate every
+ * workflow in the tenant and see where it went wrong.
+ *
+ * It was never queryable because these are not rows in a join table: they are
+ * keys inside a JSON document, and per entity in more than one place — an agent
+ * is a step OWNER and the `ownerAgentId` of a subprocess step; a tool appears in
+ * a step contract, in a plan activity, and on an automation step's config. The
+ * backend answers through one reader for exactly that reason.
+ */
+export function registerDependencyTools(
+  server: McpServer,
+  client: AxonityClient,
+): void {
+  server.tool(
+    "list_workflows_using",
+    "Which workflows reference an entity, and IN WHICH STEPS. Ask this BEFORE " +
+      "editing or deleting anything shared — it is the answer to \"what breaks " +
+      "if I change this\", and the alternative is validating every workflow in " +
+      "the tenant. Read-only. " +
+      "\n\nEach hit carries the workflow's id and name, the author's own names " +
+      "for the steps that name it (somewhere to look, not just a yes), and a " +
+      "`state`: `published` is a dependency that is LIVE right now and must not " +
+      "break; `draft` is one someone is still building. The same workflow can " +
+      "appear twice, once per state, and the difference is the point. " +
+      "\n\nThis reads workflow documents. For the agents that depend on a " +
+      "skill, policy or reference doc — a prompt-level dependency, not a " +
+      "document one — use list_dependent_agents.",
+    {
+      entityKind: z
+        .enum(["tool", "agent", "flow", "output_schema", "workflow"])
+        .describe(
+          "What kind of thing you are about to change. `workflow` answers " +
+            "which workflows CALL this one as a sub-process.",
+        ),
+      entityId: z.string().describe("That entity's id."),
+    },
+    async ({ entityKind, entityId }) =>
+      guard(async () =>
+        jsonResult(
+          await client.get(`/api/v1/workflows/using/${entityKind}/${entityId}`),
+        ),
+      ),
+  );
+
+  server.tool(
+    "list_dependent_agents",
+    "Which agents currently depend on a skill, policy or reference doc — the " +
+      "reverse of list_agent_skills / list_agent_policies / " +
+      "list_agent_reference_docs. Read it before editing or deleting a shared " +
+      "library item: changing one silently changes every prompt it is in. " +
+      "Read-only. " +
+      "\n\nLIVE links only. Detaching closes the link's interval rather than " +
+      "deleting the row, so a list that included closed ones would name agents " +
+      "that no longer use it — worse than no list at all. " +
+      "\n\nFor workflow documents that reference a tool, agent, flow, output " +
+      "schema or workflow, use list_workflows_using instead.",
+    {
+      entityKind: z
+        .enum(["skill", "policy", "reference_doc"])
+        .describe("Which library item you are about to change."),
+      entityId: z.string().describe("That item's id."),
+    },
+    async ({ entityKind, entityId }) =>
+      guard(async () => {
+        const base = {
+          skill: "/api/v1/skills",
+          policy: "/api/v1/policies",
+          reference_doc: "/api/v1/reference-docs",
+        }[entityKind];
+        return jsonResult(await client.get(`${base}/${entityId}/dependent-agents`));
+      }),
   );
 }
 
@@ -340,6 +487,64 @@ export function registerCatalogTools(server: McpServer, client: AxonityClient): 
     async ({ snippetId }) =>
       guard(async () =>
         jsonResult(await client.post(`/api/v1/prompt-snippets/${snippetId}/clone`)),
+      ),
+  );
+
+  server.tool(
+    "list_tool_packages",
+    "The Python packages a tool's code may import on THIS deploy, with their " +
+      "metadata. This is the allowlist `validate_tool_code` judges against, so " +
+      "reading it beats discovering the boundary through a rejected import. " +
+      "Read-only.",
+    {},
+    async () =>
+      guard(async () => jsonResult(await client.get("/api/v1/tools/packages"))),
+  );
+
+  /**
+   * The template catalogues. Four routes, one tool: they are the same question
+   * asked about four things, and four near-identical tools on a surface this
+   * size is how a reader stops reading tool names.
+   */
+  server.tool(
+    "list_templates",
+    "List the starting points this deploy ships: agent, tool and workflow " +
+      "templates, or the general template catalogue. A template is a shape to " +
+      "author FROM — read one for its fields, then create a fresh entity with " +
+      "those values. It is not something you reference by id from a workflow. " +
+      "Read-only.",
+    {
+      kind: z
+        .enum(["all", "agent", "tool", "workflow"])
+        .optional()
+        .describe(
+          'Which catalogue. "all" (default) is the general template list; the ' +
+            "others are the per-entity catalogues.",
+        ),
+    },
+    async ({ kind }) =>
+      guard(async () =>
+        jsonResult(
+          await client.get(
+            {
+              all: "/api/v1/templates",
+              agent: "/api/v1/agent-templates",
+              tool: "/api/v1/tool-templates",
+              workflow: "/api/v1/workflow-templates",
+            }[kind ?? "all"],
+          ),
+        ),
+      ),
+  );
+
+  server.tool(
+    "read_template",
+    "Read one template from the general catalogue by id — its full definition, " +
+      "which is what you author a new entity from. Read-only.",
+    { templateId: z.string().describe("The template's id, from list_templates.") },
+    async ({ templateId }) =>
+      guard(async () =>
+        jsonResult(await client.get(`/api/v1/templates/${templateId}`)),
       ),
   );
 }

@@ -40,9 +40,15 @@ tenant + scope on every call, so the connector is not a trust boundary.
 
 ## Tools
 
-200+ tools total. `axonity_conventions` (read this first) covers the authoring
+220+ tools total. `axonity_conventions` (read this first) covers the authoring
 rules — drafts vs live, optimistic locking, per-entity fields, delete/restore,
 and how to tell a retryable error from one that will never succeed.
+
+What the connector does **not** state is as deliberate as what it does: the
+mutation commands, the step types, the trigger types and the schedule-rule
+shapes are all read live from `get_workflow_authoring_spec`, because every one
+of those lists drifted while it was kept here. A conformance test asserts their
+absence.
 
 ### The generic entity family
 
@@ -65,17 +71,34 @@ entity gets every verb (see the per-entity notes below for the exceptions):
 Exceptions: `persona` has no `create_persona` (create only via
 `create_agent_persona`).
 
+Some list routes narrow in the query, which is where narrowing belongs — the
+backend applies it before the rows come back:
+`list_workflows({ stageId?, capabilityId? })`,
+`list_agents({ includeSystem? })`,
+`list_policies({ scope?, ownerId? })`,
+`list_reference_docs({ scope?, ownerId? })`.
+(`GET /prompt-snippets?deleted=true` is deliberately not exposed —
+`list_deleted_prompt_snippets` already calls the dedicated route, and two ways
+to ask one question is what this surface avoids.)
+
 Plus:
-- `get_workflow_authoring_spec` — the mutation commands **this deploy** accepts,
-  read live from the server (`GET /workflows/operations`, generated from the
-  engine's own registry). The connector states no vocabulary of its own, so a new
-  server operation is discoverable without a release here. Index by default;
-  pass `types` for a command's live payload schema.
+- `get_workflow_authoring_spec` — everything **this deploy** can be built from,
+  read live from the server (`GET /workflows/operations`): the mutation
+  `operations`, the `triggerTypes`, the `stepTypes` (including the ones you may
+  not author, each with the reason and what to write instead) and the
+  `scheduleRuleKinds` (each with an example the backend round-trips through its
+  own parser as it serves it). Every list is generated from the registry that
+  *enforces* it, so the connector states none of them and a new value is
+  discoverable without a release here. `operations` is an index by default;
+  pass `types` for a command's live payload schema. `rulesVersion` is a content
+  hash over all four — same hash, nothing to re-fetch.
 - `apply_workflow_mutations` for structural workflow edits (add steps, connect
   edges) via mutation commands, sequenced and version-threaded for you.
 - `replace_workflow_document` for one-shot full-document replacement in a single
   atomic PUT.
-- `read_workflow_trigger_parameters` — what input a workflow's triggers expect.
+- `read_workflow_trigger_parameters` — how to start the workflow:
+  `{ triggers, constants }`, every start with its own parameters and a `pinned`
+  flag marking the values the author owns.
 - `bulk_delete_workflows` — soft-delete several at once (each with its own
   `expectedVersion`).
 
@@ -92,7 +115,9 @@ For the ten versioned entities (including `flow`):
 | `list_deleted_<entity>_versions` | Restore candidates for the row above. |
 | `restore_deleted_<entity>_version` | Undo the delete above. No version check. |
 | `read_<entity>_published` | The live snapshot, as opposed to the draft. |
-| `name_<entity>_major_version` | Give a major version a name (label a release). |
+| `create_<entity>_major_version` | Cut a new **named** major version — "Save As" on the current draft. |
+| `ensure_<entity>_major_version` | Make sure a working draft major version exists. Idempotent. |
+| `name_<entity>_major_version` | Rename an existing major version (label a release). |
 
 `{version}` (an int) and `{versionId}` (a UUID) are two different identifiers
 across these routes — the tool parameter names say which.
@@ -112,7 +137,16 @@ across these routes — the tool parameter names say which.
   `attach_reference_to_agent`, and a `detach_*_from_*` for each. Detaching
   removes the link only — the skill or policy itself is untouched. Read the
   links back with `list_agent_skills`, `list_agent_policies`,
-  `list_agent_reference_docs`.
+  `list_agent_reference_docs` and `list_workflow_skills`. The three agent
+  read-backs take an optional `workflowId` for the **composed runtime view** —
+  what the agent's prompt actually assembles inside that workflow, with a
+  `linkSource` per row saying why each item is there.
+- **What uses this?**: `list_workflows_using({ entityKind, entityId })` names
+  the workflows that reference a tool, agent, flow, output schema or workflow,
+  **and the steps they reference it in**, with `draft`/`published` per hit.
+  `list_dependent_agents({ entityKind, entityId })` is the same question for a
+  skill, policy or reference doc. Ask before editing anything shared — the
+  alternative is validating every workflow in the tenant.
 - **Prompt elements (placement)**: a `prompt_snippet` is a library item; it only
   takes effect once placed into a flow step's prompt stack.
   `read_workflow_prompt_stacks` / `read_flow_prompt_stacks` resolve a
@@ -124,7 +158,11 @@ across these routes — the tool parameter names say which.
 - **Company** (the tenant's single company document — a singleton, no id):
   `read_company`, `update_company` (whole-document save with `expectedVersion`),
   `list_company_versions`, `read_company_version`, `restore_company_version`,
-  `name_company_major_version`, `read_company_published`, and
+  `name_company_major_version`, `create_company_major_version`,
+  `ensure_company_major_version`, `read_company_published`,
+  `apply_company_mutation` (one validated, version-safe command — preferred
+  over the whole-document `update_company`, the same way
+  `apply_workflow_mutations` is preferred for a workflow), and
   `request_publish_company` (takes no id — the
   server resolves your tenant's one company; direct company publish is closed to
   service tokens).
@@ -132,9 +170,11 @@ across these routes — the tool parameter names say which.
   step may call, each with its `parameters` and `outcomes`, and a
   `blockedReason` for the ones that cannot (never published, or no
   `subprocess-invocation` trigger). Authoring both halves is ordinary
-  `apply_workflow_mutations` work; `axonity_conventions` carries the config
-  contract, including that `validate_workflow` does **not** check a subprocess
-  step's target.
+  `apply_workflow_mutations` work — a callable workflow's signature goes into
+  the `add_trigger` call itself. `validate_workflow` **does** check a subprocess
+  target now (missing, self-call, deleted, unpublished, not callable), but
+  `list_callable_workflows` is still what you run first: it is how you pick a
+  target and read the interface you are binding to.
 - **Secrets** (read-only): `list_secrets`, `read_secret` — the catalogue a
   connector's `authConfig.secretId` points at. Values are never returned by any
   Axonity route; `valueKeys` says which keys a human has filled in, so you can
@@ -142,7 +182,9 @@ across these routes — the tool parameter names say which.
   changing a secret is a human act in Axonity (#39).
 - **Catalog & cloning**: `list_system_tools` (read-only catalog — enabling one
   for an agent is `update_agent` with the id added to `systemToolIds`),
-  `clone_flow`, `clone_prompt_snippet`.
+  `clone_flow`, `clone_prompt_snippet`, `list_tool_packages` (the import
+  allowlist `validate_tool_code` judges against), `list_templates` /
+  `read_template`.
 - `list_deleted_prompt_snippets` calls `/api/v1/prompt-snippets/deleted`; the
   backend returns it as `{ items: [... ] }`, and the tool forwards that response
   unchanged.
@@ -174,7 +216,33 @@ workflow and really executes), `cancel_run`, `delete_run`, `list_runs`,
 `bulk_delete_runs`. There is no findings endpoint — evaluation means reading a
 run's validator verdicts and its trace.
 
-`list_workflow_runs({ workflowId, archivedOnly?, limit?, cursor? })` returns one
+**Which start, and what it wants.** `read_workflow_trigger_parameters` answers
+`{ triggers, constants }` — every way the workflow can be started, each with its
+own parameters. Pass the one you mean to `start_workflow_run` as `triggerId`;
+omitting it fires the first, which on a workflow with a button *and* a schedule
+is an arbitrary choice. A parameter marked `pinned` is one the **author** owns:
+it is overwritten on every run, so a caller must not send it.
+
+**`read_run` omits the workflow snapshot by default.** It is immutable, it is
+never the answer to a question about the run, and it measured 81% of one real
+response — an oversized response turns a call that succeeded into an error.
+Pass `includeSnapshot: true` when you actually want to see what executed.
+
+**A run can park rather than finish.** `read_run_waiting_on` says what it is
+waiting for; `answer_run_question` answers an `ask_user` step and
+`send_run_message` sends a turn to a conversation run. Both record the input as
+a person's, so use them on runs you started. Deciding a **plan approval** and
+restarting a stuck run are deliberately absent — the first is the human review
+the step exists to get, the second is `require_admin` and a service token is
+always `role="member"`. Both are recorded in `test/exclusions.test.ts`.
+
+**Inside a launch**: `read_run_items_summary` is the roll-up ("4,415 processed ·
+12 failed"), `list_run_items({ outcome })` the paged rows — filter in the query,
+because the failures are scattered and sifting page one finds none of them.
+`list_run_tasks` and `read_run_for_each_progress` cover the children a run set
+in motion.
+
+`list_workflow_runs({ workflowId, status?, archivedOnly?, limit?, cursor? })` returns one
 **page** — `{ items, nextCursor, pageSize, hasMore }`, 20 by default and 200 at
 most — so follow `nextCursor` while `hasMore` is true rather than treating the
 first page as the answer. It also lists **launches**, not runs: the per-item runs
@@ -196,7 +264,9 @@ a workflow *and everything its run needs* — the agents it runs, their tools an
 personas, the flows it pins, the memory scoped to those agents — as ONE approval.
 Prefer it over a request per entity. Taking a tenant live entity-by-entity means
 a hundred-odd approvals, none of which means anything on its own, and a human
-asked that many times is not reviewing.
+asked that many times is not reviewing. `list_publish_releases` and
+`get_publish_release` read one back — the release's members, and its readiness
+recomputed as of now.
 
 Unlike `request_publish_bulk`, a release is **all-or-nothing and in dependency
 order**: approving it publishes every member or none, so a workflow can never go

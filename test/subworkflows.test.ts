@@ -83,7 +83,7 @@ describe("an agent can find what a sub-process step may call", () => {
     expect(JSON.parse(result.content[0].text)).toEqual(rows);
   });
 
-  it("warns that validate_workflow does not check the target", () => {
+  it("says why to pick a target here rather than let the validator judge it", () => {
     const { server, descriptions } = fakeServer();
     registerSubworkflowTools(
       server as never,
@@ -91,11 +91,17 @@ describe("an agent can find what a sub-process step may call", () => {
     );
     const description = descriptions.get("list_callable_workflows")!;
 
-    // The load-bearing fact: a bad target authors clean and fails at run time,
-    // so "it validated" is not evidence the call will work.
+    // axonity-flow#961 S7 made the validator check a subprocess target, so the
+    // old claim — "it does NOT check any of this, a bad target fails at RUN
+    // time" — is now false and must not be here. What remains true is the
+    // ORDER: this tool is how you pick, the validator only judges afterwards.
     expect(description).toMatch(/validate_workflow/);
-    expect(description).toMatch(/RUN time/);
+    expect(description).toMatch(/BEFORE/);
     expect(description).toMatch(/blockedReason/);
+    expect(
+      description,
+      "the validator does check the target now — see axonity-flow#961 S7",
+    ).not.toMatch(/does\s+NOT\s+check/i);
   });
 });
 

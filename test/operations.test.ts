@@ -157,6 +157,7 @@ describe("run observability", () => {
     const { handlers, client } = setup(registerRunTools);
     await handlers.get("list_workflow_runs")!({ workflowId: "w-1", archivedOnly: true });
     expect(client.get).toHaveBeenCalledWith("/api/v1/workflows/w-1/runs", {
+      status: undefined,
       archived_only: true,
     });
   });
@@ -166,7 +167,11 @@ describe("run observability", () => {
     await handlers.get("read_run")!({ runId: "r-1" });
     await handlers.get("read_run_trace")!({ runId: "r-1" });
     await handlers.get("read_run_cost")!({ runId: "r-1" });
-    expect(client.get).toHaveBeenNthCalledWith(1, "/api/v1/runs/r-1");
+    // read_run overrides the backend's own default: the workflow snapshot is
+    // 81% of a real response and never the answer to a question about the run.
+    expect(client.get).toHaveBeenNthCalledWith(1, "/api/v1/runs/r-1", {
+      includeSnapshot: false,
+    });
     expect(client.get).toHaveBeenNthCalledWith(2, "/api/v1/runs/r-1/trace");
     expect(client.get).toHaveBeenNthCalledWith(3, "/api/v1/runs/r-1/cost");
   });

@@ -6,6 +6,15 @@
  *   - `version`    — an INTEGER checkpoint number (1, 2, 3 …), used to read one.
  *   - `versionId`  — the UUID of the version row, used to restore/delete it.
  *
+ * A MAJOR version is a named release inside that history, and all four verbs
+ * exist for it: `create_*_major_version` cuts a new one ("Save As" on the
+ * current draft), `ensure_*_major_version` makes sure an unnamed working one
+ * exists (idempotent), `name_*_major_version` renames one, and the list/read/
+ * restore verbs above reach them like any other version. Creating one used to
+ * be the missing verb — the connector could list, read, restore, delete and
+ * rename a named major but not cut one, which `ENTITY-LIFECYCLE-CONTRACT.md`
+ * treats as a first-class act.
+ *
  * There are also two unrelated things both called "restore" here:
  *   - `restore_<entity>_version`         — roll the DRAFT back to an old,
  *     still-live version. Takes `expectedVersion` in the body.
@@ -160,6 +169,53 @@ export function registerVersionTools(
         jsonResult(
           await client.post(`${basePath}/${id}/versions/${versionId}/restore-deleted`),
         ),
+      ),
+  );
+
+  server.tool(
+    `create_${singular}_major_version`,
+    `Cut a new NAMED major version of a ${singular} — "Save As" for the ` +
+      `current draft. The draft's state becomes a labelled release in history ` +
+      `and work continues from there. Use it to mark a milestone you may want ` +
+      `to come back to by name rather than by hunting through checkpoints. ` +
+      `\n\nThis does NOT publish: what is live stays live until a human ` +
+      `approves a request_publish_${singular}. Renaming an existing major ` +
+      `version is name_${singular}_major_version; this creates one.`,
+    {
+      id: z.string().describe(`The ${singular}'s id.`),
+      name: z
+        .string()
+        .min(1)
+        .max(255)
+        .describe('What to call this release, e.g. "Pre-migration baseline".'),
+      description: z
+        .string()
+        .optional()
+        .describe("A longer note on what this version represents."),
+    },
+    async ({ id, name, description }) =>
+      guard(async () =>
+        jsonResult(
+          await client.post(`${basePath}/${id}/versions`, {
+            name,
+            ...(description ? { description } : {}),
+          }),
+        ),
+      ),
+  );
+
+  server.tool(
+    `ensure_${singular}_major_version`,
+    `Make sure a ${singular} has a working draft major version, creating an ` +
+      `unnamed one ("Version N") if it has none. IDEMPOTENT — calling it when ` +
+      `one already exists changes nothing and returns the same answer, so it is ` +
+      `safe to call before a run of edits. Returns the draft's major version ` +
+      `number and name. Use create_${singular}_major_version when you want a ` +
+      `NAMED release instead.`,
+    { id: z.string().describe(`The ${singular}'s id.`) },
+    async ({ id }) =>
+      guard(async () =>
+        jsonResult(await client.post(`${basePath}/${id}/versions/ensure`)),
       ),
   );
 

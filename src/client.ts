@@ -12,8 +12,21 @@ import { AxonityApiError, errorForStatus, skewErrorFor } from "./errors.js";
 
 export type Json = Record<string, unknown>;
 
-/** Query-string values a route may take. `undefined` entries are omitted. */
-export type Query = Record<string, string | number | boolean | undefined>;
+/** One scalar a query parameter may carry. */
+type QueryScalar = string | number | boolean;
+
+/**
+ * Query-string values a route may take. `undefined` entries are omitted.
+ *
+ * An ARRAY is serialised the way FastAPI reads a `list[…]` query parameter:
+ * the key REPEATED, once per element (`?status=pending&status=running`). Not
+ * every list-shaped filter on the backend is spelled that way — `GET /runs`
+ * takes its statuses as one comma-separated string while
+ * `GET /workflows/{id}/runs` repeats the key — so the caller picks the shape
+ * its route actually declares. An empty array contributes nothing, which is
+ * what "no filter" means.
+ */
+export type Query = Record<string, QueryScalar | QueryScalar[] | undefined>;
 
 export class AxonityClient {
   constructor(private readonly config: AxonityConfig) {}
@@ -24,7 +37,12 @@ export class AxonityClient {
 
     const params = new URLSearchParams();
     for (const [key, value] of Object.entries(query)) {
-      if (value !== undefined) params.set(key, String(value));
+      if (value === undefined) continue;
+      if (Array.isArray(value)) {
+        for (const item of value) params.append(key, String(item));
+      } else {
+        params.set(key, String(value));
+      }
     }
     const qs = params.toString();
     return qs ? `${base}?${qs}` : base;

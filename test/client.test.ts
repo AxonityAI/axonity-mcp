@@ -38,6 +38,38 @@ describe("loadConfig", () => {
   });
 });
 
+describe("AxonityClient query strings", () => {
+  it("omits undefined, and REPEATS a key for an array", async () => {
+    // FastAPI reads a `list[...]` query parameter as a repeated key, so
+    // `?status=failed&status=cancelled` is the only spelling
+    // `GET /workflows/{id}/runs` accepts (#45 M9.3). Comma-joining it would
+    // reach the backend as one unknown status and come back a 422.
+    const fetchMock = mockFetch(200, { items: [] });
+    vi.stubGlobal("fetch", fetchMock);
+    const client = new AxonityClient(CONFIG);
+
+    await client.get("/api/v1/workflows/w-1/runs", {
+      status: ["failed", "cancelled"],
+      archived_only: undefined,
+      limit: 20,
+    });
+
+    const url = new URL(fetchMock.mock.calls[0][0] as unknown as string);
+    expect(url.searchParams.getAll("status")).toEqual(["failed", "cancelled"]);
+    expect(url.searchParams.get("limit")).toBe("20");
+    expect(url.searchParams.has("archived_only")).toBe(false);
+  });
+
+  it("contributes nothing for an empty array — that is what 'no filter' means", async () => {
+    const fetchMock = mockFetch(200, { items: [] });
+    vi.stubGlobal("fetch", fetchMock);
+    const client = new AxonityClient(CONFIG);
+
+    await client.get("/api/v1/runs", { status: [] });
+    expect(fetchMock.mock.calls[0][0]).toBe("https://api.test/api/v1/runs");
+  });
+});
+
 describe("AxonityClient.request", () => {
   it("sends the bearer token and parses JSON on success", async () => {
     const fetchMock = mockFetch(200, [{ id: "wf-1" }]);

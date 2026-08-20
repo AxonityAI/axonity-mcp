@@ -260,11 +260,26 @@ export function registerWorkflowMutations(
       "{after|before: <stepId>, …} } are required, and id, type, typeId, config, " +
       "contract, inputs, outputs and edgeType are all accepted alongside them. No " +
       "follow-up update_step is needed merely to fill the step in." +
+      "\n- add_trigger does the same for a trigger: its `parameters` and " +
+      "`outputs` go in the SAME call, typed exactly as update_trigger types " +
+      "them, so the one-call and two-call routes cannot store different shapes. " +
+      "This matters most for a callable workflow, whose parameter list IS its " +
+      "signature — there is nowhere else to declare it." +
       "\n- add_edge accepts the document's own from/to as well as " +
       "fromStepId/toStepId, and HONOURS an id you supply rather than replacing it, " +
       "so ids stay diffable against an environment you are reproducing." +
+      "\n- set_workflow_constants replaces the WHOLE constants list, like " +
+      "advanced_edit replaces steps and edges: read it, edit the list, write it " +
+      "back. Every entry needs a `name` (that is what a step binds to and how " +
+      "the run payload keys it) and a value — a constant with no value is a " +
+      "publish-blocking `constant_without_value`, and 0, \"\", false and [] all " +
+      "count as values." +
       "\n- Payloads are STRICT: an unknown or misspelled key is a 422 that names " +
-      "it, never a silent drop. Read the error instead of assuming a value landed." +
+      "it, never a silent drop. Read the error instead of assuming a value landed. " +
+      "The SHAPE of a payload's nested fields — what a trigger parameter, a " +
+      "step input, an output or a contract may contain — is in the payload " +
+      "schemas themselves; ask get_workflow_authoring_spec for the command's " +
+      "`types` rather than for prose about it." +
       "\n\nTWO INVARIANTS RUN AFTER EVERY EDIT, and the response reports what they " +
       "did in `systemAdjustments` (addedEdges / removedEdges / rederivedInputs):" +
       "\n- Every step is guaranteed to reach the END point; the platform wires that " +
@@ -365,9 +380,25 @@ export function registerWorkflowMutations(
 
   server.tool(
     "read_workflow_trigger_parameters",
-    "Read the input parameters a workflow's triggers expect — what a caller must " +
-      "supply to start it. Use this before authoring a webhook/cron/conditional " +
-      "trigger, or before start_workflow_run, so the trigger input matches. Read-only.",
+    "How to START this workflow: `{ triggers: [...], constants: [...] }`. Read " +
+      "it before start_workflow_run, and before authoring a webhook, cron or " +
+      "conditional trigger, so the input you send matches. Read-only. " +
+      "\n\nEVERY start is described, each with its own `parameters` — a workflow " +
+      "with a button AND a schedule has two entries, and each carries different " +
+      "fields. Pass the entry's `id` to start_workflow_run as triggerId to fire " +
+      "that one; firing without naming one uses the first, which on a " +
+      "multi-start workflow is an arbitrary choice. " +
+      "\n\nA PARAMETER MARKED `pinned: true` MUST NOT BE SENT. The author owns " +
+      "that value: it is written on every run and OVERWRITES whatever a caller " +
+      "supplied, because a field the operator's form does not show must not " +
+      "become an injection point. Fill in the parameters that are not pinned; " +
+      "`required` says which of those must be present. " +
+      "\n\n`constants` are values pinned on the WORKFLOW rather than on any one " +
+      "start — applied to every run whichever trigger fired, and likewise not " +
+      "something a caller supplies. " +
+      "\n\nAn empty `triggers` list means the workflow has never been " +
+      "published: the contract is read from the published document. That is an " +
+      "answer, not an error.",
     { workflowId: z.string().describe("The workflow's id.") },
     async ({ workflowId }) =>
       guard(async () =>

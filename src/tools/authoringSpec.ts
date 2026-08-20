@@ -1,5 +1,6 @@
 /**
- * The mutation vocabulary, read from the server instead of restated here.
+ * The building blocks of this deploy, read from the server instead of restated
+ * here.
  *
  * `apply_workflow_mutations` used to name all 22 command types in its own
  * description. That list was correct only by maintenance, and it had already
@@ -15,7 +16,22 @@
  * server operation becomes discoverable with no change in this repository,
  * which is the acceptance criterion #8 was filed for.
  *
- * `rulesVersion` is a content hash over the catalog: same hash, nothing to
+ * axonity-flow#961 S1 extends that property to three more lists that had no
+ * route at all, and it is the same story each time: `conventions.ts` named nine
+ * step types where seven validate — `loop` and `for_each` both answer
+ * `step_invalid_type` — because a list nobody could read is a list that drifts.
+ * So the response now carries four generated lists, and this connector names
+ * none of them:
+ *   - `operations`         — the mutation commands, as before.
+ *   - `triggerTypes`       — every value a trigger's `typeId` may hold.
+ *   - `stepTypes`          — every value a step's `type` may hold, INCLUDING the
+ *     ones an author may not write, each with the reason and what to write
+ *     instead. Omitting those would read as "does not exist".
+ *   - `scheduleRuleKinds`  — the shapes a schedule rule takes, each with a
+ *     working example the backend round-trips through its own parser on every
+ *     read, so a published example cannot rot.
+ *
+ * `rulesVersion` is a content hash over all four: same hash, nothing to
  * re-fetch. It is what makes "read the spec at the start of each authoring
  * task" cheap enough to actually do.
  *
@@ -23,8 +39,9 @@
  * and `add_step` alone is 3 KB. Handing that to an agent that wanted to know
  * which commands exist is the mistake #33 was filed about: a default that is
  * correct but unaffordable produces the shortcut, not the careful read. So the
- * index (type + description) is the default, and the schemas come per command,
- * when the agent is actually about to write one.
+ * payload SCHEMAS are what the index drops, per command, on request. The three
+ * vocabulary lists are small and are the answer to "what may I write at all",
+ * so they always ride along — trimming them would recreate the gap this closed.
  */
 
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -52,6 +69,10 @@ interface CatalogResponse {
  * in `unknownTypes` rather than being rejected here, because the connector is
  * not the authority on what exists. That is the whole point of reading the
  * catalogue.
+ *
+ * Only `operations` is ever projected. The envelope is spread through on both
+ * paths, so `triggerTypes` / `stepTypes` / `scheduleRuleKinds` — and anything
+ * the backend adds next to them — survive unread and unnamed here.
  */
 export function projectCatalog(response: unknown, types?: string[]): unknown {
   if (typeof response !== "object" || response === null || Array.isArray(response)) {
@@ -92,11 +113,13 @@ export function projectCatalog(response: unknown, types?: string[]): unknown {
     ...source,
     operations: rows.map((row) => ({ type: row.type, description: row.description })),
     // Say what was dropped and how to get it — the omission a reader cannot see
-    // is the same trap as the cost it avoids.
+    // is the same trap as the cost it avoids. Note this names `operations`
+    // only: the vocabulary lists beside it are returned in full.
     schemasOmitted:
-      "Index only (type + description). Pass `types: [\"add_step\", …]` for the " +
-      "live payload schema of the commands you are about to write; the full " +
-      "catalogue is ~20 KB and is rarely what you need.",
+      "`operations` is an index (type + description) — its payload schemas are " +
+      'omitted. Pass `types: ["add_step", …]` for the live payload schema of ' +
+      "the commands you are about to write; the full catalogue is ~20 KB and " +
+      "is rarely what you need. Everything else in this response is complete.",
   };
 }
 
@@ -106,20 +129,36 @@ export function registerAuthoringSpecTools(
 ): void {
   server.tool(
     "get_workflow_authoring_spec",
-    "The mutation commands THIS Axonity deploy accepts, read live from the " +
+    "Everything THIS Axonity deploy can be built from, read live from the " +
       "server — not a list this connector keeps. Read it at the start of an " +
-      "authoring task, before `apply_workflow_mutations`. " +
-      "\n\nBy default you get the INDEX: every command's `type` and one-line " +
-      "`description`, plus `rulesVersion`. Pass `types` to get the live " +
-      "`payloadSchema` for the commands you are about to write — the full " +
-      "catalogue with every schema is ~20 KB, which is rarely what you need. " +
-      "\n\n`rulesVersion` is a content hash of the catalogue: while it is " +
+      "authoring task, before `apply_workflow_mutations`. Four lists come back:" +
+      "\n- `operations` — the mutation commands, with their payload schemas." +
+      "\n- `triggerTypes` — every value a trigger's `typeId` may hold. " +
+      "`category: true` marks a broad category id rather than a concrete type; " +
+      "both validate, but reach for the concrete one." +
+      "\n- `stepTypes` — every value a step's `type` may hold. Types you may " +
+      "NOT author are listed too, with `authorable: false` and a `reason` " +
+      "saying how to express that intention instead — so reaching for one gets " +
+      "you an answer rather than a `step_invalid_type`." +
+      "\n- `scheduleRuleKinds` — the shapes a schedule rule takes, each with a " +
+      "working `example` to copy and the sentence it `describes`. Every example " +
+      "is round-tripped through the platform's own parser as it is served, so " +
+      "it is one this deploy demonstrably accepts." +
+      "\n\nBy default `operations` is an INDEX: each command's `type` and " +
+      "one-line `description`. Pass `types` to get the live `payloadSchema` for " +
+      "the commands you are about to write — the full catalogue with every " +
+      "schema is ~20 KB, which is rarely what you need. The other three lists " +
+      "are always returned complete. " +
+      "\n\n`rulesVersion` is a content hash over all four: while it is " +
       "unchanged there is nothing to re-fetch. Re-read the spec when it changes, " +
       "or when a mutation fails with a 422 that suggests your idea of a command " +
       "is out of date. " +
-      "\n\nA command missing here is a command this backend will reject — the " +
-      "catalogue is generated from the same registry the mutations route " +
-      "validates against, so the two cannot disagree.",
+      "\n\nAnything missing here is something this backend will reject. Each " +
+      "list is generated from the same registry that ENFORCES it — the handler " +
+      "table, the trigger-type constants, the validator's own step-type set, " +
+      "the schedule-rule specs — so the answer and the enforcement cannot " +
+      "disagree. That is why neither this connector's guide nor its tool " +
+      "descriptions name any of these values.",
     {
       types: z
         .array(z.string())

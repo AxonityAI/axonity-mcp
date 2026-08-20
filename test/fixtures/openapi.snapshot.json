@@ -2,7 +2,7 @@
   "components": {
     "schemas": {
       "ActivationGate": {
-        "description": "When a policy is injected into an agent's prompt (Memory v2 #398).\n\nAll three gates are AND-combined with the policy's scope. Empty gate =\n\"no extra gating\" (renders whenever the scope filter matches):\n\n* ``tags`` — every tag here must be present on the agent's role tags.\n* ``tools`` — at least one tool here must be registered in the step.\n* ``delegation`` — ``top`` = only the top-level (non-delegated)\n  invocation; ``delegate`` = only sub-agent invocations; ``any`` = both.",
+        "description": "When a policy is injected into an agent's prompt (Memory v2 #398).\n\nBoth gates are AND-combined with the policy's scope. Empty gate =\n\"no extra gating\" (renders whenever the scope filter matches):\n\n* ``tools`` — at least one tool here must be registered in the step.\n* ``delegation`` — ``top`` = only the top-level (non-delegated)\n  invocation; ``delegate`` = only sub-agent invocations; ``any`` = both.\n\n``tags`` was a third gate and is gone (#932). It decided, invisibly,\nwhether a policy reached an agent: no screen ever showed it, and the gate\ndemanded EVERY listed tag while its own documentation promised any — so a\npolicy naming two roles reached nobody while the agent page displayed it as\napplying. Linking the policy to the agent says the same thing in a table an\noperator can see and edit.\n\nThe field is absent rather than deprecated-but-present: a row written\nbefore #932 still carries the key, and ``extra=\"ignore\"`` means reading one\ndrops it. Refusing it on READ would make an existing policy unloadable\ninstead of merely un-gated. Refusing it on WRITE is\n:class:`ActivationGateRequest` below.",
         "properties": {
           "delegation": {
             "default": "any",
@@ -13,15 +13,6 @@
             ],
             "title": "Delegation",
             "type": "string"
-          },
-          "tags": {
-            "items": {
-              "maxLength": 128,
-              "type": "string"
-            },
-            "maxItems": 64,
-            "title": "Tags",
-            "type": "array"
           },
           "tools": {
             "items": {
@@ -34,6 +25,32 @@
           }
         },
         "title": "ActivationGate",
+        "type": "object"
+      },
+      "ActivationGateRequest": {
+        "description": "The write side of :class:`ActivationGate` — refuses the retired gate.\n\nDropping ``tags`` from the model alone is not enough on a request: with\n``extra=\"ignore\"`` a caller would get HTTP 200 and a silently discarded\ngate, which is the same invisible failure one level along. So a write that\nstill carries it is refused, and told what to do instead.",
+        "properties": {
+          "delegation": {
+            "default": "any",
+            "enum": [
+              "any",
+              "top",
+              "delegate"
+            ],
+            "title": "Delegation",
+            "type": "string"
+          },
+          "tools": {
+            "items": {
+              "maxLength": 128,
+              "type": "string"
+            },
+            "maxItems": 64,
+            "title": "Tools",
+            "type": "array"
+          }
+        },
+        "title": "ActivationGateRequest",
         "type": "object"
       },
       "AdoptRepoRequest": {
@@ -1232,6 +1249,28 @@
             "title": "Callable",
             "type": "boolean"
           },
+          "capabilityId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capabilityid"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
           "id": {
             "title": "Id",
             "type": "string"
@@ -1255,6 +1294,28 @@
             },
             "title": "Parameters",
             "type": "array"
+          },
+          "stageId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stageid"
+          },
+          "valueStreamId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valuestreamid"
           }
         },
         "required": [
@@ -2697,7 +2758,7 @@
                 "type": "null"
               }
             ],
-            "description": "Role tags (e.g. orchestrator, reviewer, producer, publisher) that drive policy/snippet activation gates. Omitted = unchanged; [] = no role filtering.",
+            "description": "Free-form role labels (e.g. orchestrator, reviewer) for your own grouping and reporting. They do NOT decide what reaches the agent's prompt: attach a policy, skill or reference doc to the agent for that. Omitted = unchanged; [] = clears them.",
             "title": "Tags"
           },
           "toolIds": {
@@ -2912,13 +2973,36 @@
         "description": "Designer-supplied config for a new cron schedule.",
         "properties": {
           "cronExpr": {
-            "title": "Cronexpr",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cronexpr"
           },
           "enabled": {
             "default": true,
             "title": "Enabled",
             "type": "boolean"
+          },
+          "rules": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "maxItems": 50,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rules"
           },
           "timezone": {
             "default": "UTC",
@@ -2931,8 +3015,7 @@
           }
         },
         "required": [
-          "triggerId",
-          "cronExpr"
+          "triggerId"
         ],
         "title": "CreateCronScheduleRequest",
         "type": "object"
@@ -3155,13 +3238,13 @@
           "activation": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/ActivationGate"
+                "$ref": "#/components/schemas/ActivationGateRequest"
               },
               {
                 "type": "null"
               }
             ],
-            "description": "Optional activation gate controlling when the policy is injected at runtime."
+            "description": "Optional activation gate controlling when the policy is injected at runtime: `tools` (only on turns where the agent holds one of these) and `delegation` (top / delegate / any). Role tags no longer gate anything — link the policy to its agents instead."
           },
           "bodyMd": {
             "description": "Full policy text in Markdown.",
@@ -4149,8 +4232,15 @@
             "title": "Createdat"
           },
           "cronExpr": {
-            "title": "Cronexpr",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cronexpr"
           },
           "enabled": {
             "title": "Enabled",
@@ -4182,6 +4272,21 @@
             ],
             "title": "Nextfireat"
           },
+          "rules": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rules"
+          },
           "timezone": {
             "title": "Timezone",
             "type": "string"
@@ -4193,13 +4298,45 @@
           "workflowId": {
             "title": "Workflowid",
             "type": "string"
+          },
+          "workflowName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workflowname"
+          },
+          "workflowPauseReason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workflowpausereason"
+          },
+          "workflowPausedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workflowpausedat"
           }
         },
         "required": [
           "id",
           "workflowId",
           "triggerId",
-          "cronExpr",
           "timezone",
           "enabled"
         ],
@@ -4515,6 +4652,60 @@
           }
         },
         "title": "DependentAgentsResponse",
+        "type": "object"
+      },
+      "DependentWorkflow": {
+        "description": "One workflow that names a library entity, and where it names it.",
+        "properties": {
+          "id": {
+            "description": "The workflow's id.",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "description": "The workflow's name.",
+            "title": "Name",
+            "type": "string"
+          },
+          "state": {
+            "description": "Which document names it. 'published' is a dependency that is live now; 'draft' is one an author is still working on. A workflow can appear twice, once per state, and the difference matters.",
+            "enum": [
+              "draft",
+              "published"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "steps": {
+            "description": "The steps that name it, by the author's own step names — so the answer is somewhere to look, not just a yes.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Steps",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "state",
+          "steps"
+        ],
+        "title": "DependentWorkflow",
+        "type": "object"
+      },
+      "DependentWorkflowsResponse": {
+        "description": "What uses this library entity, before you change it.\n\n# paging-exempt: the workflows naming ONE entity, bounded by the tenant's\n# workflow library — the same collection ``GET /workflows`` is exempt for,\n# O(100) per tenant and grown by deliberate human authoring rather than\n# machine activity. It cannot exceed that library.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/DependentWorkflow"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "title": "DependentWorkflowsResponse",
         "type": "object"
       },
       "DeployConfigRequest": {
@@ -10370,6 +10561,41 @@
         "title": "ReachableOutputsResponse",
         "type": "object"
       },
+      "ReconcileResult": {
+        "description": "What the consistency check found and repaired.",
+        "properties": {
+          "created": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Created",
+            "type": "array"
+          },
+          "isClean": {
+            "title": "Isclean",
+            "type": "boolean"
+          },
+          "matched": {
+            "title": "Matched",
+            "type": "integer"
+          },
+          "removed": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Removed",
+            "type": "array"
+          }
+        },
+        "required": [
+          "matched",
+          "created",
+          "removed",
+          "isClean"
+        ],
+        "title": "ReconcileResult",
+        "type": "object"
+      },
       "ReferenceDocForAgentResponse": {
         "description": "A reference doc plus the reason it is in scope for this agent (#778).\n\nA doc reaches an agent through an explicit ``agent_reference_docs``\nlink, by being the agent's own ``scope='agent'`` doc, or by being\ntenant-wide. The composed list used to mix them with no discriminator,\nso \"detach this document\" looked like a sensible request for a doc that\nwas never linked — and the detach answered \"done\". Explicit link wins;\nsee ``services/link_source.py``.",
         "properties": {
@@ -10901,6 +11127,25 @@
         "title": "ReleaseApprovalSummary",
         "type": "object"
       },
+      "ReleaseBulkResult": {
+        "description": "Aggregate outcome of ``release_bulk``.\n\n``released`` of ``total``. Rows that had already started, finished or\ncarried no moment are simply not counted — see ``release_bulk`` for\nwhy a mixed selection must not raise.",
+        "properties": {
+          "released": {
+            "title": "Released",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "released",
+          "total"
+        ],
+        "title": "ReleaseBulkResult",
+        "type": "object"
+      },
       "ReleaseDecisionResponse": {
         "description": "Outcome of approving/rejecting a release.",
         "properties": {
@@ -11043,6 +11288,28 @@
           "workflowId"
         ],
         "title": "ReleaseRequest",
+        "type": "object"
+      },
+      "ReleaseResult": {
+        "description": "Outcome of ``release_now``.\n\n``status='released'`` — the row's moment moved to now and the next\nclaim will pick it up. ``status='no_change'`` — the row carried no\nmoment and was already free to be claimed, which is an answer rather\nthan an error.",
+        "properties": {
+          "status": {
+            "enum": [
+              "released",
+              "no_change"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "task": {
+            "$ref": "#/components/schemas/TaskQueueRowOut"
+          }
+        },
+        "required": [
+          "status",
+          "task"
+        ],
+        "title": "ReleaseResult",
         "type": "object"
       },
       "RenameVersionRequest": {
@@ -11951,6 +12218,159 @@
         "title": "RunItemResult",
         "type": "object"
       },
+      "RunOutlineCounts": {
+        "description": "How a node's children came out, without listing them.\n\nA fan-out step's roll-up. ``truncated`` is how many items the outline\ndeliberately did not list — the operator is never left to infer that\nforty was all of them.",
+        "properties": {
+          "done": {
+            "default": 0,
+            "title": "Done",
+            "type": "integer"
+          },
+          "failed": {
+            "default": 0,
+            "title": "Failed",
+            "type": "integer"
+          },
+          "pending": {
+            "default": 0,
+            "title": "Pending",
+            "type": "integer"
+          },
+          "skipped": {
+            "default": 0,
+            "title": "Skipped",
+            "type": "integer"
+          },
+          "total": {
+            "default": 0,
+            "title": "Total",
+            "type": "integer"
+          },
+          "truncated": {
+            "default": 0,
+            "title": "Truncated",
+            "type": "integer"
+          }
+        },
+        "title": "RunOutlineCounts",
+        "type": "object"
+      },
+      "RunOutlineNode": {
+        "description": "One node in a run's outline (#941).\n\nThe outline is the run's table of contents: everything that happened,\nnested at the depth it happened. Steps, the items a fan-out handed out,\nand — from #942 — the delegates and plan activities beneath them.\n\nDeliberately carries NO bodies. Its size is a function of the run's\nSHAPE rather than its content, which is what lets one realtime tick\nrefetch it for a launch over four thousand items at the same cost as\nfor one over four. Bodies are fetched per node, when a node is opened.\n\nFlat, with parent pointers — the client nests it. A flat list is\ntrivially cacheable, diffable and pageable; a nested response is none\nof those.",
+        "properties": {
+          "completedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completedat"
+          },
+          "counts": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RunOutlineCounts"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "parentId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parentid"
+          },
+          "refId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refid"
+          },
+          "startedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Startedat"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "stepType": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Steptype"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "name",
+          "status"
+        ],
+        "title": "RunOutlineNode",
+        "type": "object"
+      },
+      "RunOutlineResponse": {
+        "description": "Response from ``GET /api/v1/runs/{run_id}/outline`` (#941).\n\n``item_cap`` is the number of items listed per fan-out step; anything\nbeyond it is counted in that step's ``counts.truncated`` and lives on\nthe paged item-results surface.",
+        "properties": {
+          "itemCap": {
+            "title": "Itemcap",
+            "type": "integer"
+          },
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/RunOutlineNode"
+            },
+            "title": "Nodes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "nodes",
+          "itemCap"
+        ],
+        "title": "RunOutlineResponse",
+        "type": "object"
+      },
       "RunRestartResult": {
         "description": "Outcome of re-dispatching a stuck run.\n\n``status='restarted'`` — the run was re-queued onto the RunQueue.\n``status='already_active'`` — it was already being processed, so the\ncall was an idempotent no-op (double-click safe).",
         "properties": {
@@ -12644,6 +13064,34 @@
         "title": "SaveWorkflowResponse",
         "type": "object"
       },
+      "ScheduleRuleKindItem": {
+        "description": "One shape a schedule rule can take (backend/src/domain/schedule_rules.py).",
+        "properties": {
+          "describes": {
+            "description": "The sentence this example reads as on the canvas — echo it to a human to confirm you understood the schedule.",
+            "title": "Describes",
+            "type": "string"
+          },
+          "example": {
+            "additionalProperties": true,
+            "description": "A complete, working example of this rule's fields — copy it and change the values. Round-tripped through the parser on every read, so it cannot go stale.",
+            "title": "Example",
+            "type": "object"
+          },
+          "kind": {
+            "description": "The value to write in the rule's `kind`.",
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "example",
+          "describes"
+        ],
+        "title": "ScheduleRuleKindItem",
+        "type": "object"
+      },
       "SecretListItem": {
         "description": "Secret listing item for overview — never includes values.",
         "properties": {
@@ -13258,6 +13706,20 @@
           "role"
         ],
         "title": "SessionResponse",
+        "type": "object"
+      },
+      "SetEnabledRequest": {
+        "description": "Arm or disarm a schedule without destroying the rules behind it.",
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "title": "SetEnabledRequest",
         "type": "object"
       },
       "SignupRequest": {
@@ -14001,6 +14463,39 @@
           "status"
         ],
         "title": "StepStateSchema",
+        "type": "object"
+      },
+      "StepTypeItem": {
+        "description": "One value a step's ``type`` may hold — or knowingly may not.",
+        "properties": {
+          "authorable": {
+            "description": "False for a type the engine knows but an author cannot write.",
+            "title": "Authorable",
+            "type": "boolean"
+          },
+          "id": {
+            "description": "The value to write in the step's type.",
+            "title": "Id",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why it cannot be written, and how to express the intention instead. Null when the type is authorable.",
+            "title": "Reason"
+          }
+        },
+        "required": [
+          "id",
+          "authorable"
+        ],
+        "title": "StepTypeItem",
         "type": "object"
       },
       "StepsSchema": {
@@ -15349,6 +15844,17 @@
             "title": "Manualphases",
             "type": "boolean"
           },
+          "triggerId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Triggerid"
+          },
           "triggerInput": {
             "anyOf": [
               {
@@ -15428,6 +15934,27 @@
           "name"
         ],
         "title": "TriggerSchema",
+        "type": "object"
+      },
+      "TriggerTypeItem": {
+        "description": "One value a trigger's ``typeId`` may hold.",
+        "properties": {
+          "category": {
+            "description": "True when this is a broad category id rather than a concrete type. Two tenant documents use one, so both are accepted; new work should name the concrete type.",
+            "title": "Category",
+            "type": "boolean"
+          },
+          "id": {
+            "description": "The value to write in the trigger's typeId.",
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "category"
+        ],
+        "title": "TriggerTypeItem",
         "type": "object"
       },
       "TriggersSchema": {
@@ -15674,7 +16201,7 @@
                 "type": "null"
               }
             ],
-            "description": "Role tags (e.g. orchestrator, reviewer, producer, publisher) that drive policy/snippet activation gates. Omitted = unchanged; [] = no role filtering.",
+            "description": "Free-form role labels (e.g. orchestrator, reviewer) for your own grouping and reporting. They do NOT decide what reaches the agent's prompt: attach a policy, skill or reference doc to the agent for that. Omitted = unchanged; [] = clears them.",
             "title": "Tags"
           },
           "toolIds": {
@@ -16149,13 +16676,13 @@
           "activation": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/ActivationGate"
+                "$ref": "#/components/schemas/ActivationGateRequest"
               },
               {
                 "type": "null"
               }
             ],
-            "description": "Optional activation gate controlling when the policy is injected at runtime."
+            "description": "Optional activation gate controlling when the policy is injected at runtime: `tools` (only on turns where the agent holds one of these) and `delegation` (top / delegate / any). Role tags no longer gate anything — link the policy to its agents instead."
           },
           "bodyMd": {
             "anyOf": [
@@ -18205,6 +18732,7 @@
               "convert_to_loop",
               "setup_loop_decision",
               "advanced_edit",
+              "set_workflow_constants",
               "attach_output_schema",
               "detach_output_schema"
             ],
@@ -18300,9 +18828,33 @@
             "type": "array"
           },
           "rulesVersion": {
-            "description": "Content fingerprint of the catalog; stable across identical deploys, changes when a handler is added or removed.",
+            "description": "Content fingerprint of the catalog; stable across identical deploys, changes when any of the four lists changes.",
             "title": "Rulesversion",
             "type": "string"
+          },
+          "scheduleRuleKinds": {
+            "description": "How a schedule is written: one entry per rule shape, with a working example to copy and the sentence it reads as.",
+            "items": {
+              "$ref": "#/components/schemas/ScheduleRuleKindItem"
+            },
+            "title": "Schedulerulekinds",
+            "type": "array"
+          },
+          "stepTypes": {
+            "description": "Every value accepted in a step's `type`, plus the types the engine knows that an author may NOT write — each with the reason and what to do instead.",
+            "items": {
+              "$ref": "#/components/schemas/StepTypeItem"
+            },
+            "title": "Steptypes",
+            "type": "array"
+          },
+          "triggerTypes": {
+            "description": "Every value accepted in a trigger's `typeId`. `category: true` marks a broad category id (e.g. 'scheduled') rather than a concrete type (e.g. 'scheduled-cron'); both validate, but reach for the concrete one.",
+            "items": {
+              "$ref": "#/components/schemas/TriggerTypeItem"
+            },
+            "title": "Triggertypes",
+            "type": "array"
           }
         },
         "required": [
@@ -18343,6 +18895,149 @@
           "wildcardPrompts"
         ],
         "title": "WorkflowPromptStacksResponse",
+        "type": "object"
+      },
+      "WorkflowSkillsResponse": {
+        "description": "The skills attached to one workflow.\n\nDeliberately without ``link_source``: unlike the agent view, there is only\none way a skill gets here — an explicit workflow link. A field that always\nsays the same thing trains a reader to skip it.",
+        "properties": {
+          "skills": {
+            "items": {
+              "$ref": "#/components/schemas/SkillV2Response"
+            },
+            "title": "Skills",
+            "type": "array"
+          },
+          "workflowId": {
+            "title": "Workflowid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "workflowId",
+          "skills"
+        ],
+        "title": "WorkflowSkillsResponse",
+        "type": "object"
+      },
+      "WorkflowStartContract": {
+        "description": "GET /api/v1/workflows/{id}/trigger-parameters — how to start this workflow.",
+        "properties": {
+          "constants": {
+            "description": "Values the author pinned on the WORKFLOW: applied to every run whichever start fired, and not something a caller supplies.",
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Constants",
+            "type": "array"
+          },
+          "triggers": {
+            "description": "Every way this workflow can be started. Empty when it has never been published — an answer, not an error.",
+            "items": {
+              "$ref": "#/components/schemas/WorkflowStartOption"
+            },
+            "title": "Triggers",
+            "type": "array"
+          }
+        },
+        "title": "WorkflowStartContract",
+        "type": "object"
+      },
+      "WorkflowStartOption": {
+        "description": "One way this workflow can be started.",
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Pass as triggerId to fire this start.",
+            "title": "Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the author called it.",
+            "title": "Name"
+          },
+          "parameters": {
+            "description": "What this particular start carries into the run.",
+            "items": {
+              "$ref": "#/components/schemas/WorkflowStartParameter"
+            },
+            "title": "Parameters",
+            "type": "array"
+          },
+          "typeId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Trigger type, e.g. 'manual-start'.",
+            "title": "Typeid"
+          }
+        },
+        "title": "WorkflowStartOption",
+        "type": "object"
+      },
+      "WorkflowStartParameter": {
+        "additionalProperties": true,
+        "description": "One field a start carries into the run.\n\n``extra=\"allow\"``: the stored parameter dicts are passed through whole —\n``kind``, ``choiceOptions``, ``fields`` and the rest of the shape an author\ndeclared. Narrowing this to an enumerated list would drop whatever the\neditor learns to write next, which is the drift #805 closed one level up.",
+        "properties": {
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What a human calls this field.",
+            "title": "Label"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Key to send in triggerInput.",
+            "title": "Name"
+          },
+          "pinned": {
+            "description": "True when the AUTHOR owns the value: it is written on every run and overwrites whatever a caller sent, so do not send it.",
+            "title": "Pinned",
+            "type": "boolean"
+          },
+          "required": {
+            "default": false,
+            "description": "Whether a value must be present.",
+            "title": "Required",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "pinned"
+        ],
+        "title": "WorkflowStartParameter",
         "type": "object"
       },
       "WorkflowSummary": {
@@ -22944,6 +23639,64 @@
         ]
       }
     },
+    "/api/v1/cron-schedules": {
+      "get": {
+        "description": "Every schedule in the tenant, with the workflow each one fires.",
+        "operationId": "list_all_cron_schedules_api_v1_cron_schedules_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CronScheduleSummary"
+                  },
+                  "title": "Response List All Cron Schedules Api V1 Cron Schedules Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List All Cron Schedules",
+        "tags": [
+          "cron-admin"
+        ]
+      }
+    },
+    "/api/v1/cron-schedules/reconcile": {
+      "post": {
+        "description": "Check the schedule table against the published workflows, and repair it.\n\nSchedules now follow their workflow's lifecycle, so the table stays true by\nitself. This is for what was written before that, and for the question an\noperator could not otherwise ask: is what I am reading actually what runs\ntonight?\n\nIt reports rather than tidies silently, and it never arms a schedule that\nsomeone switched off — a sweep that flips things on is a sweep nobody dares\nrun.",
+        "operationId": "reconcile_cron_schedules_api_v1_cron_schedules_reconcile_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReconcileResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Reconcile Cron Schedules",
+        "tags": [
+          "cron-admin"
+        ]
+      }
+    },
     "/api/v1/cron-schedules/{schedule_id}": {
       "delete": {
         "description": "Hard-delete a cron schedule.",
@@ -22981,6 +23734,116 @@
           }
         ],
         "summary": "Delete Cron Schedule",
+        "tags": [
+          "cron-admin"
+        ]
+      },
+      "patch": {
+        "description": "Arm or disarm a schedule.\n\nTurning one off used to mean DELETING it, which throws away the rules an\nauthor wrote and makes \"pause this for a week\" indistinguishable from \"we\ndo not do this any more\".",
+        "operationId": "set_cron_schedule_enabled_api_v1_cron_schedules__schedule_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "schedule_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Schedule Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetEnabledRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CronScheduleSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Set Cron Schedule Enabled",
+        "tags": [
+          "cron-admin"
+        ]
+      }
+    },
+    "/api/v1/cron-schedules/{schedule_id}/run-now": {
+      "post": {
+        "description": "Start this schedule once, now, without moving when it next runs.\n\nThere was no way to check a schedule short of waiting for it. \"Every\nweekday at 07:00\" is a claim an author could only test by coming back\ntomorrow — and the thing most likely to be wrong is not the timing but\nwhether it starts anything at all.\n\n``next_fire_at`` is deliberately untouched: testing a schedule must not\nconsume the run it was going to make.\n\nAccept-and-return (B-NB6): this plants the queue row and returns. The\nHeartbeat claims it the same way it claims a scheduled fire.",
+        "operationId": "run_cron_schedule_now_api_v1_cron_schedules__schedule_id__run_now_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "schedule_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Schedule Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "boolean"
+                  },
+                  "title": "Response Run Cron Schedule Now Api V1 Cron Schedules  Schedule Id  Run Now Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Run Cron Schedule Now",
         "tags": [
           "cron-admin"
         ]
@@ -33212,7 +34075,7 @@
         ]
       },
       "get": {
-        "description": "Get run detail with step states, as STORED (#839 S2).\n\n``step_states`` is served in its stored form: every value at or above\nthe run-value threshold is a marker, and the body is fetched from\n``GET /runs/{run_id}/values/{digest}`` when someone opens it. Because\neach mention of one value collapses to the same marker, the response\ndeduplicates on the wire for free — this response measured 6,377 kB on\nrun ``29d20efd``, 99.75% of it one employee list mentioned three times.\n\nTHIS route is the only reader that opts out of decoding; every other\ncaller of ``RunService.get_run`` still sees exactly what was written.",
+        "description": "Get run detail with step states, as STORED (#839 S2).\n\n``step_states`` is served in its stored form: every value at or above\nthe run-value threshold is a marker, and the body is fetched from\n``GET /runs/{run_id}/values/{digest}`` when someone opens it. Because\neach mention of one value collapses to the same marker, the response\ndeduplicates on the wire for free — this response measured 6,377 kB on\nrun ``29d20efd``, 99.75% of it one employee list mentioned three times.\n\nTHIS route is the only reader that opts out of decoding; every other\ncaller of ``RunService.get_run`` still sees exactly what was written.\n\n``includeSnapshot=false`` drops ``workflow_snapshot`` — 81% of this\nresponse (23,809 B of 29,414 on run ``bd54a245``) and frozen at run\ncreation, so a refresh can learn nothing from it. The run page asks for\nit on first load and omits it on every realtime refresh thereafter.",
         "operationId": "get_run_api_v1_runs__run_id__get",
         "parameters": [
           {
@@ -33223,6 +34086,16 @@
               "format": "uuid",
               "title": "Run Id",
               "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "includeSnapshot",
+            "required": false,
+            "schema": {
+              "default": true,
+              "title": "Includesnapshot",
+              "type": "boolean"
             }
           }
         ],
@@ -33834,6 +34707,65 @@
           }
         ],
         "summary": "Post Conversation Message",
+        "tags": [
+          "runs"
+        ]
+      }
+    },
+    "/api/v1/runs/{run_id}/outline": {
+      "get": {
+        "description": "A run's table of contents (#941).\n\nEverything that happened, nested at the depth it happened: the run,\nits steps, and the items a fan-out step handed out. Flat, with parent\npointers — the client nests it.\n\nThis is the surface the run page STREAMS. It carries no bodies, so its\nsize follows the run's shape rather than its content: one realtime\ntick costs the same for a launch over four thousand items as for one\nover four, where refetching the run detail costs the whole document.\n\n``item_cap`` bounds the items listed per fan-out step; the rest are\ncounted in that step's ``counts.truncated`` and live on the paged\nitem-results surface. Nothing is truncated in silence.\n\nTenant isolation: the service's run pre-check 404s a run the caller\ncannot see, and every query beneath it filters by ``tenant_id``.",
+        "operationId": "get_run_outline_api_v1_runs__run_id__outline_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "item_cap",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "title": "Item Cap",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunOutlineResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Run Outline",
         "tags": [
           "runs"
         ]
@@ -36495,6 +37427,53 @@
         ]
       }
     },
+    "/api/v1/task-queue/release-bulk": {
+      "post": {
+        "description": "Release every selected task — same ids-XOR-filter argument as replay.\n\nOne selection model drives every operator action on the screen, so the\nbody shape is deliberately shared rather than cloned.",
+        "operationId": "release_bulk_api_v1_task_queue_release_bulk_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplayBulkBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReleaseBulkResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Release Bulk",
+        "tags": [
+          "task-queue"
+        ]
+      }
+    },
     "/api/v1/task-queue/replay-bulk": {
       "post": {
         "description": "Bulk replay — accepts ``ids`` OR ``filter`` (exactly one).\n\nAdministrators only (epic #744): reads are workspace-wide, writes\nare an operator's. The blast radius here is the argument — a filter\nform can re-run up to 500 rows in one click.\n\n``filter`` mirrors the GET ``/`` query parameters (state, owner,\nworkflow, batch, time-range). The route resolves the filter into a\nconcrete id list (capped at 500 to bound the operation) before\ndelegating to the service.",
@@ -36635,6 +37614,55 @@
           }
         ],
         "summary": "Dismiss Task",
+        "tags": [
+          "task-queue"
+        ]
+      }
+    },
+    "/api/v1/task-queue/{task_id}/release": {
+      "post": {
+        "description": "Bring a waiting task's moment forward to now — admins only.\n\nOffice hours hold a fan-out's children until the next morning, which\nis the point of stating them — and the moment someone needs a way to\noverrule it. Releasing does not re-run anything: the state, the\npayload and the attempt count are untouched, only the moment moves.",
+        "operationId": "release_task_api_v1_task_queue__task_id__release_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "task_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Task Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReleaseResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Release Task",
         "tags": [
           "task-queue"
         ]
@@ -39128,7 +40156,7 @@
     },
     "/api/v1/workflows/operations": {
       "get": {
-        "description": "The catalog of mutations this deploy accepts, with their payload schemas.\n\nSourced from the engine's mutation registry — the single source of truth the\n``/{workflow_id}/mutations`` route validates against — so a client (the MCP\nconnector) can read the vocabulary here instead of restating it (#802 B4).\n``rulesVersion`` is a content hash the client caches on: unchanged hash,\nnothing to re-fetch.\n\nDeclared BEFORE ``/{workflow_id}`` so the literal ``operations`` segment is\nnot swallowed by the id path parameter — the same care ``/bulk`` needed in\n``publish_approvals.py``. No DB and no tenant data: this describes the\nDEPLOY, not a tenant's workflows, so a service token is enough\n(``get_auth_context`` admits them).",
+        "description": "What this deploy can be built from: commands, trigger types, step types,\nschedule rules.\n\nEvery list is GENERATED from the registry that enforces it — the engine's\nmutation registry the ``/{workflow_id}/mutations`` route validates against\n(#802 B4), the trigger-type constants, the validator's own authorable-step\nset, and ``RULE_KINDS``. So a client reads the vocabulary here instead of\nrestating it, and no list can advertise something the platform then refuses.\nThe connector's hand-written guide named nine step types where seven\nvalidate; that is the failure this closes (S1).\n\n``rulesVersion`` is a content hash the client caches on: unchanged hash,\nnothing to re-fetch.\n\nDeclared BEFORE ``/{workflow_id}`` so the literal ``operations`` segment is\nnot swallowed by the id path parameter — the same care ``/bulk`` needed in\n``publish_approvals.py``. No DB and no tenant data: this describes the\nDEPLOY, not a tenant's workflows, so a service token is enough\n(``get_auth_context`` admits them).",
         "operationId": "list_workflow_operation_catalog_api_v1_workflows_operations_get",
         "responses": {
           "200": {
@@ -39195,6 +40223,70 @@
           }
         ],
         "summary": "Get Reachable Outputs Endpoint",
+        "tags": [
+          "workflows"
+        ]
+      }
+    },
+    "/api/v1/workflows/using/{entity_kind}/{entity_id}": {
+      "get": {
+        "description": "Which workflows name this entity — the answer before you change it.\n\n#845 S5 gave policies, skills and reference docs a reverse view, with the\nreasoning that \"what breaks if I change this\" is the question an author most\nneeds before editing something shared. The rest of the catalogue never got\none, and a broken tool or agent reference stops a RUN rather than a prompt.\n\nIt is not a link-table query, which is why it did not exist: an agent gets\ninto a workflow by being named in a step's ``contract.owners`` and a tool by\nsitting in ``contract.tools.toolIds``, in a plan activity, or on an\nautomation step's config. Those are keys inside a JSON document — the reason\nan author cannot find them by hand either (S8).\n\nDeclared BEFORE ``/{workflow_id}`` so ``using`` is not swallowed by the id\npath parameter, the same care ``/operations`` and ``/callable`` needed.",
+        "operationId": "list_workflows_using_entity_api_v1_workflows_using__entity_kind___entity_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_kind",
+            "required": true,
+            "schema": {
+              "enum": [
+                "tool",
+                "agent",
+                "flow",
+                "output_schema",
+                "workflow"
+              ],
+              "title": "Entity Kind",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DependentWorkflowsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Workflows Using Entity",
         "tags": [
           "workflows"
         ]
@@ -39629,7 +40721,7 @@
         ]
       },
       "post": {
-        "description": "Create a cron schedule.  Validation runs in the repository\n(croniter + zoneinfo); 422 on a malformed cron expression or\nunknown timezone.",
+        "description": "Create a cron schedule for a trigger the workflow actually published.\n\nThe table stores a copy of the rules, and publishing keeps that copy true.\nThis door did not: any trigger id and any rules were accepted, so a\nschedule could describe something no canvas had ever shown — the workflow\nsaying one thing while the table fired another, with nothing to reveal it.\n\nSo the document decides what may exist here. Validation of the rules\nthemselves still runs in the repository (croniter + zoneinfo); 422 on a\nmalformed expression or unknown timezone.",
         "operationId": "create_cron_schedule_api_v1_workflows__workflow_id__cron_schedules_post",
         "parameters": [
           {
@@ -40188,6 +41280,55 @@
         ]
       }
     },
+    "/api/v1/workflows/{workflow_id}/skills-v2": {
+      "get": {
+        "description": "Which skills are attached to this workflow (S8).\n\nAttaching and detaching both had a route; reading the result back did not.\nA link lives OUTSIDE the entity body, so nothing else shows it — which\nmeans nothing distinguished an attach that landed from one that quietly did\nnothing. That is the shape of #778, where 27 detach calls all answered\n``detached: true`` and not one of those links existed.",
+        "operationId": "list_skills_for_workflow_api_v1_workflows__workflow_id__skills_v2_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workflow_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workflow Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowSkillsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Skills For Workflow",
+        "tags": [
+          "skills"
+        ]
+      }
+    },
     "/api/v1/workflows/{workflow_id}/skills-v2/{skill_id}": {
       "delete": {
         "operationId": "unlink_skill_from_workflow_api_v1_workflows__workflow_id__skills_v2__skill_id__delete",
@@ -40304,7 +41445,7 @@
     },
     "/api/v1/workflows/{workflow_id}/trigger-parameters": {
       "get": {
-        "description": "Get the trigger payload parameters for a published workflow.",
+        "description": "What this workflow needs in order to start — per start.\n\nThis used to answer ``triggers[0].parameters``: correct for a workflow with\none trigger, and for a workflow with a button AND a schedule an answer about\nan arbitrary one, with nothing in the response saying which. It also listed\nauthor-pinned values beside fields to fill in, while a pinned value is\nexactly the one a caller must NOT send — ``apply_parameter_defaults``\noverwrites it, deliberately, because a field the UI does not show must not\nbecome an injection point (S5).\n\nSo every trigger is described, each with its own parameters, each parameter\nsaying whether the author owns it, and the workflow's constants listed\napart because they belong to no trigger at all.",
         "operationId": "get_trigger_parameters_api_v1_workflows__workflow_id__trigger_parameters_get",
         "parameters": [
           {
@@ -40323,12 +41464,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "items": {
-                    "additionalProperties": true,
-                    "type": "object"
-                  },
-                  "title": "Response Get Trigger Parameters Api V1 Workflows  Workflow Id  Trigger Parameters Get",
-                  "type": "array"
+                  "$ref": "#/components/schemas/WorkflowStartContract"
                 }
               }
             },
