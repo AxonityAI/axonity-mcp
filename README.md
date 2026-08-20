@@ -76,10 +76,15 @@ backend applies it before the rows come back:
 `list_workflows({ stageId?, capabilityId? })`,
 `list_agents({ includeSystem? })`,
 `list_policies({ scope?, ownerId? })`,
-`list_reference_docs({ scope?, ownerId? })`.
-(`GET /prompt-snippets?deleted=true` is deliberately not exposed —
-`list_deleted_prompt_snippets` already calls the dedicated route, and two ways
-to ask one question is what this surface avoids.)
+`list_reference_docs({ scope?, ownerId? })`,
+`list_prompt_snippets({ deleted? })`.
+
+That table is **generated** from the pinned schema's own query parameters
+(`npm run generate:filters` → `src/generated/listFilters.ts`), not hand-listed.
+A filter the backend adds is exposed as soon as the snapshot is refreshed, and
+a test fails if the two have parted. The argument names are camelCase; the wire
+keeps whatever spelling each route declares, which is not consistent between
+them and is not something a caller should have to know.
 
 Plus:
 - `get_workflow_authoring_spec` — everything **this deploy** can be built from,
@@ -352,6 +357,18 @@ Publishing runs from a maintainer's machine, not from CI. npm restricts tokens
 that bypass 2FA for direct publishing, so a stored `NPM_TOKEN` cannot ship this
 package; `npm login` is the supported path.
 
+**Check the contract first.** Shipping with a stale snapshot is how the
+connector fell nine operations behind the backend without any test noticing:
+
+```bash
+npm run check:contract          # expects ../axonity-flow; override with AXONITY_FLOW_PATH
+```
+
+It dumps the schema from a local `axonity-flow` checkout and diffs it against
+`test/fixtures/openapi.snapshot.json`, naming every operation that moved. It
+runs here rather than in the release workflow because the publish itself runs
+here — a gate in CI cannot stop a local `npm publish`.
+
 Run `npm login` in a real terminal — it prints a URL and waits for you to finish
 in the browser, so it needs a session that stays attached (an editor's 2-minute
 command timeout will kill it mid-flow).
@@ -373,3 +390,24 @@ was cut from a state CI cannot install.
 
 Keep npm 11 locally: Node 20 bundles npm 10, whose resolver writes an
 incompatible lockfile tree. CI pins npm 11 for the same reason.
+
+## Staying level with the backend
+
+Two mechanisms, because the thing that changes lives in another repository and
+nothing happens here on the day it changes.
+
+**A scheduled job** (`.github/workflows/contract-drift.yml`) dumps
+`axonity-flow@main`'s schema every weekday morning and fails on any difference
+from the vendored snapshot — including a route this connector does not call
+yet, which is exactly the signal that went unnoticed before. It needs a
+repository secret named `AXONITY_FLOW_READ_TOKEN` with read access to the
+private `axonity-flow` repository; without it the job fails immediately and
+says so, rather than reporting a contract it never compared.
+
+**A startup check.** The connector calls `GET /api/v1/contract` once before it
+accepts its first tool call and, if this backend is missing a route this build
+needs, says which on stderr — instead of failing on the twentieth call, mid-task.
+It is a diagnostic and never a dependency: a backend too old to serve
+`/contract`, an unreachable one, or a slow one all degrade to the previous
+behaviour and the connector starts normally. The result is cached on the
+`contractHash` the route returns, so an unchanged deploy costs one request.

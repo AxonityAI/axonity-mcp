@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { AxonityClient } from "../src/client.js";
 import { registerAll } from "../src/index.js";
+import { PROBE_ARGS as ARGS } from "../src/contract.js";
 import { projectCatalog } from "../src/tools/authoringSpec.js";
 
 /**
@@ -64,29 +65,6 @@ function schemaHas(method: string, path: string): boolean {
       t.every((seg, i) => (seg.startsWith("{") && seg.endsWith("}")) || seg === parts[i]),
   );
 }
-
-/**
- * One filled-in argument per name any tool takes, so a blind sweep reaches as
- * much of the route surface as possible. A handler that rejects these is simply
- * skipped — only the routes that actually fired are asserted on.
- */
-const ARGS: Record<string, unknown> = {
-  id: "x", workflowId: "x", agentId: "x", toolId: "x", runId: "x", approvalId: "x",
-  flowId: "x", snippetId: "x", flowStepId: "x", linkId: "x", webhookId: "x",
-  scheduleId: "x", triggerId: "x", secretId: "x", versionId: "x", version: 1, majorVersion: 1,
-  expectedVersion: 1, displayOrder: 0, name: "x", cronExpr: "0 0 * * *",
-  conditionText: "x", repeatIntervalMinutes: 5, target: "system", confirm: true,
-  document: {}, fields: {}, mutations: [{ type: "add_step", payload: {} }],
-  snippetIds: ["a"], runIds: ["a"], workflows: [{ id: "x", expectedVersion: 1 }],
-  functions: [{ name: "f", code: "def f(): pass" }], code: "x",
-  requests: [{ entityType: "tool", entityId: "x" }],
-  // The reverse-dependency, run-inspection and release surfaces (#45 M7/M9).
-  // `entityKind` picks a real branch: the tool maps it to a base path, so an
-  // absent one would sweep a route made of the word "undefined" and the guard
-  // would flag the fixture rather than the connector.
-  entityKind: "skill", entityId: "x", batchId: "x", stepId: "x", answer: "x",
-  message: "x", templateId: "x", releaseId: "x", payload: {},
-};
 
 describe("MCP route surface conforms to the backend OpenAPI snapshot", () => {
   it("every route a tool calls exists in the schema (path + method)", async () => {

@@ -351,9 +351,21 @@ export class BackendVersionSkewError extends AxonityApiError {
 
 /**
  * Routes newer than the oldest backend this connector still works against, and
- * what added them. Only these turn a 404 into a skew report; a 405 does so on
- * any path. Add an entry whenever a tool starts calling a route that a
- * previously-supported backend would not have.
+ * what added them.
+ *
+ * THIS IS ANNOTATION, NOT A ROUTE INVENTORY (#48 M2). Whether the backend has
+ * the routes this build needs is settled at startup by `GET /api/v1/contract`,
+ * which the server derives from its own mounted app and therefore cannot get
+ * wrong. What this table adds is provenance — "that route was added by
+ * axonity-flow#792" — so a human can check a deploy date instead of guessing.
+ *
+ * It keeps one deciding job, for the case the contract check cannot cover: on a
+ * REACTIVE 404 there is no way to tell "this backend is old" from "no such id",
+ * and an entry here is the only evidence available at that moment. A 405 needs
+ * no entry; a wrong method on an existing path already means the path moved.
+ *
+ * So a missing entry costs a clause in a message, never a wrong verdict — and
+ * that is the whole difference from the hand-kept lists #32 and #44 removed.
  */
 export const ROUTES_ADDED_IN: { pattern: RegExp; addedBy: string }[] = [
   {
