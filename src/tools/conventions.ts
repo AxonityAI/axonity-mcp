@@ -475,12 +475,16 @@ the new tenant too, and a human fills the real value there.
     wins.
 
   This asymmetry is real, not a typo to normalise: the shapes came from
-  different surfaces, and the vocabularies behind the three keys are not
-  interchangeable either — one knows \`constant\`, another does not, and they
-  disagree on how to spell a yes/no. Writing \`kind\` on a trigger parameter is
-  not a 422; it is a key nothing reads, so the value silently falls back to text
-  and the workflow runs with the wrong thing. Check which of the three you are
-  writing before you write it.
+  different surfaces, and normalising them would make one reader wrong. The
+  VALUES differ too — \`get_workflow_authoring_spec\` returns one list per key
+  (\`parameterTypes\`, \`outputKinds\`, \`schemaFieldKinds\`), and they are not
+  interchangeable: only one knows \`constant\`, and they disagree on how to
+  spell a yes/no. Read the list that matches the shape you are writing; this
+  guide does not restate them, for the same reason it restates no other list.
+
+  Writing \`kind\` on a trigger parameter is not a 422; it is a key nothing
+  reads, so the value silently falls back to text and the workflow runs with
+  the wrong thing. Check which of the three you are writing before you write it.
 - \`rulesVersion\` in that response is a content hash over all four lists. While
   it is unchanged there is nothing to re-fetch; re-read the spec when it changes,
   or when a mutation fails with a 422 suggesting your idea of a command is stale.

@@ -31,6 +31,20 @@
  *     working example the backend round-trips through its own parser on every
  *     read, so a published example cannot rot.
  *
+ * axonity-flow#964 adds three more, and they are the ones that bite quietly.
+ * A value's type is not carried by the same KEY everywhere, and the three
+ * vocabularies behind those keys are not interchangeable:
+ *   - `parameterTypes`   — a trigger parameter's / workflow constant's `type`.
+ *     Knows `boolean` and `constant`.
+ *   - `outputKinds`      — a step output's / input's `kind`. Narrower, and a
+ *     DIFFERENT KEY. Spells the same idea `yes-no`, not `boolean`.
+ *   - `schemaFieldKinds` — the canonical builder's vocabulary, inside a field's
+ *     `schema`. Widest and newest; where a `schema` is present it wins.
+ * Writing `kind` on a trigger parameter is not a 422 — it is a key nothing
+ * reads, so the value falls back to text and the run binds the wrong shape.
+ * That is the failure this connector shipped once (axonity-mcp#47) by reading
+ * the field off the model that DECLARES it rather than the code that READS it.
+ *
  * `rulesVersion` is a content hash over all four: same hash, nothing to
  * re-fetch. It is what makes "read the spec at the start of each authoring
  * task" cheap enough to actually do.
@@ -131,7 +145,7 @@ export function registerAuthoringSpecTools(
     "get_workflow_authoring_spec",
     "Everything THIS Axonity deploy can be built from, read live from the " +
       "server — not a list this connector keeps. Read it at the start of an " +
-      "authoring task, before `apply_workflow_mutations`. Four lists come back:" +
+      "authoring task, before `apply_workflow_mutations`. Seven lists come back:" +
       "\n- `operations` — the mutation commands, with their payload schemas." +
       "\n- `triggerTypes` — every value a trigger's `typeId` may hold. " +
       "`category: true` marks a broad category id rather than a concrete type; " +
@@ -144,12 +158,29 @@ export function registerAuthoringSpecTools(
       "working `example` to copy and the sentence it `describes`. Every example " +
       "is round-tripped through the platform's own parser as it is served, so " +
       "it is one this deploy demonstrably accepts." +
+      "\n\nAND THREE VOCABULARIES FOR A VALUE'S TYPE, which are NOT " +
+      "interchangeable and are not even read from the same key. Check which one " +
+      "applies before you write it:" +
+      "\n- `parameterTypes` — what a TRIGGER PARAMETER or a WORKFLOW CONSTANT " +
+      "may hold, in its `type` field. This is the key the platform reads on " +
+      "those two shapes; `kind` is not. It is also the only one of the three " +
+      "that knows `constant`." +
+      "\n- `outputKinds` — what a step OUTPUT or INPUT may hold, in its `kind` " +
+      "field. Narrower, a different key, and it spells the yes/no idea " +
+      "differently from `parameterTypes`." +
+      "\n- `schemaFieldKinds` — the canonical builder's vocabulary, used inside " +
+      "a field's `schema`. Widest and newest; where a `schema` object is " +
+      "present it WINS over the `type` or `kind` beside it." +
+      "\n\nGetting this wrong is silent. A `kind` written on a trigger " +
+      "parameter is not a 422 — it is a key nothing reads, so the value falls " +
+      "back to text and everything downstream binds the wrong shape. Read the " +
+      "list that matches the shape you are writing." +
       "\n\nBy default `operations` is an INDEX: each command's `type` and " +
       "one-line `description`. Pass `types` to get the live `payloadSchema` for " +
       "the commands you are about to write — the full catalogue with every " +
-      "schema is ~20 KB, which is rarely what you need. The other three lists " +
+      "schema is ~20 KB, which is rarely what you need. The other six lists " +
       "are always returned complete. " +
-      "\n\n`rulesVersion` is a content hash over all four: while it is " +
+      "\n\n`rulesVersion` is a content hash over all of them: while it is " +
       "unchanged there is nothing to re-fetch. Re-read the spec when it changes, " +
       "or when a mutation fails with a 422 that suggests your idea of a command " +
       "is out of date. " +

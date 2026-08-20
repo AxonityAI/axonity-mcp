@@ -45,10 +45,10 @@ rules — drafts vs live, optimistic locking, per-entity fields, delete/restore,
 and how to tell a retryable error from one that will never succeed.
 
 What the connector does **not** state is as deliberate as what it does: the
-mutation commands, the step types, the trigger types and the schedule-rule
-shapes are all read live from `get_workflow_authoring_spec`, because every one
-of those lists drifted while it was kept here. A conformance test asserts their
-absence.
+mutation commands, the step types, the trigger types, the schedule-rule shapes
+and the three value vocabularies are all read live from
+`get_workflow_authoring_spec`, because every one of those lists drifted while it
+was kept here. A conformance test asserts their absence.
 
 ### The generic entity family
 
@@ -85,13 +85,19 @@ Plus:
 - `get_workflow_authoring_spec` — everything **this deploy** can be built from,
   read live from the server (`GET /workflows/operations`): the mutation
   `operations`, the `triggerTypes`, the `stepTypes` (including the ones you may
-  not author, each with the reason and what to write instead) and the
+  not author, each with the reason and what to write instead), the
   `scheduleRuleKinds` (each with an example the backend round-trips through its
-  own parser as it serves it). Every list is generated from the registry that
-  *enforces* it, so the connector states none of them and a new value is
-  discoverable without a release here. `operations` is an index by default;
-  pass `types` for a command's live payload schema. `rulesVersion` is a content
-  hash over all four — same hash, nothing to re-fetch.
+  own parser as it serves it), and **three vocabularies for a value's type that
+  are not interchangeable** — `parameterTypes` (a trigger parameter's or
+  workflow constant's `type`), `outputKinds` (a step output's or input's
+  `kind` — narrower, *different key*) and `schemaFieldKinds` (inside a field's
+  `schema`, which wins where present). Getting that last group wrong is silent:
+  a `kind` written on a trigger parameter is not a 422, it is a key nothing
+  reads, so the value falls back to text. Every list is generated from the
+  registry that *enforces* it, so the connector states none of them and a new
+  value is discoverable without a release here. `operations` is an index by
+  default; pass `types` for a command's live payload schema. `rulesVersion` is
+  a content hash over all seven — same hash, nothing to re-fetch.
 - `apply_workflow_mutations` for structural workflow edits (add steps, connect
   edges) via mutation commands, sequenced and version-threaded for you.
 - `replace_workflow_document` for one-shot full-document replacement in a single
