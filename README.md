@@ -393,21 +393,29 @@ incompatible lockfile tree. CI pins npm 11 for the same reason.
 
 ## Staying level with the backend
 
-Two mechanisms, because the thing that changes lives in another repository and
-nothing happens here on the day it changes.
+The snapshot every drift guard reads is only as fresh as the last time someone
+regenerated it — and once it wasn't: it sat nine operations behind the backend
+while the whole suite stayed green, because a snapshot that has not seen a route
+cannot report it missing.
 
-**A scheduled job** (`.github/workflows/contract-drift.yml`) dumps
-`axonity-flow@main`'s schema every weekday morning and fails on any difference
-from the vendored snapshot — including a route this connector does not call
-yet, which is exactly the signal that went unnoticed before. It needs a
-repository secret named `AXONITY_FLOW_READ_TOKEN` with read access to the
-private `axonity-flow` repository; without it the job fails immediately and
-says so, rather than reporting a contract it never compared.
+**Before a release, check it** (see §Releasing): `npm run check:contract` dumps
+the schema from a local `axonity-flow` checkout and names every operation that
+moved. It compares the contract surface — query parameters, request body,
+response shape — and not descriptions, so backend docstring churn does not cry
+wolf. This is the gate that counts, because the publish runs here too.
 
-**A startup check.** The connector calls `GET /api/v1/contract` once before it
-accepts its first tool call and, if this backend is missing a route this build
-needs, says which on stderr — instead of failing on the twentieth call, mid-task.
-It is a diagnostic and never a dependency: a backend too old to serve
-`/contract`, an unreachable one, or a slow one all degrade to the previous
-behaviour and the connector starts normally. The result is cached on the
-`contractHash` the route returns, so an unchanged deploy costs one request.
+**At startup, the connector asks the deploy what it mounts.** It calls
+`GET /api/v1/contract` once before accepting its first tool call and, if this
+backend lacks a route this build needs, says which on stderr — instead of
+failing on the twentieth call, mid-task. It is a diagnostic and never a
+dependency: a backend too old to serve `/contract`, an unreachable one, or a
+slow one all degrade to the previous behaviour and the connector starts
+normally. The result is cached on the `contractHash` the route returns, so an
+unchanged deploy costs one request.
+
+**Not here: a scheduled job.** Watching for drift on a timer belongs in
+`axonity-flow`, not in this repository. The schema lives there, its CI already
+has the backend's dependencies installed, and it can read this repository's
+pinned snapshot over plain HTTPS because this repository is public — where the
+reverse needs a credential for a private repo, with an approval policy and an
+expiry behind it. Tracked in axonity-mcp#48.
