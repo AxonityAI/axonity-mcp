@@ -593,11 +593,34 @@ a document to find out what the platform did.
 - Trigger deletes are HARD deletes — no restore. Webhook tokens are shown once
   at create/rotate and are never retrievable; hand them straight to your human
   and never store one in an entity field.
+- **A schedule is a claim — check it.** \`run_cron_schedule_now\` fires one
+  immediately without moving \`nextFireAt\`, so you can prove a schedule starts
+  something instead of waiting until tomorrow to find out it does not. It runs
+  for real, with real cost and side effects.
+- **To PAUSE a schedule, disarm it** (\`set_cron_schedule_enabled\`), never
+  delete it. Deleting throws away the rules the author wrote and makes "stop
+  this for a week" indistinguishable from "we do not do this any more".
+- \`create_cron_schedule\` takes EITHER \`cronExpr\` OR \`rules\`, and the
+  trigger must exist in the PUBLISHED document. For the rule shapes, read
+  \`scheduleRuleKinds\` from \`get_workflow_authoring_spec\` — do not invent one.
+- \`list_all_cron_schedules\` answers "what runs tonight?" across the tenant;
+  \`reconcile_cron_schedules\` answers "is that actually what runs?". The second
+  reports rather than tidying silently and never arms something switched off.
 
 ## Evaluating what you built
 - There is no findings endpoint and no evaluator entity. To judge a run, read it:
   \`read_run\` (its \`validatorVerdicts\` and \`agentInvocations\`) and
   \`read_run_trace\` (the step-by-step tool calls).
+- **Start with \`read_run_outline\`, not \`read_run\`.** The outline is the run's
+  table of contents and carries no bodies, so it costs what the run's SHAPE
+  costs rather than its content — a fan-out over four thousand items reads about
+  as cheaply as one over four. Then open only what you need:
+  \`read_run_value\` for one large step value (by the digest in \`stepStates\`),
+  \`read_run_invocation_messages\` for one agent's transcript (by the id in
+  \`agentInvocations\`). Reading a whole run to find one message is the habit
+  this replaces.
+- \`itemCap\` on the outline bounds items listed per fan-out step; the remainder
+  is counted in \`counts.truncated\`, never dropped in silence.
 - Runs are the only thing with a real archive state — \`archive_run\` is
   reversible, \`bulk_delete_runs\` is not.
 

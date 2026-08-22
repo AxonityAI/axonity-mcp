@@ -9,6 +9,13 @@
  * Runs are also the only thing in the product with a real archive state —
  * entities have soft-delete, runs have archive/unarchive.
  *
+ * READING A RUN NEED NOT COST THE WHOLE RUN (axonity-mcp#57). `read_run`
+ * returns the document; `read_run_outline` returns its table of contents, whose
+ * size follows the run's SHAPE rather than its content because it carries no
+ * bodies. The two reads that serve those bodies on open — `read_run_value` and
+ * `read_run_invocation_messages` — are the only reason the outline can stay
+ * small, so they belong with it rather than as conveniences.
+ *
  * A RUN THAT ASKS A QUESTION CAN BE ANSWERED (#45 M9). `axonity_conventions`
  * tells an agent to `start_workflow_run` to test a workflow end to end. A run
  * that reaches an `ask_user` step parks there and waits — so, without a way to
@@ -274,6 +281,81 @@ export function registerRunTools(server: McpServer, client: AxonityClient): void
           await client.get(`/api/v1/runs/${runId}`, {
             includeSnapshot: includeSnapshot === true,
           }),
+        ),
+      ),
+  );
+
+  server.tool(
+    "read_run_outline",
+    "A run's TABLE OF CONTENTS — everything that happened, at the depth it " +
+      "happened: the run, its steps, and the items a fan-out step handed out. " +
+      "Flat rows with parent pointers; nest them yourself. " +
+      "\n\nREAD THIS FIRST when you want to know the shape of a run. It carries " +
+      "no bodies, so its size follows the run's SHAPE rather than its content — " +
+      "a launch over four thousand items costs about what one over four costs, " +
+      "where read_run pays for the whole document. Then fetch only what you " +
+      "actually want to look at: read_run_value for a step value, " +
+      "read_run_invocation_messages for one agent's transcript. " +
+      "\n\n`itemCap` bounds how many items are LISTED per fan-out step. The rest " +
+      "are counted in that step's `counts.truncated` and live on the paged " +
+      "item-results surface — nothing is dropped in silence.",
+    {
+      runId: z.string().describe("The run's id."),
+      itemCap: z
+        .number()
+        .int()
+        .optional()
+        .describe(
+          "Max items listed per fan-out step. Anything beyond it is counted in " +
+            "`counts.truncated`, not hidden.",
+        ),
+    },
+    async ({ runId, itemCap }) =>
+      guard(async () =>
+        jsonResult(
+          await client.get(`/api/v1/runs/${runId}/outline`, { item_cap: itemCap }),
+        ),
+      ),
+  );
+
+  server.tool(
+    "read_run_value",
+    "Fetch ONE large step value by its digest — the body behind a marker in " +
+      "read_run's `stepStates`. A run detail carries handles rather than " +
+      "megabytes; this is how you open one of them, when you have decided you " +
+      "need it. " +
+      "\n\nThe digest is scoped to THIS run: one you saw in another run is not " +
+      "readable here, and asking gives a 404 rather than someone else's value.",
+    {
+      runId: z.string().describe("The run's id."),
+      digest: z
+        .string()
+        .describe("The value's digest, from the marker in read_run's `stepStates`."),
+    },
+    async ({ runId, digest }) =>
+      guard(async () =>
+        jsonResult(await client.get(`/api/v1/runs/${runId}/values/${digest}`)),
+      ),
+  );
+
+  server.tool(
+    "read_run_invocation_messages",
+    "Read ONE agent invocation's transcript — the conversation behind a row in " +
+      "read_run's `agentInvocations`, which lists each invocation with its " +
+      "metadata and a `messageCount` but not its messages. " +
+      "\n\nThis is the read for 'what did this agent actually say?'. Fetch the " +
+      "one invocation you are asking about: a run's transcripts together are " +
+      "routinely larger than everything else in it combined.",
+    {
+      runId: z.string().describe("The run's id."),
+      invocationId: z
+        .string()
+        .describe("The invocation's id, from read_run's `agentInvocations`."),
+    },
+    async ({ runId, invocationId }) =>
+      guard(async () =>
+        jsonResult(
+          await client.get(`/api/v1/runs/${runId}/invocations/${invocationId}/messages`),
         ),
       ),
   );
