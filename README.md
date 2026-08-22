@@ -285,7 +285,21 @@ waiting for; `answer_run_question` answers an `ask_user` step and
 a person's, so use them on runs you started. Deciding a **plan approval** and
 restarting a stuck run are deliberately absent — the first is the human review
 the step exists to get, the second is `require_admin` and a service token is
-always `role="member"`. Both are recorded in `test/exclusions.test.ts`.
+always `role="member"`. Both are recorded in `test/exclusions.test.ts`, together
+with stopping runs in bulk (admin), the tenant's storage footprint (admin), an
+inbound channel reply (authenticated by the email/WhatsApp adapter, not by a
+service token) and the retired `workflow-memory` placeholder.
+
+**`list_todo_steps`** is the same question across the whole tenant: every step
+waiting on a human, in any run. It is paged over the waiting **runs**, so
+`items` can be longer than `pageSize` — one run may park several steps. Follow
+`nextCursor` to the end before concluding anything about how much is waiting.
+
+**What an agent wrote to itself.** `list_run_session_memory` lists the files an
+agent left during a run (metadata only, up to 200 per run) and
+`read_run_session_memory_file` opens one. When the trace shows a decision but
+not what it was reading, the reason is usually here. Workflow-bound reference
+material is not — that lives in `reference_docs`.
 
 **Inside a launch**: `read_run_items_summary` is the roll-up ("4,415 processed ·
 12 failed"), `list_run_items({ outcome })` the paged rows — filter in the query,

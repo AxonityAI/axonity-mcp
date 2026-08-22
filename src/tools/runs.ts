@@ -286,6 +286,74 @@ export function registerRunTools(server: McpServer, client: AxonityClient): void
   );
 
   server.tool(
+    "list_todo_steps",
+    "The steps across the TENANT that are waiting on a human — every parked " +
+      "run, whatever it is parked on. This is the list you read to answer 'is " +
+      "anything stuck on me?' without knowing which run to look at. " +
+      "\n\nTHE RESPONSE IS ONE PAGE, NOT THE FULL LIST: " +
+      "{ items, nextCursor, pageSize, hasMore }. While hasMore is true you have " +
+      "NOT seen every waiting step — pass the response's nextCursor back as " +
+      "cursor and repeat until nextCursor is null. " +
+      "\n\nNote what the page bounds: the cursor walks the waiting RUNS, and " +
+      "one run can carry several waiting steps, so `items` may be LONGER than " +
+      "pageSize. That is not a bug and not an overflow — pageSize bounds what " +
+      "was read, not what came back. A fan-out can park thousands of items on " +
+      "one manual step at once, which is why this list is paged at all. " +
+      "\n\nread_run_waiting_on answers the same question for a run you already " +
+      "have in your hand.",
+    {
+      limit: z
+        .number()
+        .int()
+        .optional()
+        .describe("Page size, over the waiting runs. Omit for the route's default."),
+      cursor: z
+        .string()
+        .optional()
+        .describe(
+          "Opaque continuation cursor from the previous response's nextCursor. " +
+            "Omit for the first page. Do not parse or construct one.",
+        ),
+    },
+    async ({ limit, cursor }) =>
+      guard(async () => jsonResult(await client.get("/api/v1/runs/todo", { limit, cursor }))),
+  );
+
+  server.tool(
+    "list_run_session_memory",
+    "List the files an agent wrote to SESSION MEMORY during a run — title, " +
+      "kind, tags, size and timestamp for each. Bodies are not included; fetch " +
+      "one with read_run_session_memory_file. " +
+      "\n\nThis is what an agent left itself between steps, and it is often the " +
+      "answer to 'why did it decide that?' when the trace shows the decision " +
+      "but not what it was reading. " +
+      "\n\nAn empty list is an answer: this run wrote nothing to session memory.",
+    { runId: z.string().describe("The run's id.") },
+    async ({ runId }) =>
+      guard(async () =>
+        jsonResult(await client.get(`/api/v1/runs/${runId}/session-memory`)),
+      ),
+  );
+
+  server.tool(
+    "read_run_session_memory_file",
+    "Read ONE session-memory file's text, by the id from " +
+      "list_run_session_memory. The listing carries metadata and this carries " +
+      "the body — up to 200 files per run, so fetching all of them to read one " +
+      "is the mistake the split exists to prevent. " +
+      "\n\nThe file id is scoped to THIS run's session folder: one borrowed " +
+      "from another run is a 404, not someone else's file.",
+    {
+      runId: z.string().describe("The run's id."),
+      fileId: z.string().describe("The file's id, from list_run_session_memory."),
+    },
+    async ({ runId, fileId }) =>
+      guard(async () =>
+        jsonResult(await client.get(`/api/v1/runs/${runId}/session-memory/${fileId}`)),
+      ),
+  );
+
+  server.tool(
     "read_run_outline",
     "A run's TABLE OF CONTENTS — everything that happened, at the depth it " +
       "happened: the run, its steps, and the items a fan-out step handed out. " +

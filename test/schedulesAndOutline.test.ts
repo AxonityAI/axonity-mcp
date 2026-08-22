@@ -201,6 +201,50 @@ describe("a run is readable in outline before it is read in full", () => {
   });
 });
 
+describe("what a run left behind, and what is waiting on a human", () => {
+  it("list_run_session_memory lists metadata only", async () => {
+    const { handlers, client } = setup();
+    await handlers.get("list_run_session_memory")!({ runId: "r-1" });
+    expect(client.get).toHaveBeenCalledWith("/api/v1/runs/r-1/session-memory");
+  });
+
+  it("read_run_session_memory_file fetches one body by id", async () => {
+    const { handlers, client } = setup();
+    await handlers.get("read_run_session_memory_file")!({ runId: "r-1", fileId: "f-1" });
+    expect(client.get).toHaveBeenCalledWith("/api/v1/runs/r-1/session-memory/f-1");
+  });
+
+  it("list_todo_steps forwards limit and cursor", async () => {
+    const { handlers, client } = setup();
+    await handlers.get("list_todo_steps")!({ limit: 50, cursor: "abc" });
+    expect(client.get).toHaveBeenCalledWith("/api/v1/runs/todo", {
+      limit: 50,
+      cursor: "abc",
+    });
+  });
+
+  /**
+   * This list is paged over the waiting RUNS, not over the to-do items, so a
+   * caller who checks `items.length <= pageSize` to decide whether they have
+   * everything gets a wrong answer on any run parked on several steps. The tool
+   * has to say so — nothing in the envelope reveals it.
+   */
+  it("says that items may outnumber pageSize, and why", () => {
+    const { descriptions } = setup();
+    const text = descriptions.get("list_todo_steps")!;
+    expect(text).toMatch(/LONGER than\s+pageSize/);
+    expect(text).toMatch(/nextCursor/);
+    expect(text).toMatch(/hasMore/);
+  });
+
+  it("forwards the page envelope whole", async () => {
+    const page = { items: [{ runId: "r-1" }], nextCursor: "c2", pageSize: 20, hasMore: true };
+    const { handlers } = setup(page);
+    const result = await handlers.get("list_todo_steps")!({});
+    expect(body(result)).toEqual(page);
+  });
+});
+
 describe("the guide says both, where an agent will meet them", () => {
   it("tells an agent to start from the outline and to disarm rather than delete", async () => {
     const handlers = new Map<string, Handler>();
