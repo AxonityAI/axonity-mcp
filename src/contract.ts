@@ -72,6 +72,7 @@ export const PROBE_ARGS: Record<string, unknown> = {
   message: "x", templateId: "x", releaseId: "x", payload: {},
   toolboxId: "x", toolIds: ["t-1"], authConfig: null, description: "x",
   digest: "d", invocationId: "x", itemCap: 50, enabled: true, rules: [{}],
+  fileId: "x",
 };
 
 /** A route a tool actually called, as observed by the recording client. */

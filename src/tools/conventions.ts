@@ -621,6 +621,16 @@ a document to find out what the platform did.
   this replaces.
 - \`itemCap\` on the outline bounds items listed per fan-out step; the remainder
   is counted in \`counts.truncated\`, never dropped in silence.
+- **What an agent wrote to itself is readable.** \`list_run_session_memory\`
+  lists the files an agent left during a run (metadata only) and
+  \`read_run_session_memory_file\` opens one. When the trace shows a decision but
+  not what it was reading, this is usually where the reason is. Workflow-bound
+  reference material is NOT here — that lives in \`reference_docs\`.
+- **\`list_todo_steps\`** is every step in the tenant waiting on a human, across
+  all runs; \`read_run_waiting_on\` is the same question for one run you already
+  have. It is PAGED over the waiting RUNS, so \`items\` can be longer than
+  \`pageSize\` — one run may park several steps. Follow \`nextCursor\` until it
+  is null before concluding anything about how much is waiting.
 - Runs are the only thing with a real archive state — \`archive_run\` is
   reversible, \`bulk_delete_runs\` is not.
 

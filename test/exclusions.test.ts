@@ -90,6 +90,29 @@ const FORBIDDEN: Rule[] = [
   // choosing, it is one that cannot be crossed. Recorded rather than left to be
   // rediscovered as a 403 by whoever wonders why there is no tool for it.
   { label: "restart a run (admin-only)", path: /\/runs\/[^/]+\/restart$/ },
+  // Stopping a SELECTION of runs is `require_admin` for the same reason restart
+  // is: changing the workspace's queue is an operator act, and a service token
+  // is deliberately `role="member"`. The member path is not missing — it is
+  // `cancel_run`, which allows admin-or-creator and is registered.
+  { label: "stop runs in bulk (admin-only)", path: /\/runs\/bulk\/stop$/ },
+  // The tenant's total run-history footprint, split by retention class.
+  // Admin-gated on the backend as operational information rather than something
+  // a member needs to do their work, so a tool here would only ever 403.
+  { label: "run storage footprint (admin-only)", path: /\/runs\/storage$/ },
+  // An inbound reply from an email/WhatsApp adapter. This route deliberately
+  // has NO user-session dependency — the adapter presents its own credential
+  // plus the reply secret from the outbound message, and the sender identity is
+  // matched against the recipient. A connector holding a service token is not
+  // the caller this was built for, and `send_run_message` is the tool for
+  // supplying a turn from here.
+  { label: "inbound channel reply (adapter-authenticated)", path: /\/runs\/[^/]+\/channel-reply$/ },
+  // A retired placeholder. The workflow-scope folder was removed by migration
+  // `b9c0d1e2f3g4`; the route survives returning an empty list so legacy
+  // frontends do not break, and workflow-bound material lives in reference_docs
+  // now. A tool that always answers `[]` teaches an agent the wrong thing about
+  // where that material is — worse than no tool, the same reasoning that keeps
+  // `delete_secret` out (#39).
+  { label: "run workflow-memory (retired placeholder)", path: /\/runs\/[^/]+\/workflow-memory$/ },
   { label: "service tokens", path: /\/service-tokens(\/|$)/ },
   { label: "deployment", path: /\/deployment(\/|$)/ },
   // `/config/secrets` lives behind this rule and stays closed to every verb —
@@ -159,6 +182,31 @@ describe("registered surface stays inside its authority boundary", () => {
     expect(forbids("POST", "/api/v1/skills/s-1/versions/v-1/restore-deleted")).toBe(
       false,
     );
+  });
+
+  /**
+   * Four run routes that need no judgement — only writing down. Each was an
+   * omission until now, which reads identically to "we have not got to it yet"
+   * and sends the next reader to rediscover a 403 or an empty list.
+   */
+  it("the run routes that CANNOT be ours are recorded, not merely absent", () => {
+    // Admin-gated on the backend; a service token is always role="member".
+    expect(forbids("POST", "/api/v1/runs/bulk/stop")).toBe(true);
+    expect(forbids("GET", "/api/v1/runs/storage")).toBe(true);
+    // The member path to stopping a run is not missing — it is cancel_run.
+    expect(forbids("POST", "/api/v1/runs/r-1/cancel")).toBe(false);
+
+    // Authenticated by an email/WhatsApp adapter's own credential plus the
+    // reply secret from the outbound message — not a service-token caller.
+    expect(forbids("POST", "/api/v1/runs/r-1/channel-reply")).toBe(true);
+    // Supplying a turn from HERE is a different act, and stays ours.
+    expect(forbids("POST", "/api/v1/runs/r-1/message")).toBe(false);
+
+    // A retired placeholder that always answers `[]`.
+    expect(forbids("GET", "/api/v1/runs/r-1/workflow-memory")).toBe(true);
+    // Session memory is real and readable — the rule must not swallow it.
+    expect(forbids("GET", "/api/v1/runs/r-1/session-memory")).toBe(false);
+    expect(forbids("GET", "/api/v1/runs/r-1/session-memory/f-1")).toBe(false);
   });
 
   it("secrets are readable and unwritable, by method", () => {
