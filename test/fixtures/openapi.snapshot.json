@@ -623,6 +623,30 @@
         "title": "ApprovalDecisionResponse",
         "type": "object"
       },
+      "AssignToolboxRequest": {
+        "additionalProperties": false,
+        "description": "PUT /api/v1/tools/{id}/toolbox — move one tool in or out.",
+        "properties": {
+          "toolboxId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Id of the toolbox to move this tool into, or null to ungroup it. Required — there is no 'leave unchanged' here, which is precisely why this is a separate endpoint from PUT /tools/{id}.",
+            "title": "Toolboxid"
+          }
+        },
+        "required": [
+          "toolboxId"
+        ],
+        "title": "AssignToolboxRequest",
+        "type": "object"
+      },
       "AttachSnippetRequest": {
         "description": "Attach an existing snippet to a flow step.\n\n``flow_step_id = None`` creates the wildcard (\"applies to every step\")\nattachment for this snippet under the tenant scope.",
         "properties": {
@@ -730,30 +754,6 @@
           "updatedAt"
         ],
         "title": "AttachmentResponse",
-        "type": "object"
-      },
-      "AttachmentTextResponse": {
-        "description": "Extracted plain text of a document attachment (M2).",
-        "properties": {
-          "attachmentId": {
-            "title": "Attachmentid",
-            "type": "string"
-          },
-          "charCount": {
-            "title": "Charcount",
-            "type": "integer"
-          },
-          "text": {
-            "title": "Text",
-            "type": "string"
-          }
-        },
-        "required": [
-          "attachmentId",
-          "text",
-          "charCount"
-        ],
-        "title": "AttachmentTextResponse",
         "type": "object"
       },
       "AuditEventItem": {
@@ -1414,7 +1414,7 @@
         "type": "object"
       },
       "ChannelReplyRequest": {
-        "description": "An inbound reply from a non-chat channel (#777 S5).\n\nA channel adapter (email / WhatsApp webhook) POSTs the person's reply\nplus the wait ``token`` it received in the outbound message. The token —\nnot a user session — authorises the resume.",
+        "description": "An inbound reply from a non-chat channel (#777 S5, hardened by #986).\n\nA channel adapter (email / WhatsApp webhook) POSTs the person's reply, the\nreply secret it received in the outbound message, and **who the provider\nsays sent it**. There is no user session, so those two together are the\nauthorisation: the secret proves possession, the sender proves it came back\nfrom the person we actually asked.\n\n``sender`` is not optional and not advisory. Without it a forwarded reply\nlink is a complete credential, which is the property #986 removes.",
         "properties": {
           "message": {
             "maxLength": 1000000,
@@ -1422,7 +1422,15 @@
             "title": "Message",
             "type": "string"
           },
+          "sender": {
+            "description": "The channel identity the provider reports for the sender — an email address or phone number. Matched against the recipient the outbound message was addressed to; a mismatch is refused.",
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Sender",
+            "type": "string"
+          },
           "token": {
+            "description": "The reply secret from the outbound message. NOT the run's wait token — that is a correlation id the platform stores in the clear.",
             "maxLength": 512,
             "minLength": 1,
             "title": "Token",
@@ -1431,7 +1439,8 @@
         },
         "required": [
           "token",
-          "message"
+          "message",
+          "sender"
         ],
         "title": "ChannelReplyRequest",
         "type": "object"
@@ -3622,6 +3631,8 @@
             "items": {
               "enum": [
                 "read",
+                "author",
+                "operate",
                 "write"
               ],
               "type": "string"
@@ -3661,6 +3672,8 @@
             "items": {
               "enum": [
                 "read",
+                "author",
+                "operate",
                 "write"
               ],
               "type": "string"
@@ -3898,14 +3911,28 @@
             "title": "Outputschema"
           },
           "surfacing": {
-            "default": "always",
-            "description": "Whether the tool is always in the agent's tool list ('always') or fetched on demand ('on_demand').",
+            "default": "inherit",
+            "description": "Whether the tool is always in the agent's tool list ('always'), fetched on demand ('on_demand'), or left to its toolbox to decide ('inherit', the default).",
             "enum": [
               "always",
-              "on_demand"
+              "on_demand",
+              "inherit"
             ],
             "title": "Surfacing",
             "type": "string"
+          },
+          "toolboxId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Id of the toolbox to create this tool in, or null to leave it ungrouped. References a toolbox (GET /api/v1/toolboxes). A tool belongs to at most one. Moving an EXISTING tool is a separate endpoint (PUT /tools/{id}/toolbox), where an explicit null means 'take it out of its box'.",
+            "title": "Toolboxid"
           },
           "type": {
             "default": "function",
@@ -3975,6 +4002,30 @@
           "status"
         ],
         "title": "CreateToolResponse",
+        "type": "object"
+      },
+      "CreateToolboxRequest": {
+        "additionalProperties": false,
+        "description": "POST /api/v1/toolboxes.",
+        "properties": {
+          "description": {
+            "description": "What this toolbox is for, in one line. Read by a person in the tool tab and by an agent deciding whether to look inside, so it must say what the tools DO.",
+            "maxLength": 2000,
+            "title": "Description",
+            "type": "string"
+          },
+          "name": {
+            "description": "Display name of the toolbox, e.g. 'Carerix'.",
+            "maxLength": 255,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "description"
+        ],
+        "title": "CreateToolboxRequest",
         "type": "object"
       },
       "CreateWakeTaskInput": {
@@ -4474,6 +4525,25 @@
         "title": "DeleteToolResponse",
         "type": "object"
       },
+      "DeleteToolboxResponse": {
+        "description": "DELETE /api/v1/toolboxes/{id}.",
+        "properties": {
+          "deleted": {
+            "default": true,
+            "title": "Deleted",
+            "type": "boolean"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "DeleteToolboxResponse",
+        "type": "object"
+      },
       "DeleteVersionResponse": {
         "description": "Response after deleting a version from entity_versions.",
         "properties": {
@@ -4652,6 +4722,24 @@
           }
         },
         "title": "DependentAgentsResponse",
+        "type": "object"
+      },
+      "DependentToolsResponse": {
+        "description": "GET /api/v1/toolboxes/{id}/dependent-tools.",
+        "properties": {
+          "toolNames": {
+            "description": "Names of the tools in this toolbox that have no credential of their own, and so would stop working if the toolbox lost its shared one. Empty when the toolbox has no shared credential, or when every tool carries its own.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Toolnames",
+            "type": "array"
+          }
+        },
+        "required": [
+          "toolNames"
+        ],
+        "title": "DependentToolsResponse",
         "type": "object"
       },
       "DependentWorkflow": {
@@ -7381,6 +7469,16 @@
             ],
             "title": "Draftversionname"
           },
+          "effectiveSurfacing": {
+            "default": "always",
+            "description": "What `surfacing` resolves to once the toolbox has had its say: 'always' (in every prompt) or 'on_demand' (found via discover_tools). Read this to answer 'is it in the prompt?'; read `surfacing` for the raw stored choice an edit form binds to.",
+            "enum": [
+              "always",
+              "on_demand"
+            ],
+            "title": "Effectivesurfacing",
+            "type": "string"
+          },
           "id": {
             "title": "Id",
             "type": "string"
@@ -7440,13 +7538,38 @@
             "type": "string"
           },
           "surfacing": {
-            "default": "always",
+            "default": "inherit",
             "enum": [
               "always",
-              "on_demand"
+              "on_demand",
+              "inherit"
             ],
             "title": "Surfacing",
             "type": "string"
+          },
+          "toolboxId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Id of the toolbox this tool belongs to, or null when it is in none. References a toolbox (GET /api/v1/toolboxes). A tool belongs to at most one.",
+            "title": "Toolboxid"
+          },
+          "toolboxName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Display name of that toolbox, so a list can be grouped without a second lookup. Null when the tool is in none.",
+            "title": "Toolboxname"
           },
           "type": {
             "enum": [
@@ -12279,6 +12402,15 @@
               }
             ]
           },
+          "countsKind": {
+            "default": "items",
+            "enum": [
+              "items",
+              "activities"
+            ],
+            "title": "Countskind",
+            "type": "string"
+          },
           "id": {
             "title": "Id",
             "type": "string"
@@ -13533,6 +13665,8 @@
             "items": {
               "enum": [
                 "read",
+                "author",
+                "operate",
                 "write"
               ],
               "type": "string"
@@ -13720,6 +13854,51 @@
           "enabled"
         ],
         "title": "SetEnabledRequest",
+        "type": "object"
+      },
+      "SetToolboxAuthRequest": {
+        "additionalProperties": false,
+        "description": "PUT /api/v1/toolboxes/{id}/auth — the credential its tools share.",
+        "properties": {
+          "authConfig": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Authentication the tools in this toolbox share, in the same shape a connector uses: {type, config, secretId}. Point `secretId` at a stored secret (GET /api/v1/secrets) rather than putting a credential here — the value is masked on read and never travels in a config export. Null clears it. A tool with its own auth keeps it; only a tool with none inherits.",
+            "title": "Authconfig"
+          }
+        },
+        "required": [
+          "authConfig"
+        ],
+        "title": "SetToolboxAuthRequest",
+        "type": "object"
+      },
+      "SetToolboxMembershipRequest": {
+        "additionalProperties": false,
+        "description": "PUT /api/v1/toolboxes/{id}/tools — declare the whole membership.",
+        "properties": {
+          "toolIds": {
+            "description": "Ids of every tool that should be in this toolbox. This REPLACES the membership: a tool currently in the box and absent from this list is ungrouped. Tools cannot be in two toolboxes, so a tool listed here leaves whichever box it was in.",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 500,
+            "title": "Toolids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "toolIds"
+        ],
+        "title": "SetToolboxMembershipRequest",
         "type": "object"
       },
       "SignupRequest": {
@@ -15499,6 +15678,16 @@
             ],
             "title": "Description"
           },
+          "effectiveSurfacing": {
+            "default": "always",
+            "description": "What `surfacing` resolves to once the toolbox has had its say: 'always' (in every prompt) or 'on_demand' (found via discover_tools). Read this to answer 'is it in the prompt?'; read `surfacing` for the raw stored choice an edit form binds to.",
+            "enum": [
+              "always",
+              "on_demand"
+            ],
+            "title": "Effectivesurfacing",
+            "type": "string"
+          },
           "id": {
             "title": "Id",
             "type": "string"
@@ -15534,13 +15723,38 @@
             "type": "string"
           },
           "surfacing": {
-            "default": "always",
+            "default": "inherit",
             "enum": [
               "always",
-              "on_demand"
+              "on_demand",
+              "inherit"
             ],
             "title": "Surfacing",
             "type": "string"
+          },
+          "toolboxId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Id of the toolbox this tool belongs to, or null when it is in none. References a toolbox (GET /api/v1/toolboxes). A tool belongs to at most one.",
+            "title": "Toolboxid"
+          },
+          "toolboxName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Display name of that toolbox, so a list can be grouped without a second lookup. Null when the tool is in none.",
+            "title": "Toolboxname"
           },
           "type": {
             "enum": [
@@ -15663,6 +15877,82 @@
           "type"
         ],
         "title": "ToolTemplateListItem",
+        "type": "object"
+      },
+      "ToolboxListResponse": {
+        "description": "GET /api/v1/toolboxes.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ToolboxSchema"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "ToolboxListResponse",
+        "type": "object"
+      },
+      "ToolboxSchema": {
+        "description": "One toolbox as the API returns it.",
+        "properties": {
+          "authConfig": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The credential this toolbox's tools share, with every secret value masked. Shape matches a connector's auth config; `secretId` references a stored secret. Null when the toolbox has none.",
+            "title": "Authconfig"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "hasAuthConfig": {
+            "default": false,
+            "description": "Whether this toolbox carries shared authentication at all. Lets a client show the configure affordance without reading the (masked) config.",
+            "title": "Hasauthconfig",
+            "type": "boolean"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "toolCount": {
+            "default": 0,
+            "title": "Toolcount",
+            "type": "integer"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "version"
+        ],
+        "title": "ToolboxSchema",
         "type": "object"
       },
       "ToolsPolicySchema": {
@@ -17419,7 +17709,8 @@
               {
                 "enum": [
                   "always",
-                  "on_demand"
+                  "on_demand",
+                  "inherit"
                 ],
                 "type": "string"
               },
@@ -17427,7 +17718,7 @@
                 "type": "null"
               }
             ],
-            "description": "Whether the tool is always in the agent's tool list ('always') or fetched on demand ('on_demand').",
+            "description": "Whether the tool is always in the agent's tool list ('always'), fetched on demand ('on_demand'), or left to its toolbox to decide ('inherit'). Omit to leave unchanged. Moving a tool between toolboxes is a separate endpoint (PUT /tools/{id}/toolbox) so that an explicit null there can mean 'ungroup' without colliding with 'unchanged' here.",
             "title": "Surfacing"
           },
           "type": {
@@ -17503,6 +17794,16 @@
             ],
             "title": "Draftversionname"
           },
+          "effectiveSurfacing": {
+            "default": "always",
+            "description": "What `surfacing` resolves to once the toolbox has had its say: 'always' (in every prompt) or 'on_demand' (found via discover_tools). Read this to answer 'is it in the prompt?'; read `surfacing` for the raw stored choice an edit form binds to.",
+            "enum": [
+              "always",
+              "on_demand"
+            ],
+            "title": "Effectivesurfacing",
+            "type": "string"
+          },
           "id": {
             "title": "Id",
             "type": "string"
@@ -17557,13 +17858,38 @@
             "type": "string"
           },
           "surfacing": {
-            "default": "always",
+            "default": "inherit",
             "enum": [
               "always",
-              "on_demand"
+              "on_demand",
+              "inherit"
             ],
             "title": "Surfacing",
             "type": "string"
+          },
+          "toolboxId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Id of the toolbox this tool belongs to, or null when it is in none. References a toolbox (GET /api/v1/toolboxes). A tool belongs to at most one.",
+            "title": "Toolboxid"
+          },
+          "toolboxName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Display name of that toolbox, so a list can be grouped without a second lookup. Null when the tool is in none.",
+            "title": "Toolboxname"
           },
           "type": {
             "enum": [
@@ -17588,6 +17914,48 @@
           "version"
         ],
         "title": "UpdateToolResponse",
+        "type": "object"
+      },
+      "UpdateToolboxRequest": {
+        "additionalProperties": false,
+        "description": "PUT /api/v1/toolboxes/{id} — rename / re-describe.",
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "New description. Omit to leave unchanged.",
+            "title": "Description"
+          },
+          "expectedVersion": {
+            "description": "Version the client last read; a mismatch is a 409.",
+            "title": "Expectedversion",
+            "type": "integer"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "New display name. Omit to leave unchanged.",
+            "title": "Name"
+          }
+        },
+        "required": [
+          "expectedVersion"
+        ],
+        "title": "UpdateToolboxRequest",
         "type": "object"
       },
       "UpdateWakeTaskInput": {
@@ -23097,55 +23465,6 @@
           }
         ],
         "summary": "Get Attachment Content",
-        "tags": [
-          "conversation_attachments"
-        ]
-      }
-    },
-    "/api/v1/conversation-attachments/{attachment_id}/text": {
-      "get": {
-        "description": "Extract and return a document attachment's text (M2, tenant-scoped).",
-        "operationId": "get_attachment_text_api_v1_conversation_attachments__attachment_id__text_get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "attachment_id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Attachment Id",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AttachmentTextResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Get Attachment Text",
         "tags": [
           "conversation_attachments"
         ]
@@ -33888,7 +34207,7 @@
     },
     "/api/v1/runs/{run_id}/channel-reply": {
       "post": {
-        "description": "Resume a parked conversation from an inbound channel reply (#777 S5).\n\nPUBLIC — there is deliberately NO ``get_auth_context`` dependency. This is\nthe inbound half of a non-chat ``yield_to_human`` channel: an email /\nWhatsApp adapter POSTs the person's reply plus the wait ``token`` it was\ngiven. The token — an unguessable uuid matched token-exact against the\nopen wait — is the authorisation; see ``RunService.post_channel_reply``.\nMirrors the message route's two-commit durability.",
+        "description": "Resume a parked conversation from an inbound channel reply (#777 S5).\n\nPUBLIC of a *user session* — there is deliberately no ``get_auth_context``\ndependency, because an email / WhatsApp adapter has none. It is not open:\nthree checks stand in for one, in this order.\n\n1. **Who is calling** (#988) — the adapter presents its own credential.\n   Without this the ``sender`` below is caller-asserted and proves nothing.\n2. **How often** (#986) — rate-limited per IP and per secret before any\n   database work, the same treatment ``POST /api/v1/triggers/{token}`` has\n   had since security M3, and for the same two reasons: an unauthenticated\n   caller must not hammer the run lookup, and a leaked secret must not\n   churn runs.\n3. **Whether this reply is genuine** (#986) — the channel binding on the\n   wait: the secret we sent, and the address we sent it to. See\n   ``RunService.post_channel_reply`` and ``services/channel_binding.py``.\n\nMirrors the message route's two-commit durability.",
         "operationId": "channel_reply_api_v1_runs__run_id__channel_reply_post",
         "parameters": [
           {
@@ -36843,7 +37162,7 @@
     },
     "/api/v1/task-queue/dismiss-bulk": {
       "post": {
-        "description": "Bulk dismiss — accepts ``ids`` OR ``filter`` (exactly one).\n\nStep one of the operator's two-step clean-up: put rows away without\nlosing them. Reversible (replay un-dismisses), so the blast radius is\na display change, not data loss — but it is still a change to the\nqueue, hence ``require_admin`` like every other write here (#744).\n\nPer-row outcomes are tallied, never raised: rows that are already\ndismissed or not in a dismissable state come back as ``skipped``.",
+        "description": "Bulk dismiss — accepts ``ids`` OR ``filter`` (exactly one).\n\nStep one of the operator's two-step clean-up: put rows away without\nlosing them. Reversible (replay un-dismisses), so the blast radius is\na display change, not data loss — but it is still a change to the\nqueue, hence an admin or an ``operate``-scoped token, like every other\nrecovery write here (#744, #976).\n\nPer-row outcomes are tallied, never raised: rows that are already\ndismissed or not in a dismissable state come back as ``skipped``.",
         "operationId": "dismiss_bulk_api_v1_task_queue_dismiss_bulk_post",
         "requestBody": {
           "content": {
@@ -37920,6 +38239,362 @@
         ]
       }
     },
+    "/api/v1/toolboxes": {
+      "get": {
+        "description": "Every toolbox in the tenant, with how many tools each holds.\n\nWhole, not paged — and that is not an oversight. A toolbox is a\ntop-level organising label a person creates by hand, of which a\ntenant holds O(10); 106 tools collapse into roughly six. The list\nthis feature exists to tame is the TOOL list, and the boxes are the\ntaming, so paging the boxes would hide the very structure the page\nis for. It does not grow with machine activity, which is the case\nB-NB8 was written against.",
+        "operationId": "list_toolboxes_api_v1_toolboxes_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolboxListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Toolboxes",
+        "tags": [
+          "toolboxes"
+        ]
+      },
+      "post": {
+        "description": "Create a toolbox.",
+        "operationId": "create_toolbox_api_v1_toolboxes_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateToolboxRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolboxSchema"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Toolbox",
+        "tags": [
+          "toolboxes"
+        ]
+      }
+    },
+    "/api/v1/toolboxes/{toolbox_id}": {
+      "delete": {
+        "description": "Delete a toolbox. Its tools survive, ungrouped.",
+        "operationId": "delete_toolbox_api_v1_toolboxes__toolbox_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "toolbox_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Toolbox Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Version the client last read; a mismatch is a 409.",
+            "in": "query",
+            "name": "expected_version",
+            "required": true,
+            "schema": {
+              "description": "Version the client last read; a mismatch is a 409.",
+              "title": "Expected Version",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteToolboxResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Toolbox",
+        "tags": [
+          "toolboxes"
+        ]
+      },
+      "put": {
+        "description": "Rename or re-describe a toolbox, under optimistic locking.",
+        "operationId": "update_toolbox_api_v1_toolboxes__toolbox_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "toolbox_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Toolbox Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateToolboxRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolboxSchema"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Toolbox",
+        "tags": [
+          "toolboxes"
+        ]
+      }
+    },
+    "/api/v1/toolboxes/{toolbox_id}/auth": {
+      "put": {
+        "description": "Set the credential this toolbox's tools share, or null to clear it.\n\nTen Microsoft Mail tools use one mailbox; this is where that is said\nonce. A tool with its own auth keeps it — only a tool with none\ninherits.",
+        "operationId": "set_toolbox_auth_api_v1_toolboxes__toolbox_id__auth_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "toolbox_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Toolbox Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetToolboxAuthRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolboxSchema"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Set Toolbox Auth",
+        "tags": [
+          "toolboxes"
+        ]
+      }
+    },
+    "/api/v1/toolboxes/{toolbox_id}/dependent-tools": {
+      "get": {
+        "description": "Which tools would stop working if this toolbox lost its credential.\n\nAsked BEFORE deleting a box or moving a tool out, so the warning can\nname them. The alternative is a run failing later with a bare 401\nfrom a partner API, which says nothing about what changed.",
+        "operationId": "list_dependent_tools_api_v1_toolboxes__toolbox_id__dependent_tools_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "toolbox_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Toolbox Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DependentToolsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Dependent Tools",
+        "tags": [
+          "toolboxes"
+        ]
+      }
+    },
+    "/api/v1/toolboxes/{toolbox_id}/tools": {
+      "put": {
+        "description": "Declare exactly which tools this toolbox holds.",
+        "operationId": "set_toolbox_membership_api_v1_toolboxes__toolbox_id__tools_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "toolbox_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Toolbox Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetToolboxMembershipRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolboxSchema"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Set Toolbox Membership",
+        "tags": [
+          "toolboxes"
+        ]
+      }
+    },
     "/api/v1/tools": {
       "get": {
         "description": "List all tools for the current tenant.",
@@ -38717,6 +39392,65 @@
           }
         ],
         "summary": "Restore Tool",
+        "tags": [
+          "tools"
+        ]
+      }
+    },
+    "/api/v1/tools/{tool_id}/toolbox": {
+      "put": {
+        "description": "Move a tool into a toolbox, or out of one with a null id.\n\nSeparate from ``PUT /tools/{id}`` for two reasons. First, there\n``null`` already means \"leave this field alone\", so there would be\nno way to say \"ungroup\". Second, grouping is not a change to the\ntool's published document — it neither bumps the version nor needs\na republish to take effect — and routing it through the edit path\nwould give it both.",
+        "operationId": "assign_tool_to_toolbox_api_v1_tools__tool_id__toolbox_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tool_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tool Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignToolboxRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetToolResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Assign Tool To Toolbox",
         "tags": [
           "tools"
         ]

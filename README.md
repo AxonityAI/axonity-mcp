@@ -143,6 +143,17 @@ across these routes — the tool parameter names say which.
   `update_connector` — `authConfig` must be placeholders only; a human fills real
   secrets in Axonity. (`create_tool`/`update_tool` carry the same guard, so a
   connector authored either way is covered.)
+- **Toolboxes** (the group a tool is filed under): `list_toolboxes`,
+  `create_toolbox`, `update_toolbox`, `delete_toolbox`, `set_toolbox_tools`,
+  `assign_tool_toolbox`, `set_toolbox_auth`, `list_toolbox_dependent_tools`.
+  Read `list_toolboxes` before `create_tool` and pass `toolboxId` — a tool made
+  without one is ungrouped. Three things worth knowing before you write:
+  `set_toolbox_tools` **declares** the membership (anything you leave out is
+  evicted — `assign_tool_toolbox` moves a single tool and takes `null` to
+  ungroup); a box never changes what an agent may *call*, only how a tool is
+  *advertised* (agents link to individual tools, never to a box); and deleting a
+  box leaves its tools alive, ungrouped. `set_toolbox_auth` sets the credential a
+  box's tools share and carries the same placeholder guard as a connector.
 - **Attach / detach memory**: `attach_skill_to_agent`,
   `attach_skill_to_workflow`, `attach_policy_to_agent`,
   `attach_reference_to_agent`, and a `detach_*_from_*` for each. Detaching

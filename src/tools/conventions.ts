@@ -260,6 +260,9 @@ made any time before you attach them.
     use rather than inventing one.
 - Complete check: the tool has the I/O schemas its callers need AND a non-empty
   implementation of the right shape for its type.
+- \`toolboxId\` files the tool in a toolbox on creation. Read \`list_toolboxes\`
+  BEFORE you create: a tool made without one is ungrouped, which is valid and
+  is also how nobody finds it. See Toolboxes below.
 
 ### agent  (\`create_agent\`, strict body)
 - Required: \`name\`. Enumerated fields, with their ONLY valid values:
@@ -654,6 +657,34 @@ Both halves live in the workflow DOCUMENT, so both are ordinary
   comes back with credential-shaped entries withheld, listed under
   \`metadataRedacted\`. If you need one of those values, a human reads it in
   Axonity — do not try another route to it.
+
+## Toolboxes — where a tool is filed
+- A toolbox is a per-tenant grouping label over tools. Read \`list_toolboxes\`
+  before \`create_tool\` and pass the box's id as \`toolboxId\`; a tool created
+  without one is ungrouped. Move an existing tool with
+  \`assign_tool_toolbox\` (\`toolboxId: null\` takes it out of its box).
+- \`set_toolbox_tools\` DECLARES the membership — it does not add to it. A tool
+  in the box and absent from your list is evicted. To add one tool, read the
+  box's contents first, or use \`assign_tool_toolbox\`, which cannot evict
+  anything by accident. A tool is in at most one box.
+- A toolbox NEVER changes what an agent may call. An agent is linked to
+  individual tools (\`agent.toolIds\`), never to a box; there is no route that
+  grants a whole box, and "give this agent the Carerix toolbox" is a bulk write
+  of individual links. What the box decides is how a tool is ADVERTISED: a boxed
+  tool with \`surfacing: "inherit"\` is found via discover_tools instead of
+  riding in every prompt. Read \`effectiveSurfacing\` on the tool to answer "is
+  it in the prompt?"; \`surfacing\` is the raw stored choice.
+- Deleting a toolbox does NOT delete its tools — they survive, ungrouped. The
+  box itself has no restore.
+- Platform-shipped tools cannot be moved. The \`Axonity\`, \`Checks\` and
+  \`Branching\` boxes hold locked tools; the API refuses and NAMES the tool it
+  refused. Read that name to your human instead of bisecting the selection.
+- \`set_toolbox_auth\` sets the credential a box's tools SHARE — ten Microsoft
+  Mail tools, one mailbox, said once. A tool with its own auth keeps it; only a
+  tool with none inherits. Same rule as anywhere else: point \`secretId\` at a
+  stored secret, never a real value. Before you clear or replace it, or delete
+  the box, call \`list_toolbox_dependent_tools\` — it names the tools that would
+  start failing at run time with a bare 401.
 
 ## Tenant
 - Your token fixes the tenant. You cannot act across tenants; never send a

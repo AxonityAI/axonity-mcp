@@ -70,6 +70,7 @@ export const PROBE_ARGS: Record<string, unknown> = {
   requests: [{ entityType: "tool", entityId: "x" }],
   entityKind: "skill", entityId: "x", batchId: "x", stepId: "x", answer: "x",
   message: "x", templateId: "x", releaseId: "x", payload: {},
+  toolboxId: "x", toolIds: ["t-1"], authConfig: null, description: "x",
 };
 
 /** A route a tool actually called, as observed by the recording client. */
