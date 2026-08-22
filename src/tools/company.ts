@@ -35,6 +35,42 @@ export function registerCompanyTools(
   );
 
   server.tool(
+    "create_company_from_template",
+    "Create this tenant's company document from a template — how a tenant that " +
+      "has none gets one. Pick the template with list_templates({ kind: " +
+      "\"all\" }) and read it with read_template first: the template decides the " +
+      "value stream, the stages and the capabilities that everything else in " +
+      "the tenant will hang off. " +
+      "\n\nThis is a WRITE on the singleton every workflow refers to. Run " +
+      "read_company first — if one already exists, instantiating over it is " +
+      "almost never what you meant, and update_company or " +
+      "apply_company_mutation is. Like every other write here it produces a " +
+      "DRAFT; a human publishes it.",
+    {
+      templateId: z.string().describe("The template's id, from list_templates."),
+      companyName: z
+        .string()
+        .optional()
+        .describe("Name for the new company. Omit to take the template's own."),
+      confirm: z
+        .literal(true)
+        .describe(
+          "Must be true. Acknowledges this creates the tenant's company " +
+            "document from a template — check read_company first.",
+        ),
+    },
+    async ({ templateId, companyName }) =>
+      guard(async () =>
+        jsonResult(
+          await client.post("/api/v1/company/from-template", {
+            templateId,
+            ...(companyName ? { companyName } : {}),
+          }),
+        ),
+      ),
+  );
+
+  server.tool(
     "read_company_published",
     "Read the LIVE published company document — what the runtime uses, as opposed " +
       "to the draft read_company returns. Diff the two to see what a publish would change.",

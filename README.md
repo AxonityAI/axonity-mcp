@@ -197,6 +197,19 @@ across these routes — the tool parameter names say which.
   target now (missing, self-call, deleted, unpublished, not callable), but
   `list_callable_workflows` is still what you run first: it is how you pick a
   target and read the interface you are binding to.
+- **The deploy, the tenant and its queues** (read-only): `read_deploy_contract`
+  (what this backend actually mounts — read it when a call fails in a way that
+  smells like a version mismatch), `list_users` (where an `ownerId` comes from),
+  `list_audit_events` (pass `actorKind: "service_token"` to read back what
+  external agents — including you — changed), `read_queue_overview`,
+  `list_in_flight_runs`, `read_task_queue_summary`, `list_task_queue`,
+  `read_task_queue_item`, `export_task_queue`, plus `read_model_tier_map` (what
+  `capabilityTier` resolves to), `read_concurrency_status`,
+  `read_concurrent_run_cap` and `read_for_each_rate`. Together these answer *why
+  is my run not moving* without asking a human to look at a screen. Every write
+  in these families — purging or replaying queue work, changing a cap or the
+  tier map, importing a tenant bundle, reading someone's notifications — is
+  deliberately absent and recorded in `test/exclusions.test.ts`.
 - **Secrets** (read-only): `list_secrets`, `read_secret` — the catalogue a
   connector's `authConfig.secretId` points at. Values are never returned by any
   Axonity route; `valueKeys` says which keys a human has filled in, so you can
@@ -390,6 +403,14 @@ These are enforced by the backend, not merely by convention:
   connector states are pinned to a vendored snapshot of the backend OpenAPI
   schema; `test/conformance.test.ts` fails if a route or documented enum
   diverges (see `test/fixtures/README.md`).
+- **Every backend route is decided, and the build says so.**
+  `test/completeness.test.ts` partitions all 444 operations in the pinned
+  snapshot into *covered by a tool* or *excluded by a rule that carries a
+  written reason*, and fails on anything in neither. A route nobody has decided
+  about is indistinguishable from one somebody is still working on, which is
+  what made "is this connector finished?" a question you could only answer with
+  an audit. It is now a build status: a new backend route arrives as a red build
+  asking **cover it, or exclude it with a reason?**
 
 **One known exception, not enforced:** a framework-provided `flow` is meant to
 be read-only to a tenant, but the backend does not actually block

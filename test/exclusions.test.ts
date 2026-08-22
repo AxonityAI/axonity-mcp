@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { AxonityClient } from "../src/client.js";
 import { PROBE_ARGS as ARGS } from "../src/contract.js";
 import { registerAll } from "../src/index.js";
+import { WRITE_METHODS, forbids } from "./denyList.js";
 
 /**
  * Security guard: no registered tool may target a deny-listed route family.
@@ -35,96 +36,6 @@ function recordingClient(calls: Recorded[]) {
       return { ok: true };
     });
   return { get: rec("GET"), post: rec("POST"), put: rec("PUT"), patch: rec("PATCH"), del: rec("DELETE") };
-}
-
-/**
- * A call is forbidden if it hits a route family the connector must never use.
- * A rule with no `methods` forbids every verb.
- *
- * Note: request_publish_* posts to `/publish-approvals` (creating an approval),
- * which is ALLOWED — only the direct publish/approve/secret-write/etc. routes
- * are not.
- */
-interface Rule {
-  label: string;
-  path: RegExp;
-  /** Verbs this rule forbids. Omitted means all of them. */
-  methods?: string[];
-}
-
-const WRITE_METHODS = ["POST", "PUT", "PATCH", "DELETE"];
-
-const FORBIDDEN: Rule[] = [
-  { label: "direct publish/unpublish", path: /\/(publish|unpublish)$/ },
-  {
-    label: "approve/reject an approval",
-    path: /\/publish-approvals\/[^/]+\/(approve|reject)$/,
-  },
-  // A RELEASE decision is the same act one level up, and the rule above cannot
-  // see it: its `[^/]+` matches ONE segment, while the release route carries
-  // two (`/publish-approvals/release/{id}/approve`). Worth its own rule
-  // precisely because it is the biggest decision on the surface — approving a
-  // release publishes a whole workflow closure at once (axonity-flow#799).
-  {
-    label: "approve/reject a release",
-    path: /\/publish-approvals\/release\/[^/]+\/(approve|reject)$/,
-  },
-  // The bulk decision routes exist for the human review UI. Requesting in bulk
-  // is fine (/publish-approvals/bulk); DECIDING in bulk is not ours to do.
-  { label: "bulk approve/reject", path: /\/publish-approvals\/bulk-(approve|reject)$/ },
-  { label: "direct version publish", path: /\/versions\/(publish|unpublish)(\/|$)/ },
-  // Writing secret material is a human act — the backend refuses it from a
-  // service token too (`forbid_service_token_for_secrets`). Reading the
-  // catalogue is not: no route there returns a value. See axonity-mcp#39.
-  { label: "secret writes", path: /\/secrets(\/|$)/, methods: WRITE_METHODS },
-  // A plan waiting on human review. #45 M9(2) asked for a DECISION on the four
-  // run-write routes rather than leaving them an omission, and this is the one
-  // that lands on the same line as the publish queue: the step exists because a
-  // person was asked to look at the agent's plan before it runs. An agent
-  // approving it removes the review it was created to get — and it would often
-  // be approving its OWN plan. Supplying input a run asked for is a different
-  // act, which is why `answer_run_question` and `send_run_message` ARE here.
-  { label: "decide a plan approval", path: /\/steps\/[^/]+\/plan-approval$/ },
-  // Re-dispatching a stuck run is `require_admin` on the backend, and a service
-  // token is deliberately `role="member"` — so this is not a boundary we are
-  // choosing, it is one that cannot be crossed. Recorded rather than left to be
-  // rediscovered as a 403 by whoever wonders why there is no tool for it.
-  { label: "restart a run (admin-only)", path: /\/runs\/[^/]+\/restart$/ },
-  // Stopping a SELECTION of runs is `require_admin` for the same reason restart
-  // is: changing the workspace's queue is an operator act, and a service token
-  // is deliberately `role="member"`. The member path is not missing — it is
-  // `cancel_run`, which allows admin-or-creator and is registered.
-  { label: "stop runs in bulk (admin-only)", path: /\/runs\/bulk\/stop$/ },
-  // The tenant's total run-history footprint, split by retention class.
-  // Admin-gated on the backend as operational information rather than something
-  // a member needs to do their work, so a tool here would only ever 403.
-  { label: "run storage footprint (admin-only)", path: /\/runs\/storage$/ },
-  // An inbound reply from an email/WhatsApp adapter. This route deliberately
-  // has NO user-session dependency — the adapter presents its own credential
-  // plus the reply secret from the outbound message, and the sender identity is
-  // matched against the recipient. A connector holding a service token is not
-  // the caller this was built for, and `send_run_message` is the tool for
-  // supplying a turn from here.
-  { label: "inbound channel reply (adapter-authenticated)", path: /\/runs\/[^/]+\/channel-reply$/ },
-  // A retired placeholder. The workflow-scope folder was removed by migration
-  // `b9c0d1e2f3g4`; the route survives returning an empty list so legacy
-  // frontends do not break, and workflow-bound material lives in reference_docs
-  // now. A tool that always answers `[]` teaches an agent the wrong thing about
-  // where that material is — worse than no tool, the same reasoning that keeps
-  // `delete_secret` out (#39).
-  { label: "run workflow-memory (retired placeholder)", path: /\/runs\/[^/]+\/workflow-memory$/ },
-  { label: "service tokens", path: /\/service-tokens(\/|$)/ },
-  { label: "deployment", path: /\/deployment(\/|$)/ },
-  // `/config/secrets` lives behind this rule and stays closed to every verb —
-  // it is the deploy-time surface, not the tenant's secret catalogue.
-  { label: "config / migration surface", path: /\/config\// },
-  { label: "arbitrary connector execution", path: /\/tools\/execute-connector$/ },
-];
-
-function forbids(method: string, path: string): boolean {
-  return FORBIDDEN.some(
-    (rule) => rule.path.test(path) && (rule.methods ?? [method]).includes(method),
-  );
 }
 
 describe("registered surface stays inside its authority boundary", () => {
@@ -207,6 +118,65 @@ describe("registered surface stays inside its authority boundary", () => {
     // Session memory is real and readable — the rule must not swallow it.
     expect(forbids("GET", "/api/v1/runs/r-1/session-memory")).toBe(false);
     expect(forbids("GET", "/api/v1/runs/r-1/session-memory/f-1")).toBe(false);
+  });
+
+  /**
+   * The #59 rules, each with the near-miss it must NOT swallow. Three of these
+   * split a family by METHOD rather than by path, which is the shape most
+   * likely to go quietly wrong: a rule that widens from "writes" to "the whole
+   * family" takes working tools with it and nothing else would notice, because
+   * the operation stays *decided* either way.
+   */
+  it("the #59 boundaries cut where they are meant to (poison check)", () => {
+    // Templates: readable, not creatable (create is admin-only).
+    expect(forbids("GET", "/api/v1/templates")).toBe(false);
+    expect(forbids("GET", "/api/v1/templates/t-1")).toBe(false);
+    expect(forbids("GET", "/api/v1/workflow-templates")).toBe(false);
+    expect(forbids("POST", "/api/v1/templates")).toBe(true);
+    // Instantiating a COMPANY from a template is a company write, not a
+    // template write — it must stay on the allowed side.
+    expect(forbids("POST", "/api/v1/company/from-template")).toBe(false);
+
+    // Tenant settings: read the effective values, never write them.
+    expect(forbids("GET", "/api/v1/tenant-settings/model-tier-map")).toBe(false);
+    expect(forbids("GET", "/api/v1/tenant-settings/concurrency-status")).toBe(false);
+    expect(forbids("PATCH", "/api/v1/tenant-settings/model-tier-map")).toBe(true);
+    // And the whole-tenant bundle stays shut in both directions.
+    expect(forbids("GET", "/api/v1/tenant/export")).toBe(true);
+    expect(forbids("POST", "/api/v1/tenant/import")).toBe(true);
+
+    // The task queue is readable and unactionable.
+    expect(forbids("GET", "/api/v1/task-queue")).toBe(false);
+    expect(forbids("GET", "/api/v1/task-queue/t-1")).toBe(false);
+    expect(forbids("GET", "/api/v1/task-queue/export")).toBe(false);
+    expect(forbids("POST", "/api/v1/task-queue/purge")).toBe(true);
+    expect(forbids("POST", "/api/v1/task-queue/t-1/replay")).toBe(true);
+    // The queues screen's own reads are a different family and stay open.
+    expect(forbids("GET", "/api/v1/queues/overview")).toBe(false);
+    expect(forbids("GET", "/api/v1/queues/runs")).toBe(false);
+
+    // Someone's notifications are theirs, in both directions.
+    expect(forbids("GET", "/api/v1/notifications")).toBe(true);
+    expect(forbids("POST", "/api/v1/notifications/n-1/read")).toBe(true);
+
+    // Firing a webhook by its token is out; the trigger ROWS stay ours, and the
+    // rule is anchored so the three trigger families are not caught by it.
+    expect(forbids("POST", "/api/v1/triggers/tok-1")).toBe(true);
+    expect(forbids("GET", "/api/v1/workflows/w-1/webhook-triggers")).toBe(false);
+    expect(forbids("POST", "/api/v1/webhook-triggers/wh-1/rotate")).toBe(false);
+    expect(forbids("PATCH", "/api/v1/conditional-triggers/ct-1")).toBe(false);
+    expect(forbids("POST", "/api/v1/cron-schedules/cs-1/run-now")).toBe(false);
+
+    // The Builder chat surface, and the run tools that must survive beside it.
+    expect(forbids("GET", "/api/v1/conversations")).toBe(true);
+    expect(forbids("GET", "/api/v1/folders/f-1/files")).toBe(true);
+    expect(forbids("POST", "/api/v1/runs/r-1/end-conversation")).toBe(true);
+    expect(forbids("POST", "/api/v1/runs/r-1/message")).toBe(false);
+    expect(forbids("GET", "/api/v1/runs/r-1/session-memory/f-1")).toBe(false);
+
+    // Scheduler plumbing is closed; reading why a run is parked is not.
+    expect(forbids("POST", "/api/v1/admin/wake-tasks")).toBe(true);
+    expect(forbids("GET", "/api/v1/runs/r-1/waiting-on")).toBe(false);
   });
 
   it("secrets are readable and unwritable, by method", () => {

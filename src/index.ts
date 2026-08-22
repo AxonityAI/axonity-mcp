@@ -36,6 +36,7 @@ import {
 } from "./tools/extras.js";
 import { registerAuthoringSpecTools } from "./tools/authoringSpec.js";
 import { registerCompanyTools } from "./tools/company.js";
+import { registerOperationsTools } from "./tools/operations.js";
 import { registerPromptPlacementTools } from "./tools/promptPlacement.js";
 import { LIST_FILTERS } from "./generated/listFilters.js";
 import { type EntityDef, registerEntityTools } from "./tools/register.js";
@@ -209,6 +210,7 @@ export function registerAll(server: ServerLike, client: AxonityClient): void {
   registerSecretTools(server as McpServer, client);
   registerSubworkflowTools(server as McpServer, client);
   registerToolboxTools(server as McpServer, client);
+  registerOperationsTools(server as McpServer, client);
 }
 
 export function buildServer(client: AxonityClient): McpServer {

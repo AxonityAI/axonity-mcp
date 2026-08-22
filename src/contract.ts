@@ -75,6 +75,46 @@ export const PROBE_ARGS: Record<string, unknown> = {
   fileId: "x",
 };
 
+/**
+ * Argument overlays the replay runs IN ADDITION to `PROBE_ARGS` alone.
+ *
+ * A blind sweep with one fixed argument set is a LOWER bound on what the tools
+ * reach, and the gap is not evenly spread: a handful of tools pick their route
+ * FROM an argument, so one probe pass sees one of their routes and misses the
+ * rest. `list_templates` chooses between four catalogue paths on `kind`;
+ * `list_dependent_agents` and `list_workflows_using` choose on `entityKind`;
+ * `validate_workflow` takes EXACTLY ONE of `workflowId`/`document`, so the base
+ * set — which supplies both — makes it fire nothing at all.
+ *
+ * That under-reporting is not theoretical. It made a coverage audit name three
+ * template routes as uncovered when `list_templates` had reached them all
+ * along. A measurement that quietly reads low is worse than no measurement,
+ * because it generates work that did not need doing.
+ *
+ * Each overlay is merged over `PROBE_ARGS` and replayed as its own pass. An
+ * `undefined` value REMOVES an argument, which is how the two shapes of
+ * `validate_workflow` are reached.
+ */
+export const PROBE_VARIANTS: Record<string, unknown>[] = [
+  {},
+  // list_templates — one path per catalogue.
+  { kind: "agent" },
+  { kind: "tool" },
+  { kind: "workflow" },
+  // list_dependent_agents — the three library kinds.
+  { entityKind: "policy" },
+  { entityKind: "reference_doc" },
+  // list_workflows_using — the five document-reference kinds.
+  { entityKind: "tool" },
+  { entityKind: "agent" },
+  { entityKind: "flow" },
+  { entityKind: "output_schema" },
+  { entityKind: "workflow" },
+  // validate_workflow — exactly one of the two, never both.
+  { document: undefined },
+  { workflowId: undefined },
+];
+
 /** A route a tool actually called, as observed by the recording client. */
 export interface CalledRoute {
   method: string;
@@ -108,11 +148,14 @@ export async function collectCalledRoutes(
   const handlers: ((args: never) => Promise<unknown>)[] = [];
   register({ tool: (_n, _d, _s, handler) => handlers.push(handler) }, recorder);
 
-  for (const handler of handlers) {
-    try {
-      await handler(PROBE_ARGS as never);
-    } catch {
-      /* Arg-shape mismatch is fine — only routes that fired are collected. */
+  for (const overlay of PROBE_VARIANTS) {
+    const args = { ...PROBE_ARGS, ...overlay } as never;
+    for (const handler of handlers) {
+      try {
+        await handler(args);
+      } catch {
+        /* Arg-shape mismatch is fine — only routes that fired are collected. */
+      }
     }
   }
   return calls;

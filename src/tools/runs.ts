@@ -22,7 +22,13 @@
  * answer, the guide prescribed a loop the connector could not finish. The two
  * tools that unpark a run supply the INPUT it is waiting for, which is not the
  * same act as deciding a review:
- *   - `answer_run_question` / `send_run_message` are here.
+ *   - `answer_run_question` / `send_run_message` are here, and since #59 so is
+ *     `complete_run_step` — one route over two acts. Choosing a DECISION step's
+ *     branch is routing; completing a MANUAL step asserts that human work
+ *     happened, which the platform then treats as fact. The tool says so and
+ *     takes a `confirm`, because leaving it out left the guide prescribing an
+ *     end-to-end test that hits a wall at the first manual step — the same
+ *     defect `answer_run_question` was added to fix.
  *   - `POST /runs/{id}/steps/{id}/plan-approval` is NOT, and
  *     `POST /runs/{id}/restart` cannot be. Both are recorded, with the reason,
  *     in `test/exclusions.test.ts` — as a decision rather than an omission.
@@ -577,6 +583,58 @@ export function registerRunTools(server: McpServer, client: AxonityClient): void
       guard(async () =>
         jsonResult(
           await client.post(`/api/v1/runs/${runId}/steps/${stepId}/answer`, { answer }),
+        ),
+      ),
+  );
+
+  server.tool(
+    "complete_run_step",
+    "Complete a MANUAL or DECISION step a run is parked on, so the run " +
+      "resumes. Along with answer_run_question, this is what makes \"start a " +
+      "run and see what it does\" finishable — a workflow with a manual step " +
+      "otherwise waits forever and a test never returns a verdict. " +
+      "\n\nONE ROUTE, TWO VERY DIFFERENT ACTS. Know which you are doing: " +
+      "\n- On a DECISION step you are CHOOSING A BRANCH. Pass `selectedBranch`. " +
+      "That is a routing choice, the same kind of act as answering a question. " +
+      "\n- On a MANUAL step you are ASSERTING THAT HUMAN WORK HAPPENED. The " +
+      "platform then treats that as fact and everything downstream proceeds on " +
+      "it. Only do this when a person has told you the work is done, or on a " +
+      "test run of your own where nothing real depended on the step. Never to " +
+      "get a stuck run moving. " +
+      "\n\nFind the parked step with read_run_waiting_on. Returns the run's " +
+      "updated detail. Deciding a PLAN APPROVAL is a different thing again and " +
+      "is deliberately not available here — that step exists to get a human's " +
+      "review, and an agent approving it would often be approving its own plan.",
+    {
+      runId: z.string().describe("The run's id."),
+      stepId: z.string().describe("The parked step's id, from read_run_waiting_on."),
+      selectedBranch: z
+        .string()
+        .optional()
+        .describe("For a DECISION step: which branch to take."),
+      output: z
+        .record(z.unknown())
+        .optional()
+        .describe("For a MANUAL step: the result the step should carry forward."),
+      structuredOutputs: z
+        .record(z.unknown())
+        .optional()
+        .describe("Values for the step's declared output schema, when it has one."),
+      confirm: z
+        .literal(true)
+        .describe(
+          "Must be true. Acknowledges that on a manual step you are asserting " +
+            "human work was done.",
+        ),
+    },
+    async ({ runId, stepId, selectedBranch, output, structuredOutputs }) =>
+      guard(async () =>
+        jsonResult(
+          await client.post(`/api/v1/runs/${runId}/steps/${stepId}/complete`, {
+            ...(selectedBranch !== undefined ? { selectedBranch } : {}),
+            ...(output !== undefined ? { output } : {}),
+            ...(structuredOutputs !== undefined ? { structuredOutputs } : {}),
+          }),
         ),
       ),
   );
