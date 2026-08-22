@@ -23,8 +23,16 @@ diff in review.
   `PUT /toolboxes/{id}/auth` (a shared credential — it gets the connector
   credential guard) and `GET /toolboxes/{id}/dependent-tools` (which tools that
   credential is holding up).
-  (Previously `7dcdad92` — epic axonity-flow#961, the nine authoring-API
-  stories consumed by axonity-mcp#45, plus #964 and #978.)
+- This supersedes the `ae0923b6` refresh from #53, and carries it: no operation
+  had moved there, but four component schemas had (`ChannelReplyRequest` gained
+  a required `sender`, and three service-token models changed). None is
+  reachable from this connector — `channel-reply` is uncovered and service
+  tokens are deny-listed in `test/exclusions.test.ts` — and it was refreshed
+  anyway, because the conformance test pins enums to this file and a snapshot
+  that is "stale but only in the parts we do not use" is how it goes stale in
+  the parts we do.
+- The authoring surface itself comes from epic axonity-flow#961 (the nine
+  stories consumed by axonity-mcp#45), plus #964 and #978, dumped at `7dcdad92`.
 - **#964** is why the catalogue now carries three vocabularies for a value's
   type: `parameterTypes` (a trigger parameter's / constant's `type`),
   `outputKinds` (a step output's / input's `kind` — narrower, *different key*)
