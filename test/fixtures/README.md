@@ -11,9 +11,20 @@ diff in review.
 
 ## Provenance
 
-- Generated from **axonity-flow `main`** at commit `7dcdad92` — epic
-  axonity-flow#961 (the nine authoring-API stories consumed by axonity-mcp#45),
-  plus #964 and #978.
+- Generated from **axonity-flow `main`** at commit `77526bff` — epic
+  axonity-flow#1006 (tools live in toolboxes), consumed by axonity-mcp#54. The
+  route count moves 437 → 444: seven toolbox routes plus
+  `PUT /tools/{id}/toolbox`, and `GET /conversation-attachments/{id}/text` is
+  gone (#1000 removed it unused). Also arriving in the same span, not yet
+  consumed here: `GET /runs/{id}/outline`, four `/cron-schedules` routes and two
+  `/task-queue` release routes.
+- The two toolbox routes the #54 issue text does not list are covered anyway,
+  because the backend grew them after the issue was written:
+  `PUT /toolboxes/{id}/auth` (a shared credential — it gets the connector
+  credential guard) and `GET /toolboxes/{id}/dependent-tools` (which tools that
+  credential is holding up).
+  (Previously `7dcdad92` — epic axonity-flow#961, the nine authoring-API
+  stories consumed by axonity-mcp#45, plus #964 and #978.)
 - **#964** is why the catalogue now carries three vocabularies for a value's
   type: `parameterTypes` (a trigger parameter's / constant's `type`),
   `outputKinds` (a step output's / input's `kind` — narrower, *different key*)
