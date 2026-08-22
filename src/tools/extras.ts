@@ -442,11 +442,25 @@ export function registerDependencyTools(
     },
     async ({ entityKind, entityId }) =>
       guard(async () => {
-        const base = {
+        const bases: Record<string, string> = {
           skill: "/api/v1/skills",
           policy: "/api/v1/policies",
           reference_doc: "/api/v1/reference-docs",
-        }[entityKind];
+        };
+        const base = bases[entityKind];
+        // A kind outside the enum cannot reach here through a real client — zod
+        // rejects it first. It CAN reach here through the route sweeps, which
+        // call handlers directly, and an unguarded lookup then built
+        // `undefined/{id}/dependent-agents` and reported it as a route this
+        // connector calls. A tool must not answer a question it was not asked.
+        if (!base) {
+          throw new Error(
+            `list_dependent_agents has no route for entityKind "${entityKind}". ` +
+              `It covers ${Object.keys(bases).join(", ")}; for a tool, agent, ` +
+              `flow, output schema or workflow named by a workflow DOCUMENT, ` +
+              `use list_workflows_using.`,
+          );
+        }
         return jsonResult(await client.get(`${base}/${entityId}/dependent-agents`));
       }),
   );

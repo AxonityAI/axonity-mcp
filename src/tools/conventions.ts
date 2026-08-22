@@ -722,6 +722,24 @@ Both halves live in the workflow DOCUMENT, so both are ordinary
 ## Tenant
 - Your token fixes the tenant. You cannot act across tenants; never send a
   tenant id in a body.
+- \`read_model_tier_map\` says what \`capabilityTier\` actually RESOLVES TO on
+  this tenant. The tier is the field you write; the model is what you are
+  choosing. Read it before you pick one.
+- When a run does not start, look outward before blaming the workflow:
+  \`read_concurrency_status\` (is the tenant at its cap?),
+  \`read_queue_overview\` (is dispatch alive?), \`list_task_queue\` (did
+  something fail in the layer beneath the run?). \`read_for_each_rate\` explains
+  a fan-out that is pacing itself rather than stalling.
+- You can READ those and not change them. Caps, rate ceilings and the tier map
+  are operator decisions — report what you found, and to whom, rather than
+  looking for another route to it.
+- \`read_deploy_contract\` says what THIS deploy speaks: build, environment and
+  the routes it mounts. Read it when a call fails in a way that suggests the
+  backend is older or newer than you expect.
+- \`list_users\` is where an \`ownerId\` comes from. Look one up instead of
+  asking a human to copy it out of the UI.
+- \`list_audit_events({ actorKind: "service_token" })\` reads back what external
+  agents — including you — actually changed.
 `;
 
 export function registerConventions(server: McpServer): void {
