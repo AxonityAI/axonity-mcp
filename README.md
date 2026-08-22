@@ -229,6 +229,24 @@ across these routes — the tool parameter names say which.
 (plus `update_conditional_trigger`). Trigger deletes are **hard** deletes with
 no restore, and a webhook token is shown **once** at create or rotate.
 
+**A schedule is a claim you can now check.** `run_cron_schedule_now` fires one
+immediately *without* moving `nextFireAt` — testing a schedule must not consume
+the run it was going to make. Before it existed, "every weekday at 07:00" could
+only be tested by coming back tomorrow, and what is usually wrong is not the
+timing but whether it starts anything at all.
+
+**To pause a schedule, disarm it** — `set_cron_schedule_enabled`, not
+`delete_cron_schedule`. Deleting throws away the rules the author wrote and
+makes "stop this for a week" indistinguishable from "we do not do this any
+more". `list_all_cron_schedules` answers *what runs tonight?* across the tenant;
+`reconcile_cron_schedules` answers *is that actually what runs?* — it reports
+rather than tidying silently, and never arms something someone switched off.
+
+`create_cron_schedule` takes either `cronExpr` or the richer `rules`, and the
+trigger must exist in the **published** document. Rule shapes come from
+`get_workflow_authoring_spec` → `scheduleRuleKinds`; this connector names none
+of its own.
+
 ### Runs — evaluating what you built
 
 `start_workflow_run` (test a workflow you built — it runs the **published**
@@ -249,6 +267,17 @@ it is overwritten on every run, so a caller must not send it.
 never the answer to a question about the run, and it measured 81% of one real
 response — an oversized response turns a call that succeeded into an error.
 Pass `includeSnapshot: true` when you actually want to see what executed.
+
+**Start from the outline.** `read_run_outline` is the run's table of contents —
+the run, its steps, and the items a fan-out handed out, flat with parent
+pointers. It carries no bodies, so its size follows the run's *shape* rather
+than its content: a launch over four thousand items costs about what one over
+four costs. `itemCap` bounds the items listed per fan-out step and the remainder
+is counted in `counts.truncated`, never dropped silently. Then open only what
+you want: `read_run_value` for one large step value (by the digest in
+`stepStates`) and `read_run_invocation_messages` for one agent's transcript (by
+the id in `agentInvocations`). Reading a whole run to find one message is the
+habit these replace.
 
 **A run can park rather than finish.** `read_run_waiting_on` says what it is
 waiting for; `answer_run_question` answers an `ask_user` step and

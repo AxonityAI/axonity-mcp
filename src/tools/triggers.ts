@@ -7,6 +7,14 @@
  *
  * Trigger deletes are HARD deletes — the row is removed, not soft-deleted, and
  * there is no restore. Hence the `confirm` guard on each.
+ *
+ * A SCHEDULE IS A CLAIM, AND IT IS NOW CHECKABLE (axonity-mcp#57). "Every
+ * weekday at 07:00" used to be something an author could only test by coming
+ * back tomorrow, and the thing most likely to be wrong is not the timing but
+ * whether it starts anything at all. Three routes close that:
+ * `run_cron_schedule_now` fires one without moving `nextFireAt`,
+ * `set_cron_schedule_enabled` pauses one without throwing its rules away, and
+ * `reconcile_cron_schedules` answers "is what I am reading what runs tonight?".
  */
 
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -106,28 +114,66 @@ export function registerTriggerTools(
   );
 
   server.tool(
+    "list_all_cron_schedules",
+    "Every cron schedule in the TENANT, with the workflow each one fires — the " +
+      "answer to 'what runs tonight?'. list_cron_schedules answers the same " +
+      "question for one workflow; this one needs no id and is what you read " +
+      "when you do not already know which workflow to suspect.",
+    {},
+    async () =>
+      guard(async () => jsonResult(await client.get("/api/v1/cron-schedules"))),
+  );
+
+  server.tool(
     "create_cron_schedule",
-    "Schedule a workflow to run on a cron expression.",
+    "Schedule a published workflow to run on a timetable. " +
+      "\n\nThe TRIGGER must exist in the workflow's PUBLISHED document — the " +
+      "schedule table stores a copy of the rules and publishing keeps that copy " +
+      "true, so a trigger id no canvas has shown is refused rather than stored. " +
+      "Read read_workflow_trigger_parameters or the published document for the " +
+      "id. " +
+      "\n\nGive it EITHER `cronExpr` OR `rules`. `rules` is the richer form and " +
+      "the one a person reads back: call get_workflow_authoring_spec for " +
+      "`scheduleRuleKinds`, which lists every shape this deploy accepts with a " +
+      "working example of each. Do not invent a shape — the list is generated " +
+      "from the parser that validates it. A malformed expression or an unknown " +
+      "timezone is a 422.",
     {
       workflowId: z.string().describe("The workflow's id."),
       triggerId: z
         .string()
-        .describe("The id of the trigger node in the workflow document."),
+        .describe(
+          "The id of the trigger node in the workflow's PUBLISHED document. An " +
+            "id that is not there is refused.",
+        ),
       cronExpr: z
         .string()
-        .describe('The cron expression, e.g. "0 9 * * 1-5" for weekdays at 09:00.'),
+        .optional()
+        .describe(
+          'A cron expression, e.g. "0 9 * * 1-5" for weekdays at 09:00. Use ' +
+            "`rules` instead for anything you want a person to be able to read.",
+        ),
+      rules: z
+        .array(z.record(z.unknown()))
+        .optional()
+        .describe(
+          "The schedule as rule objects. Shapes come from " +
+            "get_workflow_authoring_spec → `scheduleRuleKinds`, each with an " +
+            "example that is round-tripped through the parser on every read.",
+        ),
       timezone: z
         .string()
         .optional()
         .describe('IANA timezone, e.g. "Europe/Brussels". Defaults to UTC.'),
       enabled: z.boolean().optional().describe("Defaults to true."),
     },
-    async ({ workflowId, triggerId, cronExpr, timezone, enabled }) =>
+    async ({ workflowId, triggerId, cronExpr, rules, timezone, enabled }) =>
       guard(async () =>
         jsonResult(
           await client.post(`/api/v1/workflows/${workflowId}/cron-schedules`, {
             triggerId,
-            cronExpr,
+            ...(cronExpr !== undefined ? { cronExpr } : {}),
+            ...(rules !== undefined ? { rules } : {}),
             ...(timezone ? { timezone } : {}),
             ...(enabled === undefined ? {} : { enabled }),
           }),
@@ -136,9 +182,59 @@ export function registerTriggerTools(
   );
 
   server.tool(
+    "set_cron_schedule_enabled",
+    "Arm or disarm a cron schedule. THIS IS HOW YOU PAUSE ONE — it keeps the " +
+      "rules the author wrote, so 'stop this for a week' stays distinguishable " +
+      "from 'we do not do this any more'. Reach for delete_cron_schedule only " +
+      "when the schedule is genuinely finished.",
+    {
+      scheduleId: z.string().describe("The cron schedule's id."),
+      enabled: z
+        .boolean()
+        .describe("true arms the schedule, false pauses it without losing it."),
+    },
+    async ({ scheduleId, enabled }) =>
+      guard(async () =>
+        jsonResult(await client.patch(`/api/v1/cron-schedules/${scheduleId}`, { enabled })),
+      ),
+  );
+
+  server.tool(
+    "run_cron_schedule_now",
+    "Fire a cron schedule once, right now — the way to TEST one without waiting " +
+      "for its next time. This EXECUTES the workflow against live " +
+      "infrastructure, with the same cost and side effects as any real run. " +
+      "\n\n`nextFireAt` is deliberately NOT moved: testing a schedule must not " +
+      "consume the run it was going to make. " +
+      "\n\nIt returns as soon as the run is queued, not when it finishes — " +
+      "follow it with list_runs or read_run_outline.",
+    { scheduleId: z.string().describe("The cron schedule's id.") },
+    async ({ scheduleId }) =>
+      guard(async () =>
+        jsonResult(await client.post(`/api/v1/cron-schedules/${scheduleId}/run-now`)),
+      ),
+  );
+
+  server.tool(
+    "reconcile_cron_schedules",
+    "Check the tenant's schedule table against the PUBLISHED workflows and " +
+      "repair it — the answer to 'is what I am reading actually what runs " +
+      "tonight?'. Schedules follow their workflow's lifecycle now, so this is " +
+      "for rows written before that held, and for confirming there are none. " +
+      "\n\nIt REPORTS rather than tidying silently, and it never arms a " +
+      "schedule someone switched off. Safe to run when you are unsure.",
+    {},
+    async () =>
+      guard(async () => jsonResult(await client.post("/api/v1/cron-schedules/reconcile"))),
+  );
+
+  server.tool(
     "delete_cron_schedule",
-    "Delete a cron schedule. HARD delete — the row is removed and cannot be " +
-      "restored. The workflow stops running on this schedule immediately.",
+    "Delete a cron schedule. HARD delete — the row is removed, the rules go " +
+      "with it, and there is no restore. " +
+      "\n\nTO PAUSE ONE, USE set_cron_schedule_enabled INSTEAD. Deleting is not " +
+      "how you stop a schedule for a while: it destroys the timetable an author " +
+      "wrote and leaves nothing saying it ever existed.",
     {
       scheduleId: z.string().describe("The cron schedule's id."),
       confirm: CONFIRM,
