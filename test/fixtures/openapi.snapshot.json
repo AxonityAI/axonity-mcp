@@ -18863,7 +18863,7 @@
       },
       "WorkflowDocumentSchema": {
         "additionalProperties": true,
-        "description": "Full workflow JSONB document with referential integrity validation.\n\nValidates:\n- All step IDs are unique\n- All trigger IDs are unique\n- Edge from/to reference valid step or trigger IDs\n\n``extra=\"allow\"`` is load-bearing, not decorative (#805). The stored\ndocument is a superset of the four fields validated here — it also carries\ncolumn-authoritative metadata (``name``, ``description``, ``stageId``,\n``capabilityId``, ``valueStreamId``, ``onFailure``) that ride along on every\nread, plus the ``output_schemas`` registry. ``PUT /workflows/{id}`` dumps\nthis model back to a dict before handing it to the service; under the\ndefault ``extra=\"ignore\"`` that dump silently DROPPED every undeclared key,\nso the #768 metadata-sync fix and ``_reject_unhonoured_metadata`` — both\nreading those keys off the document in the service — could never see them.\nOnly keys the caller actually sent survive the round-trip, so the service's\n\"absent key = leave unchanged\" contract is preserved. Do NOT narrow this to\nan enumerated field list: that reinstates the exact hand-maintained-schema\ndrift #802/#805 are about (and would re-drop ``output_schemas``).",
+        "description": "Full workflow JSONB document with referential integrity validation.\n\nValidates:\n- All step IDs are unique\n- All trigger IDs are unique\n- Edge from/to reference valid step or trigger IDs\n\n``extra=\"allow\"`` is load-bearing, not decorative (#805). The stored\ndocument is a superset of the four fields validated here — it also carries\ncolumn-authoritative metadata (``name``, ``description``, ``stageId``,\n``capabilityId``, ``valueStreamId``, ``onFailure``) that rides along on\nevery read, plus the process's own ``inputs`` and ``constants``.\n``PUT /workflows/{id}`` dumps\nthis model back to a dict before handing it to the service; under the\ndefault ``extra=\"ignore\"`` that dump silently DROPPED every undeclared key,\nso the #768 metadata-sync fix and ``_reject_unhonoured_metadata`` — both\nreading those keys off the document in the service — could never see them.\nOnly keys the caller actually sent survive the round-trip, so the service's\n\"absent key = leave unchanged\" contract is preserved. Do NOT narrow this to\nan enumerated field list: that reinstates the exact hand-maintained-schema\ndrift #802/#805 are about.",
         "properties": {
           "definitionOfDone": {
             "anyOf": [
@@ -19101,8 +19101,7 @@
               "setup_loop_decision",
               "advanced_edit",
               "set_workflow_constants",
-              "attach_output_schema",
-              "detach_output_schema"
+              "set_workflow_inputs"
             ],
             "title": "Type",
             "type": "string"
@@ -19321,6 +19320,15 @@
               "type": "object"
             },
             "title": "Constants",
+            "type": "array"
+          },
+          "inputs": {
+            "description": "What the PROCESS needs to start, declared once and carried by every start (#1028). This is the list a caller fills in; a start's own `parameters` are what it declares on top.",
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Inputs",
             "type": "array"
           },
           "triggers": {

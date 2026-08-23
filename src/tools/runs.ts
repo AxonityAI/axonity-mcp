@@ -53,9 +53,9 @@ export function registerRunTools(server: McpServer, client: AxonityClient): void
       "side effects. It does not run your unpublished draft. After starting, " +
       "follow it with read_run / read_run_trace / read_run_cost. " +
       "\n\nA workflow can have MORE THAN ONE start (a button and a schedule, " +
-      "say), and each start declares its own fields. Read " +
-      "read_workflow_trigger_parameters first, then name the one you mean with " +
-      "triggerId and build triggerInput from THAT start's parameters — a " +
+      "say). Read read_workflow_trigger_parameters first, then name the one you " +
+      "mean with triggerId and build triggerInput from the process's `inputs` " +
+      "PLUS whatever that start declares on top in its own `parameters` — a " +
       "triggerId that does not exist is a 422 listing the ones that do, never a " +
       "quiet fallback to a different start. " +
       "\n\nA run may PARK on a step that asks a question instead of finishing. " +

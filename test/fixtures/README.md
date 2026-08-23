@@ -11,8 +11,23 @@ diff in review.
 
 ## Provenance
 
-- Generated from **axonity-flow `main`** at commit `77526bff` — epic
-  axonity-flow#1006 (tools live in toolboxes), consumed by axonity-mcp#54. The
+- Generated from **axonity-flow `main`** at commit `0efc4681` — epic
+  axonity-flow#1027/#1028, *a process owns its own interface*. **No route
+  moved**; the surface stays at 444 operations. What changed is inside the
+  authoring contract, and it is the kind of change a pass-through connector
+  never breaks on:
+  - `WorkflowStartContract` gained **`inputs`** — what the PROCESS needs to
+    start, declared once and carried by every start. A start's own `parameters`
+    are now what it declares ON TOP, and the process-level name wins where the
+    two overlap. Older documents still declare on the invocation trigger and
+    both are read.
+  - The mutation vocabulary gained `set_workflow_inputs` and lost
+    `attach_output_schema` / `detach_output_schema`. **Nothing here needed
+    changing for that** — the connector states no vocabulary of its own and
+    reads it from `GET /workflows/operations` (#8/#32/#44). This is that
+    decision paying its way.
+- Previously **`77526bff`** — epic axonity-flow#1006 (tools live in toolboxes),
+  consumed by axonity-mcp#54. The
   route count moves 437 → 444: seven toolbox routes plus
   `PUT /tools/{id}/toolbox`, and `GET /conversation-attachments/{id}/text` is
   gone (#1000 removed it unused). Also arriving in the same span, not yet

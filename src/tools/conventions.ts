@@ -521,6 +521,18 @@ the new tenant too, and a human fills the real value there.
   - An unknown or misspelled key is a 422 naming it, not a silent drop — so
     spelling matters and you are told when it is wrong.
 
+## Inputs and constants — the two lists that belong to the PROCESS
+A workflow declares two whole-list things of its own, both edited the same way
+(read the list, change it, write it back — there is no per-entry command,
+because the identity is the \`name\` and renaming is the common edit):
+- \`set_workflow_inputs\` — what the process NEEDS to start. Carried by every
+  start, and the list a caller fills in whichever trigger fired. A start's own
+  \`parameters\` are what that start declares on top; where a name is in both,
+  the process-level one wins.
+- \`set_workflow_constants\` — what the AUTHOR pins, described below.
+Read both back with \`read_workflow_trigger_parameters\`, which answers
+\`{ inputs, triggers, constants }\`.
+
 ## Constants — values the AUTHOR owns
 A constant is applied on EVERY run whichever trigger fired, and it OVERWRITES
 whatever a caller sent. That is deliberate: a field the operator's form does not
@@ -637,13 +649,27 @@ a document to find out what the platform did.
 ## Subworkflows — one workflow calling another
 Both halves live in the workflow DOCUMENT, so both are ordinary
 \`apply_workflow_mutations\` work. There is no separate "link" route.
-- **To make a workflow callable**, give it a trigger with
-  \`typeId: "subprocess-invocation"\` (\`add_trigger\`) whose \`parameters\` are
-  what a caller must pass. That list IS the signature — there is no other place
-  to declare it. \`parameters\` goes in the \`add_trigger\` call itself; you do
-  not need a follow-up \`update_trigger\`. For what a parameter may contain, ask
-  \`get_workflow_authoring_spec\` for \`add_trigger\`'s payload schema rather
-  than a shape written down here.
+- **To make a workflow callable**, it needs TWO things: a trigger with
+  \`typeId: "subprocess-invocation"\` (\`add_trigger\`), which is what makes it
+  callable at all, and a declared SIGNATURE.
+- **The signature belongs to the PROCESS, not to the trigger.** Declare it with
+  \`set_workflow_inputs\` — one list, carried by every start, and the same list
+  a caller of any kind fills in. A trigger's own \`parameters\` are what THAT
+  start declares on top; \`parameters\` goes in the \`add_trigger\` call itself,
+  so a start that does add fields needs no follow-up \`update_trigger\`.
+- Older documents declared everything on the invocation trigger instead, and
+  that still works: both are read, and where a name appears in both the
+  PROCESS-level one wins. When you are editing a workflow you did not author,
+  read \`read_workflow_trigger_parameters\` and see which list actually holds
+  its fields before adding to either.
+- \`set_workflow_inputs\` REPLACES the whole list, like
+  \`set_workflow_constants\`: read, edit, write back. An entry with no \`name\`
+  is refused rather than stored — the name is how a caller passes the value and
+  how the run payload keys it, so a nameless one would be skipped silently at
+  run time.
+- For what an input or a parameter may contain, ask
+  \`get_workflow_authoring_spec\` for the payload schema of the command you are
+  about to write, rather than a shape written down here.
 - **It must also be PUBLISHED.** The catalogue reads the published document, so
   a draft-only workflow comes back \`callable: false\` with "Never published".
   Authoring the caller first and publishing the callee later is a run-time
