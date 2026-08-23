@@ -380,14 +380,23 @@ export function registerWorkflowMutations(
 
   server.tool(
     "read_workflow_trigger_parameters",
-    "How to START this workflow: `{ triggers: [...], constants: [...] }`. Read " +
-      "it before start_workflow_run, and before authoring a webhook, cron or " +
-      "conditional trigger, so the input you send matches. Read-only. " +
-      "\n\nEVERY start is described, each with its own `parameters` — a workflow " +
-      "with a button AND a schedule has two entries, and each carries different " +
-      "fields. Pass the entry's `id` to start_workflow_run as triggerId to fire " +
+    "How to START this workflow: `{ inputs: [...], triggers: [...], " +
+      "constants: [...] }`. Read it before start_workflow_run, and before " +
+      "authoring a webhook, cron or conditional trigger, so the input you send " +
+      "matches. Read-only. " +
+      "\n\n`inputs` IS THE PROCESS'S OWN LIST — what it needs to start, " +
+      "declared once and carried by EVERY start. That is the list a caller " +
+      "fills in, whichever trigger fires. Start there. " +
+      "\n\nEVERY start is then described in `triggers`, each with its own " +
+      "`parameters` — what THAT start declares ON TOP of the process's inputs. " +
+      "A workflow with a button AND a schedule has two entries and they can " +
+      "differ. Pass the entry's `id` to start_workflow_run as triggerId to fire " +
       "that one; firing without naming one uses the first, which on a " +
       "multi-start workflow is an arbitrary choice. " +
+      "\n\nWhere a process input and a start's parameter share a name, the " +
+      "PROCESS-level one wins. A workflow authored before inputs existed may " +
+      "still declare everything on its invocation trigger and carry an empty " +
+      "`inputs` — read both rather than assuming which one holds the answer. " +
       "\n\nA PARAMETER MARKED `pinned: true` MUST NOT BE SENT. The author owns " +
       "that value: it is written on every run and OVERWRITES whatever a caller " +
       "supplied, because a field the operator's form does not show must not " +

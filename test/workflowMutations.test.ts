@@ -506,3 +506,56 @@ describe("replace_workflow_document passes the document straight through", () =>
     });
   });
 });
+
+/**
+ * axonity-flow#1027/#1028 — a process owns its own interface.
+ *
+ * `GET /workflows/{id}/trigger-parameters` gained a third list: `inputs`, what
+ * the PROCESS needs to start, carried by every start. Before it, a signature
+ * was declared on whichever trigger happened to fire.
+ *
+ * This is the second time that response has changed shape — the first was #45
+ * M5, which turned an array into `{ triggers, constants }` with no test on
+ * either side catching it. A pass-through tool never BREAKS on a change like
+ * this; it just starts describing a response it no longer matches, and an agent
+ * builds `triggerInput` from the wrong list. So the description is what gets
+ * pinned, in the place an agent reads before starting a run.
+ */
+describe("the start contract names all three of its lists", () => {
+  function describedTools() {
+    const descriptions = new Map<string, string>();
+    const server = {
+      tool: (name: string, description: string) => descriptions.set(name, description),
+    };
+    registerWorkflowMutations(server as never, {} as unknown as AxonityClient);
+    return descriptions;
+  }
+
+  it("read_workflow_trigger_parameters explains inputs, triggers AND constants", () => {
+    const text = describedTools().get("read_workflow_trigger_parameters")!;
+    expect(text).toContain("inputs");
+    expect(text).toContain("triggers");
+    expect(text).toContain("constants");
+  });
+
+  it("says which list a caller fills in, and who wins on a name clash", () => {
+    const text = describedTools().get("read_workflow_trigger_parameters")!;
+
+    // The process's list is the one a caller fills in, whichever start fires.
+    expect(text).toMatch(/PROCESS'S OWN LIST/);
+    expect(text).toMatch(/carried by EVERY start/);
+    // A start's own parameters are additive, not the whole signature.
+    expect(text).toMatch(/ON TOP/);
+    // And the overlap rule, which is the part nothing in the response reveals.
+    expect(text).toMatch(/PROCESS-level one wins/);
+  });
+
+  it("no longer says a start's own parameters are the whole story", () => {
+    const text = describedTools().get("read_workflow_trigger_parameters")!;
+    // The old sentence described a workflow whose signature lived entirely on
+    // its triggers. Keeping it would send an agent to the wrong list.
+    expect(text).not.toMatch(
+      /EVERY start is described, each with its own `parameters` — a workflow/,
+    );
+  });
+});
