@@ -11,7 +11,29 @@ diff in review.
 
 ## Provenance
 
-- Generated from **axonity-flow `main`** at commit `0efc4681` — epic
+- Generated from **axonity-flow `main`** at commit `4a6357fc` — epic
+  axonity-flow#1217 (*a table is a library element you design yourself*, PR
+  #1231) plus its two follow-ups #1234 (core entity wiring) and #1235 (the
+  authoring API), consumed here by axonity-mcp#63. The surface moves
+  **444 → 490 operations**, and only half the arrivals are the ones that were
+  asked for — a snapshot is a dump, not a selection:
+  - **24 `/api/v1/data-tables/**` routes.** The entity family, the eleven
+    version routes spelled exactly as an output schema's, three row writes
+    (`POST`/`PATCH`/`DELETE .../rows`) and `GET .../tools`. All covered, except
+    the two direct-publish routes, which the standing `direct version publish`
+    rule already forbade — publishing is a human decision, here as everywhere.
+  - **22 that came with them**, from epics that landed in the same span:
+    seven `/api/v1/platform/workspaces*` (platform administration), five
+    `/api/v1/users*` (member administration and a password-reset link), four
+    `/api/v1/auth/*` (outside the tenant API by construction), two
+    `/task-queue` stop routes (already covered by the operator-act rule),
+    `GET /runs/{id}/outline/items`, and the three
+    `/workflows/{id}/reference-docs` link routes from axonity-flow#1061.
+    The last four are COVERED — the outline continuation and the doc-link trio
+    are the connector's business, and this file used to say the doc link "does
+    not exist". The rest are excluded with reasons in `test/denyList.ts`.
+  - No operation was removed.
+- Previously **`0efc4681`** — epic
   axonity-flow#1027/#1028, *a process owns its own interface*. **No route
   moved**; the surface stays at 444 operations. What changed is inside the
   authoring contract, and it is the kind of change a pass-through connector

@@ -66,17 +66,46 @@ function isOutsideTheApi(operation: string): boolean {
   return NOT_THE_API.some((pattern) => pattern.test(operation));
 }
 
-/** Which operations the registered tools actually call. */
+/**
+ * Which operations the registered tools actually call.
+ *
+ * The sweep is a cross product — every observed call against every operation —
+ * and both sides grow with the platform, so it is quadratic in the thing that
+ * only ever gets bigger. It had reached ~2.2M comparisons and five seconds,
+ * which is the default per-test timeout: the check that tells you the surface
+ * is decided was about to start failing for being slow, which is the worst way
+ * for a build guard to go.
+ *
+ * DEDUPLICATING THE CALLS is the whole fix. `collectCalledRoutes` replays every
+ * handler once per probe variant (14 of them) precisely so a tool that needs
+ * particular arguments still fires, and it returns the raw observations — so
+ * the same route arrives a dozen times over. The set they contribute to cannot
+ * tell the difference, so folding them first changes nothing but the cost.
+ *
+ * Memoised as well: both tests below ask the same question, and computing it
+ * twice doubled a bill nobody was reading.
+ */
+let coveredCache: Promise<Set<string>> | undefined;
+
 async function coveredOperations(): Promise<Set<string>> {
-  const calls = await collectCalledRoutes(registerAll as never);
-  const operations = allOperations();
-  const covered = new Set<string>();
-  for (const call of calls) {
-    for (const operation of operations) {
-      if (matchesRoute(call, operation)) covered.add(operation);
+  coveredCache ??= (async () => {
+    const seen = new Set<string>();
+    const calls = (await collectCalledRoutes(registerAll as never)).filter((call) => {
+      const key = `${call.method} ${call.path}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    const operations = allOperations();
+    const covered = new Set<string>();
+    for (const call of calls) {
+      for (const operation of operations) {
+        if (matchesRoute(call, operation)) covered.add(operation);
+      }
     }
-  }
-  return covered;
+    return covered;
+  })();
+  return coveredCache;
 }
 
 /** Does a deny rule forbid this operation? */
@@ -138,22 +167,45 @@ describe("the route surface is fully decided (#59)", () => {
    * reader cannot tell a considered decision from a line someone added to make
    * this suite green. The reason is the artefact; the regex is just how it is
    * enforced.
+   *
+   * It reads `denyList.ts`, which is where `FORBIDDEN` lives. It used to read
+   * `exclusions.test.ts`, where the list ALSO used to live — and when the list
+   * moved, this kept pointing at the old file, found no `const FORBIDDEN` in
+   * it, and `continue`d past every rule. So the check that every boundary is
+   * explained had itself been passing on an empty search: exactly the silent
+   * vacuity the test above this one exists to prevent, one file across. Hence
+   * the assertion that it found the list at all.
    */
   it("every deny rule carries a written reason", () => {
     const source = readFileSync(
-      fileURLToPath(new URL("./exclusions.test.ts", import.meta.url)),
+      fileURLToPath(new URL("./denyList.ts", import.meta.url)),
       "utf8",
     );
-    const body = source.slice(source.indexOf("const FORBIDDEN"));
+    const start = source.indexOf("const FORBIDDEN");
+    expect(
+      start,
+      "denyList.ts no longer declares `const FORBIDDEN` — this check would " +
+        "silently inspect nothing. Point it at wherever the list moved to.",
+    ).toBeGreaterThan(-1);
+    const body = source.slice(start);
 
     const unexplained: string[] = [];
+    let checked = 0;
     for (const rule of FORBIDDEN as Rule[]) {
       const at = body.indexOf(`label: "${rule.label}"`);
       if (at < 0) continue;
+      checked += 1;
       // Walk back over this rule's own lines to the nearest comment.
       const before = body.slice(0, at).split("\n").slice(-6).join("\n");
       if (!/\/\/|\*/.test(before)) unexplained.push(rule.label);
     }
+
+    // Every rule must have been FOUND in the source, not merely not-failed.
+    expect(
+      checked,
+      "some deny rules were not located in denyList.ts, so their reasons went " +
+        "unchecked",
+    ).toBe(FORBIDDEN.length);
 
     expect(
       unexplained,

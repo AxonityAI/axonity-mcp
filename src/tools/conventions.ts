@@ -327,6 +327,12 @@ made any time before you attach them.
   \`update_flow\` write draft state; runtime uses \`read_flow_published\` until
   approval. \`request_publish_flow\` to publish, \`discard_flow_draft\` to reset.
 
+### data_table
+- An authored table of rows: the tenant's own reference data, designed and
+  maintained by a person, read by agents and decisions. Same lifecycle as an
+  output schema — draft, version, request publish. See "Tables" below, which is
+  where the rules that are NOT the generic ones live.
+
 ### company
 - The tenant's single company document (mission, value streams, org structure).
   A SINGLETON — one per tenant, no id, so there is no list/create/delete:
@@ -716,6 +722,78 @@ Both halves live in the workflow DOCUMENT, so both are ordinary
   comes back with credential-shaped entries withheld, listed under
   \`metadataRedacted\`. If you need one of those values, a human reads it in
   Axonity — do not try another route to it.
+
+## Tables — the tenant's own reference data
+A table is an authored library element that HOLDS ROWS: the pricing bands, the
+region-to-owner map, the list of accepted reason codes. A person designs the
+columns and maintains the content; agents and decisions read it.
+
+**When a table is the right element.** Reach for one when the CONTENT is the
+point and it changes without the process changing.
+- Not an \`output_schema\`: that describes a SHAPE and holds no data. If you
+  find yourself putting example values in a schema, you wanted a table.
+- Not a workflow constant: a constant belongs to ONE workflow and is edited in
+  its document. A table is shared, and three workflows reading the same rows is
+  the case it exists for.
+- Not a function tool with a list inside it: that makes changing a row an act of
+  editing code, reviewing it and publishing a tool. A business user maintains a
+  table; nobody should need you to change a postcode.
+
+**Static or dynamic — who owns the rows.**
+- \`isDynamic: false\` (the default) is reference data the AUTHOR maintains. A
+  workflow reads it and cannot change it. \`allowedOperations\` must be empty:
+  a permission nothing honours is refused, not stored.
+- \`isDynamic: true\` lets a workflow change the rows, limited to
+  \`allowedOperations\` — any of \`add\` / \`update\` / \`delete\`. READING IS
+  NEVER LISTED there: it is what a table is for and is always allowed.
+- You edit rows through \`add_data_table_row\` / \`update_data_table_row\` /
+  \`delete_data_table_row\` whatever the table's mode says — those grants are
+  about what a RUN may do, not about authoring.
+
+**Never put rows in \`update_data_table\`.** \`rows\` and \`columns\` are
+whole-collection fields: sending one row REPLACES the table's content and
+deletes everything else. The row tools address a single row by a match
+(\`matchColumn\`/\`matchValue\`) and cannot touch the rest — use them. Reach for
+\`update_data_table({ fields: { rows } })\` only when you genuinely mean to
+replace the whole content, and never as a way to append.
+
+**The rule that bites hardest: derived tools follow the PUBLISHED table.** A
+published table mints its own CRUD tools, so granting an agent access to one is
+ordinary tool granting — take a \`toolId\` from \`list_data_table_tools\` and put
+it in the agent's \`toolIds\`. But those tools follow the table's PUBLISHED
+version. An author who ticked "may add rows" and has not published has granted
+nothing, and the tool that would let a run act on it does not exist yet.
+\`list_data_table_tools\` reports \`offered\` (what the draft would yield),
+\`toolId\` (whether a row exists) and \`isLive\` (whether a run can reach it)
+separately for exactly this reason. Read all three before concluding a grant
+landed. Same rule as everywhere else here — a draft changes nothing until it is
+published — and it is the first thing an agent gets wrong about tables.
+
+**Routing a decision on a table.** A decision can branch by looking a value up
+in one column and taking the branch named in another, with
+\`builtin: "evaluators.table_lookup"\`. The behaviour worth knowing, because no
+catalogue states it: THE CELL'S VALUE IS THE BRANCH'S OUTCOME KEY — not a new
+field, and not something you map afterwards. Every value in the result column
+must be the outcome key of an outgoing branch, or publishing the workflow is
+refused. The table must be PUBLISHED: a run reads the published snapshot, so a
+table that is only saved routes nothing. For the argument names it reads, and
+for every other selectable evaluator, read \`decisionEvaluators\` from
+\`get_workflow_authoring_spec\` — generated from the registry that dispatches
+them, so it cannot advertise one the platform would not run.
+
+**Column kinds** come from the same place: \`tableColumnKinds\` in
+\`get_workflow_authoring_spec\`. It is a FOURTH vocabulary beside the three for
+parameters, outputs and schema fields, with its own spellings — do not carry a
+value across from one of the others, and do not guess. Every column needs a
+\`description\`: an agent reads it to know what the column is for, and a save
+without one is refused.
+
+**\`list_data_tables\` is PAGED**, alone among the library lists — a tenant's
+reference data has no ceiling. Page one is not the library. Follow
+\`nextCursor\` while \`hasMore\` is true, or better, narrow in the query:
+\`name\` is exact and unique per workspace, so "does one called X already
+exist" is a single call rather than a walk. The page carries \`rowCount\`, never
+the rows; the rows come from \`read_data_table\`.
 
 ## Toolboxes — where a tool is filed
 - A toolbox is a per-tenant grouping label over tools. Read \`list_toolboxes\`

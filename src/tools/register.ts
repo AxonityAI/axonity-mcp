@@ -121,6 +121,40 @@ export interface EntityDef {
    * any. Omit for an entity whose list route takes no parameters.
    */
   listFilters?: ListFilter[];
+  /**
+   * Set when `list_<plural>` answers ONE PAGE on the shared keyset cursor
+   * rather than the whole collection.
+   *
+   * Every other entity list is `# paging-exempt` on the backend — a library
+   * grows by deliberate authoring, so page one IS the answer — and this
+   * registrar was written for that. `data_table` is the first that is not, and
+   * the reasoning genuinely does not transfer: a tenant's reference DATA has no
+   * ceiling. Handing back page one as if it were the library is #37 exactly:
+   * nothing crashes, the agent just reports on twenty tables and says nothing
+   * about the rest.
+   *
+   * So the tool takes `limit`/`cursor`, forwards the envelope WHOLE (unwrapping
+   * to `items` would rebuild the silent truncation one layer up), and says in
+   * its own description that it is a page and how to reach the next one — the
+   * same contract `list_runs` carries, not a second one.
+   */
+  listPaging?: {
+    /** Page size the route applies when the caller asks for none. */
+    defaultPageSize: number;
+    /** Ceiling the route clamps to. */
+    maxPageSize: number;
+  };
+  /**
+   * Appended to `update_<entity>`'s description when this entity has a field a
+   * blind `fields` bag can destroy.
+   *
+   * `fields` is deliberately untyped — the backend validates it and the
+   * connector stays thin — but that means an agent can pass a whole-collection
+   * field meaning "add this one". On `data_table.rows` that silently replaces
+   * the table's content. A destructive default an agent can reach by accident
+   * is not acceptable unlabelled, so the entity that has one says so here.
+   */
+  updateWarning?: string;
 }
 
 export function registerEntityTools(
@@ -135,36 +169,76 @@ export function registerEntityTools(
   const readable = def.readable !== false;
 
   const listFilters = def.listFilters ?? [];
+  const paging = def.listPaging;
 
   server.tool(
     `list_${plural}`,
-    `List all ${label} in your Axonity tenant (id, name, status, version).` +
+    `List ${paging ? "" : "all "}${label} in your Axonity tenant (id, name, status, version).` +
       (listFilters.length > 0
         ? ` Narrow it with ${listFilters
             .map((f) => `\`${f.arg}\``)
             .join(" / ")} — the filter is applied by the backend, so it answers ` +
           `the narrower question rather than handing you everything to sift.`
+        : "") +
+      (paging
+        ? `\n\nTHE RESPONSE IS ONE PAGE, NOT THE WHOLE LIBRARY: ` +
+          `{ items, nextCursor, pageSize, hasMore }. Default page size is ` +
+          `${paging.defaultPageSize}, max ${paging.maxPageSize}. While hasMore ` +
+          `is true you have NOT seen every one — pass the response's nextCursor ` +
+          `back as cursor and repeat until nextCursor is null. Concluding ` +
+          `anything from a single page with hasMore: true ("there is no table ` +
+          `called X", "there are four") gives a confidently wrong answer. ` +
+          `\n\nBEFORE YOU WALK IT, TRY A FILTER: the narrowings above are ` +
+          `applied in the query, so "does one called X already exist" is one ` +
+          `call rather than a drain of every page. Never build a cursor — echo ` +
+          `back the one you were given.`
         : ""),
-    Object.fromEntries(
-      listFilters.map((filter) => [
-        filter.arg,
-        (filter.type === "boolean" ? z.boolean() : z.string())
-          .optional()
-          .describe(filter.description),
-      ]),
-    ),
-    async (args: Record<string, string | boolean | undefined>) =>
+    {
+      ...Object.fromEntries(
+        listFilters.map((filter) => [
+          filter.arg,
+          (filter.type === "boolean" ? z.boolean() : z.string())
+            .optional()
+            .describe(filter.description),
+        ]),
+      ),
+      ...(paging
+        ? {
+            limit: z
+              .number()
+              .int()
+              .optional()
+              .describe(
+                `Page size. Defaults to ${paging.defaultPageSize}, clamped to ` +
+                  `${paging.maxPageSize} — asking for more is not an error and ` +
+                  `does not get you more.`,
+              ),
+            cursor: z
+              .string()
+              .optional()
+              .describe(
+                "Opaque continuation cursor from the previous response's " +
+                  "nextCursor. Omit for the first page. Do not parse or " +
+                  "construct one.",
+              ),
+          }
+        : {}),
+    },
+    async (args: Record<string, string | number | boolean | undefined>) =>
       guard(async () => {
-        // No filters declared → call the route exactly as before, with no query
-        // argument at all rather than an empty one.
-        if (listFilters.length === 0) return jsonResult(await client.get(basePath));
+        // No filters and no paging → call the route exactly as before, with no
+        // query argument at all rather than an empty one.
+        if (listFilters.length === 0 && !paging) {
+          return jsonResult(await client.get(basePath));
+        }
+        // The page envelope is forwarded WHOLE — see `listPaging`.
         return jsonResult(
-          await client.get(
-            basePath,
-            Object.fromEntries(
+          await client.get(basePath, {
+            ...Object.fromEntries(
               listFilters.map((filter) => [filter.query, args[filter.arg]]),
             ),
-          ),
+            ...(paging ? { limit: args.limit, cursor: args.cursor } : {}),
+          }),
         );
       }),
   );
@@ -206,7 +280,8 @@ export function registerEntityTools(
     `update_${singular}`,
     `Update a ${singular} draft. Read it first to get \`expectedVersion\`; on a ` +
       `409 conflict, read again and retry. Pass only the fields you are ` +
-      `changing (camelCase) in \`fields\`.`,
+      `changing (camelCase) in \`fields\`.` +
+      (def.updateWarning ? `\n\n${def.updateWarning}` : ""),
     {
       id: z.string().describe(`The ${singular}'s id.`),
       expectedVersion: z

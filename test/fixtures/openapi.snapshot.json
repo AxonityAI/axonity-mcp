@@ -53,6 +53,96 @@
         "title": "ActivationGateRequest",
         "type": "object"
       },
+      "AddDataTableRowRequest": {
+        "additionalProperties": false,
+        "description": "One new row, keyed by column name.",
+        "properties": {
+          "values": {
+            "additionalProperties": true,
+            "description": "The row's values, keyed by column name. A key that is not a column is refused and named — never dropped, because a silently discarded value is a lost value.",
+            "maxProperties": 200,
+            "title": "Values",
+            "type": "object"
+          }
+        },
+        "required": [
+          "values"
+        ],
+        "title": "AddDataTableRowRequest",
+        "type": "object"
+      },
+      "AddMemberRequest": {
+        "additionalProperties": false,
+        "description": "Give a colleague access to THIS workspace (#1100).\n\nThere is deliberately no tenant field, and unknown keys are rejected\nrather than ignored: the workspace is always the caller's own\n``auth.tenant_id``. A body that could name a tenant would re-create the\ncross-tenant bypass PR #502 deleted, and silently dropping such a key\nwould let a caller believe it had been honoured.",
+        "properties": {
+          "email": {
+            "format": "email",
+            "maxLength": 255,
+            "title": "Email",
+            "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "role": {
+            "default": "member",
+            "enum": [
+              "admin",
+              "member"
+            ],
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email"
+        ],
+        "title": "AddMemberRequest",
+        "type": "object"
+      },
+      "AddMemberResponse": {
+        "description": "The result of adding somebody, including the one-time password.\n\n``temporary_password`` is present ONLY when the e-mail had no credential\nyet and the platform therefore minted one. It is returned exactly once —\nit is never stored in clear, never logged and never re-readable — and it\nis ``None`` when the person already has an Axonity account, because they\nkeep the password they already use for their other workspace.",
+        "properties": {
+          "invitationSent": {
+            "default": false,
+            "title": "Invitationsent",
+            "type": "boolean"
+          },
+          "reinstated": {
+            "default": false,
+            "title": "Reinstated",
+            "type": "boolean"
+          },
+          "temporaryPassword": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Temporarypassword"
+          },
+          "user": {
+            "$ref": "#/components/schemas/TenantMemberItem"
+          }
+        },
+        "required": [
+          "user"
+        ],
+        "title": "AddMemberResponse",
+        "type": "object"
+      },
       "AdoptRepoRequest": {
         "description": "``POST /deployment/repos/adopt`` — PR the scaffold into an existing repo.\n\nNames the repo by ``url`` OR ``fullName`` like the connect surface (#616\nC3); the URL is parsed for shape only and the repo is then resolved against\nthe caller's VERIFIED installation bindings — a repo outside them is a 404,\nwhatever the request claims.\n\nUnlike connect, the target is NOT required to be compliant: adoption is what\nmakes it compliant. A repo that already has an ``axonity.yaml`` has nothing\nto adopt (422 — connect it instead). ``client`` defaults to the tenant slug.",
         "properties": {
@@ -1413,6 +1503,29 @@
         "title": "CapabilitySchema",
         "type": "object"
       },
+      "ChangePasswordRequest": {
+        "description": "Replace your own password, proving you know the current one (#1099).\n\nThe current password is re-asked even though the caller already holds a\nvalid session: a stolen access token is 15 minutes of read/write, and it\nmust not also be 15 minutes to take over the credential permanently.",
+        "properties": {
+          "currentPassword": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Currentpassword",
+            "type": "string"
+          },
+          "newPassword": {
+            "maxLength": 256,
+            "minLength": 8,
+            "title": "Newpassword",
+            "type": "string"
+          }
+        },
+        "required": [
+          "currentPassword",
+          "newPassword"
+        ],
+        "title": "ChangePasswordRequest",
+        "type": "object"
+      },
       "ChannelReplyRequest": {
         "description": "An inbound reply from a non-chat channel (#777 S5, hardened by #986).\n\nA channel adapter (email / WhatsApp webhook) POSTs the person's reply, the\nreply secret it received in the outbound message, and **who the provider\nsays sent it**. There is no user session, so those two together are the\nauthorisation: the secret proves possession, the sender proves it came back\nfrom the person we actually asked.\n\n``sender`` is not optional and not advisory. Without it a forwarded reply\nlink is a complete credential, which is the property #986 removes.",
         "properties": {
@@ -2442,7 +2555,7 @@
         "type": "object"
       },
       "ConnectorBody": {
-        "description": "Request body configuration.",
+        "description": "Request body configuration.\n\n``form`` is ``application/x-www-form-urlencoded``: the shape the older\npartner APIs speak, where the credentials are ordinary fields next to the\npayload rather than a header. Its values are percent-encoded on\nsubstitution — see ``_interpolate_form`` — so a ``&`` in a job title\ncannot add a field the author never wrote.",
         "properties": {
           "content": {
             "default": "",
@@ -2453,7 +2566,8 @@
             "default": "json",
             "enum": [
               "json",
-              "none"
+              "none",
+              "form"
             ],
             "title": "Type",
             "type": "string"
@@ -2881,6 +2995,7 @@
               "persona",
               "prompt_snippet",
               "output_schema",
+              "data_table",
               "company"
             ],
             "title": "Entitytype",
@@ -3029,6 +3144,92 @@
         "title": "CreateCronScheduleRequest",
         "type": "object"
       },
+      "CreateDataTableRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "allowedOperations": {
+            "default": [],
+            "description": "What a workflow may do to a dynamic table's rows — any of add, update, delete. Must be empty on a static table: a permission nothing honours is refused, not stored. Reading is always allowed and is not listed.",
+            "items": {
+              "enum": [
+                "add",
+                "update",
+                "delete"
+              ],
+              "type": "string"
+            },
+            "maxItems": 3,
+            "title": "Allowedoperations",
+            "type": "array"
+          },
+          "columns": {
+            "description": "The table's design, in the order it is shown.",
+            "items": {
+              "$ref": "#/components/schemas/TableColumnPayload"
+            },
+            "maxItems": 200,
+            "title": "Columns",
+            "type": "array"
+          },
+          "description": {
+            "description": "What this table holds and when it is the right one to read.",
+            "maxLength": 10000,
+            "title": "Description",
+            "type": "string"
+          },
+          "isDynamic": {
+            "default": false,
+            "description": "False: the rows are reference data the author maintains. True: a workflow may change them, limited to allowedOperations.",
+            "title": "Isdynamic",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "The handle this table is known by. Unique within the workspace — a tool grant and a decision rule name it.",
+            "maxLength": 255,
+            "title": "Name",
+            "type": "string"
+          },
+          "rows": {
+            "default": [],
+            "description": "The table's content: a list of objects keyed by column name. Empty on a table whose rows a workflow will write.",
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "maxItems": 2000,
+            "title": "Rows",
+            "type": "array"
+          },
+          "source": {
+            "default": "human",
+            "description": "Who authored this: human, agent, or framework (system-shipped).",
+            "enum": [
+              "human",
+              "agent",
+              "framework"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "status": {
+            "default": "active",
+            "description": "Lifecycle status of the table.",
+            "enum": [
+              "active",
+              "archived"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "description",
+          "columns"
+        ],
+        "title": "CreateDataTableRequest",
+        "type": "object"
+      },
       "CreateDeployCredentialRequest": {
         "description": "Issue a new deploy credential for the caller's tenant.",
         "properties": {
@@ -3127,6 +3328,7 @@
         "type": "object"
       },
       "CreateOutputSchemaRequest": {
+        "additionalProperties": false,
         "properties": {
           "consumedBy": {
             "anyOf": [
@@ -3142,7 +3344,7 @@
                 "type": "null"
               }
             ],
-            "description": "IDs of the workflow steps that consume data shaped by this schema (wires to workflow step ids).",
+            "description": "Names of what reads a value of this shape (free-form references, e.g. workflow step ids). Authored — unlike producedBy, which is derived from the agents that name this schema and is refused on write.",
             "title": "Consumedby"
           },
           "description": {
@@ -3156,23 +3358,6 @@
             "maxLength": 255,
             "title": "Name",
             "type": "string"
-          },
-          "producedBy": {
-            "anyOf": [
-              {
-                "items": {
-                  "maxLength": 255,
-                  "type": "string"
-                },
-                "maxItems": 256,
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "IDs of the workflow steps that produce data shaped by this schema (wires to workflow step ids).",
-            "title": "Producedby"
           },
           "schemaBody": {
             "additionalProperties": true,
@@ -3848,10 +4033,17 @@
                 "type": "object"
               },
               {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
                 "type": "null"
               }
             ],
-            "description": "Authentication configuration for the tool's outbound calls (e.g. connector credentials reference).",
+            "description": "Authentication configuration for the tool's outbound calls (e.g. connector credentials reference). A LIST carries more than one credential on one connector (#1095) — an API that wants an OAuth2 token and a subscription-key header at the same time needs both. A single object stays valid and behaves as a list of one, so every stored connector keeps working.",
             "title": "Authconfig"
           },
           "description": {
@@ -4268,6 +4460,71 @@
         "title": "CreateWorkflowResponse",
         "type": "object"
       },
+      "CreateWorkspaceRequest": {
+        "additionalProperties": false,
+        "description": "Create a workspace and its first administrator (#1107).",
+        "properties": {
+          "adminEmail": {
+            "format": "email",
+            "maxLength": 255,
+            "title": "Adminemail",
+            "type": "string"
+          },
+          "adminName": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Adminname"
+          },
+          "name": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "adminEmail"
+        ],
+        "title": "CreateWorkspaceRequest",
+        "type": "object"
+      },
+      "CreateWorkspaceResponse": {
+        "description": "The new workspace, and the one time its temporary password is shown.\n\n``temporaryPassword`` is ``None`` when the address already had a\ncredential: that person keeps the password they already use, and Axonity\nnever knew it. When it IS present, it exists only in this response — never\nin a log, never in an audit payload, never in an error.",
+        "properties": {
+          "invitationSent": {
+            "default": false,
+            "title": "Invitationsent",
+            "type": "boolean"
+          },
+          "temporaryPassword": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Temporarypassword"
+          },
+          "workspace": {
+            "$ref": "#/components/schemas/WorkspaceSummary"
+          }
+        },
+        "required": [
+          "workspace"
+        ],
+        "title": "CreateWorkspaceResponse",
+        "type": "object"
+      },
       "CronScheduleSummary": {
         "description": "Public view of a cron schedule row.",
         "properties": {
@@ -4394,6 +4651,416 @@
         "title": "CronScheduleSummary",
         "type": "object"
       },
+      "DataTableResponse": {
+        "description": "One table WITH its rows — the shape a detail read returns.",
+        "properties": {
+          "allowedOperations": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Allowedoperations",
+            "type": "array"
+          },
+          "columns": {
+            "default": [],
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Columns",
+            "type": "array"
+          },
+          "createdAt": {
+            "title": "Createdat",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "draftMajorVersion": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The working draft's major version, or null when there is none. The versioning panel decides whether to offer Publish from this — without it the button cannot render at all.",
+            "title": "Draftmajorversion"
+          },
+          "draftVersionName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the working draft is called. The number decides the button; this is what a person reads on it.",
+            "title": "Draftversionname"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "isDynamic": {
+            "title": "Isdynamic",
+            "type": "boolean"
+          },
+          "isSystem": {
+            "title": "Issystem",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "publishedMajorVersion": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The live major version, or null when this table has never been published. A run reads only a published table.",
+            "title": "Publishedmajorversion"
+          },
+          "rowCount": {
+            "default": 0,
+            "description": "How many rows this table currently holds.",
+            "title": "Rowcount",
+            "type": "integer"
+          },
+          "rows": {
+            "default": [],
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "source": {
+            "enum": [
+              "human",
+              "agent",
+              "framework"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "active",
+              "archived"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "tenantId": {
+            "title": "Tenantid",
+            "type": "string"
+          },
+          "updatedAt": {
+            "title": "Updatedat",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "tenantId",
+          "name",
+          "description",
+          "isDynamic",
+          "source",
+          "isSystem",
+          "status",
+          "version",
+          "createdAt",
+          "updatedAt"
+        ],
+        "title": "DataTableResponse",
+        "type": "object"
+      },
+      "DataTableRowResponse": {
+        "description": "What one row write did, without echoing the whole table back.\n\nReturning the table would undo the point of the endpoint: a caller\nediting one cell of a two-thousand-row table would get all two\nthousand back on every write. ``version`` is here because that is the\none thing the caller genuinely needs afterwards — it is what a later\nwhole-table ``PUT`` must be based on.",
+        "properties": {
+          "changed": {
+            "default": [],
+            "description": "Which columns an update changed. Empty for add and delete.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Changed",
+            "type": "array"
+          },
+          "operation": {
+            "enum": [
+              "add",
+              "update",
+              "delete"
+            ],
+            "title": "Operation",
+            "type": "string"
+          },
+          "row": {
+            "additionalProperties": true,
+            "description": "The row as it now stands — the one added, the one after the update, or the one that was removed.",
+            "title": "Row",
+            "type": "object"
+          },
+          "table": {
+            "description": "The table's name, as the author knows it.",
+            "title": "Table",
+            "type": "string"
+          },
+          "total": {
+            "description": "How many rows the table holds after this.",
+            "title": "Total",
+            "type": "integer"
+          },
+          "version": {
+            "description": "The table's version after the write. Base a later expectedVersion on this one.",
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "operation",
+          "table",
+          "row",
+          "total",
+          "version"
+        ],
+        "title": "DataTableRowResponse",
+        "type": "object"
+      },
+      "DataTableSummary": {
+        "description": "One table WITHOUT its rows — the shape a library page returns.\n\n``rowCount`` stands in for the rows themselves. A page of tables that\nembedded every row would grow with what the authors typed, which is\nthe response-size failure #875 fixed by projection; the rows are one\n``GET /data-tables/{id}`` away.",
+        "properties": {
+          "allowedOperations": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Allowedoperations",
+            "type": "array"
+          },
+          "columns": {
+            "default": [],
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Columns",
+            "type": "array"
+          },
+          "createdAt": {
+            "title": "Createdat",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "draftMajorVersion": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The working draft's major version, or null when there is none. The versioning panel decides whether to offer Publish from this — without it the button cannot render at all.",
+            "title": "Draftmajorversion"
+          },
+          "draftVersionName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the working draft is called. The number decides the button; this is what a person reads on it.",
+            "title": "Draftversionname"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "isDynamic": {
+            "title": "Isdynamic",
+            "type": "boolean"
+          },
+          "isSystem": {
+            "title": "Issystem",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "publishedMajorVersion": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The live major version, or null when this table has never been published. A run reads only a published table.",
+            "title": "Publishedmajorversion"
+          },
+          "rowCount": {
+            "default": 0,
+            "description": "How many rows this table currently holds.",
+            "title": "Rowcount",
+            "type": "integer"
+          },
+          "source": {
+            "enum": [
+              "human",
+              "agent",
+              "framework"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "active",
+              "archived"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "tenantId": {
+            "title": "Tenantid",
+            "type": "string"
+          },
+          "updatedAt": {
+            "title": "Updatedat",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "tenantId",
+          "name",
+          "description",
+          "isDynamic",
+          "source",
+          "isSystem",
+          "status",
+          "version",
+          "createdAt",
+          "updatedAt"
+        ],
+        "title": "DataTableSummary",
+        "type": "object"
+      },
+      "DataTableToolSummary": {
+        "description": "One operation this table can yield, and how far along it is.\n\nThree facts, and they are genuinely different — collapsing them is\nhow \"I ticked the box and there is no tool\" becomes a mystery:\n\n  * ``offered`` — the current draft would yield this tool. What the\n    author has decided.\n  * ``toolId`` — a tool row exists today. What an agent grant names.\n  * ``isLive`` — that row is published. What a run can reach.",
+        "properties": {
+          "description": {
+            "description": "What the tool does, as an agent reads it.",
+            "title": "Description",
+            "type": "string"
+          },
+          "isLive": {
+            "description": "Whether the tool is published, and so reachable by a run. A table's tools follow its PUBLISHED version: a grant that has been saved and not published has granted nothing yet.",
+            "title": "Islive",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "The tool's name — the table's name plus the operation.",
+            "title": "Name",
+            "type": "string"
+          },
+          "offered": {
+            "description": "Whether the current draft yields this tool. False on a row that survives only because the operation was revoked.",
+            "title": "Offered",
+            "type": "boolean"
+          },
+          "operation": {
+            "enum": [
+              "list",
+              "find",
+              "add",
+              "update",
+              "delete"
+            ],
+            "title": "Operation",
+            "type": "string"
+          },
+          "toolId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The tool's id, or null when no row exists yet. This is what an agent grant or a toolbox names — never the name.",
+            "title": "Toolid"
+          }
+        },
+        "required": [
+          "operation",
+          "name",
+          "description",
+          "offered",
+          "isLive"
+        ],
+        "title": "DataTableToolSummary",
+        "type": "object"
+      },
+      "DataTableToolsResponse": {
+        "description": "Every tool this table yields — at most one per operation.",
+        "properties": {
+          "items": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/DataTableToolSummary"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "publishedMajorVersion": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The table's live major version, or null when it has never been published — in which case nothing here is live.",
+            "title": "Publishedmajorversion"
+          }
+        },
+        "title": "DataTableToolsResponse",
+        "type": "object"
+      },
       "DeleteAgentResponse": {
         "description": "Response after deleting an agent.",
         "properties": {
@@ -4418,6 +5085,17 @@
           "success"
         ],
         "title": "DeleteAttachmentResponse",
+        "type": "object"
+      },
+      "DeleteDataTableResponse": {
+        "properties": {
+          "success": {
+            "default": true,
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "title": "DeleteDataTableResponse",
         "type": "object"
       },
       "DeleteFileRequest": {
@@ -5422,6 +6100,17 @@
             ],
             "title": "Order"
           },
+          "outcome": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outcome"
+          },
           "to": {
             "title": "To",
             "type": "string"
@@ -5800,9 +6489,16 @@
                 "$ref": "#/components/schemas/ConnectorAuthConfig"
               },
               {
+                "items": {
+                  "$ref": "#/components/schemas/ConnectorAuthConfig"
+                },
+                "type": "array"
+              },
+              {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "Authconfig"
           },
           "baseUrl": {
             "title": "Baseurl",
@@ -6160,7 +6856,7 @@
       },
       "ExposedValidatorTool": {
         "additionalProperties": false,
-        "description": "One pre-flight tool exposure — wraps a registered validator as an\nagent-facing tool (``validator_tools.py`` entry shape).\n\n``error_message`` is allowed: production entries carry it as the\nformatted failure template the wrapper returns on a failing check.\nSnake_case on the wire for the same reason as :class:`ValidatorSpec`\n— one declaration format at every level.",
+        "description": "One pre-flight tool exposure — wraps a registered validator as an\nagent-facing tool (``validator_tools.py`` entry shape).\n\n``error_message`` is allowed: production entries carry it as the\nformatted failure template the wrapper returns on a failing check.\nSnake_case on the wire for the same reason as :class:`ValidatorSpec`\n— one declaration format at every level.\n\nLike a submit-time spec, an exposure names EITHER a shipped predicate\n(``validator_name``) or a validator tool from the library\n(``validator_tool``), and each brings its own binding keys: the registry\nform is bound by ``value_from_field`` + ``static_args``, the tool form by\n``inputs``. Neither dispatch path reads the other's keys.\n\nThe reference key is ``validator_tool`` and not ``tool``, which is what a\nsubmit-time spec calls it. An entry already carries ``tool_name`` — the\nname the AGENT sees — and two keys a character apart meaning different\nthings is a trap that keeps costing. It pairs with ``validator_name``\ninstead: the two answers to what backs this exposure.",
         "properties": {
           "description": {
             "anyOf": [
@@ -6185,6 +6881,18 @@
               }
             ],
             "title": "Error Message"
+          },
+          "inputs": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inputs"
           },
           "param_schema": {
             "anyOf": [
@@ -6217,10 +6925,30 @@
             "type": "string"
           },
           "validator_name": {
-            "maxLength": 255,
-            "minLength": 1,
-            "title": "Validator Name",
-            "type": "string"
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Validator Name"
+          },
+          "validator_tool": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Validator Tool"
           },
           "value_from_field": {
             "anyOf": [
@@ -6236,8 +6964,7 @@
           }
         },
         "required": [
-          "tool_name",
-          "validator_name"
+          "tool_name"
         ],
         "title": "ExposedValidatorTool",
         "type": "object"
@@ -6852,6 +7579,20 @@
             ],
             "title": "Promptslot"
           },
+          "reasoningBudget": {
+            "anyOf": [
+              {
+                "maximum": 500.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How many reasoning turns this step may take before it must wrap up. Leave empty for the platform default (50). A whole number between 1 and 500.",
+            "title": "Reasoningbudget"
+          },
           "toolsPolicy": {
             "anyOf": [
               {
@@ -6875,6 +7616,20 @@
               }
             ],
             "title": "Transitions"
+          },
+          "wallClockBudget": {
+            "anyOf": [
+              {
+                "maximum": 21600.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How many seconds this step may spend reasoning before it must wrap up. Time spent waiting on delegates does not count. Leave empty for the platform default (3600). A whole number between 1 and 21600.",
+            "title": "Wallclockbudget"
           }
         },
         "required": [
@@ -6988,6 +7743,35 @@
           "updatedAt"
         ],
         "title": "FolderResponse",
+        "type": "object"
+      },
+      "ForgotPasswordRequest": {
+        "description": "Ask for a reset link (#1105).",
+        "properties": {
+          "email": {
+            "format": "email",
+            "title": "Email",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email"
+        ],
+        "title": "ForgotPasswordRequest",
+        "type": "object"
+      },
+      "ForgotPasswordResponse": {
+        "description": "The ONE answer this endpoint ever gives.\n\nIdentical for a known address, an unknown one, a suspended member and a\nremoved one — an endpoint that answers differently is a user-enumeration\noracle with a friendly label.",
+        "properties": {
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "title": "ForgotPasswordResponse",
         "type": "object"
       },
       "FormatCodeRequest": {
@@ -7416,6 +8200,13 @@
                 "type": "object"
               },
               {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
                 "type": "null"
               }
             ],
@@ -7576,7 +8367,8 @@
               "function",
               "connector",
               "validator",
-              "evaluator"
+              "evaluator",
+              "table"
             ],
             "title": "Type",
             "type": "string"
@@ -7814,6 +8606,35 @@
           "token"
         ],
         "title": "GithubTokenConfigureRequest",
+        "type": "object"
+      },
+      "GrantSupportAccessRequest": {
+        "additionalProperties": false,
+        "description": "Enter a customer workspace, time-bounded and audited (#1109).\n\n``reason`` is mandatory and has a minimum length because an optional\nreason field is filled with \"support\" within a week. It is CUSTOMER-VISIBLE\n— their admins read it in their own team list — so it is never a place for\ninternal detail.\n\n``hours`` defaults to the configured default and is validated against the\nconfigured ceiling server-side. A request above the ceiling is REFUSED,\nnot silently clamped: an operator who asked for a week should be told they\ncannot have one, not handed a day and left believing otherwise.",
+        "properties": {
+          "hours": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hours"
+          },
+          "reason": {
+            "maxLength": 500,
+            "minLength": 10,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "GrantSupportAccessRequest",
         "type": "object"
       },
       "HTTPValidationError": {
@@ -8495,6 +9316,28 @@
             "title": "Description",
             "type": "string"
           },
+          "draftMajorVersion": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draftmajorversion"
+          },
+          "draftVersionName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draftversionname"
+          },
           "id": {
             "title": "Id",
             "type": "string"
@@ -8508,18 +9351,13 @@
             "type": "string"
           },
           "producedBy": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Producedby"
+            "default": [],
+            "description": "Names of the agents that produce data shaped by this schema. DERIVED from the agents whose permissions.expectedOutputSchemaId names it, and read-only: a create/update carrying it is refused. Attach the schema on the agent instead.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Producedby",
+            "type": "array"
           },
           "publishedMajorVersion": {
             "anyOf": [
@@ -8736,6 +9574,42 @@
         "title": "Page[AuditEventItem]",
         "type": "object"
       },
+      "Page_DataTableSummary_": {
+        "properties": {
+          "hasMore": {
+            "default": false,
+            "title": "Hasmore",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/DataTableSummary"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          },
+          "pageSize": {
+            "title": "Pagesize",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "pageSize"
+        ],
+        "title": "Page[DataTableSummary]",
+        "type": "object"
+      },
       "Page_NotificationOut_": {
         "properties": {
           "hasMore": {
@@ -8914,6 +9788,42 @@
           "pageSize"
         ],
         "title": "Page[TodoItem]",
+        "type": "object"
+      },
+      "Page_WorkspaceSummary_": {
+        "properties": {
+          "hasMore": {
+            "default": false,
+            "title": "Hasmore",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/WorkspaceSummary"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          },
+          "pageSize": {
+            "title": "Pagesize",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "pageSize"
+        ],
+        "title": "Page[WorkspaceSummary]",
         "type": "object"
       },
       "PatchWorkflowRequest": {
@@ -9499,6 +10409,56 @@
         "title": "PlanTargetSchema",
         "type": "object"
       },
+      "PlatformMemberItem": {
+        "description": "One membership, as the platform inventory sees it.\n\nName, address, role, state — the shape of the seat. Nothing about what\nthe person did with it.",
+        "properties": {
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "isSupportAccess": {
+            "default": false,
+            "title": "Issupportaccess",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "supportExpiresAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supportexpiresat"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "email",
+          "role",
+          "status"
+        ],
+        "title": "PlatformMemberItem",
+        "type": "object"
+      },
       "PolicyForAgentResponse": {
         "description": "A policy row plus the reason it applies to this agent (#778).\n\nA policy reaches an agent through five different routes — an explicit\n``agent_policies`` link, or tenant / agent / workflow / step scope. The\ncomposed list used to mix them with no way to tell which is which, so\nan operator could not answer \"is this attached, or does it just apply?\"\n— and therefore could not tell whether detaching it would change\nanything. Explicit link wins; see ``services/link_source.py``.",
         "properties": {
@@ -9512,6 +10472,28 @@
           "createdAt": {
             "title": "Createdat",
             "type": "string"
+          },
+          "draftMajorVersion": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draftmajorversion"
+          },
+          "draftVersionName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draftversionname"
           },
           "id": {
             "title": "Id",
@@ -9685,6 +10667,28 @@
           "createdAt": {
             "title": "Createdat",
             "type": "string"
+          },
+          "draftMajorVersion": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draftmajorversion"
+          },
+          "draftVersionName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draftversionname"
           },
           "id": {
             "title": "Id",
@@ -9931,6 +10935,28 @@
             ],
             "title": "Description"
           },
+          "draftMajorVersion": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draftmajorversion"
+          },
+          "draftVersionName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draftversionname"
+          },
           "id": {
             "title": "Id",
             "type": "string"
@@ -10078,6 +11104,7 @@
               "persona",
               "prompt_snippet",
               "output_schema",
+              "data_table",
               "company"
             ],
             "title": "Entitytype",
@@ -10744,6 +11771,28 @@
             "title": "Description",
             "type": "string"
           },
+          "draftMajorVersion": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draftmajorversion"
+          },
+          "draftVersionName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draftversionname"
+          },
           "id": {
             "title": "Id",
             "type": "string"
@@ -10751,6 +11800,7 @@
           "linkSource": {
             "enum": [
               "link",
+              "workflow",
               "agent",
               "tenant_wide"
             ],
@@ -10871,6 +11921,7 @@
               {
                 "enum": [
                   "link",
+                  "workflow",
                   "agent",
                   "tenant_wide"
                 ],
@@ -10922,6 +11973,28 @@
           "description": {
             "title": "Description",
             "type": "string"
+          },
+          "draftMajorVersion": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draftmajorversion"
+          },
+          "draftVersionName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draftversionname"
           },
           "id": {
             "title": "Id",
@@ -11696,6 +12769,48 @@
         "title": "RepoSummary",
         "type": "object"
       },
+      "ResetLinkResponse": {
+        "description": "A password-reset link an admin hands over themselves (#1132).\n\n``path`` is RELATIVE — ``/reset-password?token=…`` — and the client\nprefixes its own origin. The admin is looking at the application in their\nbrowser, so that origin is already the right one and cannot be wrong, and\nnothing has to be configured for the link to work. Which matters: the\nplatform cannot send mail yet, and this exists precisely because of that.\n\nReadable exactly once, like the temporary password beside it. The token is\nstored only as a digest, so nothing can produce it again.",
+        "properties": {
+          "expiresAt": {
+            "title": "Expiresat",
+            "type": "string"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "expiresAt"
+        ],
+        "title": "ResetLinkResponse",
+        "type": "object"
+      },
+      "ResetPasswordRequest": {
+        "description": "Redeem a reset link and set a new password (#1105).",
+        "properties": {
+          "newPassword": {
+            "maxLength": 256,
+            "minLength": 8,
+            "title": "Newpassword",
+            "type": "string"
+          },
+          "token": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token",
+          "newPassword"
+        ],
+        "title": "ResetPasswordRequest",
+        "type": "object"
+      },
       "ResolveConnectableResponse": {
         "description": "``POST /deployment/resolve-connectable`` — is this repo connectable?\n\nFail-closed (#616 C3): a repo the tenant has no verified binding for (or one\nwithout a valid manifest) resolves to ``connectable: false`` with a\nhuman-readable ``reason`` — never silently dropped. When connectable, the\nrepo's real ``branches`` + ``default_branch`` are returned so the connect UI\ncan populate its branch picker in one round-trip; ``branch_hint`` echoes a\nbranch parsed from a ``/tree/<branch>`` URL so the UI can pre-select it.\n\n**``reason_code`` is not an oracle, and the split matters.** It takes two\nkinds of value:\n\n* ``no_manifest`` / ``invalid_manifest`` — only ever for a repo INSIDE the\n  caller's verified bindings. Safe to be specific: the tenant demonstrably\n  controls that repo (Gate 1 — only a GitHub admin of it could install the\n  App), so this tells them nothing they cannot already see, and it is what\n  lets the UI offer \"add a manifest\" instead of a dead end.\n* ``app_not_installed`` — for anything else. It describes the CALLER's\n  OWN binding state (\"no binding of yours covers that\"), not the repo, and\n  is returned identically for a repo that does not exist, one that is\n  private to another org, and one that exists but is unbound. That\n  indistinguishability is deliberate: pasting a victim's URL must never\n  reveal whether it exists. ``reason`` stays generic in this case too.",
         "properties": {
@@ -12378,6 +13493,39 @@
         "title": "RunOutlineCounts",
         "type": "object"
       },
+      "RunOutlineItemsResponse": {
+        "description": "Response from ``GET /api/v1/runs/{run_id}/outline/items``.\n\nThe next stretch of ONE fan-out step's items, as outline nodes — the\nitem and the steps beneath it, exactly as the outline itself sends\nthem, so a spliced-in stretch is indistinguishable from the first.\n\n``next_offset`` is ``None`` on the last stretch. A client that reads it\nnever has to ask again to find out there is nothing left.",
+        "properties": {
+          "hasMore": {
+            "title": "Hasmore",
+            "type": "boolean"
+          },
+          "nextOffset": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextoffset"
+          },
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/RunOutlineNode"
+            },
+            "title": "Nodes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "nodes",
+          "hasMore"
+        ],
+        "title": "RunOutlineItemsResponse",
+        "type": "object"
+      },
       "RunOutlineNode": {
         "description": "One node in a run's outline (#941).\n\nThe outline is the run's table of contents: everything that happened,\nnested at the depth it happened. Steps, the items a fan-out handed out,\nand — from #942 — the delegates and plan activities beneath them.\n\nDeliberately carries NO bodies. Its size is a function of the run's\nSHAPE rather than its content, which is what lets one realtime tick\nrefetch it for a launch over four thousand items at the same cost as\nfor one over four. Bodies are fetched per node, when a node is opened.\n\nFlat, with parent pointers — the client nests it. A flat list is\ntrivially cacheable, diffable and pageable; a nested response is none\nof those.",
         "properties": {
@@ -12444,6 +13592,17 @@
               }
             ],
             "title": "Refid"
+          },
+          "runId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Runid"
           },
           "startedAt": {
             "anyOf": [
@@ -13253,6 +14412,18 @@
             "title": "Id",
             "type": "string"
           },
+          "metadata": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metadata"
+          },
           "name": {
             "title": "Name",
             "type": "string"
@@ -13511,6 +14682,11 @@
             "title": "Email",
             "type": "string"
           },
+          "isPlatformAdmin": {
+            "default": false,
+            "title": "Isplatformadmin",
+            "type": "boolean"
+          },
           "name": {
             "anyOf": [
               {
@@ -13559,6 +14735,11 @@
           "email": {
             "title": "Email",
             "type": "string"
+          },
+          "isPlatformAdmin": {
+            "default": false,
+            "title": "Isplatformadmin",
+            "type": "boolean"
           },
           "role": {
             "title": "Role",
@@ -13798,6 +14979,16 @@
             "title": "Email",
             "type": "string"
           },
+          "isPlatformAdmin": {
+            "default": false,
+            "title": "Isplatformadmin",
+            "type": "boolean"
+          },
+          "mustChangePassword": {
+            "default": false,
+            "title": "Mustchangepassword",
+            "type": "boolean"
+          },
           "name": {
             "anyOf": [
               {
@@ -13812,6 +15003,28 @@
           "role": {
             "title": "Role",
             "type": "string"
+          },
+          "supportExpiresAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supportexpiresat"
+          },
+          "supportReason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supportreason"
           },
           "tenantId": {
             "title": "Tenantid",
@@ -13946,6 +15159,28 @@
             "title": "Description",
             "type": "string"
           },
+          "draftMajorVersion": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draftmajorversion"
+          },
+          "draftVersionName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draftversionname"
+          },
           "id": {
             "title": "Id",
             "type": "string"
@@ -14074,6 +15309,28 @@
           "description": {
             "title": "Description",
             "type": "string"
+          },
+          "draftMajorVersion": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draftmajorversion"
+          },
+          "draftVersionName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draftversionname"
           },
           "id": {
             "title": "Id",
@@ -14698,6 +15955,53 @@
         "title": "StepsSchema",
         "type": "object"
       },
+      "StopBulkBody": {
+        "description": "Request body for ``POST /task-queue/stop-bulk``.\n\n``ids`` ONLY — deliberately not the ids-XOR-filter shape the other\nbulk actions take. Dismiss-by-filter puts finished rows away;\nstop-by-filter would END live work the operator never looked at, and\na mis-aimed filter there reaches a whole workspace's queue. Stopping\nis per-selection, on rows somebody chose (#1122).",
+        "properties": {
+          "ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 500,
+            "minItems": 1,
+            "title": "Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "ids"
+        ],
+        "title": "StopBulkBody",
+        "type": "object"
+      },
+      "StopBulkResult": {
+        "description": "Aggregate outcome of ``stop-bulk``.\n\n``skipped`` counts rows that had already reached an end — not a\nfailure, so it must not paint the operator's summary red — and stays\nseparate from ``errored`` (unknown / cross-tenant / write failed) so\n\"9 stopped, 3 had already finished\" reads honestly.",
+        "properties": {
+          "errored": {
+            "default": 0,
+            "title": "Errored",
+            "type": "integer"
+          },
+          "skipped": {
+            "default": 0,
+            "title": "Skipped",
+            "type": "integer"
+          },
+          "stopped": {
+            "default": 0,
+            "title": "Stopped",
+            "type": "integer"
+          },
+          "total": {
+            "default": 0,
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "title": "StopBulkResult",
+        "type": "object"
+      },
       "SubworkflowField": {
         "description": "One value crossing the boundary — a parameter in, or a returned field.",
         "properties": {
@@ -14775,6 +16079,35 @@
           "name"
         ],
         "title": "SubworkflowOutcome",
+        "type": "object"
+      },
+      "SupportAccessResponse": {
+        "description": "The grant that now exists, as the operator's session will see it.",
+        "properties": {
+          "expiresAt": {
+            "title": "Expiresat",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "userId": {
+            "title": "Userid",
+            "type": "string"
+          },
+          "workspaceId": {
+            "title": "Workspaceid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "userId",
+          "workspaceId",
+          "expiresAt",
+          "reason"
+        ],
+        "title": "SupportAccessResponse",
         "type": "object"
       },
       "SuspendRunBody": {
@@ -14885,6 +16218,90 @@
           "category"
         ],
         "title": "SystemToolEntry",
+        "type": "object"
+      },
+      "TableColumnPayload": {
+        "additionalProperties": false,
+        "description": "One column of a table's design, as a client sends it.\n\n``id``, ``name`` and ``label`` are optional because the domain fills\nwhat the author did not type: a name is derived from the label, a\nlabel falls back to the name, and an id is minted once and then kept\n(a stored id is what makes a table's payload stable across reads).",
+        "properties": {
+          "choiceOptions": {
+            "anyOf": [
+              {
+                "items": {
+                  "maxLength": 255,
+                  "type": "string"
+                },
+                "maxItems": 500,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The values a choice / multi-choice column may take. Required for those two kinds and meaningless for the others.",
+            "title": "Choiceoptions"
+          },
+          "description": {
+            "default": "",
+            "description": "What this column means. Mandatory — an agent reads it to know what the column is for, and a save without it is refused.",
+            "maxLength": 2000,
+            "title": "Description",
+            "type": "string"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Stable identifier of this column. Omit on a new column — one is minted and kept from then on.",
+            "title": "Id"
+          },
+          "kind": {
+            "default": "text",
+            "description": "The type of value a cell holds: text, long-text, number, yes-no, date, datetime, time, email, url, choice, multi-choice, object or list. A file is not a cell value and is refused.",
+            "maxLength": 32,
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What a person reads at the top of the column.",
+            "title": "Label"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The key this column has in every row, and the identifier tool code refers to. Derived from the label when omitted; never moved by a later label edit.",
+            "title": "Name"
+          },
+          "required": {
+            "default": true,
+            "description": "Whether every row must carry a value for this column.",
+            "title": "Required",
+            "type": "boolean"
+          }
+        },
+        "title": "TableColumnPayload",
         "type": "object"
       },
       "TaskQueueListResponse": {
@@ -15390,6 +16807,98 @@
         "title": "TenantChoiceResponse",
         "type": "object"
       },
+      "TenantMemberItem": {
+        "description": "One row of the Team page roster (#1098).",
+        "properties": {
+          "avatarUrl": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatarurl"
+          },
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "isSupportAccess": {
+            "default": false,
+            "title": "Issupportaccess",
+            "type": "boolean"
+          },
+          "lastSignInAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lastsigninat"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "admin",
+              "member"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "active",
+              "suspended",
+              "removed"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "supportExpiresAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supportexpiresat"
+          },
+          "supportReason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supportreason"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "email",
+          "role",
+          "status"
+        ],
+        "title": "TenantMemberItem",
+        "type": "object"
+      },
       "TenantOption": {
         "description": "One tenant a credential may enter at login.",
         "properties": {
@@ -15761,7 +17270,8 @@
               "function",
               "connector",
               "validator",
-              "evaluator"
+              "evaluator",
+              "table"
             ],
             "title": "Type",
             "type": "string"
@@ -16717,6 +18227,159 @@
         "title": "UpdateAttachmentRequest",
         "type": "object"
       },
+      "UpdateDataTableRequest": {
+        "additionalProperties": false,
+        "description": "A partial edit. Only the keys actually sent are applied.",
+        "properties": {
+          "allowedOperations": {
+            "anyOf": [
+              {
+                "items": {
+                  "enum": [
+                    "add",
+                    "update",
+                    "delete"
+                  ],
+                  "type": "string"
+                },
+                "maxItems": 3,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Allowedoperations"
+          },
+          "columns": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/TableColumnPayload"
+                },
+                "maxItems": 200,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Replaces the whole design when sent.",
+            "title": "Columns"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 10000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "expectedVersion": {
+            "description": "Version the edit is based on; a stale value is rejected with HTTP 409 (optimistic locking).",
+            "title": "Expectedversion",
+            "type": "integer"
+          },
+          "isDynamic": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Isdynamic"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "rows": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "maxItems": 2000,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Replaces the whole content when sent.",
+            "title": "Rows"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "enum": [
+                  "human",
+                  "agent",
+                  "framework"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "active",
+                  "archived"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          }
+        },
+        "required": [
+          "expectedVersion"
+        ],
+        "title": "UpdateDataTableRequest",
+        "type": "object"
+      },
+      "UpdateDataTableRowRequest": {
+        "additionalProperties": false,
+        "description": "The columns to change on the row the query addresses.",
+        "properties": {
+          "changes": {
+            "additionalProperties": true,
+            "description": "The columns to change and what to change them to. Columns not named here keep their values. Empty is refused: an update that changes nothing is a mistake dressed as a success.",
+            "maxProperties": 200,
+            "title": "Changes",
+            "type": "object"
+          }
+        },
+        "required": [
+          "changes"
+        ],
+        "title": "UpdateDataTableRowRequest",
+        "type": "object"
+      },
       "UpdateFileRequest": {
         "description": "Update a file's mutable fields. ``expectedVersion`` is mandatory.",
         "properties": {
@@ -16785,7 +18448,46 @@
         "title": "UpdateFileRequest",
         "type": "object"
       },
+      "UpdateMemberRequest": {
+        "additionalProperties": false,
+        "description": "A partial update carrying only what changes (#1101).\n\n``None`` means \"leave this alone\", which is why ``status`` cannot say\n``removed`` here: retiring somebody is ``DELETE``, a deliberate action of\nits own, not a value slipped into a role change.",
+        "properties": {
+          "role": {
+            "anyOf": [
+              {
+                "enum": [
+                  "admin",
+                  "member"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "active",
+                  "suspended"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          }
+        },
+        "title": "UpdateMemberRequest",
+        "type": "object"
+      },
       "UpdateOutputSchemaRequest": {
+        "additionalProperties": false,
         "properties": {
           "consumedBy": {
             "anyOf": [
@@ -16801,7 +18503,7 @@
                 "type": "null"
               }
             ],
-            "description": "IDs of the workflow steps that consume data shaped by this schema (wires to workflow step ids).",
+            "description": "Names of what reads a value of this shape (free-form references, e.g. workflow step ids). Authored — unlike producedBy, which is derived from the agents that name this schema and is refused on write.",
             "title": "Consumedby"
           },
           "description": {
@@ -16834,23 +18536,6 @@
             ],
             "description": "Human-readable name of the output schema.",
             "title": "Name"
-          },
-          "producedBy": {
-            "anyOf": [
-              {
-                "items": {
-                  "maxLength": 255,
-                  "type": "string"
-                },
-                "maxItems": 256,
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "IDs of the workflow steps that produce data shaped by this schema (wires to workflow step ids).",
-            "title": "Producedby"
           },
           "schemaBody": {
             "anyOf": [
@@ -17114,6 +18799,22 @@
           "expectedVersion"
         ],
         "title": "UpdatePolicyRequest",
+        "type": "object"
+      },
+      "UpdateProfileRequest": {
+        "description": "Change your own display name (#1099).\n\n``users.name`` is per membership, so this renames the person in THIS\nworkspace only — deliberately, not as a limitation.",
+        "properties": {
+          "name": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "UpdateProfileRequest",
         "type": "object"
       },
       "UpdatePromptSnippetRequest": {
@@ -17613,10 +19314,17 @@
                 "type": "object"
               },
               {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
                 "type": "null"
               }
             ],
-            "description": "Authentication configuration for the tool's outbound calls (e.g. connector credentials reference).",
+            "description": "Authentication configuration for the tool's outbound calls (e.g. connector credentials reference). A LIST carries more than one credential on one connector (#1095) — an API that wants an OAuth2 token and a subscription-key header at the same time needs both. A single object stays valid and behaves as a list of one, so every stored connector keeps working.",
             "title": "Authconfig"
           },
           "description": {
@@ -17754,6 +19462,13 @@
               {
                 "additionalProperties": true,
                 "type": "object"
+              },
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
               },
               {
                 "type": "null"
@@ -17896,7 +19611,8 @@
               "function",
               "connector",
               "validator",
-              "evaluator"
+              "evaluator",
+              "table"
             ],
             "title": "Type",
             "type": "string"
@@ -18185,7 +19901,7 @@
       },
       "ValidatorSpec": {
         "additionalProperties": false,
-        "description": "One validator attachment — the SINGLE declaration format used at\nevery level (agent permissions, step contract, schema-bundled).\n\nMirrors the runtime spec shape documented in\n:mod:`src.execution.framework.output_validators`:\n\n  * ``function``     — registry key (e.g. ``validators.min_length``)\n  * ``target``       — field under test; ``None`` = whole payload\n  * ``args``         — function-specific arguments\n  * ``error_message`` — template fed back to the agent on rejection\n\n``extra=\"forbid\"``: the UI writes exactly one format; a typo'd key\nmust fail loudly instead of persisting as a dead key the runtime\nsilently ignores.\n\nDeliberately NOT camel-aliased: the spec shape is byte-identical at\nevery level (agent permissions, step contract, schema-bundled), and\nstep/schema specs live inside verbatim JSONB documents in\nsnake_case. Aliasing here would make the agent API the one surface\nspeaking a different dialect.",
+        "description": "One validator attachment — the SINGLE declaration format used at\nevery level (agent permissions, step contract, schema-bundled).\n\nMirrors the runtime spec shape documented in\n:mod:`src.execution.framework.output_validators`. A spec names its\npredicate in ONE of two ways, and each way brings its own binding keys:\n\n  * ``function``     — registry key (e.g. ``validators.min_length``),\n                       bound by ``target`` + ``args``\n  * ``tool``         — a validator TOOL in the tenant's library, by\n                       display name or UUID, bound by ``inputs``\n  * ``error_message`` — template fed back to the agent on rejection;\n                       the one key both forms share\n\nExactly one of ``function`` / ``tool``. Naming neither leaves nothing to\nrun; naming both leaves it unsaid which one does, and a gate does not get\nto be ambiguous.\n\nThe binding keys do not mix either. The registry path reads ``target``\nand ``args`` and never looks at ``inputs``; the tool path reads\n``inputs`` and never looks at the other two. Allowing the wrong pair\nwould persist a key the runtime silently ignores — which is precisely\nwhat ``extra=\"forbid\"`` is here to prevent, so it is enforced rather\nthan left to the author's memory.\n\n``extra=\"forbid\"``: the UI writes exactly one format; a typo'd key\nmust fail loudly instead of persisting as a dead key the runtime\nsilently ignores.\n\nDeliberately NOT camel-aliased: the spec shape is byte-identical at\nevery level (agent permissions, step contract, schema-bundled), and\nstep/schema specs live inside verbatim JSONB documents in\nsnake_case. Aliasing here would make the agent API the one surface\nspeaking a different dialect.",
         "properties": {
           "args": {
             "anyOf": [
@@ -18212,10 +19928,29 @@
             "title": "Error Message"
           },
           "function": {
-            "maxLength": 255,
-            "minLength": 1,
-            "title": "Function",
-            "type": "string"
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Function"
+          },
+          "inputs": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inputs"
           },
           "target": {
             "anyOf": [
@@ -18228,11 +19963,32 @@
               }
             ],
             "title": "Target"
+          },
+          "tool": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tool"
+          },
+          "when_present": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "When Present"
           }
         },
-        "required": [
-          "function"
-        ],
         "title": "ValidatorSpec",
         "type": "object"
       },
@@ -19187,6 +20943,15 @@
       "WorkflowOperationsResponse": {
         "description": "GET /api/v1/workflows/operations — the mutation catalog over HTTP.\n\nLets a service token read the exact set of mutations this deploy accepts\n(with their payload schemas) instead of restating the vocabulary itself.\n``rulesVersion`` is a content hash over the catalog: stable across identical\ndeploys, and it changes exactly when the catalog does — so a client caches\non \"same rulesVersion → nothing to re-fetch\".",
         "properties": {
+          "decisionEvaluators": {
+            "description": "How to configure a decision that routes by an evaluator: one entry per selectable builtin, with the keys it reads out of the step's `evaluatorArgs` and what each one means. `evaluatorArgs` is a free-form object, so a misspelled key is NOT rejected — it is simply never read, and the decision then falls to its default branch at run time without saying why.",
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Decisionevaluators",
+            "type": "array"
+          },
           "operations": {
             "items": {
               "$ref": "#/components/schemas/WorkflowOperationItem"
@@ -19239,6 +21004,14 @@
             "title": "Steptypes",
             "type": "array"
           },
+          "tableColumnKinds": {
+            "description": "What a table column may hold, in its `kind` field. A fourth vocabulary beside the three above, with its own spellings (`yes-no`, `long-text`, `multi-choice`) — and `file` is deliberately absent, because a file is storage with a lifecycle rather than a cell value.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Tablecolumnkinds",
+            "type": "array"
+          },
           "triggerTypes": {
             "description": "Every value accepted in a trigger's `typeId`. `category: true` marks a broad category id (e.g. 'scheduled') rather than a concrete type (e.g. 'scheduled-cron'); both validate, but reach for the concrete one.",
             "items": {
@@ -19286,6 +21059,57 @@
           "wildcardPrompts"
         ],
         "title": "WorkflowPromptStacksResponse",
+        "type": "object"
+      },
+      "WorkflowReferenceDocLinkResponse": {
+        "description": "Answer to attaching / detaching a reference doc to a WORKFLOW.\n\n``attached`` / ``detached`` say what ACTUALLY happened, not what was\nasked for — the #778 distinction, carried over to the workflow link.",
+        "properties": {
+          "attached": {
+            "default": false,
+            "title": "Attached",
+            "type": "boolean"
+          },
+          "detached": {
+            "default": false,
+            "title": "Detached",
+            "type": "boolean"
+          },
+          "referenceDocId": {
+            "title": "Referencedocid",
+            "type": "string"
+          },
+          "workflowId": {
+            "title": "Workflowid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "workflowId",
+          "referenceDocId"
+        ],
+        "title": "WorkflowReferenceDocLinkResponse",
+        "type": "object"
+      },
+      "WorkflowReferenceDocsResponse": {
+        "description": "The docs currently attached to one workflow (#1061).",
+        "properties": {
+          "references": {
+            "items": {
+              "$ref": "#/components/schemas/ReferenceDocResponse"
+            },
+            "title": "References",
+            "type": "array"
+          },
+          "workflowId": {
+            "title": "Workflowid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "workflowId",
+          "references"
+        ],
+        "title": "WorkflowReferenceDocsResponse",
         "type": "object"
       },
       "WorkflowSkillsResponse": {
@@ -19541,6 +21365,163 @@
           "name"
         ],
         "title": "WorkflowTemplateListItem",
+        "type": "object"
+      },
+      "WorkspaceDetail": {
+        "description": "One workspace's metadata plus its roster — and nothing it contains.",
+        "properties": {
+          "adminCount": {
+            "default": 0,
+            "title": "Admincount",
+            "type": "integer"
+          },
+          "closedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closedat"
+          },
+          "createdAt": {
+            "title": "Createdat",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "memberCount": {
+            "default": 0,
+            "title": "Membercount",
+            "type": "integer"
+          },
+          "members": {
+            "items": {
+              "$ref": "#/components/schemas/PlatformMemberItem"
+            },
+            "title": "Members",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "pastRetention": {
+            "default": false,
+            "title": "Pastretention",
+            "type": "boolean"
+          },
+          "retentionEndsAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retentionendsat"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "state": {
+            "default": "active",
+            "enum": [
+              "active",
+              "closed"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug",
+          "createdAt"
+        ],
+        "title": "WorkspaceDetail",
+        "type": "object"
+      },
+      "WorkspaceSummary": {
+        "description": "One workspace as the platform inventory sees it.",
+        "properties": {
+          "adminCount": {
+            "default": 0,
+            "title": "Admincount",
+            "type": "integer"
+          },
+          "closedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closedat"
+          },
+          "createdAt": {
+            "title": "Createdat",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "memberCount": {
+            "default": 0,
+            "title": "Membercount",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "pastRetention": {
+            "default": false,
+            "title": "Pastretention",
+            "type": "boolean"
+          },
+          "retentionEndsAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retentionendsat"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "state": {
+            "default": "active",
+            "enum": [
+              "active",
+              "closed"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug",
+          "createdAt"
+        ],
+        "title": "WorkspaceSummary",
         "type": "object"
       },
       "_ResponseShape": {
@@ -21822,6 +23803,95 @@
         ]
       }
     },
+    "/api/v1/auth/change-password": {
+      "post": {
+        "description": "Replace the caller's own password (400 if the current one is wrong).\n\nReturns a FRESH token bundle: the change revokes every session of the\naccount, and handing the caller a new pair is what keeps the tab they did\nit from signed in while every other one is gone.\n\nA wrong current password is **400**, not 401: the session is still valid,\nso a client that signs people out on 401 must not do so for a typo. On\nthis route 401 means only that the session itself has gone.",
+        "operationId": "change_password_api_v1_auth_change_password_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthTokenResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Change Password",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/forgot-password": {
+      "post": {
+        "description": "Ask for a reset link. Always 202, always the same message.\n\nKnown address, unknown address, suspended member, removed member: one\nstatus and one body. The service decides whether anything is actually\nsent and says nothing about it — see\n:meth:`AuthService.request_password_reset` for the timing equalisation\nthat keeps the two branches indistinguishable in the clock as well.",
+        "operationId": "forgot_password_api_v1_auth_forgot_password_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForgotPasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForgotPasswordResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Forgot Password",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/api/v1/auth/login": {
       "post": {
         "description": "Verify credentials, then either return a token bundle or, when the\ncredential belongs to several tenants, a tenant choice (401 on failure).",
@@ -21974,6 +24044,51 @@
         "tags": [
           "auth"
         ]
+      },
+      "patch": {
+        "description": "Change the caller's own display name in the current workspace.\n\nAnswers with the same ``SessionResponse`` ``GET /api/v1/auth/me`` returns,\nso the client replaces its session payload wholesale instead of patching\none field into it. The shape is assembled here rather than reused from\n``src.routes.auth`` because that assembler is private to its module.",
+        "operationId": "update_me_api_v1_auth_me_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProfileRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Me",
+        "tags": [
+          "auth"
+        ]
       }
     },
     "/api/v1/auth/refresh": {
@@ -22013,6 +24128,41 @@
           }
         },
         "summary": "Refresh",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/reset-password": {
+      "post": {
+        "description": "Redeem a reset link and set a new password (400 if it is spent).\n\nDeliberately returns NO tokens: the link arrived by e-mail, and mailbox\naccess must not be a session. The client sends the person to the ordinary\nsign-in screen.",
+        "operationId": "reset_password_api_v1_auth_reset_password_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Reset Password",
         "tags": [
           "auth"
         ]
@@ -23829,6 +25979,1446 @@
         "summary": "Run Cron Schedule Now",
         "tags": [
           "cron-admin"
+        ]
+      }
+    },
+    "/api/v1/data-tables": {
+      "get": {
+        "description": "One bounded page of this tenant's tables, newest first (B-NB8).\n\nSummaries only: each carries ``rowCount``, never the rows. Follow\n``nextCursor``; an oversized ``limit`` clamps rather than failing.\n\nThe three narrowings are applied by the repository IN THE QUERY, so\nthey answer about the tenant rather than about the current page\n(B-NB8's first corollary). Without them, \"does a table called X\nexist\" cost a drain of every page (#1235).\n\n**This surface stays PAGED, deliberately** (#1235). Every sibling\nlibrary list is ``# paging-exempt`` on the reasoning that it grows\nonly by deliberate authoring, and a client that knows the family\nreads page one here and believes it has the lot. The reasoning does\nnot transfer: a tenant's reference DATA has no such ceiling, and the\nhonest answer to \"could this grow?\" is yes. So the cost is paid on\nthe client side instead — a caller that needs completeness follows\n``nextCursor`` to the end, the way the library screen does. Do not\n\"fix\" this by exempting it; the filters above are what make paging\naffordable, because most questions no longer need every page.",
+        "operationId": "list_data_tables_api_v1_data_tables_get",
+        "parameters": [
+          {
+            "description": "Page size (max 200).",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Page size (max 200).",
+              "title": "Limit"
+            }
+          },
+          {
+            "description": "Opaque continuation cursor from a previous response's nextCursor. Omit for the first page.",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Opaque continuation cursor from a previous response's nextCursor. Omit for the first page.",
+              "title": "Cursor"
+            }
+          },
+          {
+            "description": "Only the table with exactly this name. A name is unique within the workspace and is what a tool grant and a decision rule refer to, so this answers 'does it already exist' in one call. Matching is exact, never a substring.",
+            "in": "query",
+            "name": "name",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only the table with exactly this name. A name is unique within the workspace and is what a tool grant and a decision rule refer to, so this answers 'does it already exist' in one call. Matching is exact, never a substring.",
+              "title": "Name"
+            }
+          },
+          {
+            "description": "Only tables with this lifecycle status: active (in use) or archived (kept, not offered). A value outside the two is refused rather than silently ignored.",
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "active",
+                    "archived"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only tables with this lifecycle status: active (in use) or archived (kept, not offered). A value outside the two is refused rather than silently ignored.",
+              "title": "Status"
+            }
+          },
+          {
+            "description": "true: only tables a workflow may change. false: only reference data the author maintains. Omit for both.",
+            "in": "query",
+            "name": "is_dynamic",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "true: only tables a workflow may change. false: only reference data the author maintains. Omit for both.",
+              "title": "Is Dynamic"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_DataTableSummary_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Data Tables",
+        "tags": [
+          "data-tables"
+        ]
+      },
+      "post": {
+        "description": "Create a table. It is born with a working draft, so it can be published.",
+        "operationId": "create_data_table_api_v1_data_tables_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDataTableRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataTableResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Data Table",
+        "tags": [
+          "data-tables"
+        ]
+      }
+    },
+    "/api/v1/data-tables/deleted": {
+      "get": {
+        "description": "List soft-deleted tables that can still be restored.",
+        "operationId": "list_deleted_data_tables_api_v1_data_tables_deleted_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeletedEntityListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Deleted Data Tables",
+        "tags": [
+          "data-tables"
+        ]
+      }
+    },
+    "/api/v1/data-tables/{table_id}": {
+      "delete": {
+        "description": "Tombstone a table — recoverable via ``POST /{table_id}/restore``.",
+        "operationId": "delete_data_table_api_v1_data_tables__table_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "table_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Table Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "expected_version",
+            "required": true,
+            "schema": {
+              "title": "Expected Version",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteDataTableResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Data Table",
+        "tags": [
+          "data-tables"
+        ]
+      },
+      "get": {
+        "description": "One table WITH its rows.",
+        "operationId": "get_data_table_api_v1_data_tables__table_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "table_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Table Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataTableResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Data Table",
+        "tags": [
+          "data-tables"
+        ]
+      },
+      "put": {
+        "description": "Apply a partial edit under the optimistic lock.\n\nWhich request key maps onto which model column is\n:meth:`UpdateDataTableRequest.changed_fields`' business, not this\nhandler's — a mapping written out by hand here is where the next\nfield added to a table gets forgotten.",
+        "operationId": "update_data_table_api_v1_data_tables__table_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "table_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Table Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateDataTableRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataTableResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Data Table",
+        "tags": [
+          "data-tables"
+        ]
+      }
+    },
+    "/api/v1/data-tables/{table_id}/discard-draft": {
+      "post": {
+        "description": "Discard working-draft edits, reverting to the published table.\n\nThe published content is not touched and the discarded draft is kept\nas a version rather than destroyed, so this is itself undoable.\nRefuses (422) when the table has never been published — its draft is\nthen the only copy of that work, and the refusal says so in words.\n\nDeclared BEFORE ``/{table_id}`` so the literal segment is not swallowed\nby the id path parameter, the same care ``/deleted`` needed above.",
+        "operationId": "discard_data_table_draft_api_v1_data_tables__table_id__discard_draft_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "table_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Table Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiscardDraftResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Discard Data Table Draft",
+        "tags": [
+          "data-tables"
+        ]
+      }
+    },
+    "/api/v1/data-tables/{table_id}/restore": {
+      "post": {
+        "description": "Un-delete a table.\n\nIdempotent — restoring a live table succeeds with ``restored=false``.\nTakes no ``expectedVersion``: a recovery must never lose to a stale\nversion check.",
+        "operationId": "restore_data_table_api_v1_data_tables__table_id__restore_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "table_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Table Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RestoreEntityResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Restore Data Table",
+        "tags": [
+          "data-tables"
+        ]
+      }
+    },
+    "/api/v1/data-tables/{table_id}/rows": {
+      "delete": {
+        "description": "Remove the one row the match addresses, and return what was removed.\n\nThe removed row rides back on purpose: it is the only copy the caller\nhas left, and an operator who deleted the wrong one can put it back.",
+        "operationId": "delete_data_table_row_api_v1_data_tables__table_id__rows_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "table_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Table Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The column that identifies the row — it must match exactly one. Zero rows is a 404 and more than one is refused with the count: a write that hit nothing or hit three is not ours to guess at.",
+            "in": "query",
+            "name": "match_column",
+            "required": true,
+            "schema": {
+              "description": "The column that identifies the row — it must match exactly one. Zero rows is a 404 and more than one is refused with the count: a write that hit nothing or hit three is not ours to guess at.",
+              "title": "Match Column",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The value that column must hold. Compared the way a decision compares it over the same table, so '5000' finds the number 5000 and 'benelux' finds the cell holding 'Benelux'.",
+            "in": "query",
+            "name": "match_value",
+            "required": true,
+            "schema": {
+              "description": "The value that column must hold. Compared the way a decision compares it over the same table, so '5000' finds the number 5000 and 'benelux' finds the cell holding 'Benelux'.",
+              "title": "Match Value",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataTableRowResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Data Table Row",
+        "tags": [
+          "data-tables"
+        ]
+      },
+      "patch": {
+        "description": "Change named columns on the one row the match addresses.\n\nColumns the request does not name keep their values, so this is a\npartial edit of a row rather than a replacement of it.",
+        "operationId": "update_data_table_row_api_v1_data_tables__table_id__rows_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "table_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Table Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The column that identifies the row — it must match exactly one. Zero rows is a 404 and more than one is refused with the count: a write that hit nothing or hit three is not ours to guess at.",
+            "in": "query",
+            "name": "match_column",
+            "required": true,
+            "schema": {
+              "description": "The column that identifies the row — it must match exactly one. Zero rows is a 404 and more than one is refused with the count: a write that hit nothing or hit three is not ours to guess at.",
+              "title": "Match Column",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The value that column must hold. Compared the way a decision compares it over the same table, so '5000' finds the number 5000 and 'benelux' finds the cell holding 'Benelux'.",
+            "in": "query",
+            "name": "match_value",
+            "required": true,
+            "schema": {
+              "description": "The value that column must hold. Compared the way a decision compares it over the same table, so '5000' finds the number 5000 and 'benelux' finds the cell holding 'Benelux'.",
+              "title": "Match Value",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateDataTableRowRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataTableRowResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Data Table Row",
+        "tags": [
+          "data-tables"
+        ]
+      },
+      "post": {
+        "description": "Append one row, without resending the ones already there (#1235).\n\n``PUT /{table_id}`` replaces the whole content, so adding a row to a\nlarge table meant sending every other row back with it — and two\nauthors doing that at once lose one of the writes to the optimistic\nlock, with neither told which row went missing.\n\nRuns the same operation a published table's ``add`` tool runs. The\nrun-time GRANT is deliberately not applied: ``allowedOperations`` says\nwhat a workflow may do, and an author filling in reference data is\nexactly what a static table is for.",
+        "operationId": "add_data_table_row_api_v1_data_tables__table_id__rows_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "table_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Table Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddDataTableRowRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataTableRowResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Add Data Table Row",
+        "tags": [
+          "data-tables"
+        ]
+      }
+    },
+    "/api/v1/data-tables/{table_id}/tools": {
+      "get": {
+        "description": "Which tools this table yields, and which of them a run can reach.\n\nTheir names follow a convention, so the only way to find them before\nwas to fetch the whole tool library and match on it — the second\nvocabulary for \"this agent may read that table\" that making them real\ntools exists to avoid (#1235).\n\nOperations with no tool row yet are IN the answer, marked\n``offered`` but not ``isLive``. \"I ticked 'may add rows' and there is\nno tool\" is the first thing an author gets wrong, and the reason is\nalways the same: a table's tools follow its published version.",
+        "operationId": "list_data_table_tools_api_v1_data_tables__table_id__tools_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "table_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Table Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataTableToolsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Data Table Tools",
+        "tags": [
+          "data-tables"
+        ]
+      }
+    },
+    "/api/v1/data-tables/{table_id}/versions": {
+      "get": {
+        "description": "List version snapshots for a table.",
+        "operationId": "list_data_table_versions_api_v1_data_tables__table_id__versions_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "table_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Table Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "type",
+            "required": false,
+            "schema": {
+              "default": "all",
+              "enum": [
+                "checkpoint",
+                "major",
+                "all"
+              ],
+              "title": "Type",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VersionListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Data Table Versions",
+        "tags": [
+          "data-tables"
+        ]
+      },
+      "post": {
+        "description": "Create a named version using Save As semantics.",
+        "operationId": "create_data_table_major_version_api_v1_data_tables__table_id__versions_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "table_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Table Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMajorVersionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MajorVersionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Data Table Major Version",
+        "tags": [
+          "data-tables"
+        ]
+      }
+    },
+    "/api/v1/data-tables/{table_id}/versions/deleted": {
+      "get": {
+        "description": "List removed versions that can still be restored.\n\nDeclared before the ``/{version}`` route so the literal ``deleted``\nsegment is not captured by the integer version path param.",
+        "operationId": "list_deleted_data_table_versions_api_v1_data_tables__table_id__versions_deleted_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "table_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Table Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeletedVersionListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Deleted Data Table Versions",
+        "tags": [
+          "data-tables"
+        ]
+      }
+    },
+    "/api/v1/data-tables/{table_id}/versions/ensure": {
+      "post": {
+        "description": "Ensure a working draft version exists (idempotent).",
+        "operationId": "ensure_data_table_draft_version_api_v1_data_tables__table_id__versions_ensure_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "table_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Table Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnsureDraftVersionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Ensure Data Table Draft Version",
+        "tags": [
+          "data-tables"
+        ]
+      }
+    },
+    "/api/v1/data-tables/{table_id}/versions/major/{major_version}": {
+      "patch": {
+        "description": "Rename a major version of a table.",
+        "operationId": "rename_data_table_version_api_v1_data_tables__table_id__versions_major__major_version__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "table_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Table Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "major_version",
+            "required": true,
+            "schema": {
+              "title": "Major Version",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RenameVersionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RenameVersionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Rename Data Table Version",
+        "tags": [
+          "data-tables"
+        ]
+      }
+    },
+    "/api/v1/data-tables/{table_id}/versions/publish/{major_version}": {
+      "post": {
+        "description": "Publish a major version as the live table a run reads.\n\nClosed to service tokens (#676): an external agent asks for a publish\nthrough the approval queue (``EntityPublishGateway`` dispatches\n``data_table``), it never publishes reference data directly.",
+        "operationId": "publish_data_table_version_api_v1_data_tables__table_id__versions_publish__major_version__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "table_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Table Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "major_version",
+            "required": true,
+            "schema": {
+              "title": "Major Version",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Publish Data Table Version",
+        "tags": [
+          "data-tables"
+        ]
+      }
+    },
+    "/api/v1/data-tables/{table_id}/versions/published": {
+      "get": {
+        "description": "The currently published table + its document, or null.\n\nThis is what a run reads: an edit reaches execution when it is\npublished, not when it is saved.",
+        "operationId": "get_data_table_published_version_api_v1_data_tables__table_id__versions_published_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "table_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Table Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/PublishedVersionInfo"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Get Data Table Published Version Api V1 Data Tables  Table Id  Versions Published Get"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Data Table Published Version",
+        "tags": [
+          "data-tables"
+        ]
+      }
+    },
+    "/api/v1/data-tables/{table_id}/versions/unpublish": {
+      "post": {
+        "description": "Withdraw the currently published table.",
+        "operationId": "unpublish_data_table_api_v1_data_tables__table_id__versions_unpublish_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "table_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Table Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnpublishResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Unpublish Data Table",
+        "tags": [
+          "data-tables"
+        ]
+      }
+    },
+    "/api/v1/data-tables/{table_id}/versions/{version_id}": {
+      "delete": {
+        "description": "Delete one snapshot from a table's version history.\n\nRecoverable: the row is tombstoned, and the pair above\n(``GET .../versions/deleted`` + ``POST .../restore-deleted``) brings\nit back. Goes through ``VersionService.delete_version``, which is the\none audited deletion path.",
+        "operationId": "delete_data_table_version_api_v1_data_tables__table_id__versions__version_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "table_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Table Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteVersionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Data Table Version",
+        "tags": [
+          "data-tables"
+        ]
+      }
+    },
+    "/api/v1/data-tables/{table_id}/versions/{version_id}/restore": {
+      "post": {
+        "description": "Roll a table back to an earlier snapshot.\n\nNot to be confused with its neighbour below. THIS puts the table's\nown columns and rows back the way a version had them; that one\nun-deletes a version ROW so it appears in the history again.",
+        "operationId": "restore_data_table_version_api_v1_data_tables__table_id__versions__version_id__restore_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "table_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Table Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RestoreVersionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RestoreResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Restore Data Table Version",
+        "tags": [
+          "data-tables"
+        ]
+      }
+    },
+    "/api/v1/data-tables/{table_id}/versions/{version_id}/restore-deleted": {
+      "post": {
+        "description": "Undo a delete — bring a removed version back into history.",
+        "operationId": "restore_deleted_data_table_version_api_v1_data_tables__table_id__versions__version_id__restore_deleted_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "table_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Table Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RestoreDeletedVersionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Restore Deleted Data Table Version",
+        "tags": [
+          "data-tables"
+        ]
+      }
+    },
+    "/api/v1/data-tables/{table_id}/versions/{version}": {
+      "get": {
+        "description": "Get one table version with its document.",
+        "operationId": "get_data_table_version_api_v1_data_tables__table_id__versions__version__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "table_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Table Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version",
+            "required": true,
+            "schema": {
+              "title": "Version",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VersionDetailResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Data Table Version",
+        "tags": [
+          "data-tables"
         ]
       }
     },
@@ -29272,6 +32862,386 @@
         "summary": "Get Persona Version",
         "tags": [
           "personas"
+        ]
+      }
+    },
+    "/api/v1/platform/workspaces": {
+      "get": {
+        "description": "Every workspace in one lifecycle state, newest first.\n\nPaged on the shared keyset cursor. Workspaces are the one list that grows\nwith revenue, so B-NB8's ``paging-exempt`` escape hatch does not apply to\nit — there is no argument that this collection is bounded by its nature.\n\n``state=closed`` is the platform administrator's Closed view; closed\nworkspaces are absent from every other list in the product.",
+        "operationId": "list_workspaces_api_v1_platform_workspaces_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "state",
+            "required": false,
+            "schema": {
+              "default": "active",
+              "enum": [
+                "active",
+                "closed"
+              ],
+              "title": "State",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Page size (max 200).",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Page size (max 200).",
+              "title": "Limit"
+            }
+          },
+          {
+            "description": "Opaque continuation cursor from a previous response's nextCursor. Omit for the first page.",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Opaque continuation cursor from a previous response's nextCursor. Omit for the first page.",
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_WorkspaceSummary_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Workspaces",
+        "tags": [
+          "platform"
+        ]
+      },
+      "post": {
+        "description": "Create a workspace and its first administrator.\n\n``temporaryPassword`` is returned exactly ONCE and only when the address\nhad no credential yet. It is not logged, not audited and not recoverable —\nif it is lost, the person uses the password-reset flow like anyone else.",
+        "operationId": "create_workspace_api_v1_platform_workspaces_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateWorkspaceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateWorkspaceResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Workspace",
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/platform/workspaces/{workspace_id}": {
+      "get": {
+        "description": "One workspace's metadata and its member roster.\n\nMetadata ONLY — see the module docstring. The roster is who holds a seat,\nnot what any of them did with it.",
+        "operationId": "get_workspace_api_v1_platform_workspaces__workspace_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspace_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspace Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Workspace",
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/platform/workspaces/{workspace_id}/close": {
+      "post": {
+        "description": "Close a workspace: no sign-in, no schedules, no webhooks, no runs.\n\nReversible until the retention window ends. Nothing is deleted, here or\nwhen the window passes.",
+        "operationId": "close_workspace_api_v1_platform_workspaces__workspace_id__close_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspace_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspace Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Close Workspace",
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/platform/workspaces/{workspace_id}/restore": {
+      "post": {
+        "description": "Reopen a closed workspace. Sessions are not resurrected.",
+        "operationId": "restore_workspace_api_v1_platform_workspaces__workspace_id__restore_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspace_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspace Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Restore Workspace",
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/platform/workspaces/{workspace_id}/support-access": {
+      "delete": {
+        "description": "End the operator's own support grant early.",
+        "operationId": "revoke_support_access_api_v1_platform_workspaces__workspace_id__support_access_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspace_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspace Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Revoke Support Access",
+        "tags": [
+          "platform"
+        ]
+      },
+      "post": {
+        "description": "Enter a customer workspace — as an ordinary member, with an expiry.\n\nThe workspace's admins are notified, the grant appears in their own team\nlist, they can withdraw it with the controls they use for their own\ncolleagues, and it ends by itself if nobody does anything.",
+        "operationId": "grant_support_access_api_v1_platform_workspaces__workspace_id__support_access_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspace_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspace Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GrantSupportAccessRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SupportAccessResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Grant Support Access",
+        "tags": [
+          "platform"
         ]
       }
     },
@@ -34754,6 +38724,93 @@
         ]
       }
     },
+    "/api/v1/runs/{run_id}/outline/items": {
+      "get": {
+        "description": "The items one fan-out step handed out, beyond what the outline listed.\n\nThe outline is what the run page STREAMS, so it stays bounded: it lists\n``item_cap`` items per step and counts the rest. Counting them is only\nhalf an answer — a step that says \"121 not listed\" and offers no way\nonward is a dead end for the reader who came looking for item 40.\n\nThis is that way onward. Same nodes as the outline's own — the item AND\nthe steps beneath it — and the same order, which is what makes ``offset``\nexact: carry on at the number the outline stopped at and no item comes\nround twice or falls between two stretches.\n\nDeliberately NOT part of the streamed surface. A realtime tick keeps\ncosting what the run's shape costs, however much a reader has expanded.\n\nTenant isolation: the service's run pre-check 404s a run the caller\ncannot see, and every query beneath it filters by ``tenant_id``.",
+        "operationId": "get_run_outline_items_api_v1_runs__run_id__outline_items_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The fan-out step whose items to continue listing.",
+            "in": "query",
+            "name": "step_id",
+            "required": true,
+            "schema": {
+              "description": "The fan-out step whose items to continue listing.",
+              "title": "Step Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Where to carry on. The outline listed its first `item_cap`; pass that number to get what follows, then the response's `nextOffset` for each stretch after it.",
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "description": "Where to carry on. The outline listed its first `item_cap`; pass that number to get what follows, then the response's `nextOffset` for each stretch after it.",
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "How many items this stretch carries.",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "description": "How many items this stretch carries.",
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunOutlineItemsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Run Outline Items",
+        "tags": [
+          "runs"
+        ]
+      }
+    },
     "/api/v1/runs/{run_id}/restart": {
       "post": {
         "description": "Re-dispatch a stuck run — administrators only (epic #744).\n\nFor a run sitting in a non-terminal status that nothing is driving —\ntypically ``pending`` after a backend restart. The run is put back on\nthe RunQueue and resumes from its own step states; no new run is\ncreated. ``RunService.restart_run`` owns the mechanics (it reuses the\norphan-recovery rewind) and the idempotency decision.\n\nReturns ``already_active`` — a no-op, nothing enqueued — when a\nworker currently owns the run, so a double-click cannot double-\nadvance it. A terminal run is rejected with 422; an unknown or\ncross-tenant run with 404.\n\nA run PARKED on an open wait marker is also rejected with 422: it is\nsuspended by design and belongs to its wake ticket, not to this\nendpoint (``SUSPEND-RESUME-DESIGN.md`` §2). The message points the\noperator at the wake controls. A ``waiting`` run with no open marker\nis the genuinely stranded case and restarts normally.",
@@ -37504,6 +41561,53 @@
         ]
       }
     },
+    "/api/v1/task-queue/stop-bulk": {
+      "post": {
+        "description": "Bulk stop — ``ids`` only, never a filter.\n\nThe other bulk actions accept a filter because their blast radius is\na display change or a delete of rows the operator already put away.\nStopping ENDS live work, so it stays on the rows somebody actually\nselected; a mis-aimed filter here would reach a workspace's whole\nqueue.\n\nPer-row outcomes are tallied, never raised: rows that had already\nfinished come back as ``skipped``.",
+        "operationId": "stop_bulk_api_v1_task_queue_stop_bulk_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StopBulkBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StopBulkResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Stop Bulk",
+        "tags": [
+          "task-queue"
+        ]
+      }
+    },
     "/api/v1/task-queue/{task_id}": {
       "get": {
         "description": "Single-task detail view — drives the inspector's drawer.",
@@ -37695,6 +41799,55 @@
           }
         ],
         "summary": "Replay Task",
+        "tags": [
+          "task-queue"
+        ]
+      }
+    },
+    "/api/v1/task-queue/{task_id}/stop": {
+      "post": {
+        "description": "End a live row — the operator's stop button (#1122).\n\nThe action the inspector was missing. Dismiss refuses ``pending`` /\n``in_progress`` on purpose: putting a live row away hides it rather\nthan stopping it. So a row an operator watched re-dispatch itself had\nno action at all — \"Dismiss all\" skipped it in silence, and the only\nthing left was to wait out ``max_attempts``.\n\nThe row ends terminally at ``failed`` and records who ended it.\nAfterwards it is an ordinary finished row: dismissable, then\npurgeable.\n\nSame authority as release / replay / dismiss — an administrator, or a\nservice token the workspace granted ``operate`` (#744, #976): this is\nrecovery, not administration.\n\nReturns 422 for a row that already reached an end (nothing to stop);\n404 for cross-tenant or missing rows.",
+        "operationId": "stop_task_api_v1_task_queue__task_id__stop_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "task_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Task Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskQueueRowOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Stop Task",
         "tags": [
           "task-queue"
         ]
@@ -40115,7 +44268,7 @@
     },
     "/api/v1/users": {
       "get": {
-        "description": "List all users in the current tenant, sorted alphabetically.",
+        "description": "List the current tenant's members, sorted alphabetically.\n\nRemoved memberships are absent — the repository applies that rule once,\nfor this route and every other reader of the roster.",
         "operationId": "list_tenant_users_api_v1_users_get",
         "responses": {
           "200": {
@@ -40139,6 +44292,256 @@
           }
         ],
         "summary": "List Tenant Users",
+        "tags": [
+          "users"
+        ]
+      },
+      "post": {
+        "description": "Give a colleague access to the caller's OWN workspace.\n\nThe temporary password in the response is shown exactly once and is\npresent only when the platform had to mint a credential; somebody who\nalready has an Axonity account keeps the password they already use.",
+        "operationId": "add_tenant_member_api_v1_users_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddMemberRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddMemberResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Add Tenant Member",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/api/v1/users/members": {
+      "get": {
+        "description": "The Team page roster: role, status and last sign-in per person.\n\nReadable by every member; the mutating routes below are admin-only\nregardless of what the UI chooses to show.",
+        "operationId": "list_tenant_members_api_v1_users_members_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "scope",
+            "required": false,
+            "schema": {
+              "default": "current",
+              "enum": [
+                "current",
+                "removed"
+              ],
+              "title": "Scope",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TenantMemberItem"
+                  },
+                  "title": "Response List Tenant Members Api V1 Users Members Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Tenant Members",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/api/v1/users/{user_id}": {
+      "delete": {
+        "description": "Remove somebody from the workspace — permanently, and reversibly.\n\n**This does NOT delete a row, and must not be \"fixed\" into one.** 26\nforeign keys across 20 models point at ``users.id`` and most carry no\n``ondelete``, so the delete is refused by the database the moment that\nperson has authored, published or launched anything — and the few that\ndid succeed would erase authorship the workspace has to keep. The\nmembership is marked ``removed_at``: it disappears from the roster and\nfrom every owner picker, its sessions are revoked, and the workflow it\nwrote three years ago still names its author. An admin adds the same\nperson again to reinstate them.",
+        "operationId": "remove_tenant_member_api_v1_users__user_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "User Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Remove Tenant Member",
+        "tags": [
+          "users"
+        ]
+      },
+      "patch": {
+        "description": "Change a membership's role and/or status.\n\nA membership in another workspace answers 404, not 403 — a 403 would\nconfirm the id exists. Suspending signs the person out; re-activating\ndoes not sign them back in.",
+        "operationId": "update_tenant_member_api_v1_users__user_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "User Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMemberRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantMemberItem"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Tenant Member",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/api/v1/users/{user_id}/reset-link": {
+      "post": {
+        "description": "Mint a password-reset link for a colleague, for the admin to deliver.\n\nThe platform cannot send mail until SMTP is configured, which leaves\nsomebody who has forgotten their password with no way back in. This is the\nsame single-use, hashed, expiring token the self-service flow mints — only\nthe delivery is a human errand instead of an inbox, which is why its\nwindow is measured in days.\n\nRefused for a colleague who has been removed, and for a credential that\nalso has access to another workspace: a password belongs to the\nCREDENTIAL, so a link minted here would change the password that person\nuses THERE. Those people use the forgotten-password link instead, which\nproves possession of the mailbox.",
+        "operationId": "issue_password_reset_link_api_v1_users__user_id__reset_link_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "User Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResetLinkResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Issue Password Reset Link",
         "tags": [
           "users"
         ]
@@ -40628,7 +45031,7 @@
     },
     "/api/v1/workflows/using/{entity_kind}/{entity_id}": {
       "get": {
-        "description": "Which workflows name this entity — the answer before you change it.\n\n#845 S5 gave policies, skills and reference docs a reverse view, with the\nreasoning that \"what breaks if I change this\" is the question an author most\nneeds before editing something shared. The rest of the catalogue never got\none, and a broken tool or agent reference stops a RUN rather than a prompt.\n\nIt is not a link-table query, which is why it did not exist: an agent gets\ninto a workflow by being named in a step's ``contract.owners`` and a tool by\nsitting in ``contract.tools.toolIds``, in a plan activity, or on an\nautomation step's config. Those are keys inside a JSON document — the reason\nan author cannot find them by hand either (S8).\n\nDeclared BEFORE ``/{workflow_id}`` so ``using`` is not swallowed by the id\npath parameter, the same care ``/operations`` and ``/callable`` needed.",
+        "description": "Which workflows name this entity — the answer before you change it.\n\n#845 S5 gave policies, skills and reference docs a reverse view, with the\nreasoning that \"what breaks if I change this\" is the question an author most\nneeds before editing something shared. The rest of the catalogue never got\none, and a broken tool or agent reference stops a RUN rather than a prompt.\n\nIt is not a link-table query, which is why it did not exist: an agent gets\ninto a workflow by being named in a step's ``contract.owners`` and a tool by\nsitting in ``contract.tools.toolIds``, in a plan activity, or on an\nautomation step's config. Those are keys inside a JSON document — the reason\nan author cannot find them by hand either (S8).\n\n``data_table`` (#1234) is the newest kind and the one shared hardest: a\nrouting table is meant to be used by several processes, and a decision\nnaming it lives one level deeper still, in\n``config.evaluatorArgs.tableId``. Unpublishing it does not break a\nreference — it stops the decision routing, silently.\n\nDeclared BEFORE ``/{workflow_id}`` so ``using`` is not swallowed by the id\npath parameter, the same care ``/operations`` and ``/callable`` needed.",
         "operationId": "list_workflows_using_entity_api_v1_workflows_using__entity_kind___entity_id__get",
         "parameters": [
           {
@@ -40641,7 +45044,8 @@
                 "agent",
                 "flow",
                 "output_schema",
-                "workflow"
+                "workflow",
+                "data_table"
               ],
               "title": "Entity Kind",
               "type": "string"
@@ -41436,6 +45840,171 @@
         "summary": "Get Published Workflow",
         "tags": [
           "workflows"
+        ]
+      }
+    },
+    "/api/v1/workflows/{workflow_id}/reference-docs": {
+      "get": {
+        "description": "Which reference docs are attached to this workflow.\n\nA link lives OUTSIDE the entity body, so nothing else shows it — which\nis precisely how the old scope-rewrite went unnoticed: the panel listed\ndocs whose ``scope`` said \"workflow\" and nobody could tell that the\nruntime never read it.",
+        "operationId": "list_references_for_workflow_api_v1_workflows__workflow_id__reference_docs_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workflow_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workflow Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowReferenceDocsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List References For Workflow",
+        "tags": [
+          "reference_docs"
+        ]
+      }
+    },
+    "/api/v1/workflows/{workflow_id}/reference-docs/{ref_id}": {
+      "delete": {
+        "description": "Detach a reference doc from a workflow (idempotent).\n\n``detached`` reports what actually happened: false when there was no\nlive link to close. Leaves the doc's ``scope`` untouched — the old\ndetach set it to ``tenant_general``, which broadcast the doc to every\nagent in the tenant.",
+        "operationId": "unlink_reference_from_workflow_api_v1_workflows__workflow_id__reference_docs__ref_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workflow_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workflow Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "ref_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ref Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowReferenceDocLinkResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Unlink Reference From Workflow",
+        "tags": [
+          "reference_docs"
+        ]
+      },
+      "post": {
+        "description": "Attach a reference doc to a workflow (idempotent).\n\nLeaves the doc's own ``scope`` untouched — rewriting it was the defect\nthis replaces.",
+        "operationId": "link_reference_to_workflow_api_v1_workflows__workflow_id__reference_docs__ref_id__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workflow_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workflow Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "ref_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ref Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowReferenceDocLinkResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Link Reference To Workflow",
+        "tags": [
+          "reference_docs"
         ]
       }
     },

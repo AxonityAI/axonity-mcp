@@ -85,4 +85,27 @@ export const LIST_FILTERS: Record<string, ListFilter[]> = {
         "Return the tenant's soft-deleted rows instead of the live ones. `list_deleted_prompt_snippets` asks the dedicated route for the same thing and is usually clearer.",
     },
   ],
+  "data_table": [
+    {
+      arg: "name",
+      query: "name",
+      type: "string",
+      description:
+        "Only the table with exactly this name. A name is unique within the workspace and is what a tool grant and a decision rule refer to, so this answers 'does it already exist' in one call. Matching is exact, never a substring.",
+    },
+    {
+      arg: "status",
+      query: "status",
+      type: "string",
+      description:
+        "Only tables with this lifecycle status: active (in use) or archived (kept, not offered). A value outside the two is refused rather than silently ignored.",
+    },
+    {
+      arg: "isDynamic",
+      query: "is_dynamic",
+      type: "boolean",
+      description:
+        "true: only tables a workflow may change. false: only reference data the author maintains. Omit for both.",
+    },
+  ],
 };
