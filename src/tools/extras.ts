@@ -244,8 +244,6 @@ export function registerAttachTools(
     "policyId",
     "list_agent_policies",
   );
-  // Reference docs attach to agents only — there is no workflow-scoped
-  // reference-doc route on the backend, so no `*_to_workflow` pair here.
   link(
     "reference",
     "agent",
@@ -253,6 +251,21 @@ export function registerAttachTools(
     "agentId",
     "refId",
     "list_agent_reference_docs",
+  );
+  // Reference docs used to attach to agents ONLY, and this file said so. That
+  // is no longer true: axonity-flow#1061 gave them the workflow-scoped trio,
+  // mirroring `workflow_skills_router` exactly. Until then the process panel
+  // "attached" a doc by rewriting its `scope`, which the runtime ignores — a
+  // link nothing read, which is the same failure the skill read-back exists to
+  // make visible.
+  link(
+    "reference",
+    "workflow",
+    (workflowId, refId) =>
+      `/api/v1/workflows/${workflowId}/reference-docs/${refId}`,
+    "workflowId",
+    "refId",
+    "list_workflow_reference_docs",
   );
 
   /**
@@ -333,41 +346,79 @@ export function registerAttachTools(
   );
 
   /**
-   * The workflow-scoped read-back (axonity-flow#961 S8).
+   * The workflow-scoped read-backs (axonity-flow#961 S8, #1061).
    *
    * Deliberately without `linkSource`: unlike the agent view there is only one
-   * way a skill reaches a workflow — an explicit link — so a field that always
-   * says the same thing would train a reader to skip it. Live links only, for
-   * the reason `list_agent_skills` gives: detaching closes the interval rather
-   * than deleting the row, and a stale dependency list is worse than none.
+   * way a skill or a doc reaches a workflow — an explicit link — so a field
+   * that always says the same thing would train a reader to skip it. Live
+   * links only, for the reason `list_agent_skills` gives: detaching closes the
+   * interval rather than deleting the row, and a stale dependency list is
+   * worse than none.
    */
-  server.tool(
-    "list_workflow_skills",
-    "List the skills currently scoped to a WORKFLOW — the read-back for " +
-      "attach_skill_to_workflow. A 200 from an attach does not prove the link " +
-      "resolved, and the link lives outside the workflow document, so " +
-      "read_workflow will never show it: this is the only way to tell an attach " +
-      "that landed from one that silently did nothing. Read-only. " +
-      "\n\nReturns IDENTITY by default; pass verbosity: \"full\" for whole " +
-      "bodies, which a skill's playbook makes expensive.",
-    {
-      workflowId: z.string().describe("The workflow's id."),
-      verbosity: z
-        .enum(["identity", "full"])
-        .optional()
-        .describe(
-          'How much of each row to return. "identity" (default) is id, name, ' +
-            'description and status. "full" is the entire skill, body included.',
-        ),
-    },
-    async ({ workflowId, verbosity }) =>
-      guard(async () => {
-        const response = await client.get<Record<string, unknown>>(
-          `/api/v1/workflows/${workflowId}/skills-v2`,
-        );
-        if (verbosity === "full") return jsonResult(response);
-        return jsonResult(projectLinkRows(response, "skills"));
-      }),
+  const listWorkflowLinks = (
+    subject: string,
+    plural: string,
+    path: (workflowId: string) => string,
+    /** The key the backend nests the rows under (`skills` / `references`). */
+    rowsKey: string,
+    /** Why "full" is expensive for this subject. */
+    fullCost: string,
+    /**
+     * The noun the attach/detach pair is named with. It is NOT always the
+     * subject: the doc link is `attach_reference_to_workflow` while the
+     * read-back is `list_workflow_reference_docs`, an asymmetry inherited from
+     * the agent-scoped pair and kept so both halves of a family are spelled the
+     * same way. Pointing at the wrong name is worse than not pointing at all.
+     */
+    attachNoun: string,
+  ) => {
+    server.tool(
+      `list_workflow_${plural}`,
+      `List the ${plural.replace("_", " ")} currently scoped to a WORKFLOW — ` +
+        `the read-back for attach_${attachNoun}_to_workflow. A 200 from an attach ` +
+        `does not prove the link resolved, and the link lives outside the ` +
+        `workflow document, so read_workflow will never show it: this is the ` +
+        `only way to tell an attach that landed from one that silently did ` +
+        `nothing. Read-only. ` +
+        `\n\nReturns IDENTITY by default; pass verbosity: "full" for whole ` +
+        `bodies, which ${fullCost}.`,
+      {
+        workflowId: z.string().describe("The workflow's id."),
+        verbosity: z
+          .enum(["identity", "full"])
+          .optional()
+          .describe(
+            'How much of each row to return. "identity" (default) is id, name, ' +
+              `description and status. "full" is the entire ${subject}, body ` +
+              "included.",
+          ),
+      },
+      async ({ workflowId, verbosity }) =>
+        guard(async () => {
+          const response = await client.get<Record<string, unknown>>(
+            path(workflowId),
+          );
+          if (verbosity === "full") return jsonResult(response);
+          return jsonResult(projectLinkRows(response, rowsKey));
+        }),
+    );
+  };
+
+  listWorkflowLinks(
+    "skill",
+    "skills",
+    (id) => `/api/v1/workflows/${id}/skills-v2`,
+    "skills",
+    "a skill's playbook makes expensive",
+    "skill",
+  );
+  listWorkflowLinks(
+    "reference_doc",
+    "reference_docs",
+    (id) => `/api/v1/workflows/${id}/reference-docs`,
+    "references",
+    "a reference doc's content makes expensive",
+    "reference",
   );
 }
 

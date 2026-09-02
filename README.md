@@ -40,7 +40,7 @@ tenant + scope on every call, so the connector is not a trust boundary.
 
 ## Tools
 
-220+ tools total. `axonity_conventions` (read this first) covers the authoring
+345 tools total. `axonity_conventions` (read this first) covers the authoring
 rules — drafts vs live, optimistic locking, per-entity fields, delete/restore,
 and how to tell a retryable error from one that will never succeed.
 
@@ -52,9 +52,10 @@ was kept here. A conformance test asserts their absence.
 
 ### The generic entity family
 
-Ten entities — **workflow, agent, tool, skill, policy, reference_doc, persona,
-output_schema, prompt_snippet, flow** — share one shape, though not every
-entity gets every verb (see the per-entity notes below for the exceptions):
+Eleven entities — **workflow, agent, tool, skill, policy, reference_doc,
+persona, output_schema, prompt_snippet, flow, data_table** — share one shape,
+though not every entity gets every verb (see the per-entity notes below for the
+exceptions):
 
 | Tool (per `<entity>`) | What it does |
 |------|--------------|
@@ -69,7 +70,8 @@ entity gets every verb (see the per-entity notes below for the exceptions):
 | `request_publish_<entity>` | Ask for a draft to be published — creates a pending approval; never publishes. |
 
 Exceptions: `persona` has no `create_persona` (create only via
-`create_agent_persona`).
+`create_agent_persona`). And `list_data_tables` answers **one page**, not the
+whole library — see Tables below.
 
 Some list routes narrow in the query, which is where narrowing belongs — the
 backend applies it before the rows come back:
@@ -77,7 +79,8 @@ backend applies it before the rows come back:
 `list_agents({ includeSystem? })`,
 `list_policies({ scope?, ownerId? })`,
 `list_reference_docs({ scope?, ownerId? })`,
-`list_prompt_snippets({ deleted? })`.
+`list_prompt_snippets({ deleted? })`,
+`list_data_tables({ name?, status?, isDynamic? })`.
 
 That table is **generated** from the pinned schema's own query parameters
 (`npm run generate:filters` → `src/generated/listFilters.ts`), not hand-listed.
@@ -115,7 +118,7 @@ Plus:
 
 ### Version history, rollback, and version-level delete
 
-For the ten versioned entities (including `flow`):
+For the eleven versioned entities (including `flow` and `data_table`):
 
 | Tool | What it does |
 |------|--------------|
@@ -156,13 +159,14 @@ across these routes — the tool parameter names say which.
   box's tools share and carries the same placeholder guard as a connector.
 - **Attach / detach memory**: `attach_skill_to_agent`,
   `attach_skill_to_workflow`, `attach_policy_to_agent`,
-  `attach_reference_to_agent`, and a `detach_*_from_*` for each. Detaching
-  removes the link only — the skill or policy itself is untouched. Read the
-  links back with `list_agent_skills`, `list_agent_policies`,
-  `list_agent_reference_docs` and `list_workflow_skills`. The three agent
-  read-backs take an optional `workflowId` for the **composed runtime view** —
-  what the agent's prompt actually assembles inside that workflow, with a
-  `linkSource` per row saying why each item is there.
+  `attach_reference_to_agent`, `attach_reference_to_workflow`, and a
+  `detach_*_from_*` for each. Detaching removes the link only — the skill or
+  policy itself is untouched. Read the links back with `list_agent_skills`,
+  `list_agent_policies`, `list_agent_reference_docs`, `list_workflow_skills`
+  and `list_workflow_reference_docs`. The three agent read-backs take an
+  optional `workflowId` for the **composed runtime view** — what the agent's
+  prompt actually assembles inside that workflow, with a `linkSource` per row
+  saying why each item is there.
 - **What uses this?**: `list_workflows_using({ entityKind, entityId })` names
   the workflows that reference a tool, agent, flow, output schema or workflow,
   **and the steps they reference it in**, with `draft`/`published` per hit.
@@ -209,7 +213,8 @@ across these routes — the tool parameter names say which.
   is my run not moving* without asking a human to look at a screen. Every write
   in these families — purging or replaying queue work, changing a cap or the
   tier map, importing a tenant bundle, reading someone's notifications — is
-  deliberately absent and recorded in `test/exclusions.test.ts`.
+  deliberately absent and recorded in `test/denyList.ts`, the list
+  `test/exclusions.test.ts` enforces.
 - **Secrets** (read-only): `list_secrets`, `read_secret` — the catalogue a
   connector's `authConfig.secretId` points at. Values are never returned by any
   Axonity route; `valueKeys` says which keys a human has filled in, so you can
@@ -220,6 +225,25 @@ across these routes — the tool parameter names say which.
   `clone_flow`, `clone_prompt_snippet`, `list_tool_packages` (the import
   allowlist `validate_tool_code` judges against), `list_templates` /
   `read_template`.
+- **Tables** (`data_table`): the tenant's own reference data — a table an
+  author designs and maintains, and agents and decisions read. The whole
+  lifecycle is the generic family above; three things are not, and each is a
+  way to be quietly wrong:
+  - `list_data_tables` is **paged** (20 by default, 200 max), alone among the
+    library lists, because a tenant's reference data has no ceiling. Page one
+    is not the library — follow `nextCursor` while `hasMore`, or narrow with
+    `name`, which is exact and unique per workspace.
+  - **`rows` and `columns` are whole-collection fields.** Sending `rows`
+    through `update_data_table` replaces the table's content; one row there
+    deletes every other. `add_data_table_row`, `update_data_table_row` and
+    `delete_data_table_row` address a single row by a `matchColumn` /
+    `matchValue` pair and cannot touch the rest.
+  - **A table's derived tools follow its published version.** A published table
+    mints its own CRUD tools, so granting an agent access to one is ordinary
+    tool granting. `list_data_table_tools` reports `offered` (what the draft
+    would yield), `toolId` (whether a row exists) and `isLive` (whether a run
+    can reach it) separately — an author who ticked "may add rows" and has not
+    published has granted nothing yet.
 - `list_deleted_prompt_snippets` calls `/api/v1/prompt-snippets/deleted`; the
   backend returns it as `{ items: [... ] }`, and the tool forwards that response
   unchanged.
@@ -286,7 +310,10 @@ the run, its steps, and the items a fan-out handed out, flat with parent
 pointers. It carries no bodies, so its size follows the run's *shape* rather
 than its content: a launch over four thousand items costs about what one over
 four costs. `itemCap` bounds the items listed per fan-out step and the remainder
-is counted in `counts.truncated`, never dropped silently. Then open only what
+is counted in `counts.truncated`, never dropped silently —
+`read_run_outline_items` carries on from where the outline stopped, one step at
+a time, walked by `offset` (safe here: a fan-out's items are fixed once handed
+out, so the ordering cannot shift under you). Then open only what
 you want: `read_run_value` for one large step value (by the digest in
 `stepStates`) and `read_run_invocation_messages` for one agent's transcript (by
 the id in `agentInvocations`). Reading a whole run to find one message is the
@@ -298,7 +325,7 @@ waiting for; `answer_run_question` answers an `ask_user` step and
 a person's, so use them on runs you started. Deciding a **plan approval** and
 restarting a stuck run are deliberately absent — the first is the human review
 the step exists to get, the second is `require_admin` and a service token is
-always `role="member"`. Both are recorded in `test/exclusions.test.ts`, together
+always `role="member"`. Both are recorded in `test/denyList.ts`, together
 with stopping runs in bulk (admin), the tenant's storage footprint (admin), an
 inbound channel reply (authenticated by the email/WhatsApp adapter, not by a
 service token) and the retired `workflow-memory` placeholder.
@@ -396,7 +423,7 @@ These are enforced by the backend, not merely by convention:
   matching the message text.
 - **No tool crosses the authority boundary.** A test drives the whole registered
   surface and fails the build if any tool targets a publish / approve /
-  secret-write / service-token / deploy route (`test/exclusions.test.ts`). The
+  secret-write / service-token / deploy route (`test/denyList.ts`). The
   rules are method-aware: `GET /api/v1/secrets` is allowed, every write verb on
   it is not.
 - **Guidance can't silently drift from the backend.** The field/enum facts the

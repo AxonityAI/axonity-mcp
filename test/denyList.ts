@@ -29,7 +29,17 @@ export interface Rule {
 export const WRITE_METHODS = ["POST", "PUT", "PATCH", "DELETE"];
 
 export const FORBIDDEN: Rule[] = [
+  // The founding rule, and the one the whole connector is shaped around:
+  // PUBLISHING IS A HUMAN DECISION. Every publish route on the backend carries
+  // `forbid_service_token`, so this is not only our boundary — but stating it
+  // here is what makes `request_publish_*` legible as the path rather than a
+  // limitation. Making a draft live is where an agent's work starts affecting
+  // real runs, and somebody accountable says when that happens.
   { label: "direct publish/unpublish", path: /\/(publish|unpublish)$/ },
+  // The same decision from the other side of the queue. An agent that could
+  // approve would be approving its OWN request in almost every case, which
+  // turns the gateway into a formality — the connector may ASK (POST
+  // /publish-approvals, allowed) and never answer.
   {
     label: "approve/reject an approval",
     path: /\/publish-approvals\/[^/]+\/(approve|reject)$/,
@@ -147,6 +157,38 @@ export const FORBIDDEN: Rule[] = [
   // closes a Builder conversation run.
   { label: "builder conversations and their files", path: /\/(conversations|conversation-attachments|files|folders)(\/|$)/ },
   { label: "end a builder conversation run", path: /\/runs\/[^/]+\/end-conversation$/ },
+
+  // ---- axonity-mcp#63 — what the refreshed snapshot brought with it -------
+  // These arrived beside the table routes (a snapshot is a dump, not a
+  // selection) and are decided here rather than left to be re-derived.
+
+  // Platform administration: creating and closing WORKSPACES, and granting
+  // Axonity support access into one. Every route is `require_platform_admin` on
+  // the backend — an authority ABOVE a workspace admin — while a service token
+  // is tenant-scoped and always role="member". This is not a boundary we are
+  // choosing; it is one that cannot be crossed, and a tool here would only ever
+  // 403. It is also the one family that would let a connector act outside the
+  // single tenant its token points at, which `axonity_conventions` states as an
+  // invariant.
+  { label: "platform / workspace administration", path: /\/api\/v1\/platform\// },
+
+  // Managing the PEOPLE in a workspace — adding one, changing a role, removing
+  // one — is `require_admin`, so a member token 403s. `POST
+  // /users/{id}/reset-link` is stronger than that: it mints a password-reset
+  // URL for somebody else, which is an account-takeover primitive, and no
+  // authoring task needs one. The READS stay open and are load-bearing:
+  // `list_users` is where an `ownerId` comes from (#39's reasoning, and the
+  // reason this rule carries methods at all).
+  { label: "user administration (admin-only)", path: /\/api\/v1\/users(\/|$)/, methods: WRITE_METHODS },
+
+  // The Team page roster — role, status and last sign-in per colleague. The
+  // roster question an authoring agent actually has ("whose id do I put in
+  // `ownerId`?") is answered by `list_users`, which is registered. What this
+  // route adds beyond it is information about PEOPLE: who has signed in
+  // lately, whose access was removed. That is the line the notifications rule
+  // above draws — a fact about a person rather than about the tenant's work —
+  // and being readable does not make it an authoring tool.
+  { label: "team roster (facts about people)", path: /\/api\/v1\/users\/members$/ },
 
   // Firing a workflow through a webhook's own token. The token is shown ONCE at
   // create/rotate and is handed straight to a human or an adapter — this

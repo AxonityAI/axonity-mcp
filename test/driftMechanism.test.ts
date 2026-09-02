@@ -321,12 +321,25 @@ describe("list filters are generated, not kept (M4)", () => {
     // Sanity: the ten #45 M9(3) found by hand are in here, plus `deleted` on
     // prompt snippets, which that story deliberately skipped and the mechanism
     // picks up for free — which is the argument for the mechanism.
+    //
+    // `data_table` is that argument paying again (#63). Its three narrowings —
+    // name, status, isDynamic — were declared on the backend and reached the
+    // tools with no filter written here: `LIST_ROUTES` gained one line naming
+    // the route, and the names, types and prose came out of the schema. On a
+    // PAGED list they matter more than anywhere else, because the alternative
+    // to "is there one called X?" in one call is a walk through every page.
     expect(Object.keys(table).sort()).toEqual([
       "agent",
+      "data_table",
       "policy",
       "prompt_snippet",
       "reference_doc",
       "workflow",
+    ]);
+    expect(table.data_table.map((f) => f.query)).toEqual([
+      "name",
+      "status",
+      "is_dynamic",
     ]);
     expect(table.prompt_snippet.map((f) => f.query)).toEqual(["deleted"]);
   });

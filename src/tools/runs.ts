@@ -371,8 +371,10 @@ export function registerRunTools(server: McpServer, client: AxonityClient): void
       "actually want to look at: read_run_value for a step value, " +
       "read_run_invocation_messages for one agent's transcript. " +
       "\n\n`itemCap` bounds how many items are LISTED per fan-out step. The rest " +
-      "are counted in that step's `counts.truncated` and live on the paged " +
-      "item-results surface — nothing is dropped in silence.",
+      "are counted in that step's `counts.truncated` and are NOT lost: " +
+      "read_run_outline_items carries on from where the outline stopped, and " +
+      "read_run_item_results reads the item RESULTS. Nothing is dropped in " +
+      "silence.",
     {
       runId: z.string().describe("The run's id."),
       itemCap: z
@@ -388,6 +390,57 @@ export function registerRunTools(server: McpServer, client: AxonityClient): void
       guard(async () =>
         jsonResult(
           await client.get(`/api/v1/runs/${runId}/outline`, { item_cap: itemCap }),
+        ),
+      ),
+  );
+
+  server.tool(
+    "read_run_outline_items",
+    "The items ONE fan-out step handed out, beyond what read_run_outline " +
+      "listed. Read-only. " +
+      "\n\nThe outline stays bounded — it lists `itemCap` items per fan-out " +
+      "step and counts the rest — so a step that says \"121 not listed\" is a " +
+      "dead end for a reader who came looking for item 40. This is the way " +
+      "onward. It returns the SAME node shape the outline does (the item and " +
+      "the steps beneath it), in the same order. " +
+      "\n\nWALKED BY OFFSET, NOT A CURSOR, and that is safe here for a reason " +
+      "the run lists cannot claim: a fan-out\u2019s items are fixed once it has " +
+      "handed them out, so the ordering does not shift under you. Start at the " +
+      "number the outline stopped at (its `itemCap`), then follow the " +
+      "response\u2019s `nextOffset` while `hasMore` is true. " +
+      "\n\nOne step at a time: `stepId` is required, because \"the rest of the " +
+      "run\" is what read_run_outline already answered.",
+    {
+      runId: z.string().describe("The run's id."),
+      stepId: z
+        .string()
+        .describe(
+          "The fan-out step whose items to continue listing — the step's id " +
+            "from the outline, not an item's.",
+        ),
+      offset: z
+        .number()
+        .int()
+        .optional()
+        .describe(
+          "Where to carry on. Pass the outline's `itemCap` for the first " +
+            "stretch, then the response's `nextOffset` for each one after it. " +
+            "Defaults to 0, which repeats what the outline already showed.",
+        ),
+      limit: z
+        .number()
+        .int()
+        .optional()
+        .describe("How many items this stretch carries. Max 100."),
+    },
+    async ({ runId, stepId, offset, limit }) =>
+      guard(async () =>
+        jsonResult(
+          await client.get(`/api/v1/runs/${runId}/outline/items`, {
+            step_id: stepId,
+            offset,
+            limit,
+          }),
         ),
       ),
   );

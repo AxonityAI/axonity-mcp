@@ -101,16 +101,24 @@ export class AxonityClient {
     return this.request<T>("GET", path, undefined, query);
   }
 
-  post<T = unknown>(path: string, body?: unknown): Promise<T> {
-    return this.request<T>("POST", path, body);
+  /**
+   * The writes. `query` is optional and usually absent — a write's arguments
+   * belong in its body — but a route may address its SUBJECT in the query while
+   * the body says what to change: `PATCH /data-tables/{id}/rows` takes
+   * `match_column`/`match_value` there to name the one row it edits. Without
+   * this the only way to call such a route would be to build the query string
+   * into `path` by hand, which is how an unencoded value becomes a bug.
+   */
+  post<T = unknown>(path: string, body?: unknown, query?: Query): Promise<T> {
+    return this.request<T>("POST", path, body, query);
   }
 
-  put<T = unknown>(path: string, body?: unknown): Promise<T> {
-    return this.request<T>("PUT", path, body);
+  put<T = unknown>(path: string, body?: unknown, query?: Query): Promise<T> {
+    return this.request<T>("PUT", path, body, query);
   }
 
-  patch<T = unknown>(path: string, body?: unknown): Promise<T> {
-    return this.request<T>("PATCH", path, body);
+  patch<T = unknown>(path: string, body?: unknown, query?: Query): Promise<T> {
+    return this.request<T>("PATCH", path, body, query);
   }
 
   /**

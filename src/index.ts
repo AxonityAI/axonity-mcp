@@ -26,6 +26,7 @@ import { AxonityClient } from "./client.js";
 import { loadConfig } from "./config.js";
 import { reportContractSkew } from "./contract.js";
 import { registerConventions } from "./tools/conventions.js";
+import { registerDataTableTools } from "./tools/dataTables.js";
 import { assertPlaceholderCredentials } from "./tools/credentials.js";
 import {
   registerAttachTools,
@@ -54,9 +55,10 @@ import { type VersionedEntity, registerVersionTools } from "./tools/versions.js"
 import { registerWorkflowMutations } from "./tools/workflowMutations.js";
 
 /**
- * The entities the connector covers. Core entities (C4) plus memory
- * entities (C5) — skills, policies, reference docs — which have the same
- * draft→publish lifecycle via #443's unified versioning.
+ * The entities the connector covers. Core entities (C4), memory entities (C5)
+ * — skills, policies, reference docs — which have the same draft→publish
+ * lifecycle via #443's unified versioning, and `data_table` (axonity-flow#1217),
+ * which joins them on exactly the same shape.
  */
 const ENTITIES: EntityDef[] = [
   {
@@ -138,12 +140,35 @@ const ENTITIES: EntityDef[] = [
     label: "flows (reusable workflow fragments)",
     deleteVersionParam: "expectedVersion",
   },
+  {
+    // A table is the same category of thing as an output schema — authored,
+    // typed, versioned, publish-approved — and axonity-flow#1217 deliberately
+    // wrote its routes in the same order and spelling, so the whole family
+    // comes from the registrar with no new code. What is NOT generic is the
+    // list (paged, alone among the entities) and the rows (a whole-collection
+    // field a blind `fields` bag can wipe) — hence the two entries below and
+    // the explicit row tools in `tools/dataTables.ts`.
+    singular: "data_table",
+    basePath: "/api/v1/data-tables",
+    updateMethod: "PUT",
+    plural: "data_tables",
+    label: "tables (authored reference data agents and decisions read)",
+    deleteVersionParam: "expected_version",
+    listPaging: { defaultPageSize: 20, maxPageSize: 200 },
+    updateWarning:
+      "`rows` AND `columns` ARE WHOLE-COLLECTION FIELDS: sending either " +
+      "REPLACES it entirely. Passing one row in `rows` does not append it — it " +
+      "deletes every other row in the table. To change content, use " +
+      "add_data_table_row / update_data_table_row / delete_data_table_row, " +
+      "which address a single row and cannot destroy the rest. Use `rows` here " +
+      "only when you genuinely mean to replace the whole content.",
+  },
 ];
 
 /**
  * Entities with version history. Every authored entity here exposes the
  * `/versions*` routes, `flow` included (verified against the backend:
- * `/api/v1/flows/{id}/versions…`), so all ten get the version tools.
+ * `/api/v1/flows/{id}/versions…`), so all eleven get the version tools.
  */
 const VERSIONED: VersionedEntity[] = [
   { singular: "workflow", basePath: "/api/v1/workflows", publishedPath: "entity" },
@@ -168,6 +193,11 @@ const VERSIONED: VersionedEntity[] = [
     publishedPath: "versions",
   },
   { singular: "flow", basePath: "/api/v1/flows", publishedPath: "entity" },
+  {
+    singular: "data_table",
+    basePath: "/api/v1/data-tables",
+    publishedPath: "versions",
+  },
 ];
 
 /**
@@ -211,6 +241,7 @@ export function registerAll(server: ServerLike, client: AxonityClient): void {
   registerSubworkflowTools(server as McpServer, client);
   registerToolboxTools(server as McpServer, client);
   registerOperationsTools(server as McpServer, client);
+  registerDataTableTools(server as McpServer, client);
 }
 
 export function buildServer(client: AxonityClient): McpServer {

@@ -48,6 +48,7 @@ const LIST_ROUTES = {
   persona: "/api/v1/personas",
   prompt_snippet: "/api/v1/prompt-snippets",
   flow: "/api/v1/flows",
+  data_table: "/api/v1/data-tables",
 };
 
 /**

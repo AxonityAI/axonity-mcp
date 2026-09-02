@@ -202,7 +202,10 @@ describe("attach / detach symmetry", () => {
     const { handlers } = setup(registerAttachTools);
     const names = [...handlers.keys()];
     const attaches = names.filter((n) => n.startsWith("attach_"));
-    expect(attaches).toHaveLength(4);
+    // Four until axonity-flow#1061 gave reference docs the workflow-scoped
+    // trio; five now. The count is pinned so a pair cannot arrive unnoticed —
+    // the loop below is what actually matters.
+    expect(attaches).toHaveLength(5);
     for (const a of attaches) {
       expect(names).toContain(a.replace("attach_", "detach_").replace("_to_", "_from_"));
     }
@@ -226,11 +229,35 @@ describe("attach / detach symmetry", () => {
     expect(client.del).toHaveBeenCalledWith("/api/v1/agents/a-1/policies/p-1");
   });
 
-  it("has no reference-doc/workflow pair — that route does not exist", () => {
-    const { handlers } = setup(registerAttachTools);
+  /**
+   * This test used to assert the OPPOSITE — that there was no reference-doc /
+   * workflow pair, because the backend had no such route. axonity-flow#1061
+   * added one, mirroring `workflow_skills_router`, and until then the process
+   * panel "attached" a doc by rewriting its `scope`, which the runtime ignores:
+   * a link nothing read. So the absence this pinned has become a presence, and
+   * pinning it the old way would have kept the connector from the fix.
+   */
+  it("attaches a reference doc to a workflow, and detaches it (axonity-flow#1061)", async () => {
+    const { handlers, client } = setup(registerAttachTools);
     const names = [...handlers.keys()];
-    expect(names).not.toContain("attach_reference_to_workflow");
-    expect(names).not.toContain("detach_reference_from_workflow");
+    expect(names).toContain("attach_reference_to_workflow");
+    expect(names).toContain("detach_reference_from_workflow");
+
+    await handlers.get("attach_reference_to_workflow")!({
+      workflowId: "w-1",
+      refId: "r-1",
+    });
+    expect(client.post).toHaveBeenCalledWith(
+      "/api/v1/workflows/w-1/reference-docs/r-1",
+    );
+
+    await handlers.get("detach_reference_from_workflow")!({
+      workflowId: "w-1",
+      refId: "r-1",
+    });
+    expect(client.del).toHaveBeenCalledWith(
+      "/api/v1/workflows/w-1/reference-docs/r-1",
+    );
   });
 });
 
