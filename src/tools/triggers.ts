@@ -248,10 +248,59 @@ export function registerTriggerTools(
 
   // ---- Conditional triggers ---------------------------------------------
 
+  /**
+   * The condition CHECK (axonity-flow#1354/#1356/#1363).
+   *
+   * A conditional trigger wakes on its interval; the check decides whether that
+   * beat becomes a run at all. It is a gate in the dispatch loop, ahead of the
+   * run being created — so a miss costs one tool call instead of a whole empty
+   * run, and the next beat is planted as usual.
+   *
+   * WITHOUT A CHECK (`checkKind: null`) EVERY BEAT STARTS THE WORKFLOW. That is
+   * what every trigger authored before this did, and it is why a mailbox on a
+   * fifteen-minute interval produces ninety-six empty runs a day.
+   *
+   * Both fields are FORWARDED, NOT VALIDATED HERE. The backend judges a check
+   * with the same function the dispatcher uses when the trigger fires
+   * (`validate_check`), so a setting that saves is a setting that runs. A second
+   * list of rules in this connector would drift from that one, and the drift is
+   * the invisible kind: something passes here and fails at three in the morning,
+   * on the beat it was supposed to catch. So a bad `op`, a missing `toolId` or a
+   * kind the backend will not accept comes back as its 422 — which names what to
+   * fix — rather than as a Zod error phrased by us.
+   *
+   * That is also why the operators are described rather than listed. They are
+   * the decision-rule vocabulary, which no route serves and which this
+   * repository has been burned by hand-keeping before (#32): the refusal names
+   * the usable set, and a list here could only ever go stale against it.
+   */
+  const CHECK_KIND_DESCRIPTION =
+    'How this start decides. Omit to leave it as it is. `"automatic"` runs ONE ' +
+    "tool and holds its answer against one rule — no model, so it is the cheap " +
+    "way to ask \"is there anything there?\". `\"agent\"` is reserved for a " +
+    "model judging the condition; the backend REFUSES it today because that " +
+    "judgement is not built yet, and says so. With no check at all the workflow " +
+    "starts EVERY beat.";
+
+  const CHECK_CONFIG_DESCRIPTION =
+    "The check's settings, shaped by `checkKind`. For `automatic`: " +
+    '`{ toolId, inputs?, rule: { field, op, value } }` — `toolId` is the tool ' +
+    "that looks, `inputs` is what it is called with, and `rule` says which " +
+    "field OF THE TOOL'S ANSWER counts, how it is compared, and to what. The " +
+    "comparisons are the same ones a decision rule uses; send a wrong one and " +
+    "the refusal names the usable set. " +
+    "\n\nA rule naming a field the tool never returns is a FAULT, not a " +
+    'quiet "condition not met" — the trigger reports a broken setup rather ' +
+    "than silently never firing.";
+
   server.tool(
     "list_conditional_triggers",
-    "List a workflow's conditional triggers — an agent evaluates a condition " +
-      "on an interval and starts the workflow when it holds.",
+    "List a workflow's conditional triggers — a start that wakes on an " +
+      "interval and decides whether there is anything to do. " +
+      "\n\nREAD `checkKind` ON EACH ROW: `null` means the trigger has no check " +
+      "and every beat becomes a run, whether or not there was work. " +
+      "`\"automatic\"` means one tool call decides. `checkConfig` carries that " +
+      "setting. Set them with create_/update_conditional_trigger.",
     { workflowId: z.string().describe("The workflow's id.") },
     async ({ workflowId }) =>
       guard(async () =>
@@ -263,19 +312,34 @@ export function registerTriggerTools(
 
   server.tool(
     "create_conditional_trigger",
-    "Create a conditional trigger on a workflow: an agent checks `conditionText` " +
-      "every `repeatIntervalMinutes` and fires the workflow when it is met.",
+    "Create a conditional trigger on a workflow: it wakes every " +
+      "`repeatIntervalMinutes` and starts the workflow when there is something " +
+      "to do. " +
+      "\n\nSET `checkKind` UNLESS YOU MEAN EVERY BEAT TO START A RUN. Without " +
+      "it the trigger has no check and fires on the interval regardless — a " +
+      "mailbox at fifteen minutes then makes ninety-six empty runs a day. " +
+      '`checkKind: "automatic"` with a `checkConfig` is one tool call and one ' +
+      "rule, no model, deciding before a run exists.",
     {
       workflowId: z.string().describe("The workflow's id."),
       triggerId: z
         .string()
         .describe("The id of the trigger node in the workflow document."),
-      agentId: z.string().describe("The agent that evaluates the condition."),
+      agentId: z
+        .string()
+        .describe(
+          "The agent this start belongs to. Note it is NOT what decides " +
+            "whether the beat fires — `checkKind` is.",
+        ),
       conditionText: z
         .string()
         .min(1)
         .max(2000)
-        .describe("The condition, in plain language."),
+        .describe(
+          "The condition, in plain language: what a person would say this " +
+            "start is waiting for. It records the intent; `checkKind` is what " +
+            "actually judges it.",
+        ),
       repeatIntervalMinutes: z
         .number()
         .int()
@@ -283,8 +347,19 @@ export function registerTriggerTools(
         .max(10080)
         .describe("How often to re-check, in minutes (5 to 10080)."),
       enabled: z.boolean().optional().describe("Defaults to true."),
+      checkKind: z.string().optional().describe(CHECK_KIND_DESCRIPTION),
+      checkConfig: z.record(z.unknown()).optional().describe(CHECK_CONFIG_DESCRIPTION),
     },
-    async ({ workflowId, triggerId, agentId, conditionText, repeatIntervalMinutes, enabled }) =>
+    async ({
+      workflowId,
+      triggerId,
+      agentId,
+      conditionText,
+      repeatIntervalMinutes,
+      enabled,
+      checkKind,
+      checkConfig,
+    }) =>
       guard(async () =>
         jsonResult(
           await client.post(`/api/v1/workflows/${workflowId}/conditional-triggers`, {
@@ -293,6 +368,8 @@ export function registerTriggerTools(
             conditionText,
             repeatIntervalMinutes,
             ...(enabled === undefined ? {} : { enabled }),
+            ...(checkKind === undefined ? {} : { checkKind }),
+            ...(checkConfig === undefined ? {} : { checkConfig }),
           }),
         ),
       ),
@@ -300,14 +377,31 @@ export function registerTriggerTools(
 
   server.tool(
     "update_conditional_trigger",
-    "Change a conditional trigger's condition, interval, agent, or enabled flag. " +
-      "Send only what you are changing.",
+    "Change a conditional trigger's condition, interval, agent, enabled flag, " +
+      "or its CHECK. Send only what you are changing — an omitted field is " +
+      "left as it was. " +
+      "\n\nTHIS IS HOW YOU PUT A CHECK ON AN EXISTING START: pass `checkKind` " +
+      "and `checkConfig` together. An existing trigger has no check (that is " +
+      "what everything authored before checks existed looks like), so it fires " +
+      "every beat until you set one. " +
+      '\n\nTO CLEAR A CHECK, PASS `checkKind: ""` — the empty string, which ' +
+      "means \"start every beat again\" and drops the config with it. Omitting " +
+      "the field leaves the check standing; only the empty string removes it. " +
+      "Without that distinction a check could be switched on and never off.",
     {
       triggerId: z.string().describe("The conditional trigger's id."),
       conditionText: z.string().min(1).max(2000).optional(),
       repeatIntervalMinutes: z.number().int().min(5).max(10080).optional(),
       agentId: z.string().optional(),
       enabled: z.boolean().optional(),
+      checkKind: z
+        .string()
+        .optional()
+        .describe(
+          `${CHECK_KIND_DESCRIPTION} Pass "" (empty string) to CLEAR the ` +
+            "check, which is a different intention from omitting the field.",
+        ),
+      checkConfig: z.record(z.unknown()).optional().describe(CHECK_CONFIG_DESCRIPTION),
     },
     async ({ triggerId, ...fields }) =>
       guard(async () => {

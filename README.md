@@ -284,6 +284,24 @@ trigger must exist in the **published** document. Rule shapes come from
 `get_workflow_authoring_spec` → `scheduleRuleKinds`; this connector names none
 of its own.
 
+**A conditional trigger without a check starts the workflow every beat.** It
+wakes on its interval and, with nothing set, runs whether or not there was
+anything to do — a mailbox on fifteen minutes makes ninety-six empty runs a
+day. `checkKind` decides instead, and it is a gate ahead of the run being
+created: `"automatic"` is one tool call plus one rule on its answer, no model.
+Its `checkConfig` is `{ toolId, inputs?, rule: { field, op, value } }`, where
+`field` names a key of the *tool's* answer. `"agent"` is reserved for a model
+judging the condition and is refused today.
+
+Set it on `create_conditional_trigger` or on an existing trigger with
+`update_conditional_trigger` — everything authored before checks existed has
+none, which `list_conditional_triggers` shows as `checkKind: null`. **To take a
+check off, send `checkKind: ""`**: the empty string clears the kind and its
+config together, where omitting the field leaves it standing. The connector
+does not judge a check — the backend validates it with the same function the
+dispatcher runs when the trigger fires, so a setting that saves is one that
+runs, and a bad one comes back as a refusal naming what to fix.
+
 ### Runs — evaluating what you built
 
 `start_workflow_run` (test a workflow you built — it runs the **published**

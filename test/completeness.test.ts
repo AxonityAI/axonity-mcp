@@ -76,11 +76,11 @@ function isOutsideTheApi(operation: string): boolean {
  * is decided was about to start failing for being slow, which is the worst way
  * for a build guard to go.
  *
- * DEDUPLICATING THE CALLS is the whole fix. `collectCalledRoutes` replays every
- * handler once per probe variant (14 of them) precisely so a tool that needs
- * particular arguments still fires, and it returns the raw observations — so
- * the same route arrives a dozen times over. The set they contribute to cannot
- * tell the difference, so folding them first changes nothing but the cost.
+ * DEDUPLICATING THE CALLS is the whole fix, and it now lives in
+ * `collectCalledRoutes` itself (axonity-mcp#66) rather than here: the same
+ * repetition was making the contract-skew sweep flaky at the same timeout, and
+ * that one also runs at connector startup. Every consumer of that list asks a
+ * set question, so folding the duplicates changes nothing but the cost.
  *
  * Memoised as well: both tests below ask the same question, and computing it
  * twice doubled a bill nobody was reading.
@@ -89,13 +89,7 @@ let coveredCache: Promise<Set<string>> | undefined;
 
 async function coveredOperations(): Promise<Set<string>> {
   coveredCache ??= (async () => {
-    const seen = new Set<string>();
-    const calls = (await collectCalledRoutes(registerAll as never)).filter((call) => {
-      const key = `${call.method} ${call.path}`;
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
+    const calls = await collectCalledRoutes(registerAll as never);
     const operations = allOperations();
     const covered = new Set<string>();
     for (const call of calls) {
