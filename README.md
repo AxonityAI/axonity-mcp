@@ -473,12 +473,39 @@ npm run build   # emits dist/
 
 ## Releasing
 
-Publishing runs from a maintainer's machine, not from CI. npm restricts tokens
-that bypass 2FA for direct publishing, so a stored `NPM_TOKEN` cannot ship this
-package; `npm login` is the supported path.
+**One command.**
 
-**Check the contract first.** Shipping with a stale snapshot is how the
-connector fell nine operations behind the backend without any test noticing:
+```bash
+npm run release:minor     # or release:patch / release:major
+```
+
+That is the whole procedure. It refuses to start unless you are on `main` with
+nothing uncommitted, resets `main` to exactly what is on GitHub, then installs,
+tests and builds *before* touching the version — so anything that can fail,
+fails while there is still nothing to undo. Only then does it bump, push, tag,
+publish, and read the version back from npm to confirm it landed.
+
+You need to be logged in first, once per machine. Run it in a real terminal:
+`npm login` prints a URL and waits for the browser, so an editor's two-minute
+command timeout will kill it mid-flow.
+
+```bash
+npm login
+npm whoami                # confirm the account
+```
+
+**Why a script and not a list of steps.** The list used to live here, and the
+ORDER was load-bearing: sync first, or the version bump lands on a stale
+checkout. That went wrong twice in one week, identically both times — the bump
+was made on a tree missing the last merge, the branch push was refused, and the
+tag went up anyway. Recovering meant deleting a published tag and hard-resetting,
+which is not something a release should ever require. The script pushes the
+branch *before* the tag for the same reason: a refused push then leaves nothing
+behind.
+
+**Check the contract before a release that matters.** Shipping with a stale
+snapshot is how the connector fell nine operations behind the backend without
+any test noticing:
 
 ```bash
 npm run check:contract          # expects ../axonity-flow; override with AXONITY_FLOW_PATH
@@ -486,27 +513,12 @@ npm run check:contract          # expects ../axonity-flow; override with AXONITY
 
 It dumps the schema from a local `axonity-flow` checkout and diffs it against
 `test/fixtures/openapi.snapshot.json`, naming every operation that moved. It
-runs here rather than in the release workflow because the publish itself runs
-here — a gate in CI cannot stop a local `npm publish`.
+runs here rather than in CI because the publish runs here — a gate in CI cannot
+stop a local `npm publish`.
 
-Run `npm login` in a real terminal — it prints a URL and waits for you to finish
-in the browser, so it needs a session that stays attached (an editor's 2-minute
-command timeout will kill it mid-flow).
-
-```bash
-npm login                 # browser flow; must complete in an attached terminal
-npm whoami                # confirm the account
-
-git checkout main && git pull
-npm version <x.y.z> -m "%s"          # commits + tags, so the tag matches the tarball
-git push origin main --follow-tags
-npm publish                          # prepublishOnly builds dist/ fresh
-npm view @axonity-ai/mcp version     # confirm
-```
-
-Then cut a GitHub release for the tag. That triggers `Verify release`, which
-rebuilds and packs the tagged commit without publishing — it catches a tag that
-was cut from a state CI cannot install.
+After releasing, optionally cut a GitHub release for the tag. That triggers
+`Verify release`, which rebuilds and packs the tagged commit without publishing
+— it catches a tag cut from a state CI cannot install.
 
 Keep npm 11 locally: Node 20 bundles npm 10, whose resolver writes an
 incompatible lockfile tree. CI pins npm 11 for the same reason.
