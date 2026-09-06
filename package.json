@@ -40,6 +40,9 @@
     "test:watch": "vitest",
     "check:contract": "node scripts/check-contract-drift.mjs --flow \"${AXONITY_FLOW_PATH:-../axonity-flow}\"",
     "generate:filters": "node scripts/generate-list-filters.mjs",
+    "release:patch": "bash scripts/release.sh patch",
+    "release:minor": "bash scripts/release.sh minor",
+    "release:major": "bash scripts/release.sh major",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
