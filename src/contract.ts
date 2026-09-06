@@ -158,7 +158,25 @@ export async function collectCalledRoutes(
       }
     }
   }
-  return calls;
+
+  // DEDUPLICATED, because every consumer of this list is a SET question —
+  // "which routes does this build call" — and the replay above asks it once per
+  // probe variant. Fourteen variants over three hundred handlers is ~4,400
+  // observations of a few hundred distinct routes, and both readers then match
+  // each one against the whole route surface: 2.2M comparisons where 150k
+  // would do. `missingFromContract` already collapses the duplicates into a
+  // Set, and the completeness sweep does the same, so nothing downstream can
+  // tell the difference — it was paying for repetition it then discarded.
+  //
+  // It is not only a test cost. This runs at connector STARTUP, ahead of the
+  // transport, on any deploy whose contract hash has changed.
+  const seen = new Set<string>();
+  return calls.filter((call) => {
+    const key = `${call.method} ${call.path}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 /** Split a path into segments, dropping any query string. */

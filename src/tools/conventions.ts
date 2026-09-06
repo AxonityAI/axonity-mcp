@@ -624,6 +624,26 @@ a document to find out what the platform did.
 - \`list_all_cron_schedules\` answers "what runs tonight?" across the tenant;
   \`reconcile_cron_schedules\` answers "is that actually what runs?". The second
   reports rather than tidying silently and never arms something switched off.
+- **A conditional trigger without a CHECK starts the workflow every beat.** It
+  wakes on its interval and, with nothing set, runs regardless of whether there
+  was anything to do — a mailbox on fifteen minutes then makes ninety-six empty
+  runs a day. Set \`checkKind\` on \`create_conditional_trigger\`, or on an
+  existing one with \`update_conditional_trigger\`; every trigger authored
+  before checks existed has none, so read \`checkKind\` in
+  \`list_conditional_triggers\` before assuming otherwise.
+- \`checkKind: "automatic"\` is ONE tool call and one rule on its answer — no
+  model, so it is the cheap way to ask "is there anything there?". Its
+  \`checkConfig\` is \`{ toolId, inputs?, rule: { field, op, value } }\`, where
+  \`field\` names a key OF THE TOOL'S ANSWER. A rule pointing at a field the
+  tool never returns is reported as a broken setup, not as "condition not met".
+  \`"agent"\` is reserved for a model judging the condition and is refused
+  today. Do not pre-validate a check here — the backend judges it with the same
+  function the dispatcher runs when the trigger fires, and its refusal says
+  what to change.
+- **To take a check off again, send \`checkKind: ""\`** — the empty string. It
+  clears the kind and its config together and returns the trigger to starting
+  every beat. Omitting the field leaves the check standing, which is why the
+  empty string exists at all.
 
 ## Evaluating what you built
 - There is no findings endpoint and no evaluator entity. To judge a run, read it:
