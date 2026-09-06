@@ -31,6 +31,10 @@ esac
 step() { printf '\n\033[1m==> %s\033[0m\n' "$1"; }
 die() { printf '\n\033[31mSTOPPED: %s\033[0m\n' "$1" >&2; exit 1; }
 
+# Read from package.json rather than written here, so a rename cannot leave this
+# script confidently checking a package that no longer exists.
+PACKAGE="$(node -p "require('./package.json').name")"
+
 # --- 1. refuse to start from anywhere but a clean main --------------------
 # Both failures began here. Nothing below can be safe if this is not true.
 branch="$(git rev-parse --abbrev-ref HEAD)"
@@ -91,11 +95,31 @@ git push origin "v$version"
 step "Publishing to npm"
 npm publish
 
+# --- 5. confirm, patiently ------------------------------------------------
+# `npm publish` returning 0 is what says the publish took. This step only asks
+# whether the registry's READ side is showing it yet, and that lags — the first
+# version of this script asked once, immediately, and announced "the publish did
+# not take" over a release that had in fact just succeeded. A release ending in
+# a false alarm is worse than one ending in silence: it sends someone to undo
+# work that was fine.
+#
+# So: retry for a minute, and if it still has not appeared, say what is actually
+# known — it is published, npm is being slow — rather than claiming a failure
+# nothing has established.
 step "Confirming"
-published="$(npm view @axonity-ai/mcp version)"
+published=""
+for _ in $(seq 1 12); do
+  published="$(npm view "$PACKAGE" version 2>/dev/null || true)"
+  [ "$published" = "$version" ] && break
+  sleep 5
+done
+
 if [ "$published" = "$version" ]; then
   printf '\n\033[32mReleased %s.\033[0m\n' "$version"
   echo "Optional: cut a GitHub release for v$version to run the tag verification."
 else
-  die "npm reports $published, expected $version. The publish did not take."
+  printf '\n\033[32mPublished %s.\033[0m\n' "$version"
+  printf '\033[33mnpm still reports %s after a minute — that is its read side\n' "${published:-nothing}"
+  printf 'catching up, not a failed publish. Check again shortly:\n\n'
+  printf '  npm view %s version\n\n' "$PACKAGE"
 fi
