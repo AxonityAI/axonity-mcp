@@ -2,5 +2,10 @@ node_modules/
 dist/
 *.log
 
-# Local git worktrees (.worktrees/<branch>) are checkouts, not repository content.
+# Local git worktrees are checkouts, not repository content. Both locations:
+# .worktrees/<branch> is the hand-made one, .claude/worktrees/<branch> is where
+# Claude Code puts its own. The second was missing, so a scratch checkout showed
+# up inside the project — an editor then reports its half-finished edits as
+# changes to YOUR tree, which is alarming and completely untrue.
 .worktrees/
+.claude/worktrees/
