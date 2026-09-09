@@ -145,9 +145,11 @@ has run cleanly once, at its current version.
 - All fields are camelCase JSON (e.g. \`capabilityTier\`, not \`capability_tier\`).
   ONE documented exception: validator specs (\`permissions.outputValidators\`,
   \`permissions.exposedValidatorTools\`) use snake_case keys (\`function\`,
-  \`target\`, \`args\`, \`error_message\`, \`tool_name\`, \`validator_name\`) — they are
-  the same shape at every level and are stored verbatim, so they are NOT
-  camel-aliased. Send them in snake_case.
+  \`target\`, \`args\`, \`when_present\`, \`inputs\`, \`error_message\`,
+  \`tool_name\`, \`validator_name\`) — they are the same shape at every level and
+  are stored verbatim, so they are NOT camel-aliased. Send them in snake_case.
+  What those keys MEAN, and how a validator is bound to what it judges, is the
+  Validators section.
 - \`update_*\` is a partial change for agents/tools and a partial patch for
   workflows: send only the fields you are changing (plus \`expectedVersion\`).
 - The backend validates fields; a 422 error names the offending field and why
@@ -254,10 +256,15 @@ made any time before you attach them.
     or ""); a human fills the secret in Axonity. Test with
     \`execute_stored_connector\` (uses the real, server-side-decrypted secret;
     you see only the result).
-  - **validator / evaluator** — a constrained kind that wraps a builtin;
-    \`implementation\` names the builtin registry key plus its args. Look at the
-    tenant's existing validator/evaluator tools (\`list_tools\`) for the keys in
-    use rather than inventing one.
+  - **validator / evaluator** — a constrained kind, and \`implementation\` takes
+    ONE OF TWO shapes. Either \`{"builtin": "validators.<name>"}\`, naming a
+    house predicate — look at the tenant's existing validator/evaluator tools
+    (\`list_tools\`) for the keys in use rather than inventing one. Or authored
+    Python, like a function tool, whose \`run\` returns a VERDICT: \`True\` /
+    \`False\` / a fail-detail object. A \`run\` that returns a string, a number
+    or nothing at all declares no verdict and is REFUSED on save, so that a
+    misconfigured gate cannot silently pass everything at run time. Authored
+    code takes the standard call — see Validators.
 - Complete check: the tool has the I/O schemas its callers need AND a non-empty
   implementation of the right shape for its type.
 - \`toolboxId\` files the tool in a toolbox on creation. Read \`list_toolboxes\`
@@ -273,8 +280,9 @@ made any time before you attach them.
   shape), \`canOwnProcess\` (bool; must be true for an agent to own a
   workflow step's flow), \`episodicMemoryEnabled\` (bool).
 - \`permissions\` (object): \`planning\`, \`delegation\`, \`verboseOutput\` (bools);
-  \`outputValidators\` / \`exposedValidatorTools\` (snake_case specs, see Field
-  shape); \`expectedOutputSchemaId\` (an output_schema id — MANDATORY whenever you
+  \`outputValidators\` / \`exposedValidatorTools\` (snake_case specs — see Field
+  shape for the casing, Validators for what they say);
+  \`expectedOutputSchemaId\` (an output_schema id — MANDATORY whenever you
   attach validators here).
 - Wiring fields — see the Wiring section: \`toolIds\`, \`systemToolIds\`,
   \`delegationTargetIds\`.
@@ -313,6 +321,10 @@ made any time before you attach them.
 - A reusable output contract, versioned and publishable. Referenced BY id from a
   tool's validators or an agent's \`permissions.expectedOutputSchemaId\` — so
   create it first, then point things at the id the create call returns.
+- \`schemaBody\` is a JSON Schema document (\`type\`, \`properties\`,
+  \`required\`) PLUS one key that is not JSON Schema: \`validators\`, the gates
+  run against a submitted output. This is the place a validator can be STEERED
+  at part of the output — see Validators.
 
 ### skill / policy / reference_doc
 - Memory entities attached to agents (and skills also to workflows). Create them,
@@ -343,6 +355,89 @@ made any time before you attach them.
   is a singleton this takes NO id (the server resolves your tenant's one
   company). Direct company publish is closed to machine tokens, so the approval
   queue is the only path.
+
+## Validators — one shape, one call
+A validator is a GATE on a submitted output: it runs after an agent produces a
+result and can refuse it. Specs are written in two places and carry the same
+key names in both — \`permissions.outputValidators\` on an agent, and
+\`validators\` inside an output_schema's \`schemaBody\`. The backend's OpenAPI
+description of \`schemaBody\` is the source for the full contract; what follows
+is the part you cannot author without.
+
+- A spec names its check in ONE of two ways, and each brings its own binding:
+  - \`function\` — a shipped predicate (e.g. \`validators.min_length\`), bound
+    by \`target\` (the field it judges; omit it to judge the whole output) and
+    \`args\`.
+  - \`tool\` — a validator TOOL in this tenant's library, by name or id.
+  Exactly one of the two. Naming both leaves it unsaid which one runs, naming
+  neither leaves nothing to run, and a gate does not get to be ambiguous — both
+  are refused. The binding keys do not mix either: \`target\`/\`args\` belong to
+  the \`function\` form and are refused on a \`tool\` spec, because a key the
+  runtime ignores is worse stored than rejected.
+- \`error_message\` is what the agent is told on refusal, and the one key both
+  forms share. \`{value}\` in it is replaced by what the validator reported.
+- \`when_present\` runs the check only when the target field is actually in the
+  payload. Off by default, deliberately: a blanket skip turns a mistyped
+  \`target\` into a gate that passes everything. Set it where a field is
+  genuinely optional.
+
+### The standard call
+EVERY authored validator is invoked the same way. The signature does not vary
+per tool, and that is the whole point: a screen cannot offer inputs it does not
+know, and a spec served to an agent cannot describe a shape that differs per
+tool. Bespoke parameters push the contract into prose that goes stale.
+
+\`\`\`
+run(data, slots, binding)
+\`\`\`
+
+- \`data\` — what the validator is pointed at, UNTOUCHED. The whole submitted
+  output, or the field named by \`field\`.
+- \`slots\` — every declared session-memory reference found in \`data\`, with its
+  text, indexed by the reference itself. The platform resolves them because code
+  in the sandbox is never handed a lookup callable — a validator may be foreign
+  code.
+- \`binding\` — what you declared, verbatim, so the validator knows which values
+  in \`data\` are references to look up rather than text to read. Without it it
+  would have to guess, and guessing is how a check reads a key as though it were
+  the body.
+
+Two keys on the spec steer that call: \`field\` names the part of the output to
+hand over (leave it out for the whole output), and \`slots\` lists the fields
+that hold references.
+
+\`\`\`json
+{ "tool": "my.freshness.check",
+  "field": "units",
+  "slots": ["key", "source_key"],
+  "error_message": "REJECTED: {value}" }
+\`\`\`
+
+BOTH ARE CHECKED WHEN YOU SAVE the output schema, and a refusal names the
+fields that do exist: a \`field\` that is not a property, or a \`slots\` name the
+rows do not carry. That check is there because either mistake fails SILENTLY at
+run time — a name that is not there is never looked up, so the gate runs on
+unresolved values and nothing says so. (Rows whose schema declares no shape are
+left alone: there is nothing to check against, and guessing would refuse correct
+configurations.)
+
+WHERE \`field\` AND \`slots\` ARE ACCEPTED: inside an output_schema's
+\`schemaBody\`, which is stored verbatim. An agent's
+\`permissions.outputValidators\` is a STRICT body — an undeclared key is a 422 —
+so a spec written THERE takes neither, and its validator gets the whole output
+and no slots. Steer a validator from the output_schema.
+
+### The older, explicit binding
+A tool spec MAY declare \`inputs\` instead, and a spec with \`inputs\` does NOT
+get the standard call. That is the way for a validator tool backed by a shipped
+predicate, which receives \`value\` plus its own arguments — its \`run\` would
+not accept \`data\`/\`slots\`/\`binding\`. Each entry is
+\`{"source": "field"|"const", "field": <name>, "as": "slot"?}\`; with
+\`as: "slot"\` the field's value is read as a reference and its TEXT is passed.
+\`field\` takes a path, so a binding can point INTO a list: \`units[].key\` is,
+from every row in \`units\`, the \`key\` field.
+
+Writing a NEW validator: take the standard call and leave \`inputs\` out.
 
 ## Wiring — how the pieces connect
 There are THREE mechanisms, and using the wrong one silently no-ops. Know which
