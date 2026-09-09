@@ -11,7 +11,49 @@ diff in review.
 
 ## Provenance
 
-- Generated from **axonity-flow `main`** at commit `4a6357fc` — epic
+- Generated from **axonity-flow `main`** at commit `484c1628` — the validator
+  contract reaching the OpenAPI (axonity-flow#1515, on top of #1514's standard
+  call), consumed here by axonity-mcp#73. The surface moves **490 → 495
+  operations** and no operation was removed. All five arrivals are COVERED;
+  none of them touches a boundary `denyList.ts` keeps shut, so there was
+  nothing to exclude:
+  - `GET /conditional-triggers` — every conditional start in the tenant, where
+    the connector could only ask per workflow. Richer rows than the per-workflow
+    route: the workflow's name, whether the schedule is paused, and how many
+    ticks are waiting. That last number should be one, and more than one means
+    the schedule forked (axonity-flow#1278) — a fault that otherwise surfaces
+    only as a workflow running three times an interval.
+    → `list_tenant_conditional_triggers`.
+  - `GET /data-tables/{id}/rows` — the paged, filtered reader. `read_data_table`
+    answers with EVERY row, and the reasoning that put paging on
+    `list_data_tables` (a library grows by authoring; a tenant's reference data
+    has no ceiling) bites harder one level down where the rows are.
+    → `list_data_table_rows`.
+  - `GET /workflows/{id}/components` — what a workflow is made of, composed over
+    two hops: what the document names, and what each agent then actually
+    receives. The connector could only ask the REVERSE (`list_workflows_using`).
+    The guide's own "Reproducing a setup" told an agent to walk this by hand.
+    → `list_workflow_components`, and the guide now starts that step with it.
+  - `POST /workflows/{id}/components/duplicate` — give this workflow its own
+    copy of a shared component. Not a breach of "recreate, never copy ids":
+    that rule is about carrying an id across TENANTS, and this is one tenant
+    with the backend rewriting the references.
+    → `duplicate_workflow_component`.
+  - `POST /company/discard-draft` — company was the twelfth versioned entity and
+    the last without one (axonity-flow#1388), so its draft was the only draft in
+    the tenant nobody could walk back. → `discard_company_draft`.
+
+  **One guard had to move.** `StepSchema.properties.type` no longer enums the
+  nine step types; it is a bare string. That is the backend reaching the same
+  conclusion this connector did — the transport is permissive, the spec is the
+  authority — but `conformance.test.ts` was reading that enum as the ALPHABET
+  for its "the connector states no vocabulary of its own" sweep. An empty
+  alphabet matches nothing, so the sweep would have passed on every text
+  forever. The `.toBe(9)` tripwire fired exactly as designed, and the step types
+  now sit written-out beside the trigger types and rule kinds, with the caveat
+  those already carry: a value added on the backend is invisible to the list,
+  which can make it miss an accusation but never invent one.
+- Previously **`4a6357fc`** — epic
   axonity-flow#1217 (*a table is a library element you design yourself*, PR
   #1231) plus its two follow-ups #1234 (core entity wiring) and #1235 (the
   authoring API), consumed here by axonity-mcp#63. The surface moves

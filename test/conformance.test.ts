@@ -204,14 +204,28 @@ describe("MCP route surface conforms to the backend OpenAPI snapshot", () => {
    * key nothing reads. This connector shipped exactly that in #46 and had to
    * correct it in #47 — so the absence is guarded here too.
    *
-   * Alphabets: the step-type one is read from the SNAPSHOT and is deliberately
-   * the wider of the two lists on the backend. `StepSchema.type` still enums
-   * all nine while the validator accepts seven — the transport schema is
-   * permissive and the validator is the authority, which is precisely why the
-   * old drift guard could not see this. A wider alphabet only makes this guard
-   * catch more. The other two alphabets are written out here because no route
-   * in the snapshot carries them; a value added on the backend is invisible to
-   * them, which weakens the guard but can never make it lie.
+   * Alphabets: all of them are now written out HERE, and the step-type one
+   * arrived last. It used to be read from the snapshot — `StepSchema.type`
+   * enumerated all nine while the validator accepts seven, and the wider list
+   * only made this guard catch more. The backend has since dropped that enum:
+   * `StepSchema.type` is a bare string, which is the same conclusion this
+   * connector reached one level up (the transport promises nothing, the spec
+   * is the authority) and is the right move there.
+   *
+   * It does mean the alphabet had to come from somewhere, and an empty one is
+   * the failure that matters: `enumerationOf([])` matches nothing, so the
+   * sweep below would pass on every text forever and nobody would know. The
+   * `.toBe(9)` assertion that used to guard the snapshot was exactly that
+   * tripwire, and it fired on the refresh rather than letting the guard go
+   * quietly to sleep.
+   *
+   * So the step types join the other two: written out, with the same caveat
+   * the trigger types and rule kinds carry — a value ADDED on the backend is
+   * invisible to this list, which weakens the guard but can never make it lie.
+   * It cannot produce a false accusation; it can only miss one. The live
+   * vocabulary is `get_workflow_authoring_spec`, read from the deploy, and
+   * that is what an agent is pointed at. A test that read it from there would
+   * be a test that needs a backend to run.
    */
   it("the connector states none of the deploy's vocabularies of its own", async () => {
     const descriptions = new Map<string, string>();
@@ -229,11 +243,15 @@ describe("MCP route surface conforms to the backend OpenAPI snapshot", () => {
     };
     registerAll(server as never, {} as unknown as AxonityClient);
 
-    const stepTypes =
-      snapshot.components.schemas.StepSchema?.properties?.type?.enum ?? [];
-    expect(stepTypes.length, "the step-type enum vanished — check the snapshot").toBe(
-      9,
-    );
+    // The nine the transport schema used to enum, kept deliberately wider than
+    // the seven the validator accepts: this is a net for our own prose, and a
+    // wider net catches more. `loop` and `for_each` are in it precisely
+    // BECAUSE they are the pair the guide once handed an agent and the backend
+    // then refused.
+    const stepTypes = [
+      "manual", "agent", "automation", "subprocess", "connector",
+      "decision", "loop", "for_each", "end",
+    ];
 
     const triggerTypes = [
       "manual-start", "manual-button", "conditional-data", "conditional-poll",

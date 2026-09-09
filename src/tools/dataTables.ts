@@ -24,7 +24,16 @@
  * `update_data_table` to base itself on. Adding a version argument here would
  * invent a check the route does not make.
  *
- * **2. Which tools a table yields.** A published table mints its own CRUD tools,
+ * **2. Reading the rows without reading the whole table.** `read_data_table`
+ * answers with the table AND every row it holds, which is right for a library
+ * element and wrong for DATA: the reasoning that put `listPaging` on
+ * `list_data_tables` — a library grows by deliberate authoring, a tenant's
+ * reference data has no ceiling — applies harder one level down, where the rows
+ * are. `list_data_table_rows` (axonity-flow#1372) is the paged, filtered reader,
+ * and the filter runs over the WHOLE table before the page is cut, so a match
+ * below the window is still found.
+ *
+ * **3. Which tools a table yields.** A published table mints its own CRUD tools,
  * so granting an agent access to a table is ordinary tool granting rather than a
  * second permission vocabulary. Their names follow a convention, which used to
  * mean the only way to find them was to fetch the whole tool library and match
@@ -159,6 +168,62 @@ export function registerDataTableTools(
             match_column: matchColumn,
             match_value: matchValue,
           }),
+        ),
+      ),
+  );
+
+  server.tool(
+    "list_data_table_rows",
+    "Read a table's rows ONE PAGE at a time, optionally filtered. Read-only. " +
+      "\n\nPREFER THIS OVER read_data_table WHEN YOU WANT THE CONTENT. " +
+      "read_data_table answers with the table and ALL of its rows, which is " +
+      "fine for a small lookup table and is not what a tenant's reference data " +
+      "looks like — thousands of rows arrive as one response nobody asked for. " +
+      "\n\nTHE RESPONSE IS ONE PAGE: { items, nextCursor, pageSize, hasMore }. " +
+      "Each item is `{ cells }`, keyed by column name exactly as the table " +
+      "stores them — not reshaped, because you are looking at the author's own " +
+      "data. While hasMore is true you have NOT seen every row; pass nextCursor " +
+      "back as cursor and repeat until it is null. " +
+      "\n\nFILTER RATHER THAN WALK: `q` matches any cell containing that text " +
+      "and is applied to the whole table before the page is cut, so \"is there " +
+      "a row for X\" is one call. " +
+      "\n\nA CURSOR GOES STALE ON PURPOSE. It carries a fingerprint of the " +
+      "table's version and your filter, so a table edited while you were " +
+      "paging REFUSES the cursor with a 422 instead of quietly continuing " +
+      "through a different set of rows. Start again from the first page — that " +
+      "is the correct response, not an error to work around.",
+    {
+      tableId: z.string().describe("The table's id."),
+      q: z
+        .string()
+        .optional()
+        .describe(
+          "Keep only rows with a cell containing this text. Applied across " +
+            "the whole table, not just the page you are on.",
+        ),
+      limit: z
+        .number()
+        .int()
+        .optional()
+        .describe(
+          "Page size. Defaults to 20, clamped to 200 — asking for more is not " +
+            "an error and does not get you more.",
+        ),
+      cursor: z
+        .string()
+        .optional()
+        .describe(
+          "Opaque continuation cursor from the previous response's " +
+            "nextCursor. Omit for the first page. Do not parse or construct " +
+            "one, and do not reuse one from before the table changed.",
+        ),
+    },
+    async ({ tableId, q, limit, cursor }) =>
+      guard(async () =>
+        // The page envelope is forwarded WHOLE — unwrapping to `items` would
+        // rebuild the silent truncation this tool exists to avoid.
+        jsonResult(
+          await client.get(`${BASE}/${tableId}/rows`, { q, limit, cursor }),
         ),
       ),
   );

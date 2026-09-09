@@ -317,7 +317,7 @@ describe("a table's tools follow its PUBLISHED version", () => {
 });
 
 describe("the row tools are registered as a set", () => {
-  it("registers all four", () => {
+  it("registers all five", () => {
     const handlers = new Map<string, Handler>();
     registerDataTableTools(
       {
@@ -329,6 +329,7 @@ describe("the row tools are registered as a set", () => {
     expect([...handlers.keys()].sort()).toEqual([
       "add_data_table_row",
       "delete_data_table_row",
+      "list_data_table_rows",
       "list_data_table_tools",
       "update_data_table_row",
     ]);

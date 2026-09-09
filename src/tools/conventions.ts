@@ -401,6 +401,15 @@ get "into" a workflow — there is no attach route for it):
   validates each edit. Read the returned document to see the exact shape it
   produced, then adjust.
 
+### Which way you are asking
+- \`list_workflow_components\` — what does THIS workflow depend on. Two hops:
+  what the document names, and what each agent then actually receives.
+- \`list_workflows_using\` / \`list_dependent_agents\` — who depends on THIS
+  entity. Ask before you edit or delete anything shared.
+- A component's \`reach\` is how many workflows name it, this one included. Above
+  1, an edit reaches processes you did not open; \`duplicate_workflow_component\`
+  gives this workflow its own copy and leaves the others on the original.
+
 ## Prompt elements & placement (Memory V2)
 A prompt snippet is a LIBRARY item — creating it changes nothing on its own. It
 only shapes a run once it is PLACED into a flow step's prompt stack. Placement is
@@ -442,10 +451,16 @@ meaningful only in the tenant it came from; sending it back in a create/update
 elsewhere points at nothing. Do this instead:
 1. Read the source graph (in the session pointed at it) for its SHAPE: names,
    field values, which tools each agent lists, which agents/tools each workflow
-   step references. For each source agent also read its LINKS —
-   \`list_agent_skills\`, \`list_agent_policies\`, \`list_agent_reference_docs\` —
-   they are not in the agent body, so a plain \`read_agent\` misses them and you
-   would rebuild an agent that quietly lost its skills and guardrails.
+   step references. START WITH \`list_workflow_components\`: it answers what the
+   workflow is made of in one call — agents and flows, the workflows it calls,
+   the tools those agents reach, the tables behind those tools, the knowledge
+   attached — each row naming the STEPS that are the reason it is there. Walking
+   that outward by hand is how a rebuild quietly loses a tool nobody noticed was
+   attached. Then read each entity for its field values. For each source agent
+   also read its LINKS — \`list_agent_skills\`, \`list_agent_policies\`,
+   \`list_agent_reference_docs\` — they are not in the agent body, so a plain
+   \`read_agent\` misses them and you would rebuild an agent that quietly lost
+   its skills and guardrails.
 2. Create the leaf dependencies first (tools, output_schemas). Keep a map from
    each OLD id to the NEW id the create call returns.
 3. Create agents, translating every referenced id through your map:

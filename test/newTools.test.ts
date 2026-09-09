@@ -163,6 +163,13 @@ describe("company (singleton) tools", () => {
   });
 
   it("has no singleton-inappropriate tools", () => {
+    // `discard_company_draft` used to be on this list, and it belonged there:
+    // company had no discard route, so a tool would have been a 405 dressed as
+    // a capability. axonity-flow#1388 added the route — company was the last
+    // versioned entity without one — so the reason expired and the tool is
+    // registered now, asserted below. What stays forbidden is what a SINGLETON
+    // genuinely cannot have: there is nothing to list, nothing to create
+    // beside the one, and no id to delete or restore by.
     const { handlers } = setup();
     const names = [...handlers.keys()];
     for (const forbidden of [
@@ -170,10 +177,19 @@ describe("company (singleton) tools", () => {
       "create_company",
       "delete_company",
       "restore_company",
-      "discard_company_draft",
     ]) {
       expect(names).not.toContain(forbidden);
     }
+  });
+
+  it("discards the draft with no version, and says why it can be refused", async () => {
+    // No expectedVersion on purpose: a discard is a RECOVERY action against
+    // whatever the draft currently holds, so a stale version number must not
+    // be able to block it. That is the backend's contract, and a version
+    // argument here would invent a check the route does not make.
+    const { handlers, client } = setup();
+    await handlers.get("discard_company_draft")!({});
+    expect(client.post).toHaveBeenCalledWith("/api/v1/company/discard-draft");
   });
 
   it("requests publish through the approval queue with NO id (singleton)", async () => {

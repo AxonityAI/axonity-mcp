@@ -2,17 +2,26 @@
  * The company entity — a tenant's single company document (mission, value
  * streams, org structure). Unlike the other authored entities it is a
  * SINGLETON: one per tenant, addressed at `/api/v1/company` with no id, so it
- * has no list / create / delete / restore / discard routes. It is
- * version-controlled like the memory entities, and editable two ways: command
- * mutations (`apply_company_mutation`, preferred — the backend validates each
- * and threads the version) or a whole-document PUT (`update_company`). Workflow
- * has had both for a long time; company was whole-document-only here even
- * though `POST /api/v1/company/mutations` existed.
+ * has no list / create / delete routes. It is version-controlled like the
+ * memory entities, and editable two ways: command mutations
+ * (`apply_company_mutation`, preferred — the backend validates each and threads
+ * the version) or a whole-document PUT (`update_company`). Workflow has had
+ * both for a long time; company was whole-document-only here even though
+ * `POST /api/v1/company/mutations` existed.
  *
- * Publishing: company is currently NOT a publish-approval entity type on the
- * backend, so there is no request_publish_company — a company change is
- * published directly by a human/admin in Axonity. (Tracked in axonity-flow: the
- * decision on whether company joins the approval queue.)
+ * Publishing goes through the approval queue like everything else
+ * (`request_publish_company`, no id — the server resolves the singleton). The
+ * comment here used to say the opposite: that company was NOT a publish-approval
+ * entity type and that a human published it directly. The backend's approval
+ * enum names `company`, and the tool below has always posted it, so the prose
+ * was describing a state of the world that had moved on. Corrected rather than
+ * left, because a wrong comment about the publish gate is the wrong comment to
+ * have.
+ *
+ * `discard_company_draft` is newer. Company was the twelfth versioned entity
+ * and the last one without a discard route — axonity-flow#1388 added it because
+ * the Company page's own Discard button had nothing to call — so until now a
+ * company draft was the one draft in the tenant you could not walk back.
  */
 
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -32,6 +41,24 @@ export function registerCompanyTools(
       "version for optimistic locking.",
     {},
     async () => guard(async () => jsonResult(await client.get("/api/v1/company"))),
+  );
+
+  server.tool(
+    "discard_company_draft",
+    "Throw away the company DRAFT and reset it to what is published — the " +
+      "recovery action when a run of edits went wrong and you want the live " +
+      "document back. What is live is not touched; only the draft is. " +
+      "\n\nTakes no expectedVersion, on purpose: a discard acts on whatever " +
+      "the draft currently holds, so a stale version number must not be able " +
+      "to block a recovery. " +
+      "\n\nREFUSED (422) WHEN THE COMPANY HAS NEVER BEEN PUBLISHED. There is " +
+      "then nothing to reset to and the draft is the only copy of that work — " +
+      "the refusal says so. Read the message rather than retrying.",
+    {},
+    async () =>
+      guard(async () =>
+        jsonResult(await client.post("/api/v1/company/discard-draft")),
+      ),
   );
 
   server.tool(
@@ -83,8 +110,9 @@ export function registerCompanyTools(
     "update_company",
     "Save the company draft as a WHOLE document (full-document PUT, not a field " +
       "merge). Read it first for its version; on a 409 conflict re-read and retry. " +
-      "This writes the draft only — a human publishes it in Axonity (company is " +
-      "not part of the request_publish_* approval flow).",
+      "This writes the draft only — propose it with request_publish_company and " +
+      "a human approves. To walk the draft back to what is live, " +
+      "discard_company_draft.",
     {
       expectedVersion: z
         .number()

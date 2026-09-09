@@ -311,6 +311,30 @@ export function registerTriggerTools(
   );
 
   server.tool(
+    "list_tenant_conditional_triggers",
+    "Every conditional start in the TENANT, not one workflow's — the answer to " +
+      "\"what is scheduled to run here at all\", which list_conditional_triggers " +
+      "cannot give you without walking every workflow. Read-only. " +
+      "\n\nEach row names the workflow it starts, so a tenant-wide list is " +
+      "readable, and DISABLED triggers are included on purpose: a schedule " +
+      "somebody switched off is the one you go looking for to switch back on. " +
+      "\n\nREAD `pendingTasks`. It should be 1. More than one means the " +
+      "schedule FORKED and the workflow is starting several times an interval " +
+      "— a fault that otherwise shows up only as a surprising number of runs. " +
+      "`nextScheduledFor` says when the next beat is due, and " +
+      "`schedulePausedAt` is set when the whole workflow's schedule is paused, " +
+      "which makes a trigger that looks enabled do nothing. " +
+      "\n\nRicher rows than list_conditional_triggers, which answers with the " +
+      "trigger records themselves — use that one when you are editing a " +
+      "specific workflow's starts.",
+    {},
+    async () =>
+      guard(async () =>
+        jsonResult(await client.get("/api/v1/conditional-triggers")),
+      ),
+  );
+
+  server.tool(
     "create_conditional_trigger",
     "Create a conditional trigger on a workflow: it wakes every " +
       "`repeatIntervalMinutes` and starts the workflow when there is something " +

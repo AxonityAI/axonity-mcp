@@ -37,6 +37,7 @@ import {
 } from "./tools/extras.js";
 import { registerAuthoringSpecTools } from "./tools/authoringSpec.js";
 import { registerCompanyTools } from "./tools/company.js";
+import { registerComponentTools } from "./tools/components.js";
 import { registerOperationsTools } from "./tools/operations.js";
 import { registerPromptPlacementTools } from "./tools/promptPlacement.js";
 import { LIST_FILTERS } from "./generated/listFilters.js";
@@ -242,6 +243,7 @@ export function registerAll(server: ServerLike, client: AxonityClient): void {
   registerToolboxTools(server as McpServer, client);
   registerOperationsTools(server as McpServer, client);
   registerDataTableTools(server as McpServer, client);
+  registerComponentTools(server as McpServer, client);
 }
 
 export function buildServer(client: AxonityClient): McpServer {
