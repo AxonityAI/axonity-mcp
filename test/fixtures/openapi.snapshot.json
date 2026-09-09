@@ -331,6 +331,20 @@
             "title": "Tags",
             "type": "array"
           },
+          "toolIds": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Toolids"
+          },
           "updatedAt": {
             "title": "Updatedat",
             "type": "string"
@@ -1952,6 +1966,101 @@
         "title": "ConcurrentRunCapUpdate",
         "type": "object"
       },
+      "ConditionalScheduleRow": {
+        "description": "One conditional trigger as the schedules screen needs it.\n\nRicher than ``ConditionalTriggerOut`` in exactly two ways, and both\nanswer a question an operator actually has:\n\n* ``workflow_name`` — the list is tenant-wide, so a row has to say what\n  it starts. An id does not.\n* ``pending_tasks`` — how many of this trigger's ticks are waiting. It\n  should be one. More than one means the schedule forked (#1278), and\n  that shows up here as a number rather than as a workflow quietly\n  running three times an interval.",
+        "properties": {
+          "agentId": {
+            "format": "uuid",
+            "title": "Agentid",
+            "type": "string"
+          },
+          "checkKind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checkkind"
+          },
+          "conditionText": {
+            "title": "Conditiontext",
+            "type": "string"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "nextScheduledFor": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextscheduledfor"
+          },
+          "pendingTasks": {
+            "title": "Pendingtasks",
+            "type": "integer"
+          },
+          "repeatIntervalMinutes": {
+            "title": "Repeatintervalminutes",
+            "type": "integer"
+          },
+          "schedulePausedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Schedulepausedat"
+          },
+          "triggerId": {
+            "format": "uuid",
+            "title": "Triggerid",
+            "type": "string"
+          },
+          "workflowId": {
+            "format": "uuid",
+            "title": "Workflowid",
+            "type": "string"
+          },
+          "workflowName": {
+            "title": "Workflowname",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "workflowId",
+          "workflowName",
+          "triggerId",
+          "agentId",
+          "conditionText",
+          "repeatIntervalMinutes",
+          "enabled",
+          "pendingTasks",
+          "nextScheduledFor",
+          "schedulePausedAt"
+        ],
+        "title": "ConditionalScheduleRow",
+        "type": "object"
+      },
       "ConditionalTriggerIn": {
         "description": "Input shape for ``create`` / ``update``.\n\nThe route layer fills in ``tenant_id`` from the auth context — never\nfrom the request body, so a request cannot escalate to another\ntenant. ``trigger_id`` is the JSONB-side trigger element id supplied\nby the workflow document; the route accepts it because the trigger\nmetadata lives in the document, not on a separate table.",
         "properties": {
@@ -1959,6 +2068,29 @@
             "format": "uuid",
             "title": "Agentid",
             "type": "string"
+          },
+          "checkConfig": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checkconfig"
+          },
+          "checkKind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checkkind"
           },
           "conditionText": {
             "maxLength": 2000,
@@ -2005,6 +2137,29 @@
             "format": "uuid",
             "title": "Agentid",
             "type": "string"
+          },
+          "checkConfig": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checkconfig"
+          },
+          "checkKind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checkkind"
           },
           "conditionText": {
             "title": "Conditiontext",
@@ -2078,6 +2233,29 @@
               }
             ],
             "title": "Agentid"
+          },
+          "checkConfig": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checkconfig"
+          },
+          "checkKind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checkkind"
           },
           "conditionText": {
             "anyOf": [
@@ -3361,7 +3539,7 @@
           },
           "schemaBody": {
             "additionalProperties": true,
-            "description": "The JSON Schema document describing the output contract.",
+            "description": "The JSON Schema document describing the output contract: `type`, `properties`, `required`, and — the part that is not JSON Schema — `validators`.\n\n`validators` is a list of gates run against a submitted output. Each entry is one of two shapes.\n\nA SHIPPED PREDICATE names `function` (e.g. `validators.min_length`), the `target` field it judges, and its own `args`. Omit `target` to judge the whole output.\n\nA VALIDATOR TOOL names `tool` instead, and gets the STANDARD CALL — every authored validator is invoked the same way, so a screen can offer its inputs and a served spec can describe them:\n\n  `data`    — what the validator is pointed at, untouched. The whole submitted output by default, or the field named by `field`.\n  `slots`   — every declared session-memory reference found in `data`, with its text, indexed by the reference itself. The platform resolves these because sandboxed tool code is never handed a lookup callable.\n  `binding` — what you declared, verbatim, so the validator knows which values in `data` are references rather than plain values.\n\nTwo keys steer it. `field` names the part of the output to hand over; leave it out for the whole output. `slots` lists the fields holding references, e.g. `[\"key\", \"source_key\"]`. Both are checked on save: a `field` that is not a property, or a `slots` name the rows do not carry, is refused — a name that is not there would never be looked up and the gate would run on unresolved values in silence.\n\n  {\"tool\": \"my.freshness.check\", \"field\": \"units\", \"slots\": [\"key\", \"source_key\"], \"error_message\": \"REJECTED: {value}\"}\n\nA tool MAY instead declare `inputs` — the older, explicit binding, and the way a tool backed by a shipped predicate receives `value` plus its arguments. Each entry is `{\"source\": \"field\"|\"const\", \"field\": <name>, \"as\": \"slot\"?}`; with `as: \"slot\"` the field's value is read as a reference and the TEXT is passed. `field` may point into a list: `units[].key` is, from every row in `units`, the `key` field. A spec with `inputs` does not get the standard call.\n\n`error_message` is the text an agent sees on refusal; `{value}` is replaced by what the validator reported.",
             "title": "Schemabody",
             "type": "object"
           },
@@ -4207,7 +4385,7 @@
             "type": "string"
           },
           "name": {
-            "description": "Display name of the toolbox, e.g. 'Carerix'.",
+            "description": "Display name of the toolbox, e.g. 'Billing'.",
             "maxLength": 255,
             "title": "Name",
             "type": "string"
@@ -4790,6 +4968,22 @@
           "updatedAt"
         ],
         "title": "DataTableResponse",
+        "type": "object"
+      },
+      "DataTableRowItem": {
+        "description": "One row of a data table, as a reader sees it (#1372).",
+        "properties": {
+          "cells": {
+            "additionalProperties": true,
+            "description": "The row's cells, keyed by column name, exactly as the table stores them. Not reshaped: a reader is looking at the author's own data, and renaming or coercing it here would show something the routing does not use.",
+            "title": "Cells",
+            "type": "object"
+          }
+        },
+        "required": [
+          "cells"
+        ],
+        "title": "DataTableRowItem",
         "type": "object"
       },
       "DataTableRowResponse": {
@@ -6065,6 +6259,58 @@
           "dryRunClean"
         ],
         "title": "DryRunToolResponse",
+        "type": "object"
+      },
+      "DuplicateComponentRequest": {
+        "description": "Copy a shared component and point THIS workflow at the copy (#1371).",
+        "properties": {
+          "entityId": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Entityid",
+            "type": "string"
+          },
+          "kind": {
+            "const": "agent",
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "entityId"
+        ],
+        "title": "DuplicateComponentRequest",
+        "type": "object"
+      },
+      "DuplicateComponentResponse": {
+        "description": "What the panel replaces its own state with.\n\nThe whole document, not a patch: the repoint touches every site the\ncomponent was named in, and a caller applying a partial answer would keep a\nstale reference on the sites it did not hear about.",
+        "properties": {
+          "document": {
+            "additionalProperties": true,
+            "title": "Document",
+            "type": "object"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "newEntityId": {
+            "title": "Newentityid",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "newEntityId",
+          "name",
+          "version",
+          "document"
+        ],
+        "title": "DuplicateComponentResponse",
         "type": "object"
       },
       "EdgeSchema": {
@@ -8319,6 +8565,26 @@
             ],
             "title": "Outputschema"
           },
+          "publishedCredentialFields": {
+            "description": "Fields in the LIVE PUBLISHED snapshot that carry a literal credential, as markers naming where and what — e.g. \"headers[0] 'Ocp-Apim-Subscription-Key'\" — never the value. Empty when the published version is clean or nothing is published. Non-empty means the running connector still sends a credential even if the fields above no longer do: cleaning a tool changes nothing until it is published (#1351).",
+            "items": {
+              "type": "string"
+            },
+            "title": "Publishedcredentialfields",
+            "type": "array"
+          },
+          "publishedMajorVersion": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Major version currently live, or null when nothing is published. The runtime reads the published snapshot, not this record's fields — so this is what is actually running.",
+            "title": "Publishedmajorversion"
+          },
           "status": {
             "enum": [
               "draft",
@@ -9574,6 +9840,42 @@
         "title": "Page[AuditEventItem]",
         "type": "object"
       },
+      "Page_DataTableRowItem_": {
+        "properties": {
+          "hasMore": {
+            "default": false,
+            "title": "Hasmore",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/DataTableRowItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          },
+          "pageSize": {
+            "title": "Pagesize",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "pageSize"
+        ],
+        "title": "Page[DataTableRowItem]",
+        "type": "object"
+      },
       "Page_DataTableSummary_": {
         "properties": {
           "hasMore": {
@@ -9892,6 +10194,18 @@
               }
             ],
             "title": "Onfailure"
+          },
+          "orchestratorAgentId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The agent that owns this process (#1376). Every agent step that names no owner of its own runs on it, so naming it once replaces naming the same agent on every step. An empty string clears it, and clearing it does not reassign anything — steps that named their own agent keep it, and steps that inherited go back to having no actor.",
+            "title": "Orchestratoragentid"
           },
           "stageId": {
             "anyOf": [
@@ -13012,6 +13326,42 @@
         "title": "RevokeServiceTokenResponse",
         "type": "object"
       },
+      "RunCaller": {
+        "description": "The process that called this one, when another process did (#1375).\n\nA sub-process invocation appears on the called workflow's own runs\nlist, where it would otherwise be indistinguishable from a run someone\nstarted by hand. That difference matters to an operator deciding\nwhether to re-run it: you do not re-run a step of somebody else's\nprocess, you re-run that process.\n\n``run_id`` is the caller's run, so the row can link back to it — the\ninvocation's real context is inside there.",
+        "properties": {
+          "runId": {
+            "title": "Runid",
+            "type": "string"
+          },
+          "workflowId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workflowid"
+          },
+          "workflowName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workflowname"
+          }
+        },
+        "required": [
+          "runId"
+        ],
+        "title": "RunCaller",
+        "type": "object"
+      },
       "RunCostBreakdownEntry": {
         "description": "One row of per-agent + per-model cost rollup (S205.3, V7 §9.3).\n\n``tokens_in`` is the TOTAL prompt tokens; ``cached_tokens`` is the\ncache-served subset of it. ``input_cost_micros`` prices only the\nuncached remainder; ``cached_cost_micros`` the cached subset at the\ndiscounted rate — so the UI total = input + cached + output.",
         "properties": {
@@ -13770,6 +14120,16 @@
       "RunSummary": {
         "description": "Run summary for list views.",
         "properties": {
+          "calledBy": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RunCaller"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "completedAt": {
             "anyOf": [
               {
@@ -14872,8 +15232,13 @@
         "type": "object"
       },
       "SessionMemoryFile": {
-        "description": "One row in a run's session-memory LISTING (#372, #440).\n\nReturned by ``GET /api/v1/runs/{run_id}/session-memory``. Metadata\nonly — deliberately no ``content``: serialising every file body just\nto draw a list is what made the run Memory panel slow (#440). Fetch a\nsingle file's text from\n``GET /api/v1/runs/{run_id}/session-memory/{file_id}``.\n\n``size_bytes`` is the body's serialised size in octets, so the list\ncan show how big a file is before anyone opens it. ``tags`` mirrors\nthe tags stored on the file.",
+        "description": "One row in a run's session-memory LISTING (#372, #440).\n\nReturned by ``GET /api/v1/runs/{run_id}/session-memory``. Metadata\nonly — deliberately no ``content``: serialising every file body just\nto draw a list is what made the run Memory panel slow (#440). Fetch a\nsingle file's text from\n``GET /api/v1/runs/{run_id}/session-memory/{file_id}``.\n\n``size_bytes`` is the body's serialised size in octets, so the list\ncan show how big a file is before anyone opens it. ``tags`` mirrors\nthe tags stored on the file.\n\n``archived`` says the file was deleted after the fact — it is still\nthe run's record and still readable, and the panel marks it (#1148).",
         "properties": {
+          "archived": {
+            "default": false,
+            "title": "Archived",
+            "type": "boolean"
+          },
           "id": {
             "title": "Id",
             "type": "string"
@@ -15559,17 +15924,6 @@
             "title": "Outputs"
           },
           "type": {
-            "enum": [
-              "manual",
-              "agent",
-              "automation",
-              "subprocess",
-              "connector",
-              "decision",
-              "loop",
-              "for_each",
-              "end"
-            ],
             "title": "Type",
             "type": "string"
           },
@@ -15694,6 +16048,18 @@
               }
             ],
             "title": "Learningrecord"
+          },
+          "loop": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Loop"
           },
           "maxIterations": {
             "anyOf": [
@@ -17187,6 +17553,28 @@
             ],
             "title": "Description"
           },
+          "draftMajorVersion": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draftmajorversion"
+          },
+          "draftVersionName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draftversionname"
+          },
           "effectiveSurfacing": {
             "default": "always",
             "description": "What `surfacing` resolves to once the toolbox has had its say: 'always' (in every prompt) or 'on_demand' (found via discover_tools). Read this to answer 'is it in the prompt?'; read `surfacing` for the raw stored choice an edit form binds to.",
@@ -17221,6 +17609,17 @@
           "name": {
             "title": "Name",
             "type": "string"
+          },
+          "publishedMajorVersion": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publishedmajorversion"
           },
           "status": {
             "enum": [
@@ -18547,7 +18946,7 @@
                 "type": "null"
               }
             ],
-            "description": "The JSON Schema document describing the output contract.",
+            "description": "The JSON Schema document describing the output contract: `type`, `properties`, `required`, and — the part that is not JSON Schema — `validators`.\n\n`validators` is a list of gates run against a submitted output. Each entry is one of two shapes.\n\nA SHIPPED PREDICATE names `function` (e.g. `validators.min_length`), the `target` field it judges, and its own `args`. Omit `target` to judge the whole output.\n\nA VALIDATOR TOOL names `tool` instead, and gets the STANDARD CALL — every authored validator is invoked the same way, so a screen can offer its inputs and a served spec can describe them:\n\n  `data`    — what the validator is pointed at, untouched. The whole submitted output by default, or the field named by `field`.\n  `slots`   — every declared session-memory reference found in `data`, with its text, indexed by the reference itself. The platform resolves these because sandboxed tool code is never handed a lookup callable.\n  `binding` — what you declared, verbatim, so the validator knows which values in `data` are references rather than plain values.\n\nTwo keys steer it. `field` names the part of the output to hand over; leave it out for the whole output. `slots` lists the fields holding references, e.g. `[\"key\", \"source_key\"]`. Both are checked on save: a `field` that is not a property, or a `slots` name the rows do not carry, is refused — a name that is not there would never be looked up and the gate would run on unresolved values in silence.\n\n  {\"tool\": \"my.freshness.check\", \"field\": \"units\", \"slots\": [\"key\", \"source_key\"], \"error_message\": \"REJECTED: {value}\"}\n\nA tool MAY instead declare `inputs` — the older, explicit binding, and the way a tool backed by a shipped predicate receives `value` plus its arguments. Each entry is `{\"source\": \"field\"|\"const\", \"field\": <name>, \"as\": \"slot\"?}`; with `as: \"slot\"` the field's value is read as a reference and the TEXT is passed. `field` may point into a list: `units[].key` is, from every row in `units`, the `key` field. A spec with `inputs` does not get the standard call.\n\n`error_message` is the text an agent sees on refusal; `{value}` is replaced by what the validator reported.",
             "title": "Schemabody"
           },
           "source": {
@@ -20577,6 +20976,97 @@
         "title": "WildcardPromptEntry",
         "type": "object"
       },
+      "WorkflowComponent": {
+        "description": "One entity this workflow depends on, and every reason it does.",
+        "properties": {
+          "entityId": {
+            "description": "The entity's id, for opening it.",
+            "title": "Entityid",
+            "type": "string"
+          },
+          "kind": {
+            "description": "What kind of entity this row is.",
+            "enum": [
+              "agent",
+              "flow",
+              "workflow",
+              "tool",
+              "data_table",
+              "skill",
+              "policy",
+              "reference_doc"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "description": "The entity's name as its author wrote it, falling back to the id when the entity cannot be read — a component that was deleted out from under the workflow is still a dependency, and the case an author most needs to see.",
+            "title": "Name",
+            "type": "string"
+          },
+          "publicationState": {
+            "default": "not_published",
+            "description": "Whether the runtime can actually see this component. 'live' is published and unchanged since; 'edited' is published with newer changes the runtime has NOT got; 'not_published' has never gone live and reaches nobody; 'missing' is referenced but no longer readable (deleted without being unpublished first); 'not_versioned' is a kind with no publication lifecycle at all — flows, per ENTITY-LIFECYCLE-CONTRACT.md section 4.1 — where 'not published' would be true of the row and false about the world. Derived per read from the entity's row version against the one its live publish points at; nothing is stored.",
+            "enum": [
+              "live",
+              "edited",
+              "not_published",
+              "missing",
+              "not_versioned"
+            ],
+            "title": "Publicationstate",
+            "type": "string"
+          },
+          "reach": {
+            "default": 0,
+            "description": "How many workflows in this tenant reach this component, INCLUDING the one being viewed — so 3 means this process and two others. A component brought in by another (a skill via an agent, a table via a tool) is counted by the workflows that name it DIRECTLY, so a second-hop row can read 1 while the agent carrying it runs in three; resolving that chain belongs to the component sheet.",
+            "title": "Reach",
+            "type": "integer"
+          },
+          "section": {
+            "description": "Which section of the Components tab this row belongs to: 'agents' (agents and flows), 'called' (workflows this one invokes), 'tools', 'tables', 'knowledge' (skills, policies, reference docs).",
+            "enum": [
+              "agents",
+              "called",
+              "tools",
+              "tables",
+              "knowledge"
+            ],
+            "title": "Section",
+            "type": "string"
+          },
+          "sources": {
+            "description": "Every reason this entity is a dependency, first hop first: a step name for something the document names itself, 'via <name>' for something an agent or a tool brings in. One entry per distinct reason; an entity reached twice is one row with two reasons.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Sources",
+            "type": "array"
+          }
+        },
+        "required": [
+          "section",
+          "kind",
+          "entityId",
+          "name"
+        ],
+        "title": "WorkflowComponent",
+        "type": "object"
+      },
+      "WorkflowComponentsResponse": {
+        "description": "Everything a workflow is made of, in one answer.\n\n# paging-exempt: the components of ONE workflow. Bounded by that workflow's\n# own document — one row per entity its steps name, plus what those entities\n# bring in turn — and grown by deliberate human authoring rather than by\n# machine activity. A process that outgrows a panel has a step-count\n# problem, not a paging problem.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/WorkflowComponent"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "title": "WorkflowComponentsResponse",
+        "type": "object"
+      },
       "WorkflowContextSchema": {
         "description": "Resolved names for the workflow's organizational context.\n\nProvides human-readable names for the IDs stored on the workflow.\nResolved from the tenant's company document at query time.",
         "properties": {
@@ -20652,6 +21142,12 @@
       "WorkflowListItem": {
         "description": "Workflow listing item (enriched for the workflows list page).",
         "properties": {
+          "calledByCount": {
+            "default": 0,
+            "description": "How many OTHER workflows name this one as a sub-process target (config.targetWorkflowId), counted across the whole tenant. A self-call does not count. Reported whether or not the workflow is a part, because 'who depends on this' is worth knowing before you change a process that several others call.",
+            "title": "Calledbycount",
+            "type": "integer"
+          },
           "capabilityId": {
             "anyOf": [
               {
@@ -20710,6 +21206,12 @@
           "id": {
             "title": "Id",
             "type": "string"
+          },
+          "isPart": {
+            "default": false,
+            "description": "True when this workflow is a PART of another one: something else calls it as a sub-process AND nothing starts it on its own (no schedule, webhook or condition; a manual trigger does not count, that is how a part is tested). Derived on every read from the documents and the trigger set - there is no stored flag. The list hides parts by default; both halves are required, so a part-shaped workflow nobody calls yet stays visible.",
+            "title": "Ispart",
+            "type": "boolean"
           },
           "launchable": {
             "default": false,
@@ -24309,6 +24811,33 @@
         ]
       }
     },
+    "/api/v1/company/discard-draft": {
+      "post": {
+        "description": "Discard working-draft edits, reverting to the published profile.\n\nCompany was the twelfth versioned entity and the only one without\nthis route, so the Company page's own \"Discard draft\" button had\nnothing to call and answered 405 through an improvised version-delete\n(#1388).\n\nRefuses (422) when the profile has never been published — its draft is\nthen the only copy of that work, and the refusal says so in words.\n\nTakes no ``expectedVersion``: a discard is a recovery action against\nwhatever the draft currently holds, so a stale version number must not\nblock it.",
+        "operationId": "discard_company_draft_api_v1_company_discard_draft_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiscardDraftResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Discard Company Draft",
+        "tags": [
+          "company"
+        ]
+      }
+    },
     "/api/v1/company/from-template": {
       "post": {
         "description": "Create company from a template.",
@@ -24823,6 +25352,37 @@
         "summary": "Get Version",
         "tags": [
           "company"
+        ]
+      }
+    },
+    "/api/v1/conditional-triggers": {
+      "get": {
+        "description": "Every conditional trigger in the tenant, for the schedules screen.\n\nIncludes DISABLED ones on purpose: a schedule you switched off is the\none you go looking for to switch back on, and a list that hides it makes\nit unreachable outside the database.\n\nEach row carries how many of its ticks are waiting. That number should\nbe one; more means the schedule forked (#1278), and an operator who can\nsee it can act on it.",
+        "operationId": "list_tenant_conditional_triggers_api_v1_conditional_triggers_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ConditionalScheduleRow"
+                  },
+                  "title": "Response List Tenant Conditional Triggers Api V1 Conditional Triggers Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Tenant Conditional Triggers",
+        "tags": [
+          "conditional-triggers"
         ]
       }
     },
@@ -26513,6 +27073,101 @@
           }
         ],
         "summary": "Delete Data Table Row",
+        "tags": [
+          "data-tables"
+        ]
+      },
+      "get": {
+        "description": "One page of a table's rows, filtered (#1372).\n\nA table shows up in a workflow's Components tab because a decision reads it\nor a tool writes it, and the next question is always what is in it. Before\nthis, answering meant leaving the editor, finding the table in the library,\nand finding the way back.\n\nNever the whole table: a tenant table can hold thousands of rows and this\nfeeds a panel, not an export. The filter is applied to the whole set and the\npage is cut from the result — never the other way round, which would hide\nevery match below the window.\n\nThe cursor is an INDEX rather than the shared keyset, because a row inside a\nJSONB array has no ``created_at`` and no ``id`` to key on. It carries a\nfingerprint of the table version and the filter, so a table edited mid-scroll\nrefuses the cursor instead of silently paging a different set.",
+        "operationId": "list_data_table_rows_api_v1_data_tables__table_id__rows_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "table_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Table Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Filter: any cell containing this text.",
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "default": "",
+              "description": "Filter: any cell containing this text.",
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Opaque continuation token from the previous page's nextCursor. Send it back unchanged; never construct or reuse a stale one. A cursor minted before the table changed is refused with 422 rather than continuing into a set it no longer describes.",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Opaque continuation token from the previous page's nextCursor. Send it back unchanged; never construct or reuse a stale one. A cursor minted before the table changed is refused with 422 rather than continuing into a set it no longer describes.",
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 200,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_DataTableRowItem_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Data Table Rows",
         "tags": [
           "data-tables"
         ]
@@ -38339,7 +38994,7 @@
     },
     "/api/v1/runs/{run_id}/for-each/{batch_id}/progress": {
       "get": {
-        "description": "Per-state row counts for a FOR EACH batch on this run.\n\nDrives the run-page children-progress badge so operators see\n``12 / 1500 succeeded · 3 failed · 1485 pending`` rather than an\nopaque \"Waiting for children…\". Frontend polls this while the\nFOR EACH step is ``running``.\n\nTwo-layer tenant scoping: ``run_service.get_run`` confirms the\nrun belongs to the caller's tenant (raises 404 otherwise), and\n``task_queue_service.batch_progress`` filters rows by tenant_id\nso a forged ``batch_id`` from another tenant returns all-zero\ncounts. The ``run_id`` itself is not used in the count query —\nit's only here for URL lineage + the implicit auth check.",
+        "description": "Per-state row counts for a FOR EACH batch on this run.\n\nDrives the run-page children-progress badge so operators see\n``12 / 1500 succeeded · 3 failed · 1485 pending`` rather than an\nopaque \"Waiting for children…\". Frontend polls this while the\nfanning-out step is ``running``.\n\nTwo-layer tenant scoping: ``run_service.get_run`` confirms the\nrun belongs to the caller's tenant (raises 404 otherwise), and\n``task_queue_service.batch_progress`` filters rows by tenant_id\nso a forged ``batch_id`` from another tenant returns all-zero\ncounts. The ``run_id`` itself is not used in the count query —\nit's only here for URL lineage + the implicit auth check.",
         "operationId": "get_for_each_progress_api_v1_runs__run_id__for_each__batch_id__progress_get",
         "parameters": [
           {
@@ -38862,7 +39517,7 @@
     },
     "/api/v1/runs/{run_id}/session-memory": {
       "get": {
-        "description": "List a run's session-memory files — metadata only (#372, #440).\n\nReturns the title, kind, tags, size and timestamp of every file the\nagent wrote to session memory during this run. Bodies are NOT\nincluded: serialising up to 200 full JSONB bodies just to draw a list\nis what made the Memory panel slow (#440). Fetch a single file's text\nfrom ``GET /runs/{run_id}/session-memory/{file_id}``.\n\nTenant isolation is enforced in the service (run pre-check, then\ntenant-scoped folder and file queries). Returns an empty list when no\nsession folder exists yet.",
+        "description": "List a run's session-memory files — metadata only (#372, #440).\n\nReturns the title, kind, tags, size and timestamp of every file the\nagent wrote to session memory during this run. Bodies are NOT\nincluded: serialising up to 200 full JSONB bodies just to draw a list\nis what made the Memory panel slow (#440). Fetch a single file's text\nfrom ``GET /runs/{run_id}/session-memory/{file_id}``.\n\nA file archived after the run ended is listed with ``archived:\ntrue`` rather than omitted (#1148) — this is the run's record, and\nthe runs whose notes were wiped by the old terminal cleanup are\nexactly the ones a post-mortem opens.\n\nTenant isolation is enforced in the service (run pre-check, then\ntenant-scoped folder and file queries). Returns an empty list when no\nsession folder exists yet.",
         "operationId": "get_run_session_memory_api_v1_runs__run_id__session_memory_get",
         "parameters": [
           {
@@ -38911,7 +39566,7 @@
     },
     "/api/v1/runs/{run_id}/session-memory/{file_id}": {
       "get": {
-        "description": "Fetch one session-memory file's text, on open (#440).\n\nThe listing counterpart to ``GET /runs/{run_id}/session-memory``.\n404s unless the run belongs to the caller's tenant, the file belongs\nto the caller's tenant, AND the file lives in THIS run's session\nfolder — so a file id borrowed from another run is not readable here.",
+        "description": "Fetch one session-memory file's text, on open (#440).\n\nThe listing counterpart to ``GET /runs/{run_id}/session-memory``.\n404s unless the run belongs to the caller's tenant, the file belongs\nto the caller's tenant, AND the file lives in THIS run's session\nfolder — so a file id borrowed from another run is not readable here.\n\nAn archived file is served (#1148): those three checks are what makes\nthe read safe, and being soft-deleted was never one of them.",
         "operationId": "get_run_session_memory_file_api_v1_runs__run_id__session_memory__file_id__get",
         "parameters": [
           {
@@ -45355,6 +46010,114 @@
           }
         ],
         "summary": "Save Workflow",
+        "tags": [
+          "workflows"
+        ]
+      }
+    },
+    "/api/v1/workflows/{workflow_id}/components": {
+      "get": {
+        "description": "Everything this workflow is made of, in one answer (#1369).\n\nA process is made of agents, flows, tools, tables, knowledge and the\nprocesses it calls. That list existed nowhere: finding it meant opening the\ncanvas step by step, clicking through to an agent, from there to its tools,\nfrom there to the table behind it — and remembering it yourself.\n\nTwo hops, composed. ``find_document_references`` answers the first — which\nentities the document NAMES, and in which steps. The second asks the\nruntime's own readers what each agent actually receives and what each tool\nreaches, because \"what is attached\" and \"what the agent gets\" are different\nquestions with different answers.\n\nEvery row carries its SOURCES rather than a bare \"used\": an entity reached\ntwice is one dependency with two reasons, and \"in these two steps\" is what\nan author can act on. Whether each one is LIVE is #1370's job.\n\nAn unknown id raises ``NotFoundError`` in the service rather than coming\nback as an empty list: a workflow that names nothing and a workflow that\ndoes not exist are different answers, and a caller that cannot tell them\napart reports success for a typo.",
+        "operationId": "list_workflow_components_api_v1_workflows__workflow_id__components_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workflow_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workflow Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowComponentsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Workflow Components",
+        "tags": [
+          "workflows"
+        ]
+      }
+    },
+    "/api/v1/workflows/{workflow_id}/components/duplicate": {
+      "post": {
+        "description": "Copy a shared component and point THIS workflow at the copy (#1371).\n\nAn agent is shared: editing one from inside a process changes processes the\nauthor never opened. This is the escape hatch — the copy belongs to this\nprocess, every other process stays on the original, and the original is not\nmodified at all.\n\nReturns the whole document rather than a patch. The repoint rewrites every\nsite the component was named in, and a caller applying a partial answer\nwould keep a stale reference on the sites it did not hear about.",
+        "operationId": "duplicate_workflow_component_api_v1_workflows__workflow_id__components_duplicate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workflow_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workflow Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DuplicateComponentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DuplicateComponentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Duplicate Workflow Component",
         "tags": [
           "workflows"
         ]
