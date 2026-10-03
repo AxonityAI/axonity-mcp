@@ -11201,6 +11201,25 @@
         "title": "PromotionInfoSchema",
         "type": "object"
       },
+      "PromptPlacementResponse": {
+        "description": "GET /api/v1/authoring/prompt-placement — the prompt-element placement rules this deploy serves.\n\nHAND-ADDED to the axonity-mcp snapshot ahead of the backend route landing; replace with a regenerated dump.",
+        "properties": {
+          "markdown": {
+            "title": "Markdown",
+            "type": "string"
+          },
+          "rulesVersion": {
+            "title": "Rulesversion",
+            "type": "string"
+          }
+        },
+        "required": [
+          "markdown",
+          "rulesVersion"
+        ],
+        "title": "PromptPlacementResponse",
+        "type": "object"
+      },
       "PromptSnippetItem": {
         "description": "One row from the snippet library.\n\nSnippets are pure content. Where they land in the assembled\nprompt (system vs user) and in what order is owned by each\nper-step :class:`FlowStepPromptItem`.",
         "properties": {
@@ -24736,6 +24755,33 @@
         "summary": "Signup",
         "tags": [
           "auth"
+        ]
+      }
+    },
+    "/api/v1/authoring/prompt-placement": {
+      "get": {
+        "description": "The prompt-element placement rules, as markdown. No DB and no tenant data: this describes the DEPLOY, so a service token is enough.",
+        "operationId": "get_prompt_placement_api_v1_authoring_prompt_placement_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PromptPlacementResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Prompt Placement",
+        "tags": [
+          "authoring"
         ]
       }
     },

@@ -7,6 +7,7 @@ import {
   registerValidationTools,
 } from "../src/tools/validation.js";
 import { registerConventions } from "../src/tools/conventions.js";
+import { placementClient } from "./placementStub.js";
 import { registerVersionTools } from "../src/tools/versions.js";
 import { registerWorkflowMutations } from "../src/tools/workflowMutations.js";
 
@@ -416,7 +417,7 @@ describe("tool descriptions state the contract the platform enforces", () => {
     registerConventions({
       tool: (name: string, _d: string, _s: unknown, h: () => Promise<{ content: { text: string }[] }>) =>
         handlers.set(name, h),
-    } as never);
+    } as never, placementClient());
     const guide = (await handlers.get("axonity_conventions")!()).content[0].text;
 
     expect(guide).toMatch(/derived, not authored/i);

@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { AxonityClient } from "../src/client.js";
 import { registerConventions } from "../src/tools/conventions.js";
+import { placementClient } from "./placementStub.js";
 import { registerSubworkflowTools } from "../src/tools/subworkflows.js";
 
 type Handler = (args: Record<string, unknown>) => Promise<ToolResult>;
@@ -112,7 +113,7 @@ describe("the authoring guide carries the subworkflow contract", () => {
       tool: (name: string, _d: string, _s: unknown, h: () => Promise<ToolResult>) =>
         handlers.set(name, h),
     };
-    registerConventions(server as never);
+    registerConventions(server as never, placementClient());
     const text = (await handlers.get("axonity_conventions")!()).content[0].text;
 
     for (const needle of [
