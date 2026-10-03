@@ -20,6 +20,7 @@
 import { describe, expect, it } from "vitest";
 
 import { registerConventions } from "../src/tools/conventions.js";
+import { placementClient } from "./placementStub.js";
 
 interface ToolResult {
   content: { text: string }[];
@@ -30,7 +31,7 @@ async function guide(): Promise<string> {
   registerConventions({
     tool: (name: string, _d: string, _s: unknown, h: () => Promise<ToolResult>) =>
       handlers.set(name, h),
-  } as never);
+  } as never, placementClient());
   return (await handlers.get("axonity_conventions")!()).content[0].text;
 }
 

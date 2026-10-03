@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { AxonityClient } from "../src/client.js";
 import { registerConventions } from "../src/tools/conventions.js";
+import { placementClient } from "./placementStub.js";
 import { registerDataTableTools } from "../src/tools/dataTables.js";
 import { registerAll } from "../src/index.js";
 import { forbids } from "./denyList.js";
@@ -300,7 +301,7 @@ describe("a table's tools follow its PUBLISHED version", () => {
     registerConventions({
       tool: (name: string, _d: string, _s: unknown, h: () => Promise<ToolResult>) =>
         handlers.set(name, h),
-    } as never);
+    } as never, placementClient());
     const guide = (await handlers.get("axonity_conventions")!()).content[0].text;
 
     expect(guide).toMatch(/## Tables/);

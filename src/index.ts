@@ -211,7 +211,7 @@ const VERSIONED: VersionedEntity[] = [
 type ServerLike = Pick<McpServer, "tool">;
 
 export function registerAll(server: ServerLike, client: AxonityClient): void {
-  registerConventions(server as McpServer);
+  registerConventions(server as McpServer, client);
   for (const def of ENTITIES) {
     // Filters are GENERATED from the pinned schema (#48 M4), never declared on
     // the EntityDef — a filter the backend adds reaches an agent as soon as the

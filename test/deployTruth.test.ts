@@ -20,6 +20,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { AxonityClient } from "../src/client.js";
 import { registerCompanyTools } from "../src/tools/company.js";
 import { registerConventions } from "../src/tools/conventions.js";
+import { placementClient } from "./placementStub.js";
 import { registerAuthoringSpecTools } from "../src/tools/authoringSpec.js";
 import { registerAttachTools, registerDependencyTools, registerCatalogTools } from "../src/tools/extras.js";
 import { registerRunTools } from "../src/tools/runs.js";
@@ -65,7 +66,7 @@ function fakeClient() {
 
 async function guideText(): Promise<string> {
   const { server, handlers } = fakeServer();
-  registerConventions(server as never);
+  registerConventions(server as never, placementClient());
   const result = await handlers.get("axonity_conventions")!({});
   return result.content[0].text;
 }

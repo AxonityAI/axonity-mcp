@@ -11,6 +11,15 @@ diff in review.
 
 ## Provenance
 
+- **Added on top of `484c1628`:** `GET /api/v1/authoring/prompt-placement`
+  and its `PromptPlacementResponse` (`{markdown, rulesVersion}`), copied
+  verbatim from `app.openapi()` of axonity-flow#1829 (not yet on main), so the
+  rest of the snapshot keeps its `484c1628` provenance; the entry is written
+  with the dump script's own formatting (sorted keys,
+  `ensure_ascii=False`, trailing newline) so the next regeneration replaces it
+  as an ordinary diff. `axonity_conventions` reads it on every call to append
+  this deploy's prompt-placement rules. Until axonity-flow ships it,
+  `npm run check:contract` lists it under "gone from axonity-flow" — expected.
 - Generated from **axonity-flow `main`** at commit `484c1628` — the validator
   contract reaching the OpenAPI (axonity-flow#1515, on top of #1514's standard
   call), consumed here by axonity-mcp#73. The surface moves **490 → 495

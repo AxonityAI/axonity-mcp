@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { AxonityClient } from "../src/client.js";
 import { registerConventions } from "../src/tools/conventions.js";
+import { placementClient } from "./placementStub.js";
 import { registerToolboxTools } from "../src/tools/toolboxes.js";
 
 type Handler = (args: Record<string, unknown>) => Promise<ToolResult>;
@@ -188,7 +189,7 @@ describe("a toolbox credential gets the same guard as a connector's", () => {
 describe("the guide carries what the schema cannot say", () => {
   it("names the three traps an agent hits without them", async () => {
     const { server, handlers } = fakeServer();
-    registerConventions(server as never);
+    registerConventions(server as never, placementClient());
     const result = await handlers.get("axonity_conventions")!({});
     const text = result.content[0].text;
 

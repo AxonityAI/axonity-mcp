@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { AxonityClient } from "../src/client.js";
 import { registerConventions } from "../src/tools/conventions.js";
+import { placementClient } from "./placementStub.js";
 import { registerTriggerTools } from "../src/tools/triggers.js";
 
 /**
@@ -222,7 +223,7 @@ describe("the descriptions say what actually decides", () => {
     registerConventions({
       tool: (n: string, _d: string, _s: unknown, h: () => Promise<{ content: { text: string }[] }>) =>
         handlers.set(n, h),
-    } as never);
+    } as never, placementClient());
     const guide = (await handlers.get("axonity_conventions")!()).content[0].text;
 
     expect(guide).toMatch(/checkKind/);

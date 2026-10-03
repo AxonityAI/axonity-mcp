@@ -28,11 +28,23 @@
  * something the catalogue can say — it can only say the id exists. The line is
  * the one #44 drew: a mention is guidance, an enumeration is a claim about what
  * exists, and it is the claim that goes stale.
+ *
+ * THE PLACEMENT RULES ARE THE PLATFORM'S. Where an instruction belongs —
+ * persona, policy, skill, reference doc, a step's activities — and how large
+ * each may be used to be restated here as a "decision map", and it contradicted
+ * the platform's own rules. The platform now serves them
+ * (`GET /api/v1/authoring/prompt-placement`) and this tool appends them on
+ * every call. If they cannot be read the tool says so and tells the agent to
+ * leave prompt elements alone; it never substitutes a local copy, because a
+ * local copy is what went wrong. The prompt-SNIPPET mechanics (attach, reorder,
+ * wildcard) stay below — those are how the API works, not where things go.
  */
 
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
-const CONVENTIONS = `# Authoring conventions for Axonity entities
+import type { AxonityClient } from "../client.js";
+
+export const CONVENTIONS = `# Authoring conventions for Axonity entities
 
 Read this before creating or updating anything.
 
@@ -519,24 +531,19 @@ per flow step, in one of two channels, at an order:
   attachment's \`linkId\`); \`update_flow_step_prompt(linkId, …)\` moves/reorders one;
   \`reorder_flow_step_prompts(flowStepId, snippetIds)\` sets the whole order;
   \`detach_prompt_snippet_from_flow_step(linkId)\` unlinks (the snippet survives).
-- A WILDCARD snippet applies to EVERY step (top of every stack) — use it for
-  cross-cutting instructions instead of attaching the same snippet everywhere.
-  \`list_wildcard_prompts\` shows them.
+- A WILDCARD snippet applies to EVERY step (top of every stack), with no
+  per-step link. \`list_wildcard_prompts\` shows them.
 
-Where each kind of instruction belongs — the decision map:
-- reusable voice/character for one agent → a **persona** (1:1 with the agent), or a
-  reusable **snippet** if it is shared prompt text.
-- a rule that must hold everywhere → a **wildcard** snippet, or a **policy** if it
-  is a guardrail (policies are governance; snippets are prompt text).
-- a step-specific instruction → a flow-step **\`system\`** prompt.
-- user-turn scaffolding for a step → a flow-step **\`user\`** prompt.
-- background knowledge the agent reads → a **reference doc** (attach to the agent).
-- a capability the agent uses → a **tool** (\`agent.toolIds\`) or **skill** (attach).
-- long-term recall for an agent → the agent's **\`episodicMemoryEnabled\`** flag
-  (Memory V2, opt-in). Session/workflow memory are RUNTIME, not authored: they are
-  written by a run, never set here. This connector does not expose them — the
-  backend serves them per run, but no tool wraps those reads yet, so do not
-  promise a user you can show them.
+Which prompt element an instruction goes in — persona, policy, skill, reference
+doc or a step's activities — and how large each may be, is not decided here: the
+placement rules are served by the platform and appended to this guide, read live
+from this deploy each time you call it.
+
+Long-term recall for an agent is the agent's **\`episodicMemoryEnabled\`** flag
+(Memory V2, opt-in). Session/workflow memory are RUNTIME, not authored: they are
+written by a run, never set here. This connector does not expose them — the
+backend serves them per run, but no tool wraps those reads yet, so do not
+promise a user you can show them.
 
 ## Reproducing a setup (recreate, never copy ids)
 To rebuild an agent/workflow/tool graph as NEW entities — in this tenant, or in
@@ -976,7 +983,55 @@ the rows; the rows come from \`read_data_table\`.
   agents — including you — actually changed.
 `;
 
-export function registerConventions(server: McpServer): void {
+/** Where this deploy serves its prompt-element placement rules. */
+export const PLACEMENT_ROUTE = "/api/v1/authoring/prompt-placement";
+
+interface PlacementResponse {
+  markdown?: unknown;
+  rulesVersion?: unknown;
+}
+
+/**
+ * Said instead of the rules when they cannot be read. NOT a fallback: a local
+ * copy of the rules is what drifted from the platform in the first place, so
+ * the honest answer is "unknown here — do not touch prompt elements".
+ */
+const PLACEMENT_UNAVAILABLE =
+  "## Prompt element placement — NOT AVAILABLE\n\n" +
+  "The prompt-element placement rules could not be read from this deploy " +
+  `(\`GET ${PLACEMENT_ROUTE}\`). This guide does not carry a copy of them. ` +
+  "Prompt elements (persona, policy, skill, reference doc, step activities) " +
+  "must not be changed until they can be read: call `axonity_conventions` " +
+  "again, and if it still fails, report it rather than deciding placement " +
+  "yourself.";
+
+/**
+ * Read this deploy's placement rules, or say why not.
+ *
+ * Exported for testing. Any failure — an older backend without the route (404),
+ * a network error, a body without markdown — yields the notice; never throws.
+ */
+export async function readPlacementRules(client: AxonityClient): Promise<string> {
+  let response: PlacementResponse;
+  try {
+    response = (await client.get(PLACEMENT_ROUTE)) as PlacementResponse;
+  } catch {
+    return PLACEMENT_UNAVAILABLE;
+  }
+  const markdown = response?.markdown;
+  if (typeof markdown !== "string" || markdown.trim() === "") {
+    return PLACEMENT_UNAVAILABLE;
+  }
+  const version =
+    typeof response.rulesVersion === "string" ? response.rulesVersion : "unknown";
+  return (
+    "The prompt-element placement rules below are served live by this deploy " +
+    `(rulesVersion \`${version}\`).\n\n` +
+    markdown
+  );
+}
+
+export function registerConventions(server: McpServer, client: AxonityClient): void {
   server.tool(
     "axonity_conventions",
     "Read the authoring conventions BEFORE creating or updating anything: the " +
@@ -984,8 +1039,17 @@ export function registerConventions(server: McpServer): void {
       "(required fields, valid enum values, what 'complete' means), how to WIRE " +
       "tools→agents, agents/tools→workflows and delegation, and how to reproduce " +
       "a setup by creating new entities and remapping ids (never copy an id " +
-      "across tenants).",
+      "across tenants). Also returns this deploy's prompt-placement rules — " +
+      "where an instruction belongs (persona, policy, skill, reference doc, " +
+      "step activities) — read live from the platform on every call.",
     {},
-    async () => ({ content: [{ type: "text" as const, text: CONVENTIONS }] }),
+    async () => ({
+      content: [
+        {
+          type: "text" as const,
+          text: `${CONVENTIONS}\n${await readPlacementRules(client)}`,
+        },
+      ],
+    }),
   );
 }

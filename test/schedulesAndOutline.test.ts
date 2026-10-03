@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { AxonityClient } from "../src/client.js";
 import { registerConventions } from "../src/tools/conventions.js";
+import { placementClient } from "./placementStub.js";
 import { registerRunTools } from "../src/tools/runs.js";
 import { registerTriggerTools } from "../src/tools/triggers.js";
 
@@ -251,7 +252,7 @@ describe("the guide says both, where an agent will meet them", () => {
     registerConventions({
       tool: (name: string, _d: string, _s: unknown, h: (a: never) => Promise<ToolResult>) =>
         handlers.set(name, h as Handler),
-    } as never);
+    } as never, placementClient());
     const text = (await handlers.get("axonity_conventions")!({})).content[0].text;
 
     expect(text).toContain("read_run_outline");

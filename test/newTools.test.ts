@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { AxonityClient } from "../src/client.js";
 import { registerCompanyTools } from "../src/tools/company.js";
 import { registerConventions } from "../src/tools/conventions.js";
+import { placementClient } from "./placementStub.js";
 import { registerPromptPlacementTools } from "../src/tools/promptPlacement.js";
 import { registerRunTools } from "../src/tools/runs.js";
 import { registerApprovalTools } from "../src/tools/validation.js";
@@ -46,7 +47,7 @@ describe("authoring guide (axonity_conventions) stays complete", () => {
       tool: (name: string, _d: string, _s: unknown, h: () => Promise<ToolResult>) =>
         handlers.set(name, h),
     };
-    registerConventions(server as never);
+    registerConventions(server as never, placementClient());
     const guide = text(await handlers.get("axonity_conventions")!());
 
     for (const needle of [

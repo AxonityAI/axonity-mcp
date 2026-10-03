@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { AxonityClient } from "../src/client.js";
 import { registerConventions } from "../src/tools/conventions.js";
+import { placementClient } from "./placementStub.js";
 import { REDACTION, redactCredentials } from "../src/tools/credentials.js";
 import { redactSecretMetadata, registerSecretTools } from "../src/tools/secrets.js";
 
@@ -98,7 +99,7 @@ describe("the authoring guide agrees with what the tools do", () => {
       tool: (name: string, _d: string, _s: unknown, h: () => Promise<ToolResult>) =>
         handlers.set(name, h),
     };
-    registerConventions(server as never);
+    registerConventions(server as never, placementClient());
     const guide = handlers.get("axonity_conventions")!;
     const text = (await guide()).content[0].text;
 
