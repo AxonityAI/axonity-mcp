@@ -11202,13 +11202,15 @@
         "type": "object"
       },
       "PromptPlacementResponse": {
-        "description": "GET /api/v1/authoring/prompt-placement — the prompt-element placement rules this deploy serves.\n\nHAND-ADDED to the axonity-mcp snapshot ahead of the backend route landing; replace with a regenerated dump.",
+        "description": "GET /api/v1/authoring/prompt-placement — the placement rules over HTTP.\n\nWhich prompt element a sentence belongs in, as this deploy composes\nprompts. ``rulesVersion`` is a content hash over the text: stable across\nidentical deploys, and it changes exactly when the rules do — so a client\ncaches on \"same rulesVersion → nothing to re-fetch\".",
         "properties": {
           "markdown": {
+            "description": "The placement rules, as Markdown, verbatim from the platform.",
             "title": "Markdown",
             "type": "string"
           },
           "rulesVersion": {
+            "description": "Content fingerprint of the rules; changes exactly when the text does.",
             "title": "Rulesversion",
             "type": "string"
           }
@@ -24760,8 +24762,8 @@
     },
     "/api/v1/authoring/prompt-placement": {
       "get": {
-        "description": "The prompt-element placement rules, as markdown. No DB and no tenant data: this describes the DEPLOY, so a service token is enough.",
-        "operationId": "get_prompt_placement_api_v1_authoring_prompt_placement_get",
+        "description": "The prompt-element placement rules and their ``rulesVersion``.\n\nNo DB and no tenant data: this describes the DEPLOY, not a tenant, so a\nservice token is enough (``get_auth_context`` admits them). The text is\nread once per process from ``src/domain/prompt_placement_rules.md``.",
+        "operationId": "read_prompt_placement_rules_api_v1_authoring_prompt_placement_get",
         "responses": {
           "200": {
             "content": {
@@ -24779,7 +24781,7 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "Get Prompt Placement",
+        "summary": "Read Prompt Placement Rules",
         "tags": [
           "authoring"
         ]

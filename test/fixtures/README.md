@@ -11,10 +11,11 @@ diff in review.
 
 ## Provenance
 
-- **Hand-added on top of `484c1628`:** `GET /api/v1/authoring/prompt-placement`
-  and its `PromptPlacementResponse` (`{markdown, rulesVersion}`). The platform
-  is building that route in parallel, so there was no backend to dump from; the
-  entry was written with the dump script's own formatting (sorted keys,
+- **Added on top of `484c1628`:** `GET /api/v1/authoring/prompt-placement`
+  and its `PromptPlacementResponse` (`{markdown, rulesVersion}`), copied
+  verbatim from `app.openapi()` of axonity-flow#1829 (not yet on main), so the
+  rest of the snapshot keeps its `484c1628` provenance; the entry is written
+  with the dump script's own formatting (sorted keys,
   `ensure_ascii=False`, trailing newline) so the next regeneration replaces it
   as an ordinary diff. `axonity_conventions` reads it on every call to append
   this deploy's prompt-placement rules. Until axonity-flow ships it,
