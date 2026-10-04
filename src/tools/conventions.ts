@@ -38,6 +38,13 @@
  * leave prompt elements alone; it never substitutes a local copy, because a
  * local copy is what went wrong. The prompt-SNIPPET mechanics (attach, reorder,
  * wildcard) stay below — those are how the API works, not where things go.
+ *
+ * THE SEMANTIC-KNOWLEDGE RULES ARE THE PLATFORM'S TOO, and go the same way —
+ * live from `GET /api/v1/authoring/semantic-knowledge`, never a local copy —
+ * with one difference: they are NOT appended to every call. They only matter to
+ * an agent building a workspace's semantic layer, so they get their own tool,
+ * `axonity_semantic_conventions`, and this guide carries one line pointing at
+ * it. Findable for whoever needs them, free for everyone else.
  */
 
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -341,6 +348,10 @@ made any time before you attach them.
 ### skill / policy / reference_doc
 - Memory entities attached to agents (and skills also to workflows). Create them,
   then wire with the \`attach_*\` tools — see Wiring.
+- Building the SEMANTIC LAYER — reference docs that say what a table means, what
+  a word means, which query fills which table (\`semanticKind\` and the fields
+  that go with it)? Read \`axonity_semantic_conventions\` first. Those rules are
+  served by the platform; this guide does not restate them.
 
 ### prompt_snippet
 - Reusable prompt fragments; a normal entity. Wire-level oddity:
@@ -986,7 +997,11 @@ the rows; the rows come from \`read_data_table\`.
 /** Where this deploy serves its prompt-element placement rules. */
 export const PLACEMENT_ROUTE = "/api/v1/authoring/prompt-placement";
 
-interface PlacementResponse {
+/** Where this deploy serves its rules for writing the semantic layer. */
+export const SEMANTIC_KNOWLEDGE_ROUTE = "/api/v1/authoring/semantic-knowledge";
+
+/** What both rules routes answer: the platform's markdown and its content hash. */
+interface RulesResponse {
   markdown?: unknown;
   rulesVersion?: unknown;
 }
@@ -1005,29 +1020,64 @@ const PLACEMENT_UNAVAILABLE =
   "again, and if it still fails, report it rather than deciding placement " +
   "yourself.";
 
+/** The same refusal for the semantic layer: no rules here, so write no knowledge. */
+const SEMANTIC_KNOWLEDGE_UNAVAILABLE =
+  "## Semantic knowledge — NOT AVAILABLE\n\n" +
+  "The rules for writing the semantic layer could not be read from this deploy " +
+  `(\`GET ${SEMANTIC_KNOWLEDGE_ROUTE}\`). This connector does not carry a copy ` +
+  "of them. Write no semantic knowledge — no reference doc with a " +
+  "`semanticKind` — until they can be read: call " +
+  "`axonity_semantic_conventions` again, and if it still fails, report it " +
+  "rather than deciding what the knowledge should say yourself.";
+
 /**
- * Read this deploy's placement rules, or say why not.
- *
- * Exported for testing. Any failure — an older backend without the route (404),
- * a network error, a body without markdown — yields the notice; never throws.
+ * GET a rules route and introduce its markdown with its `rulesVersion`, or
+ * return `unavailable`. Any failure — an older backend without the route
+ * (404), a network error, a body without markdown — yields the notice; never
+ * throws.
  */
-export async function readPlacementRules(client: AxonityClient): Promise<string> {
-  let response: PlacementResponse;
+async function readServedRules(
+  client: AxonityClient,
+  route: string,
+  what: string,
+  unavailable: string,
+): Promise<string> {
+  let response: RulesResponse;
   try {
-    response = (await client.get(PLACEMENT_ROUTE)) as PlacementResponse;
+    response = (await client.get(route)) as RulesResponse;
   } catch {
-    return PLACEMENT_UNAVAILABLE;
+    return unavailable;
   }
   const markdown = response?.markdown;
   if (typeof markdown !== "string" || markdown.trim() === "") {
-    return PLACEMENT_UNAVAILABLE;
+    return unavailable;
   }
   const version =
     typeof response.rulesVersion === "string" ? response.rulesVersion : "unknown";
   return (
-    "The prompt-element placement rules below are served live by this deploy " +
+    `The ${what} below are served live by this deploy ` +
     `(rulesVersion \`${version}\`).\n\n` +
     markdown
+  );
+}
+
+/** Read this deploy's placement rules, or say why not. Exported for testing. */
+export async function readPlacementRules(client: AxonityClient): Promise<string> {
+  return readServedRules(
+    client,
+    PLACEMENT_ROUTE,
+    "prompt-element placement rules",
+    PLACEMENT_UNAVAILABLE,
+  );
+}
+
+/** Read this deploy's semantic-knowledge rules, or say why not. Exported for testing. */
+export async function readSemanticKnowledgeRules(client: AxonityClient): Promise<string> {
+  return readServedRules(
+    client,
+    SEMANTIC_KNOWLEDGE_ROUTE,
+    "rules for writing the semantic layer",
+    SEMANTIC_KNOWLEDGE_UNAVAILABLE,
   );
 }
 
@@ -1050,6 +1100,21 @@ export function registerConventions(server: McpServer, client: AxonityClient): v
           text: `${CONVENTIONS}\n${await readPlacementRules(client)}`,
         },
       ],
+    }),
+  );
+
+  server.tool(
+    "axonity_semantic_conventions",
+    "Read BEFORE building a workspace's semantic layer — reference docs with a " +
+      "`semanticKind` that say what a table means, what a word means, or which " +
+      "query fills which table. Returns this deploy's rules for writing that " +
+      "knowledge: what each kind is for, what belongs in it and what does not, " +
+      "and what a source query must say about one row of its result. Read live " +
+      "from the platform on every call, with its rulesVersion. Not needed for " +
+      "anything else.",
+    {},
+    async () => ({
+      content: [{ type: "text" as const, text: await readSemanticKnowledgeRules(client) }],
     }),
   );
 }

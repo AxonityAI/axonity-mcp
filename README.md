@@ -40,9 +40,12 @@ tenant + scope on every call, so the connector is not a trust boundary.
 
 ## Tools
 
-345 tools total. `axonity_conventions` (read this first) covers the authoring
+346 tools total. `axonity_conventions` (read this first) covers the authoring
 rules — drafts vs live, optimistic locking, per-entity fields, delete/restore,
 and how to tell a retryable error from one that will never succeed.
+`axonity_semantic_conventions` is its counterpart for one job only: building a
+workspace's semantic layer. Both serve the platform's own rules, read live —
+there is no copy of them in this repository.
 
 What the connector does **not** state is as deliberate as what it does: the
 mutation commands, the step types, the trigger types, the schedule-rule shapes
