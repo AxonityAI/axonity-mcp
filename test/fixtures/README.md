@@ -20,6 +20,13 @@ diff in review.
   as an ordinary diff. `axonity_conventions` reads it on every call to append
   this deploy's prompt-placement rules. Until axonity-flow ships it,
   `npm run check:contract` lists it under "gone from axonity-flow" — expected.
+- **Added on top of `484c1628`:** `GET /api/v1/authoring/semantic-knowledge`
+  and its `AuthoringRulesResponse` (`{markdown, rulesVersion}`), copied
+  verbatim from `app.openapi()` of axonity-flow `worktree-dashboards` at
+  `9dd8feac` (not yet on main), in the dump script's own formatting, the same
+  way as the placement route above. `axonity_semantic_conventions` reads it.
+  Until axonity-flow ships it, `npm run check:contract` lists it under "gone
+  from axonity-flow" — expected.
 - Generated from **axonity-flow `main`** at commit `484c1628` — the validator
   contract reaching the OpenAPI (axonity-flow#1515, on top of #1514's standard
   call), consumed here by axonity-mcp#73. The surface moves **490 → 495

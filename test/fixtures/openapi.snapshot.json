@@ -1006,6 +1006,27 @@
         "title": "AuthUser",
         "type": "object"
       },
+      "AuthoringRulesResponse": {
+        "description": "A set of authoring rules this deploy serves, over HTTP.\n\nThe same shape as :class:`PromptPlacementResponse` and for the same\nreason: an author — a person in the screen or an agent through the\nconnector — reads the platform's own words instead of a copy that\ndrifted. ``rulesVersion`` is a content hash over the text, so a client\ncaches on \"same version → nothing to re-fetch\".",
+        "properties": {
+          "markdown": {
+            "description": "The rules, as Markdown, verbatim from the platform.",
+            "title": "Markdown",
+            "type": "string"
+          },
+          "rulesVersion": {
+            "description": "Content fingerprint of the rules; changes exactly when the text does.",
+            "title": "Rulesversion",
+            "type": "string"
+          }
+        },
+        "required": [
+          "markdown",
+          "rulesVersion"
+        ],
+        "title": "AuthoringRulesResponse",
+        "type": "object"
+      },
       "BatchProgress": {
         "description": ":class:`FanOutProgress` for ONE identified FOR EACH batch.",
         "properties": {
@@ -24782,6 +24803,33 @@
           }
         ],
         "summary": "Read Prompt Placement Rules",
+        "tags": [
+          "authoring"
+        ]
+      }
+    },
+    "/api/v1/authoring/semantic-knowledge": {
+      "get": {
+        "description": "How to write what a workspace knows about its own data.\n\nWhat each of the five kinds is for, what belongs in it and what does\nnot, and the one thing a source query must say that nobody writes\nunless they are asked: what ONE ROW of its result is.\n\nServed rather than documented, for the same reason as the placement\nrules next door: an agent building the semantic layer through the\nconnector and a person building it in the screen must work to the same\nstandard, and a copy in another repo drifts.",
+        "operationId": "read_semantic_knowledge_rules_api_v1_authoring_semantic_knowledge_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthoringRulesResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Read Semantic Knowledge Rules",
         "tags": [
           "authoring"
         ]
