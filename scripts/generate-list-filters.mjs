@@ -49,6 +49,9 @@ const LIST_ROUTES = {
   prompt_snippet: "/api/v1/prompt-snippets",
   flow: "/api/v1/flows",
   data_table: "/api/v1/data-tables",
+  data_source: "/api/v1/data-sources",
+  table_relationship: "/api/v1/table-relationships",
+  dashboard: "/api/v1/dashboards",
 };
 
 /**
@@ -87,6 +90,12 @@ const NOTES = {
     "Return the tenant's soft-deleted rows instead of the live ones. " +
     "`list_deleted_prompt_snippets` asks the dedicated route for the same thing " +
     "and is usually clearer.",
+  enabled:
+    "true: only sources that are switched on. false: only the ones switched " +
+    "off. Omit for both.",
+  table_id:
+    "Only relationships that touch this table, on either side. The way to " +
+    "answer \"what does this table join to\" without walking every page.",
 };
 
 /** camelCase for the tool argument; the wire keeps whatever the route declares. */

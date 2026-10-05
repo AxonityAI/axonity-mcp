@@ -2716,6 +2716,37 @@
         "title": "ConnectedRepoResponse",
         "type": "object"
       },
+      "ConnectionTestResult": {
+        "description": "Whether the source answered, in words.",
+        "properties": {
+          "checkedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checkedat"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok",
+          "message"
+        ],
+        "title": "ConnectionTestResult",
+        "type": "object"
+      },
       "ConnectorAuthConfig": {
         "description": "Authentication configuration for connector requests.",
         "properties": {
@@ -3341,6 +3372,51 @@
           "triggerId"
         ],
         "title": "CreateCronScheduleRequest",
+        "type": "object"
+      },
+      "CreateDashboardRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "default": "",
+            "maxLength": 2000,
+            "title": "Description",
+            "type": "string"
+          },
+          "layout": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Sections of tiles. Omit for an empty dashboard.",
+            "title": "Layout"
+          },
+          "name": {
+            "description": "What the dashboard is called.",
+            "maxLength": 255,
+            "title": "Name",
+            "type": "string"
+          },
+          "visibility": {
+            "default": "workspace",
+            "description": "workspace: everyone in the workspace. private: only you.",
+            "enum": [
+              "workspace",
+              "private"
+            ],
+            "title": "Visibility",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "CreateDashboardRequest",
         "type": "object"
       },
       "CreateDataTableRequest": {
@@ -4850,6 +4926,532 @@
         "title": "CronScheduleSummary",
         "type": "object"
       },
+      "DashboardResponse": {
+        "description": "One dashboard with its layout.",
+        "properties": {
+          "createdAt": {
+            "title": "Createdat",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "isMine": {
+            "description": "True when the reader made this dashboard.",
+            "title": "Ismine",
+            "type": "boolean"
+          },
+          "layout": {
+            "additionalProperties": true,
+            "title": "Layout",
+            "type": "object"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "ownerId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ownerid"
+          },
+          "tileCount": {
+            "title": "Tilecount",
+            "type": "integer"
+          },
+          "updatedAt": {
+            "title": "Updatedat",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          },
+          "visibility": {
+            "enum": [
+              "workspace",
+              "private"
+            ],
+            "title": "Visibility",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "visibility",
+          "ownerId",
+          "isMine",
+          "tileCount",
+          "version",
+          "createdAt",
+          "updatedAt",
+          "layout"
+        ],
+        "title": "DashboardResponse",
+        "type": "object"
+      },
+      "DataSourceCreate": {
+        "description": "POST /api/v1/data-sources.",
+        "properties": {
+          "config": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "maxProperties": 20,
+            "title": "Config",
+            "type": "object"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "enabled": {
+            "default": true,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "name": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "policy": {
+            "$ref": "#/components/schemas/DataSourcePolicy"
+          },
+          "secretId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Secretid"
+          },
+          "sourceType": {
+            "default": "bigquery",
+            "title": "Sourcetype",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "DataSourceCreate",
+        "type": "object"
+      },
+      "DataSourceDetail": {
+        "description": "One source, with the limits it is read under.",
+        "properties": {
+          "bytesScanned": {
+            "default": 0,
+            "title": "Bytesscanned",
+            "type": "integer"
+          },
+          "config": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Config",
+            "type": "object"
+          },
+          "createdAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Createdat"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "hasCredential": {
+            "title": "Hascredential",
+            "type": "boolean"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "lastCheckedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lastcheckedat"
+          },
+          "lastError": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lasterror"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "policy": {
+            "$ref": "#/components/schemas/DataSourcePolicy"
+          },
+          "secretId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Secretid"
+          },
+          "sourceType": {
+            "title": "Sourcetype",
+            "type": "string"
+          },
+          "updatedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updatedat"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "sourceType",
+          "enabled",
+          "hasCredential",
+          "version",
+          "policy"
+        ],
+        "title": "DataSourceDetail",
+        "type": "object"
+      },
+      "DataSourcePolicy": {
+        "description": "The limits a query against this source is held to.\n\nEvery field is optional and empty by default: a source refuses nothing\nbut a write until someone configures it. A limit that is on by accident\nis a limit nobody chose.",
+        "properties": {
+          "allowedDatasets": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 200,
+            "title": "Alloweddatasets",
+            "type": "array"
+          },
+          "dateFilters": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Datefilters",
+            "type": "object"
+          },
+          "forbiddenDatasets": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 200,
+            "title": "Forbiddendatasets",
+            "type": "array"
+          },
+          "maxBytesBilled": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Maxbytesbilled"
+          },
+          "maxSeconds": {
+            "anyOf": [
+              {
+                "maximum": 600.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Maxseconds"
+          },
+          "personalColumns": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 500,
+            "title": "Personalcolumns",
+            "type": "array"
+          }
+        },
+        "title": "DataSourcePolicy",
+        "type": "object"
+      },
+      "DataSourceSummary": {
+        "description": "A row in the Data Sources list.",
+        "properties": {
+          "config": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Config",
+            "type": "object"
+          },
+          "createdAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Createdat"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "hasCredential": {
+            "title": "Hascredential",
+            "type": "boolean"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "lastCheckedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lastcheckedat"
+          },
+          "lastError": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lasterror"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "secretId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Secretid"
+          },
+          "sourceType": {
+            "title": "Sourcetype",
+            "type": "string"
+          },
+          "updatedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updatedat"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "sourceType",
+          "enabled",
+          "hasCredential",
+          "version"
+        ],
+        "title": "DataSourceSummary",
+        "type": "object"
+      },
+      "DataSourceUpdate": {
+        "description": "PUT /api/v1/data-sources/{id} — only what is sent is changed.",
+        "properties": {
+          "config": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "maxProperties": 20,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Config"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enabled"
+          },
+          "expectedVersion": {
+            "minimum": 1.0,
+            "title": "Expectedversion",
+            "type": "integer"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "policy": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DataSourcePolicy"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "secretId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Secretid"
+          }
+        },
+        "required": [
+          "expectedVersion"
+        ],
+        "title": "DataSourceUpdate",
+        "type": "object"
+      },
       "DataTableResponse": {
         "description": "One table WITH its rows — the shape a detail read returns.",
         "properties": {
@@ -5300,6 +5902,17 @@
           "success"
         ],
         "title": "DeleteAttachmentResponse",
+        "type": "object"
+      },
+      "DeleteDashboardResponse": {
+        "properties": {
+          "success": {
+            "default": true,
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "title": "DeleteDashboardResponse",
         "type": "object"
       },
       "DeleteDataTableResponse": {
@@ -6187,6 +6800,98 @@
         "title": "DraftMigrationPlanRequest",
         "type": "object"
       },
+      "DriverCapabilitiesOut": {
+        "description": "What a warehouse can do, as the screen needs to know it.",
+        "properties": {
+          "containerWord": {
+            "title": "Containerword",
+            "type": "string"
+          },
+          "pricesBeforeRunning": {
+            "title": "Pricesbeforerunning",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "pricesBeforeRunning",
+          "containerWord"
+        ],
+        "title": "DriverCapabilitiesOut",
+        "type": "object"
+      },
+      "DriverConfigField": {
+        "description": "One connection detail a warehouse needs that the others do not.",
+        "properties": {
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "required": {
+            "title": "Required",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "label",
+          "description",
+          "required"
+        ],
+        "title": "DriverConfigField",
+        "type": "object"
+      },
+      "DriverDescriptor": {
+        "description": "One warehouse the platform can reach, as the screen draws it.\n\nThe screen renders a source's settings FROM this, rather than carrying\nits own copy of which fields BigQuery needs. That is the whole point of\nthe register (``src/domain/warehouse_drivers.py``): adding a warehouse\nadds a field to the form without a line of frontend code.",
+        "properties": {
+          "capabilities": {
+            "$ref": "#/components/schemas/DriverCapabilitiesOut"
+          },
+          "configFields": {
+            "items": {
+              "$ref": "#/components/schemas/DriverConfigField"
+            },
+            "title": "Configfields",
+            "type": "array"
+          },
+          "credentialKinds": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Credentialkinds",
+            "type": "array"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "driverId": {
+            "title": "Driverid",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "driverId",
+          "label",
+          "description",
+          "credentialKinds",
+          "capabilities",
+          "configFields"
+        ],
+        "title": "DriverDescriptor",
+        "type": "object"
+      },
       "DryRunToolRequest": {
         "description": "POST /api/v1/tools/{tool_id}/dry-run — request body.\n\nNo code: the point of a dry-run is that it runs the tool's OWN stored\nimplementation. Only the sample input is supplied (#792).",
         "properties": {
@@ -6332,6 +7037,25 @@
           "document"
         ],
         "title": "DuplicateComponentResponse",
+        "type": "object"
+      },
+      "DuplicateDashboardRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "title": "DuplicateDashboardRequest",
         "type": "object"
       },
       "EdgeSchema": {
@@ -9236,6 +9960,574 @@
         "title": "MajorVersionResponse",
         "type": "object"
       },
+      "MeasureDesignResponse": {
+        "description": "A table's measures as a dashboard builder reads them.",
+        "properties": {
+          "columns": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Columns",
+            "type": "array"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "measures": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Measures",
+            "type": "array"
+          },
+          "publishedMajorVersion": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publishedmajorversion"
+          },
+          "tableId": {
+            "title": "Tableid",
+            "type": "string"
+          },
+          "tableName": {
+            "title": "Tablename",
+            "type": "string"
+          },
+          "timeAxis": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timeaxis"
+          },
+          "updatedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updatedat"
+          }
+        },
+        "required": [
+          "tableId",
+          "tableName",
+          "description",
+          "columns",
+          "measures",
+          "timeAxis",
+          "publishedMajorVersion",
+          "updatedAt"
+        ],
+        "title": "MeasureDesignResponse",
+        "type": "object"
+      },
+      "MeasureFilterPayload": {
+        "additionalProperties": false,
+        "description": "One condition a row must meet to count.",
+        "properties": {
+          "column": {
+            "description": "The column the condition reads.",
+            "maxLength": 64,
+            "title": "Column",
+            "type": "string"
+          },
+          "operator": {
+            "description": "equals, not_equals, in, not_in, greater_than, less_than, at_least or at_most. The last four need a number or date column.",
+            "maxLength": 32,
+            "title": "Operator",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "items": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "boolean"
+                    }
+                  ]
+                },
+                "maxItems": 200,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the column is compared with; a list for in and not_in.",
+            "title": "Value"
+          }
+        },
+        "required": [
+          "column",
+          "operator"
+        ],
+        "title": "MeasureFilterPayload",
+        "type": "object"
+      },
+      "MeasureQueryItem": {
+        "additionalProperties": false,
+        "description": "One tile's question: a measure, over a period, maybe split.",
+        "properties": {
+          "compare": {
+            "default": "none",
+            "description": "What the total is compared with.",
+            "enum": [
+              "none",
+              "previous_period",
+              "previous_year"
+            ],
+            "title": "Compare",
+            "type": "string"
+          },
+          "end": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Last day of a custom range, inclusive.",
+            "title": "End"
+          },
+          "filters": {
+            "default": [],
+            "description": "Extra conditions, on top of the measure's own.",
+            "items": {
+              "$ref": "#/components/schemas/MeasureFilterPayload"
+            },
+            "maxItems": 20,
+            "title": "Filters",
+            "type": "array"
+          },
+          "grain": {
+            "default": "none",
+            "description": "Draw a series per this grain; auto picks one that fits; none draws no series.",
+            "enum": [
+              "none",
+              "auto",
+              "day",
+              "week",
+              "month",
+              "quarter",
+              "year"
+            ],
+            "title": "Grain",
+            "type": "string"
+          },
+          "key": {
+            "description": "The caller's own id for this question; the answer carries it back.",
+            "maxLength": 64,
+            "title": "Key",
+            "type": "string"
+          },
+          "limit": {
+            "default": 10,
+            "description": "With a split: how many groups, largest first.",
+            "maximum": 50.0,
+            "minimum": 1.0,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "measure": {
+            "description": "The measure's id or name on that table.",
+            "maxLength": 64,
+            "title": "Measure",
+            "type": "string"
+          },
+          "period": {
+            "anyOf": [
+              {
+                "enum": [
+                  "today",
+                  "this_week",
+                  "last_week",
+                  "this_month",
+                  "last_month",
+                  "this_quarter",
+                  "year_to_date",
+                  "last_30_days",
+                  "last_12_months",
+                  "all_time"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "this_month",
+            "description": "A named period. Omit (null) and send start and end for a custom range.",
+            "title": "Period"
+          },
+          "splitBy": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A column to split the measure by.",
+            "title": "Splitby"
+          },
+          "start": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "First day of a custom range.",
+            "title": "Start"
+          },
+          "tableId": {
+            "description": "The dynamic table the measure belongs to.",
+            "format": "uuid",
+            "title": "Tableid",
+            "type": "string"
+          },
+          "useDraft": {
+            "default": false,
+            "description": "Read the table's working design instead of its published one — for an author previewing a measure before publishing it.",
+            "title": "Usedraft",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "key",
+          "tableId",
+          "measure"
+        ],
+        "title": "MeasureQueryItem",
+        "type": "object"
+      },
+      "MeasureQueryRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "queries": {
+            "items": {
+              "$ref": "#/components/schemas/MeasureQueryItem"
+            },
+            "maxItems": 40,
+            "minItems": 1,
+            "title": "Queries",
+            "type": "array"
+          }
+        },
+        "required": [
+          "queries"
+        ],
+        "title": "MeasureQueryRequest",
+        "type": "object"
+      },
+      "MeasureQueryResponse": {
+        "properties": {
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/MeasureQueryResult"
+            },
+            "title": "Results",
+            "type": "array"
+          }
+        },
+        "required": [
+          "results"
+        ],
+        "title": "MeasureQueryResponse",
+        "type": "object"
+      },
+      "MeasureQueryResult": {
+        "description": "One answer. ``ok`` false carries only ``key`` and ``error``.",
+        "properties": {
+          "certified": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "True when computed from a published measure; false for a draft preview.",
+            "title": "Certified"
+          },
+          "change": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Relative change against the comparison: 0.096 is +9.6%.",
+            "title": "Change"
+          },
+          "comparisonPeriod": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comparisonperiod"
+          },
+          "comparisonTotal": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comparisontotal"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "freshAsOf": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the freshest row behind this number was written. Null when the period holds no rows. Not the same as updatedAt: that is the definition, this is the data. A tile that cannot say how old its number is shows a failed overnight sync as yesterday's truth.",
+            "title": "Freshasof"
+          },
+          "grain": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grain"
+          },
+          "groupCount": {
+            "default": 0,
+            "description": "How many groups there were before the limit.",
+            "title": "Groupcount",
+            "type": "integer"
+          },
+          "groups": {
+            "default": [],
+            "description": "With a split: {group, value}, largest first.",
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Groups",
+            "type": "array"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "lastDate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The newest date among the table's rows.",
+            "title": "Lastdate"
+          },
+          "measure": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The published definition the number was computed from.",
+            "title": "Measure"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "period": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period"
+          },
+          "rowCount": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rowcount"
+          },
+          "series": {
+            "default": [],
+            "description": "One point per bucket (and group): {bucket, group, value}.",
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Series",
+            "type": "array"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "on_track",
+                  "watch",
+                  "off_track"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "table": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Table"
+          },
+          "total": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total"
+          },
+          "updatedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the measure's DEFINITION last changed.",
+            "title": "Updatedat"
+          }
+        },
+        "required": [
+          "key",
+          "ok"
+        ],
+        "title": "MeasureQueryResult",
+        "type": "object"
+      },
       "ModelTierMap": {
         "additionalProperties": false,
         "description": "Per-tenant tier → concrete provider model.\n\nEvery value of ``CapabilityTier`` MUST be present.  Values cannot be\nempty strings — an empty model name would silently fall through to\nthe router fallback and surprise an admin who thought they had\nconfigured a tier.",
@@ -9861,6 +11153,78 @@
         "title": "Page[AuditEventItem]",
         "type": "object"
       },
+      "Page_DashboardSummary_": {
+        "properties": {
+          "hasMore": {
+            "default": false,
+            "title": "Hasmore",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/src__schemas__dashboard__DashboardSummary"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          },
+          "pageSize": {
+            "title": "Pagesize",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "pageSize"
+        ],
+        "title": "Page[DashboardSummary]",
+        "type": "object"
+      },
+      "Page_DataSourceSummary_": {
+        "properties": {
+          "hasMore": {
+            "default": false,
+            "title": "Hasmore",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/DataSourceSummary"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          },
+          "pageSize": {
+            "title": "Pagesize",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "pageSize"
+        ],
+        "title": "Page[DataSourceSummary]",
+        "type": "object"
+      },
       "Page_DataTableRowItem_": {
         "properties": {
           "hasMore": {
@@ -10075,6 +11439,42 @@
           "pageSize"
         ],
         "title": "Page[RunSummary]",
+        "type": "object"
+      },
+      "Page_TableRelationshipDetail_": {
+        "properties": {
+          "hasMore": {
+            "default": false,
+            "title": "Hasmore",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/TableRelationshipDetail"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          },
+          "pageSize": {
+            "title": "Pagesize",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "pageSize"
+        ],
+        "title": "Page[TableRelationshipDetail]",
         "type": "object"
       },
       "Page_TodoItem_": {
@@ -11673,6 +13073,25 @@
           }
         },
         "title": "PurgeBulkResult",
+        "type": "object"
+      },
+      "QueryColumn": {
+        "description": "One column of an answer, with the type the warehouse gave it.",
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "type"
+        ],
+        "title": "QueryColumn",
         "type": "object"
       },
       "QueueDispatchHealth": {
@@ -14054,6 +15473,85 @@
         "title": "RunOutlineResponse",
         "type": "object"
       },
+      "RunQueryRequest": {
+        "description": "POST /api/v1/data-sources/{id}/query.",
+        "properties": {
+          "maxRows": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Maxrows"
+          },
+          "sql": {
+            "maxLength": 65536,
+            "minLength": 1,
+            "title": "Sql",
+            "type": "string"
+          }
+        },
+        "required": [
+          "sql"
+        ],
+        "title": "RunQueryRequest",
+        "type": "object"
+      },
+      "RunQueryResult": {
+        "description": "What a query answered, and what it cost.\n\n``rows`` is bounded by the service's ceiling, so this object cannot grow\nwith the warehouse. ``truncated`` says when rows were left unread — a\nnumber shown as complete when it is not is the outcome this surface may\nnever produce.",
+        "properties": {
+          "bytesScanned": {
+            "title": "Bytesscanned",
+            "type": "integer"
+          },
+          "columns": {
+            "items": {
+              "$ref": "#/components/schemas/QueryColumn"
+            },
+            "title": "Columns",
+            "type": "array"
+          },
+          "fromCache": {
+            "title": "Fromcache",
+            "type": "boolean"
+          },
+          "rowCount": {
+            "title": "Rowcount",
+            "type": "integer"
+          },
+          "rows": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "totalRows": {
+            "title": "Totalrows",
+            "type": "integer"
+          },
+          "truncated": {
+            "title": "Truncated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "columns",
+          "rows",
+          "rowCount",
+          "totalRows",
+          "truncated",
+          "bytesScanned",
+          "fromCache"
+        ],
+        "title": "RunQueryResult",
+        "type": "object"
+      },
       "RunRestartResult": {
         "description": "Outcome of re-dispatching a stuck run.\n\n``status='restarted'`` — the run was re-queued onto the RunQueue.\n``status='already_active'`` — it was already being processed, so the\ncall was an idempotent no-op (double-click safe).",
         "properties": {
@@ -14783,6 +16281,57 @@
           "describes"
         ],
         "title": "ScheduleRuleKindItem",
+        "type": "object"
+      },
+      "SchemaColumnOut": {
+        "description": "One column of a table in the warehouse.",
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "type"
+        ],
+        "title": "SchemaColumnOut",
+        "type": "object"
+      },
+      "SchemaTableOut": {
+        "description": "One table the source holds, with its columns.",
+        "properties": {
+          "columns": {
+            "items": {
+              "$ref": "#/components/schemas/SchemaColumnOut"
+            },
+            "title": "Columns",
+            "type": "array"
+          },
+          "container": {
+            "title": "Container",
+            "type": "string"
+          },
+          "containerWord": {
+            "title": "Containerword",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "container",
+          "containerWord",
+          "columns"
+        ],
+        "title": "SchemaTableOut",
         "type": "object"
       },
       "SecretListItem": {
@@ -16568,6 +18117,205 @@
         "title": "SuspendRunResponse",
         "type": "object"
       },
+      "SyncCreate": {
+        "description": "POST /api/v1/data-sources/{id}/syncs.",
+        "properties": {
+          "cronExpr": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Cronexpr",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "enabled": {
+            "default": true,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "keyColumns": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "title": "Keycolumns",
+            "type": "array"
+          },
+          "mode": {
+            "default": "upsert",
+            "enum": [
+              "append",
+              "upsert"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "sql": {
+            "maxLength": 65536,
+            "minLength": 1,
+            "title": "Sql",
+            "type": "string"
+          },
+          "tableId": {
+            "title": "Tableid",
+            "type": "string"
+          },
+          "timezone": {
+            "default": "UTC",
+            "maxLength": 64,
+            "title": "Timezone",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "tableId",
+          "sql",
+          "cronExpr"
+        ],
+        "title": "SyncCreate",
+        "type": "object"
+      },
+      "SyncOut": {
+        "description": "One sync, and how its last attempt went.",
+        "properties": {
+          "cronExpr": {
+            "title": "Cronexpr",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "keyColumns": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Keycolumns",
+            "type": "array"
+          },
+          "lastError": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lasterror"
+          },
+          "lastRowCount": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lastrowcount"
+          },
+          "lastRunAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lastrunat"
+          },
+          "mode": {
+            "title": "Mode",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "nextFireAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextfireat"
+          },
+          "sourceId": {
+            "title": "Sourceid",
+            "type": "string"
+          },
+          "sql": {
+            "title": "Sql",
+            "type": "string"
+          },
+          "tableId": {
+            "title": "Tableid",
+            "type": "string"
+          },
+          "timezone": {
+            "title": "Timezone",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "sourceId",
+          "tableId",
+          "sql",
+          "mode",
+          "keyColumns",
+          "cronExpr",
+          "timezone",
+          "enabled",
+          "version"
+        ],
+        "title": "SyncOut",
+        "type": "object"
+      },
       "SystemAdjustments": {
         "description": "What the platform changed on its own, in this call (#771).\n\nTwo invariants run after every edit and are NOT optional:\n``ensure_end_step`` guarantees every step can reach the end point and\nwires the edge itself, and ``derive_input_contracts`` projects each\nbound input's contract from the output it is bound to. Both are\ncorrect; both used to be invisible, so an author copying one\nenvironment into another found edges they never asked for and\ndescriptions they never wrote, and could only find them by diffing the\nwhole document after every call.\n\nIds and names only — this rides on every mutation response, so it must\nstay small. Absent/empty means nothing was adjusted.",
         "properties": {
@@ -16710,6 +18458,204 @@
           }
         },
         "title": "TableColumnPayload",
+        "type": "object"
+      },
+      "TableRelationshipCreate": {
+        "description": "POST /api/v1/table-relationships.",
+        "properties": {
+          "cardinality": {
+            "default": "many_to_one",
+            "enum": [
+              "many_to_one",
+              "one_to_one"
+            ],
+            "title": "Cardinality",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "fromColumn": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Fromcolumn",
+            "type": "string"
+          },
+          "fromTableId": {
+            "title": "Fromtableid",
+            "type": "string"
+          },
+          "toColumn": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Tocolumn",
+            "type": "string"
+          },
+          "toTableId": {
+            "title": "Totableid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "fromTableId",
+          "fromColumn",
+          "toTableId",
+          "toColumn"
+        ],
+        "title": "TableRelationshipCreate",
+        "type": "object"
+      },
+      "TableRelationshipDetail": {
+        "description": "One declared connection.",
+        "properties": {
+          "cardinality": {
+            "title": "Cardinality",
+            "type": "string"
+          },
+          "createdAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Createdat"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "fromColumn": {
+            "title": "Fromcolumn",
+            "type": "string"
+          },
+          "fromTableId": {
+            "title": "Fromtableid",
+            "type": "string"
+          },
+          "fromTableName": {
+            "title": "Fromtablename",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "toColumn": {
+            "title": "Tocolumn",
+            "type": "string"
+          },
+          "toTableId": {
+            "title": "Totableid",
+            "type": "string"
+          },
+          "toTableName": {
+            "title": "Totablename",
+            "type": "string"
+          },
+          "updatedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updatedat"
+          },
+          "verified": {
+            "title": "Verified",
+            "type": "boolean"
+          },
+          "verifiedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verifiedat"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "fromTableId",
+          "fromTableName",
+          "fromColumn",
+          "toTableId",
+          "toTableName",
+          "toColumn",
+          "cardinality",
+          "verified",
+          "version"
+        ],
+        "title": "TableRelationshipDetail",
+        "type": "object"
+      },
+      "TableRelationshipUpdate": {
+        "description": "PUT /api/v1/table-relationships/{id} — only what is sent is changed.",
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "expectedVersion": {
+            "minimum": 1.0,
+            "title": "Expectedversion",
+            "type": "integer"
+          },
+          "verified": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verified"
+          }
+        },
+        "required": [
+          "expectedVersion"
+        ],
+        "title": "TableRelationshipUpdate",
         "type": "object"
       },
       "TaskQueueListResponse": {
@@ -17930,6 +19876,137 @@
         "title": "ToolsPolicySchema",
         "type": "object"
       },
+      "TopRowsRequest": {
+        "additionalProperties": false,
+        "description": "A list tile's question: the first rows of a table in an order.",
+        "properties": {
+          "descending": {
+            "default": true,
+            "title": "Descending",
+            "type": "boolean"
+          },
+          "filters": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/MeasureFilterPayload"
+            },
+            "maxItems": 20,
+            "title": "Filters",
+            "type": "array"
+          },
+          "limit": {
+            "default": 10,
+            "maximum": 50.0,
+            "minimum": 1.0,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "period": {
+            "anyOf": [
+              {
+                "enum": [
+                  "today",
+                  "this_week",
+                  "last_week",
+                  "this_month",
+                  "last_month",
+                  "this_quarter",
+                  "year_to_date",
+                  "last_30_days",
+                  "last_12_months",
+                  "all_time"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period"
+          },
+          "sortBy": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sortby"
+          },
+          "tableId": {
+            "format": "uuid",
+            "title": "Tableid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tableId"
+        ],
+        "title": "TopRowsRequest",
+        "type": "object"
+      },
+      "TopRowsResponse": {
+        "properties": {
+          "columns": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Columns",
+            "type": "array"
+          },
+          "matched": {
+            "description": "How many rows matched, before the limit.",
+            "title": "Matched",
+            "type": "integer"
+          },
+          "period": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period"
+          },
+          "rows": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "table": {
+            "additionalProperties": true,
+            "title": "Table",
+            "type": "object"
+          }
+        },
+        "required": [
+          "table",
+          "columns",
+          "rows",
+          "matched"
+        ],
+        "title": "TopRowsResponse",
+        "type": "object"
+      },
       "TransitionSchema": {
         "description": "One outbound edge from a flow-step.\n\n- ``when='auto'``: unconditionally transitions to ``next``.\n- ``when='fork'``: reads ``fork_field`` from the exit-tool payload and\n  picks the target in ``routes`` matching that value. ``default`` is\n  used when no explicit route matches.\n\nStored as an entry in the JSONB ``transitions`` list on flow_steps.\nService-layer validation ensures referenced step identifiers exist.",
         "properties": {
@@ -18666,6 +20743,73 @@
           }
         },
         "title": "UpdateAttachmentRequest",
+        "type": "object"
+      },
+      "UpdateDashboardRequest": {
+        "additionalProperties": false,
+        "description": "A partial edit; only the keys sent change.",
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "expectedVersion": {
+            "description": "The version the edit is based on (409 if stale).",
+            "title": "Expectedversion",
+            "type": "integer"
+          },
+          "layout": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Layout"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "visibility": {
+            "anyOf": [
+              {
+                "enum": [
+                  "workspace",
+                  "private"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Visibility"
+          }
+        },
+        "required": [
+          "expectedVersion"
+        ],
+        "title": "UpdateDashboardRequest",
         "type": "object"
       },
       "UpdateDataTableRequest": {
@@ -22128,6 +24272,77 @@
           "functionName"
         ],
         "title": "_ToolCallShape",
+        "type": "object"
+      },
+      "src__schemas__dashboard__DashboardSummary": {
+        "description": "A dashboard in a list — without its layout.",
+        "properties": {
+          "createdAt": {
+            "title": "Createdat",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "isMine": {
+            "description": "True when the reader made this dashboard.",
+            "title": "Ismine",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "ownerId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ownerid"
+          },
+          "tileCount": {
+            "title": "Tilecount",
+            "type": "integer"
+          },
+          "updatedAt": {
+            "title": "Updatedat",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          },
+          "visibility": {
+            "enum": [
+              "workspace",
+              "private"
+            ],
+            "title": "Visibility",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "visibility",
+          "ownerId",
+          "isMine",
+          "tileCount",
+          "version",
+          "createdAt",
+          "updatedAt"
+        ],
+        "title": "DashboardSummary",
         "type": "object"
       },
       "src__schemas__run__DashboardSummary": {
@@ -26635,6 +28850,1274 @@
         "summary": "Run Cron Schedule Now",
         "tags": [
           "cron-admin"
+        ]
+      }
+    },
+    "/api/v1/dashboards": {
+      "get": {
+        "description": "The dashboards this reader may see, newest first (B-NB8).",
+        "operationId": "list_dashboards_api_v1_dashboards_get",
+        "parameters": [
+          {
+            "description": "Page size (max 200).",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Page size (max 200).",
+              "title": "Limit"
+            }
+          },
+          {
+            "description": "nextCursor of the previous page.",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "nextCursor of the previous page.",
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_DashboardSummary_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Dashboards",
+        "tags": [
+          "dashboards"
+        ]
+      },
+      "post": {
+        "operationId": "create_dashboard_api_v1_dashboards_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDashboardRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Dashboard",
+        "tags": [
+          "dashboards"
+        ]
+      }
+    },
+    "/api/v1/dashboards/deleted": {
+      "get": {
+        "operationId": "list_deleted_dashboards_api_v1_dashboards_deleted_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeletedEntityListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Deleted Dashboards",
+        "tags": [
+          "dashboards"
+        ]
+      }
+    },
+    "/api/v1/dashboards/{dashboard_id}": {
+      "delete": {
+        "description": "Tombstone — recoverable through ``POST /{dashboard_id}/restore``.",
+        "operationId": "delete_dashboard_api_v1_dashboards__dashboard_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "dashboard_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Dashboard Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "expected_version",
+            "required": true,
+            "schema": {
+              "title": "Expected Version",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteDashboardResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Dashboard",
+        "tags": [
+          "dashboards"
+        ]
+      },
+      "get": {
+        "operationId": "get_dashboard_api_v1_dashboards__dashboard_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "dashboard_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Dashboard Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Dashboard",
+        "tags": [
+          "dashboards"
+        ]
+      },
+      "put": {
+        "operationId": "update_dashboard_api_v1_dashboards__dashboard_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "dashboard_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Dashboard Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateDashboardRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Dashboard",
+        "tags": [
+          "dashboards"
+        ]
+      }
+    },
+    "/api/v1/dashboards/{dashboard_id}/duplicate": {
+      "post": {
+        "operationId": "duplicate_dashboard_api_v1_dashboards__dashboard_id__duplicate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "dashboard_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Dashboard Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DuplicateDashboardRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Duplicate Dashboard",
+        "tags": [
+          "dashboards"
+        ]
+      }
+    },
+    "/api/v1/dashboards/{dashboard_id}/restore": {
+      "post": {
+        "description": "Un-delete. Idempotent — a live dashboard answers ``restored: false``.",
+        "operationId": "restore_dashboard_api_v1_dashboards__dashboard_id__restore_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "dashboard_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Dashboard Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RestoreEntityResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Restore Dashboard",
+        "tags": [
+          "dashboards"
+        ]
+      }
+    },
+    "/api/v1/data-sources": {
+      "get": {
+        "description": "This workspace's warehouses, one bounded page at a time (B-NB8).",
+        "operationId": "list_data_sources_api_v1_data_sources_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Limit"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "enabled",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Enabled"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_DataSourceSummary_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Data Sources",
+        "tags": [
+          "data-sources"
+        ]
+      },
+      "post": {
+        "description": "Connect a warehouse. Admin only: it binds a credential.",
+        "operationId": "create_data_source_api_v1_data_sources_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DataSourceCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataSourceDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Data Source",
+        "tags": [
+          "data-sources"
+        ]
+      }
+    },
+    "/api/v1/data-sources/deleted": {
+      "get": {
+        "description": "Removed sources that can still be brought back.",
+        "operationId": "list_deleted_data_sources_api_v1_data_sources_deleted_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeletedEntityListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Deleted Data Sources",
+        "tags": [
+          "data-sources"
+        ]
+      }
+    },
+    "/api/v1/data-sources/drivers": {
+      "get": {
+        "description": "Which warehouses can be connected, and what each one needs.\n\nThe screen draws a source's settings from this instead of knowing which\nfields BigQuery wants, so a new warehouse reaches the form with the\nrelease rather than with a frontend change.",
+        "operationId": "list_drivers_api_v1_data_sources_drivers_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DriverDescriptor"
+                  },
+                  "title": "Response List Drivers Api V1 Data Sources Drivers Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Drivers",
+        "tags": [
+          "data-sources"
+        ]
+      }
+    },
+    "/api/v1/data-sources/{source_id}": {
+      "delete": {
+        "operationId": "delete_data_source_api_v1_data_sources__source_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Source Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "expected_version",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Expected Version",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "boolean"
+                  },
+                  "title": "Response Delete Data Source Api V1 Data Sources  Source Id  Delete",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Data Source",
+        "tags": [
+          "data-sources"
+        ]
+      },
+      "get": {
+        "operationId": "get_data_source_api_v1_data_sources__source_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Source Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataSourceDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Data Source",
+        "tags": [
+          "data-sources"
+        ]
+      },
+      "put": {
+        "operationId": "update_data_source_api_v1_data_sources__source_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Source Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DataSourceUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataSourceDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Data Source",
+        "tags": [
+          "data-sources"
+        ]
+      }
+    },
+    "/api/v1/data-sources/{source_id}/query": {
+      "post": {
+        "description": "Run a read-only query and return the rows.\n\nThe rows are bounded by the service's ceiling and the answer says when\nit was cut short, so this response cannot grow with the warehouse.",
+        "operationId": "run_data_source_query_api_v1_data_sources__source_id__query_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Source Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunQueryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunQueryResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Run Data Source Query",
+        "tags": [
+          "data-sources"
+        ]
+      }
+    },
+    "/api/v1/data-sources/{source_id}/restore": {
+      "post": {
+        "description": "Un-delete a source.\n\nIdempotent — restoring a live source succeeds with ``restored=false``.\nTakes no ``expectedVersion``: a recovery must never lose to a stale\nversion check.",
+        "operationId": "restore_data_source_api_v1_data_sources__source_id__restore_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Source Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RestoreEntityResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Restore Data Source",
+        "tags": [
+          "data-sources"
+        ]
+      }
+    },
+    "/api/v1/data-sources/{source_id}/schema": {
+      "get": {
+        "description": "Which tables and columns this source holds.\n\nReads the warehouse's own catalogue, so it costs nothing on a warehouse\nbilled per byte. This is what S8 writes its table cards against.",
+        "operationId": "read_data_source_schema_api_v1_data_sources__source_id__schema_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Source Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SchemaTableOut"
+                  },
+                  "title": "Response Read Data Source Schema Api V1 Data Sources  Source Id  Schema Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Read Data Source Schema",
+        "tags": [
+          "data-sources"
+        ]
+      }
+    },
+    "/api/v1/data-sources/{source_id}/syncs": {
+      "get": {
+        "description": "The queries that keep tables filled from this warehouse.",
+        "operationId": "list_syncs_api_v1_data_sources__source_id__syncs_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Source Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SyncOut"
+                  },
+                  "title": "Response List Syncs Api V1 Data Sources  Source Id  Syncs Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Syncs",
+        "tags": [
+          "data-sources"
+        ]
+      },
+      "post": {
+        "description": "Set up a query that fills a table on a rhythm.",
+        "operationId": "create_sync_api_v1_data_sources__source_id__syncs_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Source Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SyncCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Sync",
+        "tags": [
+          "data-sources"
+        ]
+      }
+    },
+    "/api/v1/data-sources/{source_id}/syncs/{sync_id}": {
+      "delete": {
+        "description": "Stop a sync. The rows it already wrote stay where they are.",
+        "operationId": "delete_sync_api_v1_data_sources__source_id__syncs__sync_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Source Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "sync_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Sync Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "boolean"
+                  },
+                  "title": "Response Delete Sync Api V1 Data Sources  Source Id  Syncs  Sync Id  Delete",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Sync",
+        "tags": [
+          "data-sources"
+        ]
+      }
+    },
+    "/api/v1/data-sources/{source_id}/syncs/{sync_id}/restore": {
+      "post": {
+        "description": "Bring a stopped sync back, switched off.\n\nStopping one is usually a reaction to it doing the wrong thing, so it\nreturns off: the author switches it on once they have looked.",
+        "operationId": "restore_sync_api_v1_data_sources__source_id__syncs__sync_id__restore_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Source Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "sync_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Sync Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Restore Sync",
+        "tags": [
+          "data-sources"
+        ]
+      }
+    },
+    "/api/v1/data-sources/{source_id}/syncs/{sync_id}/run": {
+      "post": {
+        "description": "Bring this sync's turn forward; the heartbeat runs it.\n\nAccept and return (B-NB6): the query can take tens of seconds and the\nmerge reads a table into memory, so neither happens on this request.\nThe answer says when it will run, not what it found.",
+        "operationId": "run_sync_now_api_v1_data_sources__source_id__syncs__sync_id__run_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Source Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "sync_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Sync Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Run Sync Now",
+        "tags": [
+          "data-sources"
+        ]
+      }
+    },
+    "/api/v1/data-sources/{source_id}/test": {
+      "post": {
+        "description": "Ask the warehouse the cheapest question there is, and say what it said.\n\nA failure is an ANSWER here, not an error status: \"it did not work, and\nthis is why\" is what the screen shows next to the source.",
+        "operationId": "test_data_source_api_v1_data_sources__source_id__test_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Source Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectionTestResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Test Data Source",
+        "tags": [
+          "data-sources"
         ]
       }
     },
@@ -31307,6 +34790,159 @@
         "summary": "Create File",
         "tags": [
           "memory"
+        ]
+      }
+    },
+    "/api/v1/measures/query": {
+      "post": {
+        "description": "Answer up to 40 tile questions at once, each on its own.",
+        "operationId": "query_measures_api_v1_measures_query_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MeasureQueryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeasureQueryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Query Measures",
+        "tags": [
+          "measures"
+        ]
+      }
+    },
+    "/api/v1/measures/rows": {
+      "post": {
+        "description": "The first rows of a published dynamic table in an order — a list tile.",
+        "operationId": "top_rows_api_v1_measures_rows_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TopRowsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TopRowsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Top Rows",
+        "tags": [
+          "measures"
+        ]
+      }
+    },
+    "/api/v1/measures/tables/{table_id}": {
+      "get": {
+        "description": "A table's published measures, columns and time axis — what a builder offers.",
+        "operationId": "get_measure_design_api_v1_measures_tables__table_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "table_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Table Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "useDraft",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Usedraft",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeasureDesignResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Measure Design",
+        "tags": [
+          "measures"
         ]
       }
     },
@@ -41773,6 +45409,381 @@
         "summary": "List System Tools",
         "tags": [
           "system-tools"
+        ]
+      }
+    },
+    "/api/v1/table-relationships": {
+      "get": {
+        "description": "This workspace's connections, one bounded page at a time (B-NB8).",
+        "operationId": "list_table_relationships_api_v1_table_relationships_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Limit"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "table_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Table Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_TableRelationshipDetail_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Table Relationships",
+        "tags": [
+          "table-relationships"
+        ]
+      },
+      "post": {
+        "description": "Declare a connection — refused in words when it cannot be right.",
+        "operationId": "create_table_relationship_api_v1_table_relationships_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TableRelationshipCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TableRelationshipDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Table Relationship",
+        "tags": [
+          "table-relationships"
+        ]
+      }
+    },
+    "/api/v1/table-relationships/deleted": {
+      "get": {
+        "description": "Connections that were removed and can still be brought back.",
+        "operationId": "list_deleted_table_relationships_api_v1_table_relationships_deleted_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeletedEntityListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Deleted Table Relationships",
+        "tags": [
+          "table-relationships"
+        ]
+      }
+    },
+    "/api/v1/table-relationships/{relationship_id}": {
+      "delete": {
+        "operationId": "delete_table_relationship_api_v1_table_relationships__relationship_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "relationship_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Relationship Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "expected_version",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Expected Version",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "boolean"
+                  },
+                  "title": "Response Delete Table Relationship Api V1 Table Relationships  Relationship Id  Delete",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Table Relationship",
+        "tags": [
+          "table-relationships"
+        ]
+      },
+      "get": {
+        "operationId": "get_table_relationship_api_v1_table_relationships__relationship_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "relationship_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Relationship Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TableRelationshipDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Table Relationship",
+        "tags": [
+          "table-relationships"
+        ]
+      },
+      "put": {
+        "description": "Mark the keys as checked, or change the note beside them.",
+        "operationId": "update_table_relationship_api_v1_table_relationships__relationship_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "relationship_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Relationship Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TableRelationshipUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TableRelationshipDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Table Relationship",
+        "tags": [
+          "table-relationships"
+        ]
+      }
+    },
+    "/api/v1/table-relationships/{relationship_id}/restore": {
+      "post": {
+        "description": "Un-delete a connection. Idempotent; takes no ``expectedVersion``.",
+        "operationId": "restore_table_relationship_api_v1_table_relationships__relationship_id__restore_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "relationship_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Relationship Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RestoreEntityResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Restore Table Relationship",
+        "tags": [
+          "table-relationships"
         ]
       }
     },

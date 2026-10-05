@@ -328,12 +328,16 @@ describe("list filters are generated, not kept (M4)", () => {
     // the route, and the names, types and prose came out of the schema. On a
     // PAGED list they matter more than anywhere else, because the alternative
     // to "is there one called X?" in one call is a walk through every page.
+    // #78 is the same again: `enabled` on data sources and `table_id` on
+    // relationships came out of the schema, one LIST_ROUTES line each.
     expect(Object.keys(table).sort()).toEqual([
       "agent",
+      "data_source",
       "data_table",
       "policy",
       "prompt_snippet",
       "reference_doc",
+      "table_relationship",
       "workflow",
     ]);
     expect(table.data_table.map((f) => f.query)).toEqual([
