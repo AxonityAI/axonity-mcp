@@ -76,6 +76,12 @@ Exceptions: `persona` has no `create_persona` (create only via
 `create_agent_persona`). And `list_data_tables` answers **one page**, not the
 whole library — see Tables below.
 
+Three more entities use the same verbs **without** the draft ones —
+**data_source, table_relationship, dashboard**. None is versioned: a change is
+live when it is saved, so there is no `discard_*_draft` and no
+`request_publish_*`. Their lists are paged like `list_data_tables`. See
+Warehouses and dashboards below.
+
 Some list routes narrow in the query, which is where narrowing belongs — the
 backend applies it before the rows come back:
 `list_workflows({ stageId?, capabilityId? })`,
@@ -83,7 +89,9 @@ backend applies it before the rows come back:
 `list_policies({ scope?, ownerId? })`,
 `list_reference_docs({ scope?, ownerId? })`,
 `list_prompt_snippets({ deleted? })`,
-`list_data_tables({ name?, status?, isDynamic? })`.
+`list_data_tables({ name?, status?, isDynamic? })`,
+`list_data_sources({ enabled? })`,
+`list_table_relationships({ tableId? })`.
 
 That table is **generated** from the pinned schema's own query parameters
 (`npm run generate:filters` → `src/generated/listFilters.ts`), not hand-listed.
@@ -247,6 +255,35 @@ across these routes — the tool parameter names say which.
     would yield), `toolId` (whether a row exists) and `isLive` (whether a run
     can reach it) separately — an author who ticked "may add rows" and has not
     published has granted nothing yet.
+- **Warehouses and dashboards** (`data_source`, `table_relationship`,
+  `dashboard`, measures): a workspace connects a warehouse such as BigQuery,
+  syncs fill dynamic tables from it on a schedule, and dashboards show
+  measures over those tables.
+  - **Most writes here are administrator-only on the platform, and a service
+    token always counts as a member.** Creating, changing, testing or querying
+    a data source, every sync write and every relationship write answer 403
+    "Only administrators can perform this action" to a token today. The tools
+    say so in their descriptions, and the error says *administrator only*
+    rather than the usual "your token is read-only" — the opposite advice.
+    Reads, dashboards and measures are open to a member.
+  - `list_data_source_drivers` first: each warehouse's `configFields` are the
+    keys `create_data_source` takes in `config`, so nothing about BigQuery is
+    hard-coded here and a new warehouse works without a connector release.
+    The warehouse key lives in a vault secret a human fills; the source points
+    at it by `secretId`.
+  - `test_data_source` answers `{ ok, message }` — a failure is an answer, not
+    an error. `read_data_source_schema` reads the warehouse's catalogue for
+    free. `query_data_source` runs read-only SQL with capped rows
+    (`truncated` says when rows were left out); a 422 is the query being
+    refused, a 502 is the warehouse.
+  - Syncs: `list_data_source_syncs`, `create_data_source_sync`,
+    `run_data_source_sync` (brings the run forward; does not wait for it),
+    `delete_data_source_sync`, `restore_data_source_sync` (comes back off).
+  - Measures: `read_measure_design` (what a table can be asked),
+    `query_measures` (up to 40 questions, each answered on its own),
+    `list_measure_rows` (a list tile). Plus `duplicate_dashboard`.
+  - A `source_query` knowledge note names its source in `subjectSourceId` on
+    `create_reference_doc`.
 - `list_deleted_prompt_snippets` calls `/api/v1/prompt-snippets/deleted`; the
   backend returns it as `{ items: [... ] }`, and the tool forwards that response
   unchanged.

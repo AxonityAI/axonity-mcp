@@ -54,6 +54,23 @@ export function registerPersonaTools(
   // bespoke, because personas have no standalone create route.
 }
 
+/**
+ * The shape `implementation` must have for a connector to run.
+ *
+ * An author wrote `headers` as an object instead of a list of entries; it saved
+ * and then crashed at execution with an error that pointed at the network (#78).
+ * The platform is getting a save-time check for it, but the description is
+ * where an agent learns the shape BEFORE its first attempt, so it says it.
+ */
+const CONNECTOR_SHAPE =
+  "\n\nSHAPE OF `implementation` — `headers` and `queryParams` are LISTS of " +
+  '`{ "key": "…", "value": "…", "enabled": true }`, never an object like ' +
+  '`{ "Accept": "application/json" }`. `body` is ' +
+  '`{ "type": "json" | "form" | "none", "content": "<the raw payload as a ' +
+  'string>" }`. Use `{{name}}` in a value to fill it from the tool\'s input. ' +
+  "Any other shape cannot run: the connector saves and then fails when " +
+  "called, with an error that does not point here.";
+
 export function registerConnectorTools(
   server: McpServer,
   client: AxonityClient,
@@ -61,7 +78,8 @@ export function registerConnectorTools(
   server.tool(
     "create_connector",
     "Create a connector draft (a tool of type 'connector'). Do NOT put real " +
-      "credentials in authConfig — use placeholders; a human fills secrets in Axonity.",
+      "credentials in authConfig — use placeholders; a human fills secrets in Axonity." +
+      CONNECTOR_SHAPE,
     {
       fields: z
         .record(z.unknown())
@@ -79,7 +97,8 @@ export function registerConnectorTools(
   server.tool(
     "update_connector",
     "Update a connector draft (a tool of type 'connector'). Read it first for its " +
-      "version; keep authConfig as placeholders only.",
+      "version; keep authConfig as placeholders only." +
+      CONNECTOR_SHAPE,
     {
       id: z.string().describe("The connector (tool) id."),
       expectedVersion: z.number().int().describe("Version last read — 409 if stale."),

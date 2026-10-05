@@ -108,4 +108,22 @@ export const LIST_FILTERS: Record<string, ListFilter[]> = {
         "true: only tables a workflow may change. false: only reference data the author maintains. Omit for both.",
     },
   ],
+  "data_source": [
+    {
+      arg: "enabled",
+      query: "enabled",
+      type: "boolean",
+      description:
+        "true: only sources that are switched on. false: only the ones switched off. Omit for both.",
+    },
+  ],
+  "table_relationship": [
+    {
+      arg: "tableId",
+      query: "table_id",
+      type: "string",
+      description:
+        "Only relationships that touch this table, on either side. The way to answer \"what does this table join to\" without walking every page.",
+    },
+  ],
 };

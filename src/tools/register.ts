@@ -155,6 +155,13 @@ export interface EntityDef {
    * is not acceptable unlabelled, so the entity that has one says so here.
    */
   updateWarning?: string;
+  /**
+   * Appended to `create_<entity>`'s description when creating one takes more
+   * than "pass its fields" — a value to look up first, or a permission the
+   * caller may not have. A data source is the case that asked for it: its
+   * `config` keys come from the driver, and a guessed key is a 422.
+   */
+  createNote?: string;
 }
 
 export function registerEntityTools(
@@ -259,7 +266,8 @@ export function registerEntityTools(
       `create_${singular}`,
       `Create a new ${singular} draft. Pass the entity's fields (camelCase) in ` +
         `\`fields\`; the backend validates them. Returns the created ${singular} ` +
-        `with its id and version.`,
+        `with its id and version.` +
+        (def.createNote ? `\n\n${def.createNote}` : ""),
       {
         fields: z
           .record(z.unknown())

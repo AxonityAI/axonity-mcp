@@ -11,6 +11,18 @@ diff in review.
 
 ## Provenance
 
+- **Added on top of `484c1628`:** the 34 operations of axonity-flow#1849
+  (dashboards on your own data) under `/api/v1/data-sources`,
+  `/api/v1/table-relationships`, `/api/v1/dashboards` and `/api/v1/measures`,
+  with the 36 component schemas they reference, copied verbatim from
+  `dump_openapi.py` on axonity-flow `main` at `f61aeb43` and spliced in with
+  the dump script's own formatting. Consumed by axonity-mcp#78; every one is
+  COVERED. **Only these were taken.** A full dump at `f61aeb43` carries 602
+  operations against this file's 497 — the other ~70 arrivals (config
+  branches, platform models, invoices, usage, SSO, secret reveal/transfer,
+  …) are a decision of their own, cover or exclude, and do not belong in a
+  change about warehouses. No operation was removed, and no schema already
+  here changed.
 - **Added on top of `484c1628`:** `GET /api/v1/authoring/prompt-placement`
   and its `PromptPlacementResponse` (`{markdown, rulesVersion}`), copied
   verbatim from `app.openapi()` of axonity-flow#1829 (not yet on main), so the

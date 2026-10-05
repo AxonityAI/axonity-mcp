@@ -238,15 +238,34 @@ export class AuthError extends AxonityApiError {
   }
 }
 
+/**
+ * The backend's sentence for a route behind `require_admin`.
+ *
+ * Matched on the words because the envelope's `code` is plain `forbidden` for
+ * this and for a missing scope alike, and the two need opposite advice: a
+ * scope can be granted on the token, administrator rights cannot — a service
+ * token always resolves as a member. Telling an agent "a read-only token
+ * cannot…" here sends it and its human to the token settings for something no
+ * token setting fixes (#78).
+ */
+const ADMIN_ONLY_SENTENCE = /only administrators/i;
+
 /** 403 — the token lacks the scope for this action (e.g. read-only on a write). */
 export class ForbiddenError extends AxonityApiError {
   constructor(body?: unknown) {
     const env = asEnvelope(body);
+    const adminOnly = ADMIN_ONLY_SENTENCE.test(describeBody(body) ?? "");
     super(
       withDetail(
-        "Forbidden (403): this service token is not allowed to perform that action. " +
-          "A read-only token cannot create, update, delete, or request-publish, and no " +
-          "token may publish directly — use request_publish_* and let a human approve.",
+        adminOnly
+          ? "Forbidden (403): ADMINISTRATOR ONLY. This action is reserved for a " +
+              "workspace administrator, and a service token always counts as a " +
+              "member — so no token can do it, whatever its scopes. This is not a " +
+              "mistake in your call and retrying will not help. Tell your human: " +
+              "an administrator can do it in Axonity."
+          : "Forbidden (403): this service token is not allowed to perform that action. " +
+              "A read-only token cannot create, update, delete, or request-publish, and no " +
+              "token may publish directly — use request_publish_* and let a human approve.",
         body,
       ),
       403,

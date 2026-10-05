@@ -26,6 +26,12 @@ import { AxonityClient } from "./client.js";
 import { loadConfig } from "./config.js";
 import { reportContractSkew } from "./contract.js";
 import { registerConventions } from "./tools/conventions.js";
+import {
+  ADMIN_ONLY,
+  registerDashboardTools,
+  registerDataSourceTools,
+  registerMeasureTools,
+} from "./tools/dataSources.js";
 import { registerDataTableTools } from "./tools/dataTables.js";
 import { assertPlaceholderCredentials } from "./tools/credentials.js";
 import {
@@ -164,6 +170,83 @@ const ENTITIES: EntityDef[] = [
       "which address a single row and cannot destroy the rest. Use `rows` here " +
       "only when you genuinely mean to replace the whole content.",
   },
+  // The three below arrived with axonity-flow#1849 (axonity-mcp#78). None is
+  // versioned or publish-approved: a change is live the moment it is saved, so
+  // there is no draft to discard and no request_publish_*. Each lists one page
+  // on the shared cursor, and the writes on the first two are administrator-
+  // only — see `ADMIN_ONLY` in tools/dataSources.ts.
+  {
+    singular: "data_source",
+    basePath: "/api/v1/data-sources",
+    updateMethod: "PUT",
+    label: "data sources (warehouses the workspace may read, e.g. BigQuery)",
+    publishable: false,
+    hasDiscardDraft: false,
+    deleteVersionParam: "expected_version",
+    listPaging: { defaultPageSize: 20, maxPageSize: 200 },
+    createNote:
+      "CALL list_data_source_drivers FIRST. `sourceType` is a driver's " +
+      "`driverId` (default \"bigquery\"), and `config` takes exactly the keys " +
+      "that driver's `configFields` name — do not guess them. `secretId` " +
+      "points at the vault secret holding the warehouse key; a human puts the " +
+      "key there, never you, and the source never carries the key itself. A " +
+      "source may be created without one and tested once it has it. " +
+      "`policy` holds the limits every query is held to " +
+      "(maxBytesBilled, maxSeconds, allowedDatasets, forbiddenDatasets, " +
+      "personalColumns, dateFilters); all are empty by default. " +
+      "\n\nThen test_data_source to see whether it answers. A `source_query` " +
+      "knowledge note (create_reference_doc with kind source_query) names " +
+      "this source by its id in `subjectSourceId`." +
+      ADMIN_ONLY,
+    updateWarning:
+      "NO DRAFT: this changes the live source, which every sync and query " +
+      "uses at once. `config` and `policy` are replaced WHOLE when sent — " +
+      "read first and send the complete block." +
+      ADMIN_ONLY,
+  },
+  {
+    singular: "table_relationship",
+    basePath: "/api/v1/table-relationships",
+    updateMethod: "PUT",
+    label: "table relationships (how two tables join, for measures across them)",
+    publishable: false,
+    hasDiscardDraft: false,
+    deleteVersionParam: "expected_version",
+    listPaging: { defaultPageSize: 20, maxPageSize: 200 },
+    createNote:
+      "Fields: `fromTableId` + `fromColumn` (the MANY side — the facts, e.g. " +
+      "orders), `toTableId` + `toColumn` (the ONE side — e.g. countries), " +
+      "`cardinality` (many_to_one, the default, or one_to_one; there is no " +
+      "many-to-many, it has no safe join) and an optional `description`. A " +
+      "declaration that would make a total ambiguous — a second path between " +
+      "the same two tables, say — is refused with a 422 that says why. Read " +
+      "the sentence; it is the point." +
+      ADMIN_ONLY,
+    updateWarning:
+      "Only `verified` (somebody checked that the keys really match) and " +
+      "`description` can change. To change the columns, delete and declare " +
+      "it again." +
+      ADMIN_ONLY,
+  },
+  {
+    singular: "dashboard",
+    basePath: "/api/v1/dashboards",
+    updateMethod: "PUT",
+    label: "dashboards (tiles of measures over the workspace's tables)",
+    publishable: false,
+    hasDiscardDraft: false,
+    deleteVersionParam: "expected_version",
+    listPaging: { defaultPageSize: 20, maxPageSize: 200 },
+    createNote:
+      "Fields: `name`, `description`, `visibility` (\"workspace\", the " +
+      "default — everyone sees it — or \"private\") and `layout`, the " +
+      "sections of tiles; omit it for an empty dashboard. A tile names a " +
+      "measure by the id or name read_measure_design returns. The layout is " +
+      "checked when saved and a refusal names what is wrong.",
+    updateWarning:
+      "NO DRAFT: a saved dashboard is what everyone it is shared with sees. " +
+      "`layout` is replaced WHOLE when sent — read first and send it complete.",
+  },
 ];
 
 /**
@@ -243,6 +326,9 @@ export function registerAll(server: ServerLike, client: AxonityClient): void {
   registerToolboxTools(server as McpServer, client);
   registerOperationsTools(server as McpServer, client);
   registerDataTableTools(server as McpServer, client);
+  registerDataSourceTools(server as McpServer, client);
+  registerMeasureTools(server as McpServer, client);
+  registerDashboardTools(server as McpServer, client);
   registerComponentTools(server as McpServer, client);
 }
 
