@@ -93,7 +93,7 @@ describe("axonity_semantic_conventions serves the platform's rules", () => {
     expect(text).toMatch(/could not be read from this deploy/i);
     expect(text).toContain(SEMANTIC_KNOWLEDGE_ROUTE);
     expect(text).toMatch(/does not carry a copy/);
-    expect(text).toMatch(/Write no semantic knowledge/);
+    expect(text).toMatch(/Do not build the semantic model/);
     expect(text).toMatch(/until they can be read/);
     expect(text).not.toMatch(/served live by this deploy/);
   });
@@ -110,7 +110,7 @@ describe("axonity_semantic_conventions serves the platform's rules", () => {
 
   it("the description says when to read it, and that it is live", () => {
     const { description } = harness(async () => SEMANTIC_RESPONSE);
-    expect(description).toMatch(/semantic layer/);
+    expect(description).toMatch(/semantic model/);
     expect(description).toMatch(/this deploy/);
     expect(description).toMatch(/live/);
   });
@@ -122,7 +122,7 @@ describe("CONVENTIONS points at the semantic rules without restating them", () =
       CONVENTIONS.indexOf("### skill / policy / reference_doc"),
       CONVENTIONS.indexOf("### prompt_snippet"),
     );
-    expect(section).toMatch(/SEMANTIC LAYER/);
+    expect(section).toMatch(/SEMANTIC MODEL/);
     expect(section).toContain("axonity_semantic_conventions");
     expect(section).toMatch(/served by the platform/);
   });
