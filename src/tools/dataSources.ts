@@ -1,20 +1,28 @@
 /**
- * Warehouses, the syncs that copy from them, and the numbers read off the
- * tables they fill (axonity-mcp#78, the connector half of axonity-flow#1849).
+ * Warehouses, and the numbers read off the tables they fill (axonity-mcp#78,
+ * the connector half of axonity-flow#1849; reshaped by the semantic model,
+ * axonity-mcp#81 / axonity-flow#1881).
  *
  * The plain entity verbs — list/read/create/update/delete/restore for a data
  * source, a table relationship and a dashboard — come from `registerEntityTools`
  * (see `ENTITIES` in index.ts). What is here is everything that does not fit
- * that shape: asking a warehouse something, the syncs that belong to ONE source,
- * the measures a dashboard reads, and duplicating a dashboard.
+ * that shape: asking a warehouse something, reading the numbers a dashboard
+ * shows, and duplicating a dashboard.
  *
- * **Most writes here are administrator-only on the backend**, and a service
- * token always resolves as a member. So against today's platform those calls
- * answer 403, and `ForbiddenError` says why in words rather than as a generic
- * "not allowed" — the tool descriptions say it up front as well, so an agent
- * does not spend three calls discovering it. Whether that is the right line is
- * the platform's decision, not this connector's: the tools exist so that the
- * moment the backend lets a token through, they work.
+ * **There are no sync tools any more.** A sync was a separate object beside
+ * the table it filled; the semantic model made it the table's own
+ * `provenance` (source, query, grain, key, mode, schedule), so a changed query
+ * goes through the same approval as a changed column. Filling a table is now
+ * `create_data_table` / `update_data_table` with `provenance`, and running it
+ * early is `refresh_data_table` (tools/dataTables.ts). A measure is no longer
+ * a field on a table either: it is its own versioned entity (`create_measure`
+ * and the rest of the generic family).
+ *
+ * **Who may write.** These routes were administrator-only when they arrived,
+ * and a service token always resolves as a member, so every write answered
+ * 403. The platform lifted that (axonity-flow#1855): a data source is created
+ * like any other object now. `ForbiddenError` still says "administrator only"
+ * in words when some other route answers that way.
  *
  * **Nothing here holds a credential.** A data source points at a secret by
  * `secretId`; the key itself is put in the vault by a human (secret writes are
@@ -30,16 +38,7 @@ import { guard, jsonResult } from "./result.js";
 const SOURCES = "/api/v1/data-sources";
 const MEASURES = "/api/v1/measures";
 
-/** The sentence every admin-only tool here carries, so it is said once. */
-export const ADMIN_ONLY =
-  "\n\nADMINISTRATOR ONLY. The backend lets only a workspace administrator do " +
-  "this, and a service token always counts as a member — so a 403 \"Only " +
-  "administrators can perform this action\" means exactly that, not a broken " +
-  "call and not a missing scope. Do not retry: tell your human, who can do it " +
-  "in Axonity.";
-
 const SOURCE_ID = z.string().describe("The data source's id.");
-const SYNC_ID = z.string().describe("The sync's id (from list_data_source_syncs).");
 
 export function registerDataSourceTools(
   server: McpServer,
@@ -64,13 +63,12 @@ export function registerDataSourceTools(
   server.tool(
     "test_data_source",
     "Ask the warehouse the cheapest question there is, and report what it " +
-      "said. Use it right after create_data_source, and whenever a sync or " +
-      "query fails for a reason that sounds like the connection. " +
+      "said. Use it right after create_data_source, and whenever a table's " +
+      "fill or a query fails for a reason that sounds like the connection. " +
       "\n\nA FAILURE IS AN ANSWER, NOT AN ERROR: the response is " +
       "`{ ok, message, checkedAt }`, and `ok: false` with a message is the " +
       "warehouse telling you what is wrong (missing credential, wrong project, " +
-      "no access). Read `message` — the call itself succeeded." +
-      ADMIN_ONLY,
+      "no access). Read `message` — the call itself succeeded.",
     { id: SOURCE_ID },
     async ({ id }) =>
       guard(async () => jsonResult(await client.post(`${SOURCES}/${id}/test`))),
@@ -84,7 +82,10 @@ export function registerDataSourceTools(
       "query. `containerWord` is what this warehouse calls the container " +
       "(\"dataset\" on BigQuery, \"schema\" on PostgreSQL). Column types are " +
       "the warehouse's own names, passed through. Read this before writing a " +
-      "query or a sync, rather than guessing table names.",
+      "query or a table's provenance, rather than guessing table names. " +
+      "On a source restricted to `policy.allowedDatasets` it reads those " +
+      "datasets one by one, so it answers even when the key may not list " +
+      "the whole project.",
     { id: SOURCE_ID },
     async ({ id }) =>
       guard(async () => jsonResult(await client.get(`${SOURCES}/${id}/schema`))),
@@ -93,8 +94,9 @@ export function registerDataSourceTools(
   server.tool(
     "query_data_source",
     "Run a READ-ONLY SQL query against the warehouse and get the rows back. " +
-      "For looking — checking what a table holds, trying the query a sync " +
-      "will run. To fill a table regularly, use create_data_source_sync. " +
+      "For looking — checking what a warehouse table holds, trying the " +
+      "query a table's provenance will run. To fill a table regularly, give " +
+      "it a `provenance` (create_data_table / update_data_table). " +
       "\n\nTHE ROWS ARE CAPPED. `truncated: true` means rows were left out: " +
       "`rowCount` is what came back, `totalRows` is what matched. Never report " +
       "a count or a total off a truncated answer — aggregate in the SQL " +
@@ -104,8 +106,7 @@ export function registerDataSourceTools(
       "uses `*` where personal columns are configured, would scan more than " +
       "the source allows) — the reason says what to change. A 502 is the " +
       "WAREHOUSE refusing or not answering — the query may be fine; do not " +
-      "rewrite it, check test_data_source." +
-      ADMIN_ONLY,
+      "rewrite it, check test_data_source.",
     {
       id: SOURCE_ID,
       sql: z
@@ -121,7 +122,7 @@ export function registerDataSourceTools(
         .optional()
         .describe(
           "How many rows you want back. Clamped by the platform — a bigger " +
-            "answer belongs in a sync, not in a response.",
+            "answer belongs in a table with provenance, not in a response.",
         ),
     },
     async ({ id, sql, maxRows }) =>
@@ -132,121 +133,6 @@ export function registerDataSourceTools(
             ...(maxRows !== undefined ? { maxRows } : {}),
           }),
         ),
-      ),
-  );
-
-  server.tool(
-    "list_data_source_syncs",
-    "The syncs of ONE data source: the queries that keep tables filled from " +
-      "that warehouse, on a schedule. Read-only. " +
-      "\n\nEach sync says when it runs next (`nextFireAt`), when it last ran " +
-      "(`lastRunAt`), how many rows the table held afterwards " +
-      "(`lastRowCount`), and — when the last attempt wrote nothing — why " +
-      "(`lastError`). A `lastError` here is the first thing to read when a " +
-      "dashboard number looks stale.",
-    { id: SOURCE_ID },
-    async ({ id }) =>
-      guard(async () => jsonResult(await client.get(`${SOURCES}/${id}/syncs`))),
-  );
-
-  server.tool(
-    "create_data_source_sync",
-    "Set up a query that fills a table from this warehouse on a schedule. " +
-      "\n\nThe table must be a DYNAMIC table (create_data_table with " +
-      "`isDynamic: true`). Its rows then come from here, not from authoring. " +
-      "Try the SQL with query_data_source first: what one row of its result " +
-      "means decides what the table can be asked afterwards. " +
-      "\n\nThe response says when it will first run (`nextFireAt`). To run " +
-      "it now, follow with run_data_source_sync." +
-      ADMIN_ONLY,
-    {
-      id: SOURCE_ID,
-      name: z.string().describe("What the sync is called."),
-      description: z.string().optional().describe("What it fills, and why."),
-      tableId: z
-        .string()
-        .describe("The dynamic table the result lands in (a data_table id)."),
-      sql: z
-        .string()
-        .describe(
-          "The query whose RESULT is copied into the table. Read-only, in the " +
-            "warehouse's own dialect.",
-        ),
-      mode: z
-        .enum(["append", "upsert"])
-        .optional()
-        .describe(
-          "`upsert` (default) replaces rows whose key columns match and adds " +
-            "the rest. `append` adds everything that came back, every run — " +
-            "only right when each run returns NEW rows.",
-        ),
-      keyColumns: z
-        .array(z.string())
-        .optional()
-        .describe(
-          "Which columns identify a row, for `upsert`. Without them an upsert " +
-            "has nothing to match on.",
-        ),
-      cronExpr: z
-        .string()
-        .describe('When it runs, as a five-field cron expression, e.g. "0 6 * * *".'),
-      timezone: z
-        .string()
-        .optional()
-        .describe('The time zone the cron expression is read in. Defaults to "UTC".'),
-      enabled: z
-        .boolean()
-        .optional()
-        .describe("Whether it runs on its schedule. Defaults to true."),
-    },
-    async ({ id, ...fields }) =>
-      guard(async () => jsonResult(await client.post(`${SOURCES}/${id}/syncs`, fields))),
-  );
-
-  server.tool(
-    "run_data_source_sync",
-    "Bring a sync's next run forward to now. " +
-      "\n\nTHIS DOES NOT WAIT FOR THE RESULT. The query can take tens of " +
-      "seconds, so the platform accepts the request and its scheduler runs " +
-      "it. The response is the sync with its new `nextFireAt`. To see how it " +
-      "went, read list_data_source_syncs again after a moment: `lastRunAt`, " +
-      "`lastRowCount` and `lastError` describe the run." +
-      ADMIN_ONLY,
-    { id: SOURCE_ID, syncId: SYNC_ID },
-    async ({ id, syncId }) =>
-      guard(async () =>
-        jsonResult(await client.post(`${SOURCES}/${id}/syncs/${syncId}/run`)),
-      ),
-  );
-
-  server.tool(
-    "delete_data_source_sync",
-    "Stop a sync. The rows it already wrote STAY in the table; it simply " +
-      "stops refreshing them. Recoverable with restore_data_source_sync." +
-      ADMIN_ONLY,
-    {
-      id: SOURCE_ID,
-      syncId: SYNC_ID,
-      confirm: z
-        .literal(true)
-        .describe("Must be true. Acknowledges the table stops being refreshed."),
-    },
-    async ({ id, syncId }) =>
-      guard(async () =>
-        jsonResult(await client.del(`${SOURCES}/${id}/syncs/${syncId}`)),
-      ),
-  );
-
-  server.tool(
-    "restore_data_source_sync",
-    "Bring a stopped sync back. It comes back SWITCHED OFF on purpose — a " +
-      "sync is usually stopped because it did the wrong thing — so switching " +
-      "it on again is a separate, deliberate step in Axonity." +
-      ADMIN_ONLY,
-    { id: SOURCE_ID, syncId: SYNC_ID },
-    async ({ id, syncId }) =>
-      guard(async () =>
-        jsonResult(await client.post(`${SOURCES}/${id}/syncs/${syncId}/restore`)),
       ),
   );
 }
@@ -262,12 +148,12 @@ export function registerMeasureTools(
 ): void {
   server.tool(
     "read_measure_design",
-    "What can be asked of one dynamic table: its published measures, its " +
-      "columns and its time axis. Read-only. " +
-      "\n\nRead this before query_measures or before putting a tile on a " +
-      "dashboard — a tile names a measure by the id or name this returns. " +
-      "Measures themselves are DEFINED on the table (update_data_table) and " +
-      "go live when the table is published; this only reads them.",
+    "What a number over one dynamic table may ask for: its columns and its " +
+      "time axis. Read-only. " +
+      "\n\nTHE MEASURES ARE NOT HERE. A measure belongs to the model, not " +
+      "to one table: list_measures({ tableId }) answers which measures read " +
+      "this table, and create_measure defines one. Read this for the column " +
+      "names a measure's `definition`, `splitBy` or `filters` may use.",
     {
       tableId: z.string().describe("The dynamic table's id."),
       useDraft: z
@@ -275,7 +161,7 @@ export function registerMeasureTools(
         .optional()
         .describe(
           "Read the table's working design instead of its published one — to " +
-            "preview a measure before publishing. Defaults to false.",
+            "preview a change before it is published. Defaults to false.",
         ),
     },
     async ({ tableId, useDraft }) =>
@@ -289,9 +175,11 @@ export function registerMeasureTools(
     "Compute measures: up to 40 questions in one call, each answered on its " +
       "own. Read-only. This is where a dashboard's numbers come from. " +
       "\n\nEach question is " +
-      "`{ key, tableId, measure, period?, start?, end?, compare?, grain?, " +
+      "`{ key, measure, tableId?, period?, start?, end?, compare?, grain?, " +
       "splitBy?, filters?, limit?, useDraft? }`. `key` is your own label and " +
-      "comes back on the answer. `period` is one of: " +
+      "comes back on the answer. `measure` is the measure's NAME — its " +
+      "handle, unique in the workspace (list_measures); `tableId` is " +
+      "optional and no longer what finds it. `period` is one of: " +
       PERIODS +
       " (default this_month) — or set it to null and send `start`/`end` " +
       "(YYYY-MM-DD) for a custom range. `compare` is none, previous_period or " +
@@ -301,7 +189,8 @@ export function registerMeasureTools(
       "\n\nONE BAD QUESTION DOES NOT FAIL THE CALL: every answer carries " +
       "`ok`, and `ok: false` comes with an `error` of its own. Check each one. " +
       "\n\n`freshAsOf` says how old the newest row behind the number is; " +
-      "`certified: false` means it was computed from a draft. Say so when you " +
+      "`certified: false` means it was computed from a draft; `tables` names " +
+      "every table the number came from. Say so when you " +
       "report a number that is either stale or uncertified.",
     {
       queries: z
@@ -310,6 +199,18 @@ export function registerMeasureTools(
     },
     async ({ queries }) =>
       guard(async () => jsonResult(await client.post(`${MEASURES}/query`, { queries }))),
+  );
+
+  server.tool(
+    "list_measure_live_versions",
+    "Which major versions of one measure are PUBLISHED right now, as a list " +
+      "of numbers. Read-only. An empty list means it has never been " +
+      "published, so every number it gives is a draft preview " +
+      "(`certified: false` on query_measures) — request_publish_measure is " +
+      "what changes that.",
+    { id: z.string().describe("The measure's id.") },
+    async ({ id }) =>
+      guard(async () => jsonResult(await client.get(`${MEASURES}/${id}/live-versions`))),
   );
 
   server.tool(

@@ -318,7 +318,7 @@ describe("a table's tools follow its PUBLISHED version", () => {
 });
 
 describe("the row tools are registered as a set", () => {
-  it("registers all five", () => {
+  it("registers all six", () => {
     const handlers = new Map<string, Handler>();
     registerDataTableTools(
       {
@@ -332,6 +332,7 @@ describe("the row tools are registered as a set", () => {
       "delete_data_table_row",
       "list_data_table_rows",
       "list_data_table_tools",
+      "refresh_data_table",
       "update_data_table_row",
     ]);
   });

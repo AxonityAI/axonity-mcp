@@ -334,6 +334,7 @@ describe("list filters are generated, not kept (M4)", () => {
       "agent",
       "data_source",
       "data_table",
+      "measure",
       "policy",
       "prompt_snippet",
       "reference_doc",
