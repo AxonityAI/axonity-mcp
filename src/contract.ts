@@ -113,6 +113,8 @@ export const PROBE_VARIANTS: Record<string, unknown>[] = [
   // validate_workflow — exactly one of the two, never both.
   { document: undefined },
   { workflowId: undefined },
+  // get_measure_formula_spec — the workspace's vocabulary only when asked.
+  { includeWorkspace: true },
 ];
 
 /** A route a tool actually called, as observed by the recording client. */

@@ -32,6 +32,7 @@ import {
   registerMeasureTools,
 } from "./tools/dataSources.js";
 import { registerDataTableTools } from "./tools/dataTables.js";
+import { assertFormulaShape, registerMeasureFormulaTools } from "./tools/measureFormula.js";
 import { assertPlaceholderCredentials } from "./tools/credentials.js";
 import {
   registerAttachTools,
@@ -81,6 +82,43 @@ const PROVENANCE_NOTE =
   "\n\nMEASURES ARE NOT ON THE TABLE. A measure is its own entity " +
   "(create_measure); a table carries only its `timeAxis` " +
   "(`{ column, grain }`), which every measure over it reads.";
+
+/**
+ * What writing a measure takes (axonity-flow#1908). The contract, not a manual:
+ * the words of the formula are in get_measure_formula_spec and nowhere else.
+ */
+const MEASURE_NOTE =
+  "READ get_measure_formula_spec FIRST; never write a function, operator or " +
+  "grain from memory. A measure is ONE formula, `definition.expression`, " +
+  "as text or as the stored tree. Four kinds, one grammar: " +
+  "\n- a BASE aggregates one COLUMN of one table: " +
+  "`sum(orders.amount) where orders.channel = 'd2c'`. It reads a column, " +
+  "never a calculation per row — a value per row belongs in the table's " +
+  "source query (`provenance.sql`), as a column of its own; " +
+  "\n- a DERIVED measure computes with other measures by name: " +
+  "`[revenue_d2c] + [revenue_retail]`, `divide([cm1], [net_revenue])`, " +
+  "`divide([revenue_d2c], [net_revenue] ignore orders.channel)` for a share " +
+  "of the total. Two fact tables may meet in one number; they are never " +
+  "joined; " +
+  "\n- TIME (`shift`, `to_date`, `rolling`) and CUMULATIVE (`running`): " +
+  "use them only where the spec marks them `available`. " +
+  "\n\nBuild bottom-up: the base measures first, each with its `quantity` " +
+  "(what it counts: EUR, customers, orders), then the derived ones; " +
+  "validate_measure before every save, and publish from the bottom up. " +
+  "\n\nFields: `label` (what a tile shows), `description` (what the number " +
+  "means — mandatory, an agent reads it to decide whether this is the " +
+  "number asked for), `definition`, `concept` (the NAME of the concept this " +
+  "number means — it must exist, create_concept first, and a derived " +
+  "measure needs one too), `questions` (what it answers, in the words " +
+  "someone would ask) and optionally `name`, the handle — derived from the " +
+  "label when omitted and unique in the workspace. `definition` is " +
+  "`{ expression, quantity?, format?, direction?, target?, watchMargin? }`; " +
+  "`quantity` is derived for a formula over measures. " +
+  "\n\nThe fields from before the formula — `tableId`, `clearTable`, " +
+  "`definition.aggregation`, `column`, `numerator`, `denominator` — are " +
+  "refused with `legacy_field`. " +
+  "\n\nIt is a DRAFT until published: request_publish_measure. Only a " +
+  "published measure gives a certified number.";
 
 /**
  * The entities the connector covers. Core entities (C4), memory entities (C5)
@@ -206,25 +244,16 @@ const ENTITIES: EntityDef[] = [
     label: "measures (the agreed definition of one number in the model)",
     deleteVersionParam: "expectedVersion",
     listPaging: { defaultPageSize: 20, maxPageSize: 200 },
-    createNote:
-      "Fields: `label` (what a tile shows), `description` (what the number " +
-      "means — mandatory, an agent reads it to decide whether this is the " +
-      "number asked for), `definition` (the calculation), `tableId` (the " +
-      "table it reads; omit only for a ratio whose two sides each name their " +
-      "own `table`), `concept` (the NAME of the concept this number means — " +
-      "it must exist, create_concept first), `questions` (what it answers, " +
-      "in the words someone would ask) and optionally `name`, the handle — " +
-      "derived from the label when omitted and unique in the workspace. " +
-      "\n\n`definition` is `{ aggregation, column?, numerator?, " +
-      "denominator?, filters?, format?, direction?, target?, watchMargin? }`: " +
-      "aggregation is sum, average, count, count_distinct, min, max, latest " +
-      "(the value at the last date of each period — for a stock) or ratio " +
-      "(numerator ÷ denominator, each `{ aggregation, column?, table?, " +
-      "filters? }`). A filter is `{ column, operator, value }`. Column names " +
-      "come from read_measure_design. A wrong combination is refused with a " +
-      "422 that says why. " +
-      "\n\nIt is a DRAFT until published: request_publish_measure. Only a " +
-      "published measure gives a certified number.",
+    // read_measure is in tools/measureFormula.ts: it asks the platform to
+    // write the stored tree back as formula text, which a plain GET cannot.
+    readable: false,
+    guardFields: assertFormulaShape,
+    createNote: MEASURE_NOTE,
+    updateWarning:
+      MEASURE_NOTE +
+      " `tableId` and `clearTable` are gone: a measure has no home table, " +
+      "the tables it reads follow from its formula. Sending `definition` " +
+      "replaces it whole, so send the `expression` with it.",
   },
   // The three below arrived with axonity-flow#1849 (axonity-mcp#78). None is
   // versioned or publish-approved: a change is live the moment it is saved, so
@@ -381,6 +410,7 @@ export function registerAll(server: ServerLike, client: AxonityClient): void {
   registerDataTableTools(server as McpServer, client);
   registerDataSourceTools(server as McpServer, client);
   registerMeasureTools(server as McpServer, client);
+  registerMeasureFormulaTools(server as McpServer, client);
   registerDashboardTools(server as McpServer, client);
   registerConceptTools(server as McpServer, client);
   registerComponentTools(server as McpServer, client);

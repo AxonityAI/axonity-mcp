@@ -11,6 +11,22 @@ diff in review.
 
 ## Provenance
 
+- **Measures as one formula, on top of the above:** axonity-flow#1908 phase 1
+  (PR #1934), dumped with `dump_openapi.py` from axonity-flow `main` at
+  `a723cc38` and consumed by axonity-mcp#83. Spliced in, not a full dump:
+  the three operations it adds (`GET /measures/formula-spec`,
+  `GET /measures/formula-symbols`, `POST /measures/validate`), the changed
+  `POST /measures/{id}/restore`, and the schemas they and the measure writes
+  reference (`CreateMeasureRequest`, `UpdateMeasureRequest`,
+  `MeasureDefinitionPayload`, `FormulaLeaf`, `FormulaProblem`,
+  `ValidateFormulaRequest`, `ValidateFormulaResponse`). All three new
+  operations are COVERED. The semantic-model splice below is now on `main`:
+  every route under `/measures`, `/data-tables`, `/table-relationships`,
+  `/dashboards`, `/concepts` and `/data-sources` matches `a723cc38` except
+  the two `/data-tables/{id}/rows/{row_id}` writes, which are among the ~100
+  routes still waiting for a decision in axonity-mcp#79 (applications,
+  executors, config branches, platform administration, invoices, usage, …).
+  **Regenerate in full from `main` when #79 is decided.**
 - **Semantic model, on top of the above:** the contract of axonity-flow
   epic #1881 (S1 provenance on the table, S3 concepts, S4 retired
   `semanticKind`, S12 measure as an entity), dumped with `dump_openapi.py`

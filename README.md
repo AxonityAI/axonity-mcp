@@ -284,6 +284,16 @@ across these routes — the tool parameter names say which.
     It names the concept it means in `concept`, and the questions it answers
     in `questions`. `read_measure_design` now returns a table's columns and
     time axis only; `list_measures({ tableId })` says which measures read it.
+  - **A measure is one formula**, `definition.expression`:
+    `sum(orders.amount)`, `[revenue_d2c] + [revenue_retail]`,
+    `divide([cm1], [net_revenue])`. `get_measure_formula_spec` is the only
+    list of its words — the platform's own, the one its editor shows — and
+    with `includeWorkspace: true` also this workspace's measures, tables and
+    columns. `validate_measure` checks a formula without saving it and answers
+    with every problem by code. `read_measure` returns the formula as text
+    beside the stored tree and the aggregations it folds down to. The fields
+    from before the formula (`tableId`, `clearTable`, `aggregation`,
+    `column`, `numerator`, `denominator`) are refused with `legacy_field`.
   - **Concepts**: `list_concepts`, `create_concept`, `update_concept`,
     `delete_concept` — kind (concept, state, metric, rule), name, meaning,
     synonyms, what it refers to, owner. They are rows of one table the
