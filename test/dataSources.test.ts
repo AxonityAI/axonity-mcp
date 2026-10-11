@@ -91,21 +91,21 @@ describe("the three new entities", () => {
     const { descriptions } = setup();
     const text = descriptions.get("create_data_source")!;
     expect(text).toMatch(/list_data_source_drivers FIRST/);
-    expect(text).toMatch(/ADMINISTRATOR ONLY/);
-    expect(text).toMatch(/subjectSourceId/);
+    // A table is filled through its own provenance now, not a reference doc
+    // pointing back at the source (#81).
+    expect(text).toMatch(/provenance\.sourceId/);
+    expect(text).not.toMatch(/subjectSourceId/);
   });
 });
 
 describe("data source tools call the routes they name", () => {
-  it("drivers, schema and syncs are reads", async () => {
+  it("drivers and schema are reads", async () => {
     const { handlers, client } = setup();
     await handlers.get("list_data_source_drivers")!({});
     await handlers.get("read_data_source_schema")!({ id: "s1" });
-    await handlers.get("list_data_source_syncs")!({ id: "s1" });
     expect(client.get.mock.calls.map((c) => c[0])).toEqual([
       "/api/v1/data-sources/drivers",
       "/api/v1/data-sources/s1/schema",
-      "/api/v1/data-sources/s1/syncs",
     ]);
   });
 
@@ -122,42 +122,10 @@ describe("data source tools call the routes they name", () => {
     ]);
   });
 
-  it("a sync is created on its source, and run / stopped / restored by id", async () => {
-    const { handlers, client } = setup();
-    await handlers.get("create_data_source_sync")!({
-      id: "s1",
-      name: "orders",
-      tableId: "t1",
-      sql: "select * from shop.orders",
-      mode: "upsert",
-      keyColumns: ["order_id"],
-      cronExpr: "0 6 * * *",
-    });
-    await handlers.get("run_data_source_sync")!({ id: "s1", syncId: "y1" });
-    await handlers.get("restore_data_source_sync")!({ id: "s1", syncId: "y1" });
-    await handlers.get("delete_data_source_sync")!({ id: "s1", syncId: "y1", confirm: true });
-
-    expect(client.post.mock.calls).toEqual([
-      [
-        "/api/v1/data-sources/s1/syncs",
-        {
-          name: "orders",
-          tableId: "t1",
-          sql: "select * from shop.orders",
-          mode: "upsert",
-          keyColumns: ["order_id"],
-          cronExpr: "0 6 * * *",
-        },
-      ],
-      ["/api/v1/data-sources/s1/syncs/y1/run"],
-      ["/api/v1/data-sources/s1/syncs/y1/restore"],
-    ]);
-    expect(client.del).toHaveBeenCalledWith("/api/v1/data-sources/s1/syncs/y1");
-  });
-
-  it("running a sync says it does not wait for the result", () => {
-    const { descriptions } = setup();
-    expect(descriptions.get("run_data_source_sync")).toMatch(/DOES NOT WAIT/);
+  it("no sync tool survives the semantic model (#81)", () => {
+    const { handlers } = setup();
+    const syncTools = [...handlers.keys()].filter((name) => /sync/.test(name));
+    expect(syncTools).toEqual([]);
   });
 });
 

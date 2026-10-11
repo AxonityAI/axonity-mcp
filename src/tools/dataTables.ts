@@ -229,6 +229,24 @@ export function registerDataTableTools(
   );
 
   server.tool(
+    "refresh_data_table",
+    "Fill a table from its source NOW instead of at its next scheduled time. " +
+      "Replaces run_data_source_sync: a table's fill is its own `provenance` " +
+      "now, not a separate sync. " +
+      "\n\nTHIS DOES NOT WAIT FOR THE RESULT. The query can take tens of " +
+      "seconds, so the platform brings the table's next fill forward and its " +
+      "scheduler runs it. The response is the table, with `fill.nextAt` set " +
+      "to now. To see how it went, read_data_table again after a moment: " +
+      "`fill.lastAt`, `fill.lastRowCount` and `fill.lastError` describe the " +
+      "run. " +
+      "\n\nRefused with a 422 when the table has no `provenance` — its rows " +
+      "come from a workflow or an author, and there is nothing to run.",
+    { id: z.string().describe("The table's id.") },
+    async ({ id }) =>
+      guard(async () => jsonResult(await client.post(`${BASE}/${id}/refresh`))),
+  );
+
+  server.tool(
     "list_data_table_tools",
     "Which tools this table yields, and which of them a RUN can actually " +
       "reach. Read-only. " +

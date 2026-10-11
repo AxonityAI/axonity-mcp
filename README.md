@@ -55,8 +55,8 @@ was kept here. A conformance test asserts their absence.
 
 ### The generic entity family
 
-Eleven entities — **workflow, agent, tool, skill, policy, reference_doc,
-persona, output_schema, prompt_snippet, flow, data_table** — share one shape,
+Twelve entities — **workflow, agent, tool, skill, policy, reference_doc,
+persona, output_schema, prompt_snippet, flow, data_table, measure** — share one shape,
 though not every entity gets every verb (see the per-entity notes below for the
 exceptions):
 
@@ -255,17 +255,13 @@ across these routes — the tool parameter names say which.
     would yield), `toolId` (whether a row exists) and `isLive` (whether a run
     can reach it) separately — an author who ticked "may add rows" and has not
     published has granted nothing yet.
-- **Warehouses and dashboards** (`data_source`, `table_relationship`,
-  `dashboard`, measures): a workspace connects a warehouse such as BigQuery,
-  syncs fill dynamic tables from it on a schedule, and dashboards show
-  measures over those tables.
-  - **Most writes here are administrator-only on the platform, and a service
-    token always counts as a member.** Creating, changing, testing or querying
-    a data source, every sync write and every relationship write answer 403
-    "Only administrators can perform this action" to a token today. The tools
-    say so in their descriptions, and the error says *administrator only*
-    rather than the usual "your token is read-only" — the opposite advice.
-    Reads, dashboards and measures are open to a member.
+- **The semantic model** (`data_source`, `data_table` with provenance,
+  `table_relationship`, `measure`, concepts, `dashboard`): a workspace
+  connects a warehouse such as BigQuery, dynamic tables are filled from it on
+  a schedule, measures define the numbers over those tables, concepts say
+  what each word and number means, and dashboards show the measures. Read
+  `axonity_semantic_conventions` before building one — the platform serves
+  those rules.
   - `list_data_source_drivers` first: each warehouse's `configFields` are the
     keys `create_data_source` takes in `config`, so nothing about BigQuery is
     hard-coded here and a new warehouse works without a connector release.
@@ -273,17 +269,31 @@ across these routes — the tool parameter names say which.
     at it by `secretId`.
   - `test_data_source` answers `{ ok, message }` — a failure is an answer, not
     an error. `read_data_source_schema` reads the warehouse's catalogue for
-    free. `query_data_source` runs read-only SQL with capped rows
-    (`truncated` says when rows were left out); a 422 is the query being
-    refused, a 502 is the warehouse.
-  - Syncs: `list_data_source_syncs`, `create_data_source_sync`,
-    `run_data_source_sync` (brings the run forward; does not wait for it),
-    `delete_data_source_sync`, `restore_data_source_sync` (comes back off).
-  - Measures: `read_measure_design` (what a table can be asked),
-    `query_measures` (up to 40 questions, each answered on its own),
-    `list_measure_rows` (a list tile). Plus `duplicate_dashboard`.
-  - A `source_query` knowledge note names its source in `subjectSourceId` on
-    `create_reference_doc`.
+    free, dataset by dataset on a source limited to `allowedDatasets`.
+    `query_data_source` runs read-only SQL with capped rows (`truncated` says
+    when rows were left out); a 422 is the query being refused, a 502 is the
+    warehouse.
+  - **There is no sync object.** A dynamic table carries its own
+    `provenance` — `{ sourceId, sql, grain, keyColumns, mode, cron, timezone,
+    enabled }` — on `create_data_table` / `update_data_table`, so a changed
+    query is published like a changed column. `refresh_data_table` fills it
+    now instead of at its next turn (it does not wait for the result; read
+    the table's `fill` afterwards).
+  - **A measure is its own versioned entity**: the generic family plus the
+    version tools, `request_publish_measure`, and `list_measure_live_versions`.
+    It names the concept it means in `concept`, and the questions it answers
+    in `questions`. `read_measure_design` now returns a table's columns and
+    time axis only; `list_measures({ tableId })` says which measures read it.
+  - **Concepts**: `list_concepts`, `create_concept`, `update_concept`,
+    `delete_concept` — kind (concept, state, metric, rule), name, meaning,
+    synonyms, what it refers to, owner. They are rows of one table the
+    platform keeps per workspace, so they are published with
+    `request_publish_data_table` on the `tableId` every write returns.
+  - Reading numbers: `query_measures` (up to 40 questions, each answered on
+    its own, measures named by their handle), `list_measure_rows` (a list
+    tile). Plus `duplicate_dashboard`.
+  - A reference doc has no `semanticKind` any more; the platform refuses it
+    and the other retired fields and says where each one went.
 - `list_deleted_prompt_snippets` calls `/api/v1/prompt-snippets/deleted`; the
   backend returns it as `{ items: [... ] }`, and the tool forwards that response
   unchanged.

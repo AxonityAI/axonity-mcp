@@ -11,6 +11,19 @@ diff in review.
 
 ## Provenance
 
+- **Semantic model, on top of the above:** the contract of axonity-flow
+  epic #1881 (S1 provenance on the table, S3 concepts, S4 retired
+  `semanticKind`, S12 measure as an entity), dumped with `dump_openapi.py`
+  from the LOCAL branch `semantic-model` at `5d801700` — not yet on
+  axonity-flow `main`. Consumed by axonity-mcp#81. Spliced in, not a full
+  dump: every existing path under `/data-sources`, `/data-tables`,
+  `/measures`, `/concepts`, `/reference-docs` and `/publish-approvals` was
+  replaced by that branch's version, the 24 operations the branch adds over
+  `main` were added (`/concepts`, the `/measures` entity family,
+  `POST /data-tables/{id}/refresh`), and the five `/data-sources/{id}/syncs`
+  operations it removes were removed. 531 → 550 operations; every new one is
+  COVERED. **Regenerate from axonity-flow `main` once the branch is merged**,
+  and expect only the #79 arrivals as a difference.
 - **Added on top of `484c1628`:** the 34 operations of axonity-flow#1849
   (dashboards on your own data) under `/api/v1/data-sources`,
   `/api/v1/table-relationships`, `/api/v1/dashboards` and `/api/v1/measures`,

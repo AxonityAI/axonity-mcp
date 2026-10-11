@@ -126,4 +126,13 @@ export const LIST_FILTERS: Record<string, ListFilter[]> = {
         "Only relationships that touch this table, on either side. The way to answer \"what does this table join to\" without walking every page.",
     },
   ],
+  "measure": [
+    {
+      arg: "tableId",
+      query: "tableId",
+      type: "string",
+      description:
+        "Only the measures that read this table — what a table page shows.",
+    },
+  ],
 };

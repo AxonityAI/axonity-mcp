@@ -348,10 +348,14 @@ made any time before you attach them.
 ### skill / policy / reference_doc
 - Memory entities attached to agents (and skills also to workflows). Create them,
   then wire with the \`attach_*\` tools — see Wiring.
-- Building the SEMANTIC LAYER — reference docs that say what a table means, what
-  a word means, which query fills which table (\`semanticKind\` and the fields
-  that go with it)? Read \`axonity_semantic_conventions\` first. Those rules are
-  served by the platform; this guide does not restate them.
+- A reference doc has NO kind any more. What used to be a semantic note lives
+  in the model itself: a word is a concept (\`create_concept\`), a table card
+  is the table's description and grain, a source query is the table's
+  \`provenance\`, an example question is a measure's \`questions\`. The
+  platform refuses \`semanticKind\`, \`semanticDetails\`, \`subjectTableId\`
+  and \`subjectSourceId\` on a reference doc, and says where each one went.
+  Building the SEMANTIC MODEL? Read \`axonity_semantic_conventions\` first —
+  those rules are served by the platform; this guide does not restate them.
 
 ### prompt_snippet
 - Reusable prompt fragments; a normal entity. Wire-level oddity:
@@ -1025,8 +1029,8 @@ const SEMANTIC_KNOWLEDGE_UNAVAILABLE =
   "## Semantic knowledge — NOT AVAILABLE\n\n" +
   "The rules for writing the semantic layer could not be read from this deploy " +
   `(\`GET ${SEMANTIC_KNOWLEDGE_ROUTE}\`). This connector does not carry a copy ` +
-  "of them. Write no semantic knowledge — no reference doc with a " +
-  "`semanticKind` — until they can be read: call " +
+  "of them. Do not build the semantic model — no concept, no measure, no " +
+  "table provenance — until they can be read: call " +
   "`axonity_semantic_conventions` again, and if it still fails, report it " +
   "rather than deciding what the knowledge should say yourself.";
 
@@ -1105,11 +1109,11 @@ export function registerConventions(server: McpServer, client: AxonityClient): v
 
   server.tool(
     "axonity_semantic_conventions",
-    "Read BEFORE building a workspace's semantic layer — reference docs with a " +
-      "`semanticKind` that say what a table means, what a word means, or which " +
-      "query fills which table. Returns this deploy's rules for writing that " +
-      "knowledge: what each kind is for, what belongs in it and what does not, " +
-      "and what a source query must say about one row of its result. Read live " +
+    "Read BEFORE building a workspace's semantic model: the tables with " +
+      "their provenance and grain, the measures, and the concepts that say " +
+      "what a word or a number means. Returns this deploy's rules for writing " +
+      "it: what a concept owes, what a measure's description and questions " +
+      "must say, and what a table's grain must say about one row. Read live " +
       "from the platform on every call, with its rulesVersion. Not needed for " +
       "anything else.",
     {},

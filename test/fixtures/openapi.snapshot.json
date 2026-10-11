@@ -1933,6 +1933,282 @@
         "title": "CompleteStepRequest",
         "type": "object"
       },
+      "ConceptCreate": {
+        "additionalProperties": false,
+        "description": "A new concept. Every field the entry needs, or it is refused.",
+        "properties": {
+          "kind": {
+            "description": "What sort of entry this is. `concept` is one of your own words; `state` is when something counts as being in that state; `metric` says what a number means and what it is per; `rule` is a sentence that always applies. The four: concept, state, metric, rule.",
+            "enum": [
+              "concept",
+              "state",
+              "metric",
+              "rule"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "meaning": {
+            "description": "One or two sentences, including what it is NOT. The exclusions are what stop an agent guessing: \"at least one D2C order in the month, not a trial customer and not simply anyone who has not churned\".",
+            "maxLength": 600,
+            "title": "Meaning",
+            "type": "string"
+          },
+          "name": {
+            "description": "The word as people here say it — \"Active customer\", \"Lost dog\", \"CAC\". One entry per word; its other words go in synonyms.",
+            "maxLength": 200,
+            "title": "Name",
+            "type": "string"
+          },
+          "owner": {
+            "description": "Who to ask when this definition is disputed — a role or a person, \"CGO\". Approval says it may go live; this says whose it is.",
+            "maxLength": 200,
+            "title": "Owner",
+            "type": "string"
+          },
+          "refersTo": {
+            "default": "",
+            "description": "What in the model this is about, in one of four forms: `measure:active_clients`, `table:orders_monthly`, `column:orders_monthly.country`, `value:orders_monthly.status=lost`. It must exist. Empty for a word that is not in the model yet.",
+            "maxLength": 300,
+            "title": "Refersto",
+            "type": "string"
+          },
+          "scope": {
+            "default": "",
+            "description": "For a rule only: where the sentence applies. Empty means the whole model; otherwise `table:orders_monthly` or `column:orders_monthly.net_revenue`.",
+            "maxLength": 300,
+            "title": "Scope",
+            "type": "string"
+          },
+          "synonyms": {
+            "default": [],
+            "description": "The other words people use for exactly this, so a question that says \"subscribers\" finds it. A synonym may belong to only one entry in a workspace.",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 25,
+            "title": "Synonyms",
+            "type": "array"
+          }
+        },
+        "required": [
+          "kind",
+          "name",
+          "meaning",
+          "owner"
+        ],
+        "title": "ConceptCreate",
+        "type": "object"
+      },
+      "ConceptItem": {
+        "description": "One concept, as the list and the editor read it.",
+        "properties": {
+          "id": {
+            "description": "The entry's row id — what a change or a removal names.",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "description": "What sort of entry this is. `concept` is one of your own words; `state` is when something counts as being in that state; `metric` says what a number means and what it is per; `rule` is a sentence that always applies. The four: concept, state, metric, rule.",
+            "title": "Kind",
+            "type": "string"
+          },
+          "meaning": {
+            "description": "One or two sentences, including what it is NOT. The exclusions are what stop an agent guessing: \"at least one D2C order in the month, not a trial customer and not simply anyone who has not churned\".",
+            "maxLength": 600,
+            "title": "Meaning",
+            "type": "string"
+          },
+          "name": {
+            "description": "The word as people here say it — \"Active customer\", \"Lost dog\", \"CAC\". One entry per word; its other words go in synonyms.",
+            "maxLength": 200,
+            "title": "Name",
+            "type": "string"
+          },
+          "owner": {
+            "description": "Who to ask when this definition is disputed — a role or a person, \"CGO\". Approval says it may go live; this says whose it is.",
+            "maxLength": 200,
+            "title": "Owner",
+            "type": "string"
+          },
+          "refersTo": {
+            "description": "What in the model this is about, in one of four forms: `measure:active_clients`, `table:orders_monthly`, `column:orders_monthly.country`, `value:orders_monthly.status=lost`. It must exist. Empty for a word that is not in the model yet.",
+            "maxLength": 300,
+            "title": "Refersto",
+            "type": "string"
+          },
+          "scope": {
+            "description": "For a rule only: where the sentence applies. Empty means the whole model; otherwise `table:orders_monthly` or `column:orders_monthly.net_revenue`.",
+            "maxLength": 300,
+            "title": "Scope",
+            "type": "string"
+          },
+          "synonyms": {
+            "description": "The other words people use for exactly this, so a question that says \"subscribers\" finds it. A synonym may belong to only one entry in a workspace.",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 25,
+            "title": "Synonyms",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "name",
+          "meaning",
+          "synonyms",
+          "refersTo",
+          "owner",
+          "scope"
+        ],
+        "title": "ConceptItem",
+        "type": "object"
+      },
+      "ConceptUpdate": {
+        "additionalProperties": false,
+        "description": "The fields to change. What is not sent keeps its value.",
+        "properties": {
+          "kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "concept",
+                  "state",
+                  "metric",
+                  "rule"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind"
+          },
+          "meaning": {
+            "anyOf": [
+              {
+                "maxLength": 600,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Meaning"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "owner": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner"
+          },
+          "refersTo": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refersto"
+          },
+          "scope": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scope"
+          },
+          "synonyms": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 25,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Synonyms"
+          }
+        },
+        "title": "ConceptUpdate",
+        "type": "object"
+      },
+      "ConceptWriteResult": {
+        "description": "What one write did, and what the workspace now holds.",
+        "properties": {
+          "concept": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ConceptItem"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The entry as it now stands — added, changed, or the one that was removed."
+          },
+          "operation": {
+            "enum": [
+              "add",
+              "update",
+              "delete"
+            ],
+            "title": "Operation",
+            "type": "string"
+          },
+          "tableId": {
+            "description": "The id of the table the entries live in. Publishing it is what makes these definitions count for a certified answer, and it is where their versions and history are.",
+            "title": "Tableid",
+            "type": "string"
+          },
+          "total": {
+            "description": "How many entries this workspace's ontology holds now.",
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "operation",
+          "concept",
+          "total",
+          "tableId"
+        ],
+        "title": "ConceptWriteResult",
+        "type": "object"
+      },
       "ConcurrencyStatusResponse": {
         "description": "Live \"X / Y concurrent runs\" counter for the dashboard indicator.\n\n``activeCount`` is non-archived runs in\n``pending|running|waiting|input_required`` for this tenant; ``cap``\nis the effective admin-set cap. The dashboard renders the ratio as\na progress strip so admins can tune before they hit the ceiling.",
         "properties": {
@@ -3226,6 +3502,7 @@
               "prompt_snippet",
               "output_schema",
               "data_table",
+              "measure",
               "company"
             ],
             "title": "Entitytype",
@@ -3464,6 +3741,17 @@
             "title": "Name",
             "type": "string"
           },
+          "provenance": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProvenancePayload"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Where the rows come from: a source, a query, its grain and its rhythm. A table with one has no other filler — a workflow may not also write its rows."
+          },
           "rows": {
             "default": [],
             "description": "The table's content: a list of objects keyed by column name. Empty on a table whose rows a workflow will write.",
@@ -3471,7 +3759,7 @@
               "additionalProperties": true,
               "type": "object"
             },
-            "maxItems": 2000,
+            "maxItems": 5000,
             "title": "Rows",
             "type": "array"
           },
@@ -3495,6 +3783,17 @@
             ],
             "title": "Status",
             "type": "string"
+          },
+          "timeAxis": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TimeAxisPayload"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Which date column dates a row. Without it a measure is a total."
           }
         },
         "required": [
@@ -3600,6 +3899,77 @@
           "name"
         ],
         "title": "CreateMajorVersionRequest",
+        "type": "object"
+      },
+      "CreateMeasureRequest": {
+        "additionalProperties": false,
+        "description": "A new measure.",
+        "properties": {
+          "concept": {
+            "default": "",
+            "description": "The name of the concept this number MEANS, from Concepts. The calculation says HOW it is computed; the concept says what it is and what it is per — \"CAC is per customer, TAC per dog\". It must exist.",
+            "maxLength": 255,
+            "title": "Concept",
+            "type": "string"
+          },
+          "definition": {
+            "$ref": "#/components/schemas/MeasureDefinitionPayload"
+          },
+          "description": {
+            "description": "What the number means, in words. Mandatory — an agent reads it to decide whether this is the number the question asked for.",
+            "maxLength": 2000,
+            "title": "Description",
+            "type": "string"
+          },
+          "label": {
+            "description": "What a person reads on a tile.",
+            "maxLength": 255,
+            "title": "Label",
+            "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The handle. Derived from the label when omitted, and then kept: a later label edit must not move it.",
+            "title": "Name"
+          },
+          "questions": {
+            "default": [],
+            "description": "The questions this measure answers, in the words someone would ask them. An analyst matches a question against these before writing SQL.",
+            "items": {
+              "maxLength": 300,
+              "type": "string"
+            },
+            "maxItems": 20,
+            "title": "Questions",
+            "type": "array"
+          },
+          "tableId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The table whose rows this measure reads. Omit for a ratio whose two sides each name their own — that is how a number comparing two fact tables is defined.",
+            "title": "Tableid"
+          }
+        },
+        "required": [
+          "label",
+          "description",
+          "definition"
+        ],
+        "title": "CreateMeasureRequest",
         "type": "object"
       },
       "CreateOutputSchemaRequest": {
@@ -3949,6 +4319,18 @@
             ],
             "title": "Status",
             "type": "string"
+          },
+          "stewardId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Who to ask when the definition is disputed. A different question from approval: publishing says it may go live, a steward says whose call it is.",
+            "title": "Stewardid"
           },
           "tags": {
             "default": [],
@@ -5453,7 +5835,7 @@
         "type": "object"
       },
       "DataTableResponse": {
-        "description": "One table WITH its rows — the shape a detail read returns.",
+        "description": "One table — the shape a detail read returns.\n\nCarries NO rows (#1785): a table has no row limit, so inline rows would\ngrow the response with whatever the table holds. ``rowCount`` says how\nmany there are; ``GET /data-tables/{id}/rows`` serves them a page at a\ntime.",
         "properties": {
           "allowedOperations": {
             "default": [],
@@ -5504,6 +5886,17 @@
             "description": "What the working draft is called. The number decides the button; this is what a person reads on it.",
             "title": "Draftversionname"
           },
+          "fill": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FillStatus"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the last fill did. Null for a table with no source. Never part of a version: replaying an old one must not claim last month's refresh happened tonight."
+          },
           "id": {
             "title": "Id",
             "type": "string"
@@ -5519,6 +5912,19 @@
           "name": {
             "title": "Name",
             "type": "string"
+          },
+          "provenance": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Where the rows come from (#1876), or null when a workflow writes them or an author maintains them.",
+            "title": "Provenance"
           },
           "publishedMajorVersion": {
             "anyOf": [
@@ -5537,15 +5943,6 @@
             "description": "How many rows this table currently holds.",
             "title": "Rowcount",
             "type": "integer"
-          },
-          "rows": {
-            "default": [],
-            "items": {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            "title": "Rows",
-            "type": "array"
           },
           "source": {
             "enum": [
@@ -5567,6 +5964,19 @@
           "tenantId": {
             "title": "Tenantid",
             "type": "string"
+          },
+          "timeAxis": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Which date column dates a row, and its grain.",
+            "title": "Timeaxis"
           },
           "updatedAt": {
             "title": "Updatedat",
@@ -5601,9 +6011,15 @@
             "description": "The row's cells, keyed by column name, exactly as the table stores them. Not reshaped: a reader is looking at the author's own data, and renaming or coercing it here would show something the routing does not use.",
             "title": "Cells",
             "type": "object"
+          },
+          "id": {
+            "description": "The row's identity — what the table's editor names when it changes or removes exactly the row it shows.",
+            "title": "Id",
+            "type": "string"
           }
         },
         "required": [
+          "id",
           "cells"
         ],
         "title": "DataTableRowItem",
@@ -5636,6 +6052,11 @@
             "title": "Row",
             "type": "object"
           },
+          "rowId": {
+            "description": "The id of the row written. For an add, the row that now exists — what the editor names to change it next, without reading back.",
+            "title": "Rowid",
+            "type": "string"
+          },
           "table": {
             "description": "The table's name, as the author knows it.",
             "title": "Table",
@@ -5655,6 +6076,7 @@
         "required": [
           "operation",
           "table",
+          "rowId",
           "row",
           "total",
           "version"
@@ -5714,6 +6136,17 @@
             "description": "What the working draft is called. The number decides the button; this is what a person reads on it.",
             "title": "Draftversionname"
           },
+          "fill": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FillStatus"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the last fill did. Null for a table with no source. Never part of a version: replaying an old one must not claim last month's refresh happened tonight."
+          },
           "id": {
             "title": "Id",
             "type": "string"
@@ -5729,6 +6162,19 @@
           "name": {
             "title": "Name",
             "type": "string"
+          },
+          "provenance": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Where the rows come from (#1876), or null when a workflow writes them or an author maintains them.",
+            "title": "Provenance"
           },
           "publishedMajorVersion": {
             "anyOf": [
@@ -5768,6 +6214,19 @@
           "tenantId": {
             "title": "Tenantid",
             "type": "string"
+          },
+          "timeAxis": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Which date column dates a row, and its grain.",
+            "title": "Timeaxis"
           },
           "updatedAt": {
             "title": "Updatedat",
@@ -5950,6 +6409,17 @@
           }
         },
         "title": "DeleteFlowResponse",
+        "type": "object"
+      },
+      "DeleteMeasureResponse": {
+        "properties": {
+          "deleted": {
+            "default": true,
+            "title": "Deleted",
+            "type": "boolean"
+          }
+        },
+        "title": "DeleteMeasureResponse",
         "type": "object"
       },
       "DeleteOutputSchemaResponse": {
@@ -8137,6 +8607,61 @@
         "title": "FileResponse",
         "type": "object"
       },
+      "FillStatus": {
+        "description": "What the last fill of this table did. Never part of a version.\n\nA table that cannot say how old its rows are shows a failed overnight\nfill as yesterday's truth — a confident figure with no reason to doubt\nit.",
+        "properties": {
+          "lastAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the last fill ran.",
+            "title": "Lastat"
+          },
+          "lastError": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why the last fill wrote nothing, or null when it worked.",
+            "title": "Lasterror"
+          },
+          "lastRowCount": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How many rows the table held afterwards.",
+            "title": "Lastrowcount"
+          },
+          "nextAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the next fill is due. Null when it is paused.",
+            "title": "Nextat"
+          }
+        },
+        "title": "FillStatus",
+        "type": "object"
+      },
       "FlowCloneRequest": {
         "description": "POST /api/v1/flows/{id}/clone — fork a visible flow.\n\n``name`` is optional; the service defaults it to ``\"<original> (copy)\"``\nso the UX can offer a one-click \"Clone this flow\" path.",
         "properties": {
@@ -9960,8 +10485,115 @@
         "title": "MajorVersionResponse",
         "type": "object"
       },
+      "MeasureDefinitionPayload": {
+        "additionalProperties": false,
+        "description": "The calculation: how the number comes out of the rows.",
+        "properties": {
+          "aggregation": {
+            "description": "sum, average, count, count_distinct, min, max, latest (the value at the last date of each period — for a stock such as active customers) or ratio (numerator ÷ denominator).",
+            "maxLength": 32,
+            "title": "Aggregation",
+            "type": "string"
+          },
+          "column": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The column it calculates over. Omitted for count and ratio.",
+            "title": "Column"
+          },
+          "denominator": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MeasurePartPayload"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "direction": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "higher_is_better, lower_is_better or neutral.",
+            "title": "Direction"
+          },
+          "filters": {
+            "default": [],
+            "description": "Only rows meeting every condition count.",
+            "items": {
+              "$ref": "#/components/schemas/MeasureFilterPayload"
+            },
+            "maxItems": 20,
+            "title": "Filters",
+            "type": "array"
+          },
+          "format": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MeasureFormatPayload"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "numerator": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MeasurePartPayload"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "target": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The value the owner aims for.",
+            "title": "Target"
+          },
+          "watchMargin": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Within this many percent of the target on the wrong side reads 'watch'.",
+            "title": "Watchmargin"
+          }
+        },
+        "required": [
+          "aggregation"
+        ],
+        "title": "MeasureDefinitionPayload",
+        "type": "object"
+      },
       "MeasureDesignResponse": {
-        "description": "A table's measures as a dashboard builder reads them.",
+        "description": "A table's columns and time axis — what a number over it may ask for.\n\nThe MEASURES are no longer here (#1841). A measure belongs to the model,\nnot to one table, so \"which measures are there\" is a question about the\nworkspace and is answered by ``GET /api/v1/measures``. What a builder\nstill needs from a table is which columns it has and what dates its\nrows carry.",
         "properties": {
           "columns": {
             "items": {
@@ -9974,14 +10606,6 @@
           "description": {
             "title": "Description",
             "type": "string"
-          },
-          "measures": {
-            "items": {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            "title": "Measures",
-            "type": "array"
           },
           "publishedMajorVersion": {
             "anyOf": [
@@ -10031,12 +10655,161 @@
           "tableName",
           "description",
           "columns",
-          "measures",
           "timeAxis",
           "publishedMajorVersion",
           "updatedAt"
         ],
         "title": "MeasureDesignResponse",
+        "type": "object"
+      },
+      "MeasureDetail": {
+        "description": "One measure, with its calculation.",
+        "properties": {
+          "aggregation": {
+            "title": "Aggregation",
+            "type": "string"
+          },
+          "concept": {
+            "title": "Concept",
+            "type": "string"
+          },
+          "createdAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Createdat"
+          },
+          "definition": {
+            "additionalProperties": true,
+            "default": {},
+            "title": "Definition",
+            "type": "object"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "draftMajorVersion": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draftmajorversion"
+          },
+          "draftVersionName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draftversionname"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "isSystem": {
+            "title": "Issystem",
+            "type": "boolean"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "questions": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Questions",
+            "type": "array"
+          },
+          "readsTables": {
+            "default": [],
+            "description": "Every table this measure reads, by name. Two of them for a measure that compares two fact tables.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Readstables",
+            "type": "array"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "tableId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tableid"
+          },
+          "tableName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The home table's name, or null for a measure comparing two.",
+            "title": "Tablename"
+          },
+          "updatedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updatedat"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "label",
+          "description",
+          "tableId",
+          "aggregation",
+          "concept",
+          "version",
+          "status",
+          "source",
+          "isSystem"
+        ],
+        "title": "MeasureDetail",
         "type": "object"
       },
       "MeasureFilterPayload": {
@@ -10045,7 +10818,7 @@
         "properties": {
           "column": {
             "description": "The column the condition reads.",
-            "maxLength": 64,
+            "maxLength": 128,
             "title": "Column",
             "type": "string"
           },
@@ -10103,6 +10876,99 @@
           "operator"
         ],
         "title": "MeasureFilterPayload",
+        "type": "object"
+      },
+      "MeasureFormatPayload": {
+        "additionalProperties": false,
+        "description": "How the number is shown.",
+        "properties": {
+          "currency": {
+            "anyOf": [
+              {
+                "maxLength": 3,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ISO code, e.g. EUR.",
+            "title": "Currency"
+          },
+          "decimals": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Decimals shown, 0 to 6.",
+            "title": "Decimals"
+          },
+          "unit": {
+            "default": "number",
+            "description": "number, currency or percent (a percent is stored as a fraction: 0.49 is 49%).",
+            "maxLength": 32,
+            "title": "Unit",
+            "type": "string"
+          }
+        },
+        "title": "MeasureFormatPayload",
+        "type": "object"
+      },
+      "MeasurePartPayload": {
+        "additionalProperties": false,
+        "description": "One side of a ratio: a sum, a count, or a count of distinct values.",
+        "properties": {
+          "aggregation": {
+            "description": "sum, count or count_distinct.",
+            "maxLength": 32,
+            "title": "Aggregation",
+            "type": "string"
+          },
+          "column": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The column it reads. Omitted for count, which counts rows.",
+            "title": "Column"
+          },
+          "filters": {
+            "default": [],
+            "description": "Conditions on THIS side's rows. Where the two sides read different tables this is the only place a filter can go: a filter on the measure itself names a column only one of the two tables has.",
+            "items": {
+              "$ref": "#/components/schemas/MeasureFilterPayload"
+            },
+            "maxItems": 20,
+            "title": "Filters",
+            "type": "array"
+          },
+          "table": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The table THIS side reads, when it is not the measure's own. Give it on both sides to compare two fact tables — they are not joined: each side is aggregated over its own rows and the two results are divided per period and per group.",
+            "title": "Table"
+          }
+        },
+        "required": [
+          "aggregation"
+        ],
+        "title": "MeasurePartPayload",
         "type": "object"
       },
       "MeasureQueryItem": {
@@ -10173,7 +11039,7 @@
             "type": "integer"
           },
           "measure": {
-            "description": "The measure's id or name on that table.",
+            "description": "The measure's name — the handle it carries in the model, unique in this workspace.",
             "maxLength": 64,
             "title": "Measure",
             "type": "string"
@@ -10230,21 +11096,27 @@
             "title": "Start"
           },
           "tableId": {
-            "description": "The dynamic table the measure belongs to.",
-            "format": "uuid",
-            "title": "Tableid",
-            "type": "string"
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The table the tile was authored against. Optional, and no longer what finds the measure: a measure belongs to the model and is named (#1841). A measure that compares two fact tables has no single table at all.",
+            "title": "Tableid"
           },
           "useDraft": {
             "default": false,
-            "description": "Read the table's working design instead of its published one — for an author previewing a measure before publishing it.",
+            "description": "Read the working definition instead of the published one — for an author previewing a measure before publishing it.",
             "title": "Usedraft",
             "type": "boolean"
           }
         },
         "required": [
           "key",
-          "tableId",
           "measure"
         ],
         "title": "MeasureQueryItem",
@@ -10495,7 +11367,18 @@
                 "type": "null"
               }
             ],
+            "description": "The table the number is measured over — its home. For a measure that compares two fact tables this is the numerator's; ``tables`` names both.",
             "title": "Table"
+          },
+          "tables": {
+            "default": [],
+            "description": "Every table this number came from, home first. A viewer asking where a figure comes from must not be told only half of it.",
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Tables",
+            "type": "array"
           },
           "total": {
             "anyOf": [
@@ -10526,6 +11409,150 @@
           "ok"
         ],
         "title": "MeasureQueryResult",
+        "type": "object"
+      },
+      "MeasureSummary": {
+        "description": "One measure as the Library list reads it.",
+        "properties": {
+          "aggregation": {
+            "title": "Aggregation",
+            "type": "string"
+          },
+          "concept": {
+            "title": "Concept",
+            "type": "string"
+          },
+          "createdAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Createdat"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "draftMajorVersion": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draftmajorversion"
+          },
+          "draftVersionName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draftversionname"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "isSystem": {
+            "title": "Issystem",
+            "type": "boolean"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "questions": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Questions",
+            "type": "array"
+          },
+          "readsTables": {
+            "default": [],
+            "description": "Every table this measure reads, by name. Two of them for a measure that compares two fact tables.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Readstables",
+            "type": "array"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "tableId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tableid"
+          },
+          "tableName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The home table's name, or null for a measure comparing two.",
+            "title": "Tablename"
+          },
+          "updatedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updatedat"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "label",
+          "description",
+          "tableId",
+          "aggregation",
+          "concept",
+          "version",
+          "status",
+          "source",
+          "isSystem"
+        ],
+        "title": "MeasureSummary",
         "type": "object"
       },
       "ModelTierMap": {
@@ -11153,6 +12180,42 @@
         "title": "Page[AuditEventItem]",
         "type": "object"
       },
+      "Page_ConceptItem_": {
+        "properties": {
+          "hasMore": {
+            "default": false,
+            "title": "Hasmore",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ConceptItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          },
+          "pageSize": {
+            "title": "Pagesize",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "pageSize"
+        ],
+        "title": "Page[ConceptItem]",
+        "type": "object"
+      },
       "Page_DashboardSummary_": {
         "properties": {
           "hasMore": {
@@ -11295,6 +12358,42 @@
           "pageSize"
         ],
         "title": "Page[DataTableSummary]",
+        "type": "object"
+      },
+      "Page_MeasureSummary_": {
+        "properties": {
+          "hasMore": {
+            "default": false,
+            "title": "Hasmore",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/MeasureSummary"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          },
+          "pageSize": {
+            "title": "Pagesize",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "pageSize"
+        ],
+        "title": "Page[MeasureSummary]",
         "type": "object"
       },
       "Page_NotificationOut_": {
@@ -12800,6 +13899,75 @@
         "title": "PromptStackEntry",
         "type": "object"
       },
+      "ProvenancePayload": {
+        "additionalProperties": false,
+        "description": "Where a dynamic table's rows come from — epic #1881 · S1 (#1876).\n\nWas a ``data_source_syncs`` row beside the table. It is the table's own\nnow, which is what makes a changed query go through the approval gate\nexactly like a changed column.",
+        "properties": {
+          "cron": {
+            "description": "When it runs, as a cron expression in its timezone.",
+            "maxLength": 100,
+            "title": "Cron",
+            "type": "string"
+          },
+          "enabled": {
+            "default": true,
+            "description": "False pauses it: the table keeps every row it has and gets no next turn.",
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "grain": {
+            "description": "What ONE ROW of the result is, as a sentence: \"one row per month per country\". Mandatory — it decides what this table can be asked for ever after, and without it the only way to find out is to read the SQL.",
+            "maxLength": 300,
+            "title": "Grain",
+            "type": "string"
+          },
+          "keyColumns": {
+            "default": [],
+            "description": "Which columns identify a row, for an upsert — usually the date plus whatever the query splits by. An append writes a key nowhere, so naming one there is refused.",
+            "items": {
+              "maxLength": 64,
+              "type": "string"
+            },
+            "maxItems": 10,
+            "title": "Keycolumns",
+            "type": "array"
+          },
+          "mode": {
+            "default": "upsert",
+            "description": "`upsert` replaces the rows that match the key and adds the rest, so a re-run of the same day does not double it. `append` adds what came back.",
+            "maxLength": 32,
+            "title": "Mode",
+            "type": "string"
+          },
+          "sourceId": {
+            "description": "The warehouse the query runs against, by id.",
+            "maxLength": 64,
+            "title": "Sourceid",
+            "type": "string"
+          },
+          "sql": {
+            "description": "The query whose RESULT fills this table — never the warehouse's raw rows. Its grain decides what the table can be asked afterwards.",
+            "maxLength": 20000,
+            "title": "Sql",
+            "type": "string"
+          },
+          "timezone": {
+            "default": "UTC",
+            "description": "The zone the cron expression is read in.",
+            "maxLength": 64,
+            "title": "Timezone",
+            "type": "string"
+          }
+        },
+        "required": [
+          "sourceId",
+          "sql",
+          "grain",
+          "cron"
+        ],
+        "title": "ProvenancePayload",
+        "type": "object"
+      },
       "PublishApprovalItem": {
         "description": "An approval as shown in the inbox / returned to the requester.",
         "properties": {
@@ -12861,6 +14029,7 @@
               "prompt_snippet",
               "output_schema",
               "data_table",
+              "measure",
               "company"
             ],
             "title": "Entitytype",
@@ -13824,6 +14993,17 @@
             ],
             "title": "Status",
             "type": "string"
+          },
+          "stewardId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stewardid"
           },
           "tags": {
             "default": [],
@@ -18117,205 +19297,6 @@
         "title": "SuspendRunResponse",
         "type": "object"
       },
-      "SyncCreate": {
-        "description": "POST /api/v1/data-sources/{id}/syncs.",
-        "properties": {
-          "cronExpr": {
-            "maxLength": 100,
-            "minLength": 1,
-            "title": "Cronexpr",
-            "type": "string"
-          },
-          "description": {
-            "anyOf": [
-              {
-                "maxLength": 2000,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Description"
-          },
-          "enabled": {
-            "default": true,
-            "title": "Enabled",
-            "type": "boolean"
-          },
-          "keyColumns": {
-            "items": {
-              "type": "string"
-            },
-            "maxItems": 20,
-            "title": "Keycolumns",
-            "type": "array"
-          },
-          "mode": {
-            "default": "upsert",
-            "enum": [
-              "append",
-              "upsert"
-            ],
-            "title": "Mode",
-            "type": "string"
-          },
-          "name": {
-            "maxLength": 255,
-            "minLength": 1,
-            "title": "Name",
-            "type": "string"
-          },
-          "sql": {
-            "maxLength": 65536,
-            "minLength": 1,
-            "title": "Sql",
-            "type": "string"
-          },
-          "tableId": {
-            "title": "Tableid",
-            "type": "string"
-          },
-          "timezone": {
-            "default": "UTC",
-            "maxLength": 64,
-            "title": "Timezone",
-            "type": "string"
-          }
-        },
-        "required": [
-          "name",
-          "tableId",
-          "sql",
-          "cronExpr"
-        ],
-        "title": "SyncCreate",
-        "type": "object"
-      },
-      "SyncOut": {
-        "description": "One sync, and how its last attempt went.",
-        "properties": {
-          "cronExpr": {
-            "title": "Cronexpr",
-            "type": "string"
-          },
-          "description": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Description"
-          },
-          "enabled": {
-            "title": "Enabled",
-            "type": "boolean"
-          },
-          "id": {
-            "title": "Id",
-            "type": "string"
-          },
-          "keyColumns": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Keycolumns",
-            "type": "array"
-          },
-          "lastError": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Lasterror"
-          },
-          "lastRowCount": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Lastrowcount"
-          },
-          "lastRunAt": {
-            "anyOf": [
-              {
-                "format": "date-time",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Lastrunat"
-          },
-          "mode": {
-            "title": "Mode",
-            "type": "string"
-          },
-          "name": {
-            "title": "Name",
-            "type": "string"
-          },
-          "nextFireAt": {
-            "anyOf": [
-              {
-                "format": "date-time",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Nextfireat"
-          },
-          "sourceId": {
-            "title": "Sourceid",
-            "type": "string"
-          },
-          "sql": {
-            "title": "Sql",
-            "type": "string"
-          },
-          "tableId": {
-            "title": "Tableid",
-            "type": "string"
-          },
-          "timezone": {
-            "title": "Timezone",
-            "type": "string"
-          },
-          "version": {
-            "title": "Version",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "id",
-          "name",
-          "sourceId",
-          "tableId",
-          "sql",
-          "mode",
-          "keyColumns",
-          "cronExpr",
-          "timezone",
-          "enabled",
-          "version"
-        ],
-        "title": "SyncOut",
-        "type": "object"
-      },
       "SystemAdjustments": {
         "description": "What the platform changed on its own, in this call (#771).\n\nTwo invariants run after every edit and are NOT optional:\n``ensure_end_step`` guarantees every step can reach the end point and\nwires the edge itself, and ``derive_input_contracts`` projects each\nbound input's contract from the output it is bound to. Both are\ncorrect; both used to be invisible, so an author copying one\nenvironment into another found edges they never asked for and\ndescriptions they never wrote, and could only find them by diffing the\nwhole document after every call.\n\nIds and names only — this rides on every mutation response, so it must\nstay small. Absent/empty means nothing was adjusted.",
         "properties": {
@@ -19339,6 +20320,30 @@
           "isDefault"
         ],
         "title": "TierMapResponse",
+        "type": "object"
+      },
+      "TimeAxisPayload": {
+        "additionalProperties": false,
+        "description": "Which date column dates a row, and at what grain rows are written.",
+        "properties": {
+          "column": {
+            "description": "A date or date-time column.",
+            "maxLength": 64,
+            "title": "Column",
+            "type": "string"
+          },
+          "grain": {
+            "default": "day",
+            "description": "day, week, month, quarter or year: one row per what.",
+            "maxLength": 32,
+            "title": "Grain",
+            "type": "string"
+          }
+        },
+        "required": [
+          "column"
+        ],
+        "title": "TimeAxisPayload",
         "type": "object"
       },
       "TodoItem": {
@@ -20836,6 +21841,18 @@
             ],
             "title": "Allowedoperations"
           },
+          "clearProvenance": {
+            "default": false,
+            "description": "True takes the source away. The rows already there stay — removing them is a separate decision about the table.",
+            "title": "Clearprovenance",
+            "type": "boolean"
+          },
+          "clearTimeAxis": {
+            "default": false,
+            "description": "True removes the time axis.",
+            "title": "Cleartimeaxis",
+            "type": "boolean"
+          },
           "columns": {
             "anyOf": [
               {
@@ -20892,6 +21909,17 @@
             ],
             "title": "Name"
           },
+          "provenance": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProvenancePayload"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Replaces where the rows come from when sent."
+          },
           "rows": {
             "anyOf": [
               {
@@ -20899,7 +21927,7 @@
                   "additionalProperties": true,
                   "type": "object"
                 },
-                "maxItems": 2000,
+                "maxItems": 5000,
                 "type": "array"
               },
               {
@@ -20939,6 +21967,17 @@
               }
             ],
             "title": "Status"
+          },
+          "timeAxis": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TimeAxisPayload"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Sets the time axis. Send clearTimeAxis to remove it."
           }
         },
         "required": [
@@ -21031,6 +22070,125 @@
           "expectedVersion"
         ],
         "title": "UpdateFileRequest",
+        "type": "object"
+      },
+      "UpdateMeasureRequest": {
+        "additionalProperties": false,
+        "description": "A partial edit. Only the keys actually sent are applied.",
+        "properties": {
+          "clearTable": {
+            "default": false,
+            "description": "True takes the home table away — for a measure being turned into one that compares two fact tables.",
+            "title": "Cleartable",
+            "type": "boolean"
+          },
+          "concept": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Concept"
+          },
+          "definition": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MeasureDefinitionPayload"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "expectedVersion": {
+            "description": "The version this edit is based on; a mismatch is a 409.",
+            "title": "Expectedversion",
+            "type": "integer"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "questions": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 20,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Questions"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "tableId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The table whose rows this measure reads. Omit for a ratio whose two sides each name their own — that is how a number comparing two fact tables is defined.",
+            "title": "Tableid"
+          }
+        },
+        "required": [
+          "expectedVersion"
+        ],
+        "title": "UpdateMeasureRequest",
         "type": "object"
       },
       "UpdateMemberRequest": {
@@ -27666,6 +28824,244 @@
         ]
       }
     },
+    "/api/v1/concepts": {
+      "get": {
+        "description": "This workspace's definitions, one page at a time (B-NB8).\n\nAn empty page before the workspace has written its first one — not a\n404. \"You have no definitions yet\" is an answer; a missing table is an\nimplementation detail nobody asked about.",
+        "operationId": "list_concepts_api_v1_concepts_get",
+        "parameters": [
+          {
+            "description": "Filter: any field containing this text.",
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "default": "",
+              "description": "Filter: any field containing this text.",
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Opaque continuation token from the previous page's nextCursor. Send it back unchanged; never construct one.",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Opaque continuation token from the previous page's nextCursor. Send it back unchanged; never construct one.",
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 200,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_ConceptItem_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Concepts",
+        "tags": [
+          "concepts"
+        ]
+      },
+      "post": {
+        "description": "Write one definition, creating the table on the first one.",
+        "operationId": "create_concept_api_v1_concepts_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConceptCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConceptWriteResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Concept",
+        "tags": [
+          "concepts"
+        ]
+      }
+    },
+    "/api/v1/concepts/{concept_id}": {
+      "delete": {
+        "description": "Remove one definition.\n\nRemoved from the live rows, which is what the next write publishes.\nEvery published version still carries it, so an answer that leaned on\nit can still say what it leaned on.",
+        "operationId": "delete_concept_api_v1_concepts__concept_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "concept_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Concept Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConceptWriteResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Concept",
+        "tags": [
+          "concepts"
+        ]
+      },
+      "patch": {
+        "description": "Change the fields that were sent; the rest keep their values.",
+        "operationId": "update_concept_api_v1_concepts__concept_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "concept_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Concept Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConceptUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConceptWriteResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Concept",
+        "tags": [
+          "concepts"
+        ]
+      }
+    },
     "/api/v1/conditional-triggers": {
       "get": {
         "description": "Every conditional trigger in the tenant, for the schedules screen.\n\nIncludes DISABLED ones on purpose: a schedule you switched off is the\none you go looking for to switch back on, and a list that hides it makes\nit unreachable outside the database.\n\nEach row carries how many of its ticks are waiting. That number should\nbe one; more means the schedule forked (#1278), and an operator who can\nsee it can act on it.",
@@ -29730,7 +31126,7 @@
     },
     "/api/v1/data-sources/{source_id}/schema": {
       "get": {
-        "description": "Which tables and columns this source holds.\n\nReads the warehouse's own catalogue, so it costs nothing on a warehouse\nbilled per byte. This is what S8 writes its table cards against.",
+        "description": "Which tables and columns this source holds.\n\nReads the warehouse's own catalogue, one container at a time, so it\ncosts next to nothing on a warehouse billed per byte and a credential\ngranted single datasets can answer it (#1875). This is what the\nsemantic model writes its table definitions against.",
         "operationId": "read_data_source_schema_api_v1_data_sources__source_id__schema_get",
         "parameters": [
           {
@@ -29776,297 +31172,6 @@
           }
         ],
         "summary": "Read Data Source Schema",
-        "tags": [
-          "data-sources"
-        ]
-      }
-    },
-    "/api/v1/data-sources/{source_id}/syncs": {
-      "get": {
-        "description": "The queries that keep tables filled from this warehouse.",
-        "operationId": "list_syncs_api_v1_data_sources__source_id__syncs_get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "source_id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Source Id",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/SyncOut"
-                  },
-                  "title": "Response List Syncs Api V1 Data Sources  Source Id  Syncs Get",
-                  "type": "array"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "List Syncs",
-        "tags": [
-          "data-sources"
-        ]
-      },
-      "post": {
-        "description": "Set up a query that fills a table on a rhythm.",
-        "operationId": "create_sync_api_v1_data_sources__source_id__syncs_post",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "source_id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Source Id",
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SyncCreate"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SyncOut"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Create Sync",
-        "tags": [
-          "data-sources"
-        ]
-      }
-    },
-    "/api/v1/data-sources/{source_id}/syncs/{sync_id}": {
-      "delete": {
-        "description": "Stop a sync. The rows it already wrote stay where they are.",
-        "operationId": "delete_sync_api_v1_data_sources__source_id__syncs__sync_id__delete",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "source_id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Source Id",
-              "type": "string"
-            }
-          },
-          {
-            "in": "path",
-            "name": "sync_id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Sync Id",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": {
-                    "type": "boolean"
-                  },
-                  "title": "Response Delete Sync Api V1 Data Sources  Source Id  Syncs  Sync Id  Delete",
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Delete Sync",
-        "tags": [
-          "data-sources"
-        ]
-      }
-    },
-    "/api/v1/data-sources/{source_id}/syncs/{sync_id}/restore": {
-      "post": {
-        "description": "Bring a stopped sync back, switched off.\n\nStopping one is usually a reaction to it doing the wrong thing, so it\nreturns off: the author switches it on once they have looked.",
-        "operationId": "restore_sync_api_v1_data_sources__source_id__syncs__sync_id__restore_post",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "source_id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Source Id",
-              "type": "string"
-            }
-          },
-          {
-            "in": "path",
-            "name": "sync_id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Sync Id",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SyncOut"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Restore Sync",
-        "tags": [
-          "data-sources"
-        ]
-      }
-    },
-    "/api/v1/data-sources/{source_id}/syncs/{sync_id}/run": {
-      "post": {
-        "description": "Bring this sync's turn forward; the heartbeat runs it.\n\nAccept and return (B-NB6): the query can take tens of seconds and the\nmerge reads a table into memory, so neither happens on this request.\nThe answer says when it will run, not what it found.",
-        "operationId": "run_sync_now_api_v1_data_sources__source_id__syncs__sync_id__run_post",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "source_id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Source Id",
-              "type": "string"
-            }
-          },
-          {
-            "in": "path",
-            "name": "sync_id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Sync Id",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SyncOut"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Run Sync Now",
         "tags": [
           "data-sources"
         ]
@@ -30384,7 +31489,7 @@
         ]
       },
       "get": {
-        "description": "One table WITH its rows.",
+        "description": "One table and how many rows it holds — the rows come from ``/rows``.",
         "operationId": "get_data_table_api_v1_data_tables__table_id__get",
         "parameters": [
           {
@@ -30537,6 +31642,55 @@
         ]
       }
     },
+    "/api/v1/data-tables/{table_id}/refresh": {
+      "post": {
+        "description": "Fill this table from its query now, rather than waiting for tonight.\n\nAccept-and-return (B-NB6): the query can take tens of seconds and the\nmerge reads the table into memory, so the heartbeat does the work on\nits next tick. What comes back is the table with its next turn brought\nforward — the screen shows \"due now\", then the outcome when it lands.",
+        "operationId": "refresh_data_table_api_v1_data_tables__table_id__refresh_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "table_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Table Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataTableResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Refresh Data Table",
+        "tags": [
+          "data-tables"
+        ]
+      }
+    },
     "/api/v1/data-tables/{table_id}/restore": {
       "post": {
         "description": "Un-delete a table.\n\nIdempotent — restoring a live table succeeds with ``restored=false``.\nTakes no ``expectedVersion``: a recovery must never lose to a stale\nversion check.",
@@ -30657,7 +31811,7 @@
         ]
       },
       "get": {
-        "description": "One page of a table's rows, filtered (#1372).\n\nA table shows up in a workflow's Components tab because a decision reads it\nor a tool writes it, and the next question is always what is in it. Before\nthis, answering meant leaving the editor, finding the table in the library,\nand finding the way back.\n\nNever the whole table: a tenant table can hold thousands of rows and this\nfeeds a panel, not an export. The filter is applied to the whole set and the\npage is cut from the result — never the other way round, which would hide\nevery match below the window.\n\nThe cursor is an INDEX rather than the shared keyset, because a row inside a\nJSONB array has no ``created_at`` and no ``id`` to key on. It carries a\nfingerprint of the table version and the filter, so a table edited mid-scroll\nrefuses the cursor instead of silently paging a different set.",
+        "description": "One page of a table's rows, filtered (#1372, #1785).\n\nHow the table's own editor reads its rows, and how a workflow's Components\ntab shows what is in a table. Never the whole table: a table has no row\nlimit. The filter is part of the query and the page is cut from its result\n— never the other way round, which would hide every match below the window.\n\nEach row carries its ``id``, which the editor names to change or remove\nexactly the row it shows. The cursor is a keyset on the rows' stored\nposition.",
         "operationId": "list_data_table_rows_api_v1_data_tables__table_id__rows_get",
         "parameters": [
           {
@@ -30683,7 +31837,7 @@
             }
           },
           {
-            "description": "Opaque continuation token from the previous page's nextCursor. Send it back unchanged; never construct or reuse a stale one. A cursor minted before the table changed is refused with 422 rather than continuing into a set it no longer describes.",
+            "description": "Opaque continuation token from the previous page's nextCursor. Send it back unchanged; never construct one. It names a position in the table's order, so rows added elsewhere never make a page skip or repeat a row.",
             "in": "query",
             "name": "cursor",
             "required": false,
@@ -30696,7 +31850,7 @@
                   "type": "null"
                 }
               ],
-              "description": "Opaque continuation token from the previous page's nextCursor. Send it back unchanged; never construct or reuse a stale one. A cursor minted before the table changed is refused with 422 rather than continuing into a set it no longer describes.",
+              "description": "Opaque continuation token from the previous page's nextCursor. Send it back unchanged; never construct one. It names a position in the table's order, so rows added elsewhere never make a page skip or repeat a row.",
               "title": "Cursor"
             }
           },
@@ -34793,6 +35947,172 @@
         ]
       }
     },
+    "/api/v1/measures": {
+      "get": {
+        "description": "This workspace's measures, one bounded page at a time (B-NB8).",
+        "operationId": "list_measures_api_v1_measures_get",
+        "parameters": [
+          {
+            "description": "Only the measures that read this table — what a table page shows.",
+            "in": "query",
+            "name": "tableId",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only the measures that read this table — what a table page shows.",
+              "title": "Tableid"
+            }
+          },
+          {
+            "description": "Opaque continuation token from the previous page's nextCursor. Send it back unchanged; never construct one.",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Opaque continuation token from the previous page's nextCursor. Send it back unchanged; never construct one.",
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 200,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_MeasureSummary_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Measures",
+        "tags": [
+          "measures"
+        ]
+      },
+      "post": {
+        "description": "Define a measure, draft and publishable from the moment it exists.",
+        "operationId": "create_measure_api_v1_measures_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMeasureRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeasureDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Measure",
+        "tags": [
+          "measures"
+        ]
+      }
+    },
+    "/api/v1/measures/deleted": {
+      "get": {
+        "description": "The measures that can still be brought back.",
+        "operationId": "list_deleted_measures_api_v1_measures_deleted_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeletedEntityListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Deleted Measures",
+        "tags": [
+          "measures"
+        ]
+      }
+    },
     "/api/v1/measures/query": {
       "post": {
         "description": "Answer up to 40 tile questions at once, each on its own.",
@@ -34941,6 +36261,931 @@
           }
         ],
         "summary": "Get Measure Design",
+        "tags": [
+          "measures"
+        ]
+      }
+    },
+    "/api/v1/measures/{measure_id}": {
+      "delete": {
+        "description": "Remove a measure, keeping it restorable.",
+        "operationId": "delete_measure_api_v1_measures__measure_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "measure_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Measure Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "expectedVersion",
+            "required": true,
+            "schema": {
+              "title": "Expectedversion",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteMeasureResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Measure",
+        "tags": [
+          "measures"
+        ]
+      },
+      "get": {
+        "description": "One measure, with its calculation.",
+        "operationId": "get_measure_api_v1_measures__measure_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "measure_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Measure Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeasureDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Measure",
+        "tags": [
+          "measures"
+        ]
+      },
+      "put": {
+        "description": "Apply a partial edit under the optimistic lock.",
+        "operationId": "update_measure_api_v1_measures__measure_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "measure_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Measure Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMeasureRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeasureDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Measure",
+        "tags": [
+          "measures"
+        ]
+      }
+    },
+    "/api/v1/measures/{measure_id}/discard-draft": {
+      "post": {
+        "description": "Throw the draft away and go back to what is published.",
+        "operationId": "discard_measure_draft_api_v1_measures__measure_id__discard_draft_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "measure_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Measure Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiscardDraftResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Discard Measure Draft",
+        "tags": [
+          "measures"
+        ]
+      }
+    },
+    "/api/v1/measures/{measure_id}/live-versions": {
+      "get": {
+        "description": "Which major versions of this measure are published.",
+        "operationId": "live_measure_versions_api_v1_measures__measure_id__live_versions_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "measure_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Measure Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "type": "integer"
+                  },
+                  "title": "Response Live Measure Versions Api V1 Measures  Measure Id  Live Versions Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Live Measure Versions",
+        "tags": [
+          "measures"
+        ]
+      }
+    },
+    "/api/v1/measures/{measure_id}/restore": {
+      "post": {
+        "description": "Bring a removed measure back. Restoring a live one is a no-op.",
+        "operationId": "restore_measure_api_v1_measures__measure_id__restore_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "measure_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Measure Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RestoreEntityResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Restore Measure",
+        "tags": [
+          "measures"
+        ]
+      }
+    },
+    "/api/v1/measures/{measure_id}/versions": {
+      "get": {
+        "description": "The version history of one measure.",
+        "operationId": "list_measure_versions_api_v1_measures__measure_id__versions_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "measure_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Measure Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "type",
+            "required": false,
+            "schema": {
+              "default": "all",
+              "enum": [
+                "checkpoint",
+                "major",
+                "all"
+              ],
+              "title": "Type",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VersionListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Measure Versions",
+        "tags": [
+          "measures"
+        ]
+      },
+      "post": {
+        "description": "Create a named version using Save As semantics.",
+        "operationId": "create_measure_major_version_api_v1_measures__measure_id__versions_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "measure_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Measure Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMajorVersionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MajorVersionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Measure Major Version",
+        "tags": [
+          "measures"
+        ]
+      }
+    },
+    "/api/v1/measures/{measure_id}/versions/deleted": {
+      "get": {
+        "description": "Removed versions that can still be restored.",
+        "operationId": "list_deleted_measure_versions_api_v1_measures__measure_id__versions_deleted_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "measure_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Measure Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeletedVersionListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Deleted Measure Versions",
+        "tags": [
+          "measures"
+        ]
+      }
+    },
+    "/api/v1/measures/{measure_id}/versions/ensure": {
+      "post": {
+        "description": "Make sure a working draft exists. Idempotent.",
+        "operationId": "ensure_measure_draft_version_api_v1_measures__measure_id__versions_ensure_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "measure_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Measure Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnsureDraftVersionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Ensure Measure Draft Version",
+        "tags": [
+          "measures"
+        ]
+      }
+    },
+    "/api/v1/measures/{measure_id}/versions/major/{major_version}": {
+      "patch": {
+        "description": "Rename a major version.",
+        "operationId": "rename_measure_version_api_v1_measures__measure_id__versions_major__major_version__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "measure_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Measure Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "major_version",
+            "required": true,
+            "schema": {
+              "title": "Major Version",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RenameVersionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RenameVersionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Rename Measure Version",
+        "tags": [
+          "measures"
+        ]
+      }
+    },
+    "/api/v1/measures/{measure_id}/versions/published": {
+      "get": {
+        "description": "The currently published definition and its document, or null.",
+        "operationId": "get_measure_published_version_api_v1_measures__measure_id__versions_published_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "measure_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Measure Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/PublishedVersionInfo"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Get Measure Published Version Api V1 Measures  Measure Id  Versions Published Get"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Measure Published Version",
+        "tags": [
+          "measures"
+        ]
+      }
+    },
+    "/api/v1/measures/{measure_id}/versions/{version_id}": {
+      "delete": {
+        "description": "Delete one version, keeping it restorable.",
+        "operationId": "delete_measure_version_api_v1_measures__measure_id__versions__version_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "measure_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Measure Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteVersionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Measure Version",
+        "tags": [
+          "measures"
+        ]
+      }
+    },
+    "/api/v1/measures/{measure_id}/versions/{version_id}/restore": {
+      "post": {
+        "description": "Roll the measure back to an earlier snapshot.",
+        "operationId": "restore_measure_version_api_v1_measures__measure_id__versions__version_id__restore_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "measure_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Measure Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RestoreVersionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeasureDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Restore Measure Version",
+        "tags": [
+          "measures"
+        ]
+      }
+    },
+    "/api/v1/measures/{measure_id}/versions/{version_id}/restore-deleted": {
+      "post": {
+        "description": "Un-delete one version, without making it live.",
+        "operationId": "restore_deleted_measure_version_api_v1_measures__measure_id__versions__version_id__restore_deleted_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "measure_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Measure Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RestoreDeletedVersionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Restore Deleted Measure Version",
+        "tags": [
+          "measures"
+        ]
+      }
+    },
+    "/api/v1/measures/{measure_id}/versions/{version}": {
+      "get": {
+        "description": "One version's stored snapshot.",
+        "operationId": "get_measure_version_api_v1_measures__measure_id__versions__version__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "measure_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Measure Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version",
+            "required": true,
+            "schema": {
+              "title": "Version",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VersionDetailResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Measure Version",
         "tags": [
           "measures"
         ]

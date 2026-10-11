@@ -27,7 +27,6 @@ import { loadConfig } from "./config.js";
 import { reportContractSkew } from "./contract.js";
 import { registerConventions } from "./tools/conventions.js";
 import {
-  ADMIN_ONLY,
   registerDashboardTools,
   registerDataSourceTools,
   registerMeasureTools,
@@ -44,6 +43,7 @@ import {
 import { registerAuthoringSpecTools } from "./tools/authoringSpec.js";
 import { registerCompanyTools } from "./tools/company.js";
 import { registerComponentTools } from "./tools/components.js";
+import { registerConceptTools } from "./tools/concepts.js";
 import { registerOperationsTools } from "./tools/operations.js";
 import { registerPromptPlacementTools } from "./tools/promptPlacement.js";
 import { LIST_FILTERS } from "./generated/listFilters.js";
@@ -60,6 +60,27 @@ import {
 } from "./tools/validation.js";
 import { type VersionedEntity, registerVersionTools } from "./tools/versions.js";
 import { registerWorkflowMutations } from "./tools/workflowMutations.js";
+
+const PROVENANCE_NOTE =
+  "WHERE THE ROWS COME FROM — `provenance`, for a dynamic table filled from " +
+  "a warehouse. It replaces the old data-source sync: there is no separate " +
+  "sync object any more, so create_data_source_sync / run_data_source_sync " +
+  "do not exist. `provenance` is " +
+  "`{ sourceId, sql, grain, keyColumns?, mode?, cron, timezone?, enabled? }`: " +
+  "`sourceId` the data source; `sql` the query whose RESULT fills the table " +
+  "(try it first with query_data_source); `grain` what ONE ROW of that " +
+  "result is, as a sentence (\"one row per month per country\") — " +
+  "mandatory, it decides what the table can be asked for ever after; " +
+  "`keyColumns` which columns identify a row for `mode: \"upsert\"` (the " +
+  "default — `append` takes no key); `cron` when it runs, read in " +
+  "`timezone` (default UTC); `enabled: false` pauses it. A table with " +
+  "provenance has no other filler — a workflow may not also write its " +
+  "rows. It is part of the table's design, so a changed query is published " +
+  "through request_publish_data_table like a changed column. To fill it " +
+  "now rather than at its next turn: refresh_data_table. " +
+  "\n\nMEASURES ARE NOT ON THE TABLE. A measure is its own entity " +
+  "(create_measure); a table carries only its `timeAxis` " +
+  "(`{ column, grain }`), which every measure over it reads.";
 
 /**
  * The entities the connector covers. Core entities (C4), memory entities (C5)
@@ -162,19 +183,53 @@ const ENTITIES: EntityDef[] = [
     label: "tables (authored reference data agents and decisions read)",
     deleteVersionParam: "expected_version",
     listPaging: { defaultPageSize: 20, maxPageSize: 200 },
+    createNote: PROVENANCE_NOTE,
     updateWarning:
-      "`rows` AND `columns` ARE WHOLE-COLLECTION FIELDS: sending either " +
+      PROVENANCE_NOTE +
+      " Sending `provenance` replaces it whole; `clearProvenance: true` " +
+      "takes the source away and leaves the rows that are there. " +
+      "\n\n`rows` AND `columns` ARE WHOLE-COLLECTION FIELDS: sending either " +
       "REPLACES it entirely. Passing one row in `rows` does not append it — it " +
       "deletes every other row in the table. To change content, use " +
       "add_data_table_row / update_data_table_row / delete_data_table_row, " +
       "which address a single row and cannot destroy the rest. Use `rows` here " +
       "only when you genuinely mean to replace the whole content.",
   },
+  {
+    // A measure was a field on a table; the semantic model (axonity-flow#1881
+    // S12, #1841) made it an entity of its own, in the same order and spelling
+    // as a table's routes — so the whole family, versions and publish request
+    // included, comes from the registrars with no code of its own.
+    singular: "measure",
+    basePath: "/api/v1/measures",
+    updateMethod: "PUT",
+    label: "measures (the agreed definition of one number in the model)",
+    deleteVersionParam: "expectedVersion",
+    listPaging: { defaultPageSize: 20, maxPageSize: 200 },
+    createNote:
+      "Fields: `label` (what a tile shows), `description` (what the number " +
+      "means — mandatory, an agent reads it to decide whether this is the " +
+      "number asked for), `definition` (the calculation), `tableId` (the " +
+      "table it reads; omit only for a ratio whose two sides each name their " +
+      "own `table`), `concept` (the NAME of the concept this number means — " +
+      "it must exist, create_concept first), `questions` (what it answers, " +
+      "in the words someone would ask) and optionally `name`, the handle — " +
+      "derived from the label when omitted and unique in the workspace. " +
+      "\n\n`definition` is `{ aggregation, column?, numerator?, " +
+      "denominator?, filters?, format?, direction?, target?, watchMargin? }`: " +
+      "aggregation is sum, average, count, count_distinct, min, max, latest " +
+      "(the value at the last date of each period — for a stock) or ratio " +
+      "(numerator ÷ denominator, each `{ aggregation, column?, table?, " +
+      "filters? }`). A filter is `{ column, operator, value }`. Column names " +
+      "come from read_measure_design. A wrong combination is refused with a " +
+      "422 that says why. " +
+      "\n\nIt is a DRAFT until published: request_publish_measure. Only a " +
+      "published measure gives a certified number.",
+  },
   // The three below arrived with axonity-flow#1849 (axonity-mcp#78). None is
   // versioned or publish-approved: a change is live the moment it is saved, so
   // there is no draft to discard and no request_publish_*. Each lists one page
-  // on the shared cursor, and the writes on the first two are administrator-
-  // only — see `ADMIN_ONLY` in tools/dataSources.ts.
+  // on the shared cursor.
   {
     singular: "data_source",
     basePath: "/api/v1/data-sources",
@@ -194,15 +249,14 @@ const ENTITIES: EntityDef[] = [
       "`policy` holds the limits every query is held to " +
       "(maxBytesBilled, maxSeconds, allowedDatasets, forbiddenDatasets, " +
       "personalColumns, dateFilters); all are empty by default. " +
-      "\n\nThen test_data_source to see whether it answers. A `source_query` " +
-      "knowledge note (create_reference_doc with kind source_query) names " +
-      "this source by its id in `subjectSourceId`." +
-      ADMIN_ONLY,
+      "\n\nThen test_data_source to see whether it answers. A table is " +
+      "filled from this source through its own `provenance.sourceId` " +
+      "(create_data_table) — not through a sync, and not through a " +
+      "reference doc.",
     updateWarning:
-      "NO DRAFT: this changes the live source, which every sync and query " +
+      "NO DRAFT: this changes the live source, which every table it fills and every query " +
       "uses at once. `config` and `policy` are replaced WHOLE when sent — " +
-      "read first and send the complete block." +
-      ADMIN_ONLY,
+      "read first and send the complete block.",
   },
   {
     singular: "table_relationship",
@@ -220,19 +274,17 @@ const ENTITIES: EntityDef[] = [
       "many-to-many, it has no safe join) and an optional `description`. A " +
       "declaration that would make a total ambiguous — a second path between " +
       "the same two tables, say — is refused with a 422 that says why. Read " +
-      "the sentence; it is the point." +
-      ADMIN_ONLY,
+      "the sentence; it is the point.",
     updateWarning:
       "Only `verified` (somebody checked that the keys really match) and " +
       "`description` can change. To change the columns, delete and declare " +
-      "it again." +
-      ADMIN_ONLY,
+      "it again.",
   },
   {
     singular: "dashboard",
     basePath: "/api/v1/dashboards",
     updateMethod: "PUT",
-    label: "dashboards (tiles of measures over the workspace's tables)",
+    label: "dashboards (tiles of measures over the workspace's model)",
     publishable: false,
     hasDiscardDraft: false,
     deleteVersionParam: "expected_version",
@@ -241,7 +293,7 @@ const ENTITIES: EntityDef[] = [
       "Fields: `name`, `description`, `visibility` (\"workspace\", the " +
       "default — everyone sees it — or \"private\") and `layout`, the " +
       "sections of tiles; omit it for an empty dashboard. A tile names a " +
-      "measure by the id or name read_measure_design returns. The layout is " +
+      "measure by its name (list_measures). The layout is " +
       "checked when saved and a refusal names what is wrong.",
     updateWarning:
       "NO DRAFT: a saved dashboard is what everyone it is shared with sees. " +
@@ -282,6 +334,7 @@ const VERSIONED: VersionedEntity[] = [
     basePath: "/api/v1/data-tables",
     publishedPath: "versions",
   },
+  { singular: "measure", basePath: "/api/v1/measures", publishedPath: "versions" },
 ];
 
 /**
@@ -329,6 +382,7 @@ export function registerAll(server: ServerLike, client: AxonityClient): void {
   registerDataSourceTools(server as McpServer, client);
   registerMeasureTools(server as McpServer, client);
   registerDashboardTools(server as McpServer, client);
+  registerConceptTools(server as McpServer, client);
   registerComponentTools(server as McpServer, client);
 }
 
