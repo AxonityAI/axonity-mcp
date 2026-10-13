@@ -3913,7 +3913,8 @@
             "type": "string"
           },
           "definition": {
-            "$ref": "#/components/schemas/MeasureDefinitionPayload"
+            "$ref": "#/components/schemas/MeasureDefinitionPayload",
+            "description": "The calculation: how the number comes out of the rows — what is aggregated, over which column, under which filters, and how it is shown."
           },
           "description": {
             "description": "What the number means, in words. Mandatory — an agent reads it to decide whether this is the number the question asked for.",
@@ -3937,7 +3938,7 @@
                 "type": "null"
               }
             ],
-            "description": "The handle. Derived from the label when omitted, and then kept: a later label edit must not move it.",
+            "description": "The handle a tile and a tool call name. Unique in this workspace, because a measure belongs to the model rather than to one table. Derived from the label when omitted, and then kept: a later label edit must not move it.",
             "title": "Name"
           },
           "questions": {
@@ -9319,6 +9320,108 @@
         "title": "FormatCodeResponse",
         "type": "object"
       },
+      "FormulaLeaf": {
+        "description": "One aggregation the formula will run, with the context that applies.",
+        "properties": {
+          "aggregation": {
+            "description": "sum, count, latest, …",
+            "title": "Aggregation",
+            "type": "string"
+          },
+          "column": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The column, or null for a row count.",
+            "title": "Column"
+          },
+          "filters": {
+            "default": [],
+            "description": "The conditions pushed onto this part.",
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Filters",
+            "type": "array"
+          },
+          "ignores": {
+            "default": [],
+            "description": "The dimensions this part is deliberately free of.",
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Ignores",
+            "type": "array"
+          },
+          "table": {
+            "description": "The table this part is aggregated over.",
+            "title": "Table",
+            "type": "string"
+          },
+          "tableId": {
+            "description": "That table's id.",
+            "title": "Tableid",
+            "type": "string"
+          },
+          "via": {
+            "default": [],
+            "description": "The measures walked to get here, outermost first — what an explanation shows.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Via",
+            "type": "array"
+          }
+        },
+        "required": [
+          "table",
+          "tableId",
+          "aggregation"
+        ],
+        "title": "FormulaLeaf",
+        "type": "object"
+      },
+      "FormulaProblem": {
+        "description": "One refusal or warning: the code to repair on, the sentence to read.",
+        "properties": {
+          "code": {
+            "description": "The fixed code, as in formula-spec.",
+            "title": "Code",
+            "type": "string"
+          },
+          "message": {
+            "description": "What is wrong, in the author's words.",
+            "title": "Message",
+            "type": "string"
+          },
+          "severity": {
+            "description": "error blocks saving; warning does not.",
+            "title": "Severity",
+            "type": "string"
+          },
+          "where": {
+            "additionalProperties": true,
+            "default": {},
+            "description": "Where it sits: `offset` while the text is being read, `path` into the tree once there is one.",
+            "title": "Where",
+            "type": "object"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "severity"
+        ],
+        "title": "FormulaProblem",
+        "type": "object"
+      },
       "FunctionEntry": {
         "description": "A single function definition with its name and code.",
         "properties": {
@@ -10487,13 +10590,20 @@
       },
       "MeasureDefinitionPayload": {
         "additionalProperties": false,
-        "description": "The calculation: how the number comes out of the rows.",
+        "description": "The calculation: how the number comes out of the rows.\n\n**A measure is ONE expression** (#1908). ``expression`` is the whole of\nit, as the formula text an author types or as the stored tree, and the\ntwo are one-to-one. The fields below it — ``aggregation``, ``column``,\n``numerator``, ``denominator`` — are the shape from before the formula,\nkept while measures are migrated: one aggregation, or a division of two\nparts, and nothing else.",
         "properties": {
           "aggregation": {
-            "description": "sum, average, count, count_distinct, min, max, latest (the value at the last date of each period — for a stock such as active customers) or ratio (numerator ÷ denominator).",
-            "maxLength": 32,
-            "title": "Aggregation",
-            "type": "string"
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "sum, average, count, count_distinct, min, max, latest (the value at the last date of each period — for a stock such as active customers) or ratio (numerator ÷ denominator). The shape from before the formula; write `expression` instead.",
+            "title": "Aggregation"
           },
           "column": {
             "anyOf": [
@@ -10531,6 +10641,22 @@
             "description": "higher_is_better, lower_is_better or neutral.",
             "title": "Direction"
           },
+          "expression": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The formula. Either the text an author types — `[net_revenue] - [variable_costs]`, `divide(sum(orders.cost), [orders_placed])` — or the stored tree. Both are accepted and they are one-to-one: the text parses to the tree and the tree writes back as the same text. GET /measures/formula-spec is the only valid list of words; never write one from memory.",
+            "title": "Expression"
+          },
           "filters": {
             "default": [],
             "description": "Only rows meeting every condition count.",
@@ -10561,6 +10687,19 @@
               }
             ]
           },
+          "quantity": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the number counts, in the words of the business: EUR, dogs, customers, orders, answers. Required for a single aggregation and derived for a formula. It is what lets the platform refuse adding euros to dogs — a 'number' format cannot, because it says how to show a figure and not what the figure is.",
+            "title": "Quantity"
+          },
           "target": {
             "anyOf": [
               {
@@ -10586,9 +10725,6 @@
             "title": "Watchmargin"
           }
         },
-        "required": [
-          "aggregation"
-        ],
         "title": "MeasureDefinitionPayload",
         "type": "object"
       },
@@ -22092,6 +22228,7 @@
                 "type": "null"
               }
             ],
+            "description": "The name of the concept this number MEANS, from Concepts. The calculation says HOW it is computed; the concept says what it is and what it is per — \"CAC is per customer, TAC per dog\". It must exist.",
             "title": "Concept"
           },
           "definition": {
@@ -22102,7 +22239,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "The calculation: how the number comes out of the rows — what is aggregated, over which column, under which filters, and how it is shown."
           },
           "description": {
             "anyOf": [
@@ -22114,6 +22252,7 @@
                 "type": "null"
               }
             ],
+            "description": "What the number means, in words. Mandatory — an agent reads it to decide whether this is the number the question asked for.",
             "title": "Description"
           },
           "expectedVersion": {
@@ -22131,6 +22270,7 @@
                 "type": "null"
               }
             ],
+            "description": "What a person reads on a tile.",
             "title": "Label"
           },
           "name": {
@@ -22143,6 +22283,7 @@
                 "type": "null"
               }
             ],
+            "description": "The handle a tile and a tool call name. Unique in this workspace, because a measure belongs to the model rather than to one table. Derived from the label when omitted, and then kept: a later label edit must not move it.",
             "title": "Name"
           },
           "questions": {
@@ -22158,6 +22299,7 @@
                 "type": "null"
               }
             ],
+            "description": "The questions this measure answers, in the words someone would ask them. An analyst matches a question against these before writing SQL.",
             "title": "Questions"
           },
           "status": {
@@ -22170,6 +22312,7 @@
                 "type": "null"
               }
             ],
+            "description": "Whether this measure is in use. `active` or `archived`; an archived measure keeps its definition and is not offered.",
             "title": "Status"
           },
           "tableId": {
@@ -23558,6 +23701,136 @@
           "launchable"
         ],
         "title": "ValidateDocumentResponse",
+        "type": "object"
+      },
+      "ValidateFormulaRequest": {
+        "additionalProperties": false,
+        "description": "Check a formula without saving it.\n\nWhat an agent calls before it writes (``validate_measure``) and what the\neditor calls while somebody types. One implementation behind both, so\nthe two can never disagree about whether a formula is acceptable.",
+        "properties": {
+          "expression": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The formula, as text or as the stored tree.",
+            "title": "Expression"
+          },
+          "format": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MeasureFormatPayload"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How it will be shown. Checked against what the number counts: a percentage of euros is a figure that reads as something it is not."
+          },
+          "measureId": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The measure being edited, when there is one. It is what makes a reference back to itself a cycle rather than an ordinary reference.",
+            "title": "Measureid"
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the number counts, when the author has said.",
+            "title": "Quantity"
+          },
+          "useDraftChain": {
+            "default": false,
+            "description": "Read the DRAFTS of the measures underneath instead of their published versions. Off by default, because a published number reads published definitions — so a preview cannot quietly show a different chain from the one that gets published.",
+            "title": "Usedraftchain",
+            "type": "boolean"
+          }
+        },
+        "title": "ValidateFormulaRequest",
+        "type": "object"
+      },
+      "ValidateFormulaResponse": {
+        "description": "Everything wrong with a formula, and what it folds down to.",
+        "properties": {
+          "expression": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The tree, as it would be stored.",
+            "title": "Expression"
+          },
+          "formula": {
+            "description": "The ONE spelling of this formula: names resolved, backticks only where needed, and the brackets that apply shown.",
+            "title": "Formula",
+            "type": "string"
+          },
+          "leaves": {
+            "default": [],
+            "description": "The aggregations this number needs, each one once. Two parts reading the same table with the same context are one leaf.",
+            "items": {
+              "$ref": "#/components/schemas/FormulaLeaf"
+            },
+            "title": "Leaves",
+            "type": "array"
+          },
+          "ok": {
+            "description": "False on an error. Warnings do not block saving.",
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "problems": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/FormulaProblem"
+            },
+            "title": "Problems",
+            "type": "array"
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the number counts, derived.",
+            "title": "Quantity"
+          }
+        },
+        "required": [
+          "ok",
+          "formula"
+        ],
+        "title": "ValidateFormulaResponse",
         "type": "object"
       },
       "ValidationError": {
@@ -36113,6 +36386,88 @@
         ]
       }
     },
+    "/api/v1/measures/formula-spec": {
+      "get": {
+        "description": "The only valid list of formula words — never write one from memory.\n\nGenerated from the module that also parses, so the Formula reference\npanel, autocompletion and an agent over the MCP cannot drift apart from\nwhat the server accepts. Includes the words a LATER story delivers, with\n``available: false`` — visible as coming, and refused by name rather\nthan silently ignored.\n\nDeclared before ``/{measure_id}``, or a request for it would be read as\na request for the measure called \"formula-spec\".",
+        "operationId": "read_formula_spec_api_v1_measures_formula_spec_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Read Formula Spec Api V1 Measures Formula Spec Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Read Formula Spec",
+        "tags": [
+          "measures"
+        ]
+      }
+    },
+    "/api/v1/measures/formula-symbols": {
+      "get": {
+        "description": "The words of THIS workspace: measures, tables, columns, calendars.\n\nThe companion of ``formula-spec``: that one is the language, this one is\nthe vocabulary. Autocompletion and the \"This workspace\" section of the\npanel read both, and so does an agent — one list, two readers.",
+        "operationId": "read_formula_symbols_api_v1_measures_formula_symbols_get",
+        "parameters": [
+          {
+            "description": "Include tables and measures that were never published. Off by default: a published number reads published definitions.",
+            "in": "query",
+            "name": "useDraftChain",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "Include tables and measures that were never published. Off by default: a published number reads published definitions.",
+              "title": "Usedraftchain",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Read Formula Symbols Api V1 Measures Formula Symbols Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Read Formula Symbols",
+        "tags": [
+          "measures"
+        ]
+      }
+    },
     "/api/v1/measures/query": {
       "post": {
         "description": "Answer up to 40 tile questions at once, each on its own.",
@@ -36261,6 +36616,53 @@
           }
         ],
         "summary": "Get Measure Design",
+        "tags": [
+          "measures"
+        ]
+      }
+    },
+    "/api/v1/measures/validate": {
+      "post": {
+        "description": "Check a formula and say everything wrong with it, without saving.\n\nThe same route the editor calls while somebody types and an agent calls\nbefore it writes, so the two can never disagree about whether a formula\nis acceptable. It answers with the tree, what the number counts, the\naggregations it folds down to, and every problem with its code.",
+        "operationId": "validate_formula_api_v1_measures_validate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValidateFormulaRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidateFormulaResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Validate Formula",
         "tags": [
           "measures"
         ]
@@ -36532,7 +36934,7 @@
     },
     "/api/v1/measures/{measure_id}/restore": {
       "post": {
-        "description": "Bring a removed measure back. Restoring a live one is a no-op.",
+        "description": "Bring a removed measure back. Restoring a live one is a no-op.\n\nIdempotent — restoring a live measure succeeds with ``restored=false``.\nTakes no ``expectedVersion``: a recovery must never lose to a stale\nversion check.",
         "operationId": "restore_measure_api_v1_measures__measure_id__restore_post",
         "parameters": [
           {

@@ -153,7 +153,9 @@ export function registerMeasureTools(
       "\n\nTHE MEASURES ARE NOT HERE. A measure belongs to the model, not " +
       "to one table: list_measures({ tableId }) answers which measures read " +
       "this table, and create_measure defines one. Read this for the column " +
-      "names a measure's `definition`, `splitBy` or `filters` may use.",
+      "names a measure's formula, `splitBy` or `filters` may use — or " +
+      "get_measure_formula_spec({ includeWorkspace: true }) for every " +
+      "table's columns at once.",
     {
       tableId: z.string().describe("The dynamic table's id."),
       useDraft: z
@@ -186,6 +188,13 @@ export function registerMeasureTools(
       "previous_year. `grain` (none, auto, day, week, month, quarter, year) " +
       "draws a series. `splitBy` names a column to group by; `limit` (1-50) " +
       "keeps the largest groups. " +
+      "\n\nA MEASURE OVER OTHER MEASURES is computed per group: each of " +
+      "its parts is aggregated on its own table, and the formula is applied " +
+      "to the results. Its TOTAL is computed again over the whole period, " +
+      "never added up from the groups — the total of a margin % is total " +
+      "margin over total revenue, not the average of the monthly " +
+      "percentages. Report the total you are given; do not sum the series. " +
+      "read_measure shows which parts a number is made of. " +
       "\n\nONE BAD QUESTION DOES NOT FAIL THE CALL: every answer carries " +
       "`ok`, and `ok: false` comes with an `error` of its own. Check each one. " +
       "\n\n`freshAsOf` says how old the newest row behind the number is; " +

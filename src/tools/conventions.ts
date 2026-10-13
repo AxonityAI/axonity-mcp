@@ -1075,14 +1075,62 @@ export async function readPlacementRules(client: AxonityClient): Promise<string>
   );
 }
 
+/**
+ * How a measure is built and computed (axonity-flow#1908), carried by the
+ * connector beside the served rules. It names no word of the formula: those are
+ * in `get_measure_formula_spec`, the platform's one list. What it keeps is what
+ * the spec does not say — where a calculation belongs, and how a number made
+ * of parts is computed — so an agent does not have to infer it from recipes.
+ */
+export const MEASURE_FORMULA_SECTION = `## A measure is one formula
+
+The words of a formula — functions, operators, grains, limits, every refusal
+code with its fix, and recipes — are in \`get_measure_formula_spec\`. Read it
+before writing a measure, and never write a word from memory. With
+\`includeWorkspace: true\` it also lists this workspace's measures, tables,
+columns and the dimensions each table reaches.
+
+**Four kinds, one grammar.**
+
+- **Base** — one aggregation over one column of one table, optionally with
+  \`where\`. It reads a column, never a calculation per row.
+- **Derived** — arithmetic over other measures by name: a sum over two facts,
+  a margin, a share of the total with \`ignore\`.
+- **Time** and **cumulative** — the same measure in another window, or a
+  running total. Use them only where the spec marks them \`available\`.
+
+**Row logic belongs in the table's source query, not in a measure.** A value
+per row (net = gross − discount) is a column, added to the table's
+\`provenance.sql\` and described like any other column. A measure is computed
+per question — period, grain, split, filters — and is never stored.
+
+**How a number is computed.** Each leaf is aggregated on its own table, over
+the dimensions it reaches through declared many-to-one relationships. The
+results are combined per group; two fact tables are never joined to each
+other. The formula is then applied per group, and the TOTAL is computed again
+over the whole period — never the sum or the average of the groups.
+
+**Refused, never guessed.** A dimension a leaf cannot reach, a measure that
+rests on itself, euros added to dogs, a format that does not fit what the
+number counts: each is refused with a code. \`validate_measure\` returns them
+before you save; repair on the code before asking a person.
+
+**Order.** Base measures first, each with its \`quantity\`; then the derived
+ones; \`validate_measure\` before every save; publish from the bottom up.
+`;
+
 /** Read this deploy's semantic-knowledge rules, or say why not. Exported for testing. */
 export async function readSemanticKnowledgeRules(client: AxonityClient): Promise<string> {
-  return readServedRules(
+  const rules = await readServedRules(
     client,
     SEMANTIC_KNOWLEDGE_ROUTE,
     "rules for writing the semantic layer",
     SEMANTIC_KNOWLEDGE_UNAVAILABLE,
   );
+  // Without the served rules the answer is "do not build", and a section on
+  // how to build measures beside it would contradict that.
+  if (rules === SEMANTIC_KNOWLEDGE_UNAVAILABLE) return rules;
+  return `${rules}\n\n${MEASURE_FORMULA_SECTION}`;
 }
 
 export function registerConventions(server: McpServer, client: AxonityClient): void {
@@ -1114,8 +1162,10 @@ export function registerConventions(server: McpServer, client: AxonityClient): v
       "what a word or a number means. Returns this deploy's rules for writing " +
       "it: what a concept owes, what a measure's description and questions " +
       "must say, and what a table's grain must say about one row. Read live " +
-      "from the platform on every call, with its rulesVersion. Not needed for " +
-      "anything else.",
+      "from the platform on every call, with its rulesVersion. Ends with how " +
+      "a measure is built as one formula and how a number made of parts is " +
+      "computed; the formula's words are in get_measure_formula_spec. Not " +
+      "needed for anything else.",
     {},
     async () => ({
       content: [{ type: "text" as const, text: await readSemanticKnowledgeRules(client) }],

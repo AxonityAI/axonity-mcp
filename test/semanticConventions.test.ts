@@ -14,6 +14,7 @@ import type { AxonityClient } from "../src/client.js";
 import { AxonityApiError } from "../src/errors.js";
 import {
   CONVENTIONS,
+  MEASURE_FORMULA_SECTION,
   PLACEMENT_ROUTE,
   SEMANTIC_KNOWLEDGE_ROUTE,
   registerConventions,
@@ -69,7 +70,13 @@ describe("axonity_semantic_conventions serves the platform's rules", () => {
 
     expect(text).toContain("rulesVersion `sk-f187a66c`");
     expect(text).toMatch(/served live by this deploy/);
-    expect(text.endsWith(SEMANTIC_RESPONSE.markdown)).toBe(true);
+    // The served markdown verbatim, then the connector's own section on
+    // measures as one formula (axonity-mcp#83) — after it, never inside it.
+    expect(text).toContain(SEMANTIC_RESPONSE.markdown);
+    expect(text.endsWith(MEASURE_FORMULA_SECTION)).toBe(true);
+    expect(text.indexOf("# Semantic knowledge")).toBeLessThan(
+      text.indexOf("## A measure is one formula"),
+    );
     expect(text.indexOf("sk-f187a66c")).toBeLessThan(text.indexOf("# Semantic knowledge"));
     expect(text).not.toMatch(/could not be read/);
   });
@@ -96,6 +103,8 @@ describe("axonity_semantic_conventions serves the platform's rules", () => {
     expect(text).toMatch(/Do not build the semantic model/);
     expect(text).toMatch(/until they can be read/);
     expect(text).not.toMatch(/served live by this deploy/);
+    // "Do not build" and a section on how to build measures would contradict.
+    expect(text).not.toContain(MEASURE_FORMULA_SECTION);
   });
 
   it("does not reach into axonity_conventions: that guide never reads this route", async () => {
