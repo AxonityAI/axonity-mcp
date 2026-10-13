@@ -162,6 +162,18 @@ export interface EntityDef {
    * `config` keys come from the driver, and a guessed key is a 422.
    */
   createNote?: string;
+  /**
+   * Appended to `delete_<entity>`'s description when something else may hold
+   * it up and the refusal says what. Measures are the case that asked for it:
+   * a basis another measure rests on is refused with the list (#1908).
+   */
+  deleteNote?: string;
+  /**
+   * Appended to `request_publish_<entity>`'s description when publishing it
+   * can be refused for a reason outside the entity itself, or the approval
+   * carries more than its readiness.
+   */
+  publishNote?: string;
 }
 
 export function registerEntityTools(
@@ -324,7 +336,8 @@ export function registerEntityTools(
         `list_${plural} until then). Read it first for its version. A 409 here ` +
         `may be a stale version (re-read and retry) or a reference conflict ` +
         `(something published still uses it — re-reading will not help; the ` +
-        `error tells you which).`,
+        `error tells you which).` +
+        (def.deleteNote ? `\n\n${def.deleteNote}` : ""),
       {
         id: z.string().describe(`The ${singular}'s id.`),
         expectedVersion: z
@@ -385,7 +398,8 @@ export function registerEntityTools(
     `request_publish_${singular}`,
     `Request that a ${singular} be published. This does NOT publish it — it ` +
       `creates a pending approval a human approves in Axonity. Returns the ` +
-      `pending approval (with its readiness).`,
+      `pending approval (with its readiness).` +
+      (def.publishNote ? `\n\n${def.publishNote}` : ""),
     {
       id: z.string().describe(`The ${singular}'s id.`),
       changeSummary: z

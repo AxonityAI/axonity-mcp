@@ -294,6 +294,19 @@ across these routes — the tool parameter names say which.
     beside the stored tree and the aggregations it folds down to. The fields
     from before the formula (`tableId`, `clearTable`, `aggregation`,
     `column`, `numerator`, `denominator`) are refused with `legacy_field`.
+  - **Time over a date table**: `create_data_table` / `update_data_table`
+    take `dateTable: true` and `calendars` (name, the column per grain, one
+    default) — what `shift`, `to_date`, `rolling` and `running` are measured
+    in. `read_measure_design` shows them.
+  - **Explaining a number**: `query_measures` takes `explain: true` (what
+    each part of the formula gave, on the total, per period and per group)
+    and `useDraftChain`; a refusal carries its `code`. `read_measure` says
+    what a measure rests on (`dependsOn`) and what rests on it (`usedBy`,
+    `dashboards`). `delete_measure` is refused with `still_referenced`,
+    publishing with `depends_on_unpublished` / `unverified_relationship`
+    (the approval names what moves with it in `changesWith`), and a table or
+    relationship change that would break a published measure with
+    `breaks_measure`.
   - **Concepts**: `list_concepts`, `create_concept`, `update_concept`,
     `delete_concept` — kind (concept, state, metric, rule), name, meaning,
     synonyms, what it refers to, owner. They are rows of one table the
