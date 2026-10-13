@@ -15,7 +15,7 @@ import {
 } from "../src/tools/measureFormula.js";
 
 /**
- * axonity-mcp#83, phase 1 — a measure is one formula (axonity-flow#1908).
+ * axonity-mcp#83 — a measure is one formula (axonity-flow#1908, phases 1-3).
  *
  * Pinned here: the words of the formula reach an agent from the platform's own
  * route and nowhere else; a formula is checked by the platform's route before
@@ -202,6 +202,37 @@ describe("read_measure reads back as a formula", () => {
     expect(read.formulaNote).toMatch(/could not be read/);
   });
 
+  it("takes the text from the platform's own `formula` when the measure carries it", async () => {
+    const { call } = setup({
+      get: async () => ({ ...MEASURE, formula: "[net_revenue]", usedBy: ["cm1_margin"] }),
+      post: async () => ({ ok: true, formula: "ignored", leaves: [], problems: [] }),
+    });
+    const read = JSON.parse((await call("read_measure", { id: "m1" })).content[0].text);
+    expect(read.formula.text).toBe("[net_revenue]");
+    expect(read.usedBy).toEqual(["cm1_margin"]);
+  });
+
+  it("keeps the platform's text when only the leaves cannot be read", async () => {
+    const { call } = setup({
+      get: async () => ({ ...MEASURE, formula: "[net_revenue]" }),
+      post: async () => {
+        throw new AxonityApiError("Not found.", 404);
+      },
+    });
+    const read = JSON.parse((await call("read_measure", { id: "m1" })).content[0].text);
+    expect(read.formula).toEqual({ text: "[net_revenue]", tree: TREE });
+    expect(read.formulaNote).toMatch(/The leaves could not be read/);
+  });
+
+  it("says what rests on it, so a change is not made blind", () => {
+    const { descriptions } = setup();
+    const text = descriptions.get("read_measure")!;
+    for (const field of ["dependsOn", "usedBy", "dashboards"]) expect(text).toContain(field);
+    for (const field of ["dependsOn", "usedBy", "dashboards", "formula"]) {
+      expect(snapshot.components.schemas.MeasureDetail.properties).toHaveProperty(field);
+    }
+  });
+
   it("says so for a measure that has no formula yet, without a second call", async () => {
     const { call, client } = setup({
       get: async () => ({ id: "m1", definition: { aggregation: "sum", column: "x" } }),
@@ -292,5 +323,88 @@ describe("a number made of parts is explained, not summed", () => {
   it("the semantic guide keeps row logic in the source query", () => {
     expect(MEASURE_FORMULA_SECTION).toMatch(/Row logic belongs in the table's source query/);
     expect(MEASURE_FORMULA_SECTION).toMatch(/never joined/);
+  });
+});
+
+describe("time runs over the date table's calendars (phase 2)", () => {
+  it("create and update_data_table name the date table and its calendars", () => {
+    const { descriptions } = setup();
+    for (const tool of ["create_data_table", "update_data_table"]) {
+      const text = descriptions.get(tool)!;
+      expect(text).toContain("dateTable");
+      expect(text).toContain("calendars");
+      expect(text).toMatch(/WITH its `id`/);
+    }
+  });
+
+  it("every field the note names is one the platform declares", () => {
+    const schemas = snapshot.components.schemas;
+    for (const request of ["CreateDataTableRequest", "UpdateDataTableRequest"]) {
+      expect(schemas[request].properties).toHaveProperty("dateTable");
+      expect(schemas[request].properties).toHaveProperty("calendars");
+    }
+    for (const field of ["id", "name", "label", "isDefault", "grains"]) {
+      expect(schemas.CalendarPayload.properties).toHaveProperty(field);
+    }
+    expect(schemas.MeasureDesignResponse.properties).toHaveProperty("calendars");
+  });
+
+  it("validate_measure names the codes a time window can be refused with", () => {
+    const { descriptions } = setup();
+    const text = descriptions.get("validate_measure")!;
+    for (const code of [
+      "no_date_table",
+      "no_time_axis",
+      "calendar_missing_grain",
+      "unknown_calendar",
+      "stock_over_time",
+    ]) {
+      expect(text).toContain(code);
+    }
+  });
+
+  it("the semantic guide no longer holds time back as unavailable", () => {
+    expect(MEASURE_FORMULA_SECTION).not.toMatch(/marks them `available`/);
+    expect(MEASURE_FORMULA_SECTION).toMatch(/date table/);
+  });
+});
+
+describe("a number is explained by its parts, and a chain moves together (phase 3)", () => {
+  it("query_measures offers explain and useDraftChain, both declared by the platform", () => {
+    const { descriptions } = setup();
+    const text = descriptions.get("query_measures")!;
+    for (const word of ["explain", "useDraftChain", "parts", "grain_too_fine", "breaks_measure", "empty_leaf"]) {
+      expect(text).toContain(word);
+    }
+    const item = snapshot.components.schemas.MeasureQueryItem.properties;
+    expect(item).toHaveProperty("explain");
+    expect(item).toHaveProperty("useDraftChain");
+    const result = snapshot.components.schemas.MeasureQueryResult.properties;
+    for (const field of ["parts", "leaves", "code", "warnings"]) expect(result).toHaveProperty(field);
+  });
+
+  it("forwards explain untouched", async () => {
+    const { call, client } = setup();
+    const queries = [{ key: "m", measure: "cm1_margin", explain: true, useDraftChain: true }];
+    await call("query_measures", { queries });
+    expect(client.post).toHaveBeenCalledWith("/api/v1/measures/query", { queries });
+  });
+
+  it("delete and publish say what can hold a measure up", () => {
+    const { descriptions } = setup();
+    expect(descriptions.get("delete_measure")).toContain("still_referenced");
+    const publish = descriptions.get("request_publish_measure")!;
+    for (const word of ["depends_on_unpublished", "unverified_relationship", "changesWith"]) {
+      expect(publish).toContain(word);
+    }
+  });
+
+  it("a change to the model that breaks a published measure says so where it is made", () => {
+    const { descriptions } = setup();
+    for (const tool of ["request_publish_data_table", "delete_data_table", "delete_table_relationship"]) {
+      expect(descriptions.get(tool)).toContain("breaks_measure");
+    }
+    // Only where the platform refuses it: other entities keep their text.
+    expect(descriptions.get("delete_workflow")).not.toContain("breaks_measure");
   });
 });

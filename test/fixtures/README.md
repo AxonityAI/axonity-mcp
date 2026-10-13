@@ -11,6 +11,23 @@ diff in review.
 
 ## Provenance
 
+- **Measures as one formula, phases 2 and 3, on top of the above:**
+  axonity-flow#1908 (PRs #1940 and #1946), dumped with `dump_openapi.py` from
+  axonity-flow `main` at `cf8d0c19` and consumed by axonity-mcp#83. Spliced
+  in, not a full dump: no measure or data-table ROUTE changed shape, only the
+  schemas behind them — `CalendarPayload` and `ReadFromEntry` (new), and
+  `CreateDataTableRequest`, `UpdateDataTableRequest`, `DataTableResponse`,
+  `DataTableSummary` (`dateTable`, `calendars`), `TableColumnPayload`
+  (`unique`, axonity-flow#1941, taken because it sits in the same request),
+  `FormulaLeaf` (`readFrom`, `window`), `MeasureDesignResponse` (the
+  calendars), `MeasureDetail` / `MeasureSummary` (`formula`, `dependsOn`,
+  `usedBy`, `dashboards`), `MeasureQueryItem` (`explain`, `useDraftChain`)
+  and `MeasureQueryResult` (`parts`, `leaves`, `code`, `warnings`). After
+  this, `npm run check:contract` against `cf8d0c19` reports no route under
+  `/measures` or `/data-tables` with a different contract; what it still
+  reports is #79's (applications, executors, config branches, platform
+  administration, the two row routes, …) and two routes outside this work
+  (`GET /conversations`, `GET /runs/{id}/items`).
 - **Measures as one formula, on top of the above:** axonity-flow#1908 phase 1
   (PR #1934), dumped with `dump_openapi.py` from axonity-flow `main` at
   `a723cc38` and consumed by axonity-mcp#83. Spliced in, not a full dump:

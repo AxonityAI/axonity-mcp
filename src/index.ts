@@ -84,6 +84,34 @@ const PROVENANCE_NOTE =
   "(`{ column, grain }`), which every measure over it reads.";
 
 /**
+ * The date table and its calendars (axonity-flow#1908, phase 2): what a time
+ * window in a formula is measured in. Metadata on a table, not an entity.
+ */
+/** What a change to the model may do to a published measure (axonity-flow#1908). */
+const BREAKS_MEASURE_NOTE =
+  "`breaks_measure`: refused when a PUBLISHED measure reads what this " +
+  "change takes away — a column, the table, or the relationship a part " +
+  "reaches a dimension over. The refusal names the measures: repair them " +
+  "first (update_measure, then publish), then retry.";
+
+const DATE_TABLE_NOTE =
+  "THE DATE TABLE — `dateTable: true` marks the ONE table of the workspace " +
+  "with a row per day (its `timeAxis` on the day column, grain `day`, no " +
+  "gaps): what makes a week mean the same thing to every fact. A second one " +
+  "is refused. On it, `calendars` (at most 10): " +
+  "`[{ name, label?, isDefault?, grains: { year?, quarter?, month?, week?, " +
+  "day? } }]`, each grain naming the column of this table that holds that " +
+  "period — e.g. a calendar `production` whose `week` is the production " +
+  "week. `name` is what a formula writes (`rolling([revenue], 4 week, " +
+  "production)`); exactly one is `isDefault`, used when a formula names " +
+  "none. A grain left out is a grain that calendar does not have. A formula " +
+  "stores its calendar BY ID: when you change `calendars`, read the table " +
+  "first and send every calendar back WITH its `id` — the list is replaced " +
+  "whole, and a calendar sent without one is a new calendar. " +
+  "`dateTable: false` takes the calendars with it. A fact table reaches " +
+  "the date table through its own `timeAxis`.";
+
+/**
  * What writing a measure takes (axonity-flow#1908). The contract, not a manual:
  * the words of the formula are in get_measure_formula_spec and nowhere else.
  */
@@ -101,7 +129,10 @@ const MEASURE_NOTE =
   "of the total. Two fact tables may meet in one number; they are never " +
   "joined; " +
   "\n- TIME (`shift`, `to_date`, `rolling`) and CUMULATIVE (`running`): " +
-  "use them only where the spec marks them `available`. " +
+  "the same measure in another window, measured in a calendar of the " +
+  "workspace's date table (create_data_table / update_data_table with " +
+  "`dateTable` and `calendars`); without one they are refused with " +
+  "`no_date_table`. " +
   "\n\nBuild bottom-up: the base measures first, each with its `quantity` " +
   "(what it counts: EUR, customers, orders), then the derived ones; " +
   "validate_measure before every save, and publish from the bottom up. " +
@@ -221,9 +252,13 @@ const ENTITIES: EntityDef[] = [
     label: "tables (authored reference data agents and decisions read)",
     deleteVersionParam: "expected_version",
     listPaging: { defaultPageSize: 20, maxPageSize: 200 },
-    createNote: PROVENANCE_NOTE,
+    createNote: `${PROVENANCE_NOTE}\n\n${DATE_TABLE_NOTE}`,
+    deleteNote: BREAKS_MEASURE_NOTE,
+    publishNote: BREAKS_MEASURE_NOTE,
     updateWarning:
       PROVENANCE_NOTE +
+      "\n\n" +
+      DATE_TABLE_NOTE +
       " Sending `provenance` replaces it whole; `clearProvenance: true` " +
       "takes the source away and leaves the rows that are there. " +
       "\n\n`rows` AND `columns` ARE WHOLE-COLLECTION FIELDS: sending either " +
@@ -249,6 +284,19 @@ const ENTITIES: EntityDef[] = [
     readable: false,
     guardFields: assertFormulaShape,
     createNote: MEASURE_NOTE,
+    deleteNote:
+      "`still_referenced`: a measure other measures rest on is refused, " +
+      "with their names. Change or delete those first — the one furthest " +
+      "from it first. read_measure's `usedBy` lists them beforehand.",
+    publishNote:
+      "Certified is the WHOLE chain: refused with `depends_on_unpublished` " +
+      "(a measure it rests on is not published — publish from the bottom " +
+      "up) or `unverified_relationship` (a part reaches a table over a " +
+      "relationship nobody verified — verify it first). The approval's " +
+      "`changesWith` names what moves with it: the measures that rest on " +
+      "it (`measures`, the whole chain above) and the dashboards with a " +
+      "tile on any of them (`dashboards`). Say so in `changeSummary` when " +
+      "it is not empty.",
     updateWarning:
       MEASURE_NOTE +
       " `tableId` and `clearTable` are gone: a measure has no home table, " +
@@ -296,6 +344,7 @@ const ENTITIES: EntityDef[] = [
     hasDiscardDraft: false,
     deleteVersionParam: "expected_version",
     listPaging: { defaultPageSize: 20, maxPageSize: 200 },
+    deleteNote: BREAKS_MEASURE_NOTE,
     createNote:
       "Fields: `fromTableId` + `fromColumn` (the MANY side — the facts, e.g. " +
       "orders), `toTableId` + `toColumn` (the ONE side — e.g. countries), " +

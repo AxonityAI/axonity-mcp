@@ -17,14 +17,14 @@
  * **Checking is the platform's too.** `validate_measure` forwards to
  * `POST /measures/validate`, the route the editor calls while somebody types,
  * so an agent and a person can never disagree about whether a formula is
- * acceptable. `read_measure` asks that same route to write the stored tree back
- * as text, rather than this connector unparsing it.
+ * acceptable. `read_measure` asks that same route for the leaves a stored tree
+ * folds down to; the text is the platform's own `formula` on the measure.
  *
  * The one rule held HERE is the shape of a write: a measure is written as
  * `definition.expression`, and the fields from before the formula are refused
- * with `legacy_field`. The platform still accepts them while its own form is
- * replaced; an agent has no such form to keep working, and a measure written
- * the old way today is one that has to be migrated again.
+ * with `legacy_field`. The platform refuses them too since its form writes only
+ * `expression`; the check stays here because a `definition` WITHOUT
+ * `expression` is still stored there as a `sum` nobody wrote.
  */
 
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -99,6 +99,8 @@ export function assertFormulaShape(fields: Record<string, unknown>): void {
 /** The parts of a stored measure `read_measure` needs to ask for its text. */
 interface MeasureDetail {
   id?: unknown;
+  /** The platform's own text of the stored tree (#1908, phase 4); empty on older deploys. */
+  formula?: unknown;
   definition?: {
     expression?: unknown;
     quantity?: unknown;
@@ -109,9 +111,14 @@ interface MeasureDetail {
 /**
  * The stored tree, written back as text with its leaves, by the platform.
  *
+ * The text is the measure's own `formula` — the platform writes it on every
+ * read since phase 4 — and the validate route's only where a deploy does not
+ * carry it yet. The leaves always come from the validate route: a read of the
+ * measure does not fold it.
+ *
  * Best effort, and said so: a read must not fail because the explanation
  * could not be produced. When it cannot, the measure comes back as stored with
- * a sentence saying why its formula text is missing.
+ * a sentence saying why its leaves are missing.
  */
 async function explainFormula(
   client: AxonityClient,
@@ -119,6 +126,8 @@ async function explainFormula(
   useDraftChain: boolean,
 ): Promise<Record<string, unknown>> {
   const expression = measure.definition?.expression;
+  const ownText =
+    typeof measure.formula === "string" && measure.formula !== "" ? measure.formula : null;
   if (expression === undefined || expression === null) {
     return {
       formula: null,
@@ -138,7 +147,7 @@ async function explainFormula(
     })) as Record<string, unknown>;
     return {
       formula: {
-        text: checked.formula,
+        text: ownText ?? checked.formula,
         tree: expression,
         leaves: checked.leaves ?? [],
         quantity: checked.quantity ?? null,
@@ -148,9 +157,9 @@ async function explainFormula(
     };
   } catch (err) {
     return {
-      formula: { text: null, tree: expression },
+      formula: { text: ownText, tree: expression },
       formulaNote:
-        "The formula text and its leaves could not be read from this deploy " +
+        `The ${ownText === null ? "formula text and its leaves" : "leaves"} could not be read from this deploy ` +
         `(\`POST ${VALIDATE_ROUTE}\`: ${err instanceof Error ? err.message : String(err)}). ` +
         "The stored tree is above.",
     };
@@ -176,7 +185,8 @@ export function registerMeasureFormulaTools(
       "(`not_yet_supported`) — do not use it. " +
       "\n\n`includeWorkspace: true` adds THIS workspace's vocabulary as " +
       "`workspace`: its measures (name, label, quantity, status), its tables " +
-      "and columns, and which dimensions each table reaches — the names a " +
+      "and columns, which dimensions each table reaches, and the date " +
+      "table's calendars with the grains each one has — the names a " +
       "formula may use. The answer is then `{ spec, workspace }`; without " +
       "it, the spec itself.",
     {
@@ -230,7 +240,16 @@ export function registerMeasureFormulaTools(
       "message), `too_complex` (give a part its own name), " +
       "`quantity_mismatch` (adding euros to dogs, or a format that does not " +
       "fit), `unreachable_dimension` (declare the relationship, or write " +
-      "`ignore` to mean the total on purpose), `not_yet_supported`. " +
+      "`ignore` to mean the total on purpose), `no_date_table` / " +
+      "`no_time_axis` (a time window needs the workspace's date table and a " +
+      "time axis on the table the part reads), `calendar_missing_grain` / " +
+      "`unknown_calendar` (map the grain in the calendar, or name one that " +
+      "exists), `stock_over_time` (a running total of a `latest` or `first` " +
+      "means nothing), `not_yet_supported`. " +
+      "\n\nEach leaf also says what it was read from (`readFrom`: every " +
+      "measure walked to reach it, then the table, each with the version " +
+      "read) and over which `window` — shift, to_date, rolling, running, " +
+      "with its calendar. Empty `window` is the period asked for. " +
       "`quantity_generic` is a warning: the migration left the placeholder " +
       "quantity — say what the number counts.",
     {
@@ -283,7 +302,12 @@ export function registerMeasureFormulaTools(
       "folds down to, each on its own table — `formula.quantity`, and " +
       "`formula.problems`: a measure that rests on a column or measure that " +
       "has since gone says so here. `readsTables` follows from the leaves; " +
-      "there is no home table.",
+      "there is no home table. " +
+      "\n\nWHAT IT IS CONNECTED TO: `dependsOn` is every measure it rests " +
+      "on — the whole chain, which publishing checks; `usedBy` every " +
+      "measure that rests on IT; `dashboards` every dashboard with a tile " +
+      "on it. Read `usedBy` and `dashboards` before you change or delete a " +
+      "measure: those numbers move with it.",
     {
       id: z.string().describe("The measure's id."),
       useDraftChain: z

@@ -155,7 +155,11 @@ export function registerMeasureTools(
       "this table, and create_measure defines one. Read this for the column " +
       "names a measure's formula, `splitBy` or `filters` may use — or " +
       "get_measure_formula_spec({ includeWorkspace: true }) for every " +
-      "table's columns at once.",
+      "table's columns at once. " +
+      "\n\nOn the workspace's date table it also says `dateTable: true` and " +
+      "its `calendars`, each naming the column that holds the year, quarter, " +
+      "month, week and day: what a time window (shift, to_date, rolling, " +
+      "running) can be measured in.",
     {
       tableId: z.string().describe("The dynamic table's id."),
       useDraft: z
@@ -178,7 +182,7 @@ export function registerMeasureTools(
       "own. Read-only. This is where a dashboard's numbers come from. " +
       "\n\nEach question is " +
       "`{ key, measure, tableId?, period?, start?, end?, compare?, grain?, " +
-      "splitBy?, filters?, limit?, useDraft? }`. `key` is your own label and " +
+      "splitBy?, filters?, limit?, useDraft?, useDraftChain?, explain? }`. `key` is your own label and " +
       "comes back on the answer. `measure` is the measure's NAME — its " +
       "handle, unique in the workspace (list_measures); `tableId` is " +
       "optional and no longer what finds it. `period` is one of: " +
@@ -187,16 +191,35 @@ export function registerMeasureTools(
       "(YYYY-MM-DD) for a custom range. `compare` is none, previous_period or " +
       "previous_year. `grain` (none, auto, day, week, month, quarter, year) " +
       "draws a series. `splitBy` names a column to group by; `limit` (1-50) " +
-      "keeps the largest groups. " +
+      "keeps the largest groups. `useDraft` reads this measure's draft; " +
+      "`useDraftChain` also the drafts of the measures UNDER it — each part's " +
+      "`readFrom` then says which version it read. " +
       "\n\nA MEASURE OVER OTHER MEASURES is computed per group: each of " +
       "its parts is aggregated on its own table, and the formula is applied " +
       "to the results. Its TOTAL is computed again over the whole period, " +
       "never added up from the groups — the total of a margin % is total " +
       "margin over total revenue, not the average of the monthly " +
       "percentages. Report the total you are given; do not sum the series. " +
-      "read_measure shows which parts a number is made of. " +
+      "A time window is the window ENDING at the end of the period asked " +
+      "for, and a running total per month is the standing at the end of " +
+      "each month, not their sum. " +
+      "\n\nTO EXPLAIN A NUMBER, ask `explain: true`: the answer's `leaves` " +
+      "are the parts of the formula (table, aggregation, conditions, window) " +
+      "and `parts` holds what each part gave for the total, in the order of " +
+      "`leaves` — and each point of `series` and each entry of `groups` " +
+      "carries its own `parts`. \"The margin fell\" is not an explanation; " +
+      "\"revenue held and cost rose\" is. Use it instead of reading rows. " +
       "\n\nONE BAD QUESTION DOES NOT FAIL THE CALL: every answer carries " +
-      "`ok`, and `ok: false` comes with an `error` of its own. Check each one. " +
+      "`ok`, and `ok: false` comes with an `error` of its own and, where it " +
+      "has one, a `code` from get_measure_formula_spec — `grain_too_fine` " +
+      "(a fact kept per month asked per week: ask a coarser grain), " +
+      "`unreachable_dimension`, or `breaks_measure` (a column, table or " +
+      "relationship it reads is gone: the measure must be repaired, not the " +
+      "question). Check each one. `warnings` do not make it wrong but are " +
+      "worth saying: `empty_leaf` means one PART found no rows in this " +
+      "period — in a sum that side counts as nought, which is also what a " +
+      "feed that stopped loading looks like. A period with no rows in a " +
+      "series is shown empty, not left out. " +
       "\n\n`freshAsOf` says how old the newest row behind the number is; " +
       "`certified: false` means it was computed from a draft; `tables` names " +
       "every table the number came from. Say so when you " +

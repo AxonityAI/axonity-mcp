@@ -1356,6 +1356,58 @@
         "title": "BulkRunRequest",
         "type": "object"
       },
+      "CalendarPayload": {
+        "additionalProperties": false,
+        "description": "One calendar on the date table: which column names which period.\n\nPower BI's calendar-based time intelligence, and the line #1881 holds —\na calendar is metadata on a table, not an entity of its own. A grain\nleft out is a grain this calendar does not have, and a window asking for\nit is refused by name rather than answered from another grain.",
+        "properties": {
+          "grains": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Grain → the column that names that period, for any of year, quarter, month, week, day.",
+            "maxProperties": 5,
+            "title": "Grains",
+            "type": "object"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "maxLength": 36,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The calendar's id. Leave it out when creating one: a formula stores the calendar by id, so one is minted and kept.",
+            "title": "Id"
+          },
+          "isDefault": {
+            "default": false,
+            "description": "The calendar a window uses when it names none.",
+            "title": "Isdefault",
+            "type": "boolean"
+          },
+          "label": {
+            "default": "",
+            "description": "What a person reads on screen.",
+            "maxLength": 255,
+            "title": "Label",
+            "type": "string"
+          },
+          "name": {
+            "description": "What a formula calls it: rolling([revenue], 4 week, production).",
+            "maxLength": 64,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "CalendarPayload",
+        "type": "object"
+      },
       "CallableWorkflowItem": {
         "description": "A workflow as seen by the picker on a sub-process step.\n\nNon-callable workflows are LISTED, not filtered out, each with the reason.\nHiding them makes an author hunt for a workflow that is right there and\nsay \"where is it?\"; showing it disabled says \"here, and here is what to\nfix\" — which is a two-second answer instead of a support question.",
         "properties": {
@@ -3714,6 +3766,16 @@
             "title": "Allowedoperations",
             "type": "array"
           },
+          "calendars": {
+            "default": [],
+            "description": "The calendars on the date table. Only the date table carries them.",
+            "items": {
+              "$ref": "#/components/schemas/CalendarPayload"
+            },
+            "maxItems": 10,
+            "title": "Calendars",
+            "type": "array"
+          },
           "columns": {
             "description": "The table's design, in the order it is shown.",
             "items": {
@@ -3722,6 +3784,12 @@
             "maxItems": 200,
             "title": "Columns",
             "type": "array"
+          },
+          "dateTable": {
+            "default": false,
+            "description": "True: this is the workspace's date table — one row per day, which is what makes a week mean the same thing to every fact. At most one table per workspace.",
+            "title": "Datetable",
+            "type": "boolean"
           },
           "description": {
             "description": "What this table holds and when it is the right one to read.",
@@ -5846,6 +5914,16 @@
             "title": "Allowedoperations",
             "type": "array"
           },
+          "calendars": {
+            "default": [],
+            "description": "The calendars on the date table: which column names the year, the quarter, the month, the week and the day.",
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Calendars",
+            "type": "array"
+          },
           "columns": {
             "default": [],
             "items": {
@@ -5858,6 +5936,12 @@
           "createdAt": {
             "title": "Createdat",
             "type": "string"
+          },
+          "dateTable": {
+            "default": false,
+            "description": "Whether this is the workspace's date table.",
+            "title": "Datetable",
+            "type": "boolean"
           },
           "description": {
             "title": "Description",
@@ -6096,6 +6180,16 @@
             "title": "Allowedoperations",
             "type": "array"
           },
+          "calendars": {
+            "default": [],
+            "description": "The calendars on the date table: which column names the year, the quarter, the month, the week and the day.",
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Calendars",
+            "type": "array"
+          },
           "columns": {
             "default": [],
             "items": {
@@ -6108,6 +6202,12 @@
           "createdAt": {
             "title": "Createdat",
             "type": "string"
+          },
+          "dateTable": {
+            "default": false,
+            "description": "Whether this is the workspace's date table.",
+            "title": "Datetable",
+            "type": "boolean"
           },
           "description": {
             "title": "Description",
@@ -9360,6 +9460,15 @@
             "title": "Ignores",
             "type": "array"
           },
+          "readFrom": {
+            "default": [],
+            "description": "Where this part came from, outermost first: every measure walked to reach it and then the table it reads, each with the version actually read. It is what makes a preview trustworthy — a chain read from drafts looks identical to the published one without it. Two parts that are the same work are ONE leaf, and then this names the first way to it.",
+            "items": {
+              "$ref": "#/components/schemas/ReadFromEntry"
+            },
+            "title": "Readfrom",
+            "type": "array"
+          },
           "table": {
             "description": "The table this part is aggregated over.",
             "title": "Table",
@@ -9377,6 +9486,16 @@
               "type": "string"
             },
             "title": "Via",
+            "type": "array"
+          },
+          "window": {
+            "default": [],
+            "description": "The windows this part was read over, outermost first, each with its calendar by name: shift, to_date, rolling or running. Empty means it read the period the question asked for. A reader comparing two parts of one number has to be able to see that one of them is last year's.",
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Window",
             "type": "array"
           }
         },
@@ -10731,6 +10850,16 @@
       "MeasureDesignResponse": {
         "description": "A table's columns and time axis — what a number over it may ask for.\n\nThe MEASURES are no longer here (#1841). A measure belongs to the model,\nnot to one table, so \"which measures are there\" is a question about the\nworkspace and is answered by ``GET /api/v1/measures``. What a builder\nstill needs from a table is which columns it has and what dates its\nrows carry.",
         "properties": {
+          "calendars": {
+            "default": [],
+            "description": "The calendars on it, each naming the column that holds the year, the quarter, the month, the week and the day. What a window can be measured in.",
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Calendars",
+            "type": "array"
+          },
           "columns": {
             "items": {
               "additionalProperties": true,
@@ -10738,6 +10867,12 @@
             },
             "title": "Columns",
             "type": "array"
+          },
+          "dateTable": {
+            "default": false,
+            "description": "Whether this is the workspace's date table.",
+            "title": "Datetable",
+            "type": "boolean"
           },
           "description": {
             "title": "Description",
@@ -10802,8 +10937,15 @@
         "description": "One measure, with its calculation.",
         "properties": {
           "aggregation": {
-            "title": "Aggregation",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Aggregation"
           },
           "concept": {
             "title": "Concept",
@@ -10820,11 +10962,29 @@
             ],
             "title": "Createdat"
           },
+          "dashboards": {
+            "default": [],
+            "description": "Every dashboard with a tile on this measure, by name. The other half of \"used by\": a measure that twelve numbers rest on and four screens show is not a measure anybody changes lightly.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Dashboards",
+            "type": "array"
+          },
           "definition": {
             "additionalProperties": true,
             "default": {},
             "title": "Definition",
             "type": "object"
+          },
+          "dependsOn": {
+            "default": [],
+            "description": "Every measure this one rests on, by name — the WHOLE chain, not only what its formula names. Publishing reads it: certified is the whole chain, not only the top of it.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Dependson",
+            "type": "array"
           },
           "description": {
             "title": "Description",
@@ -10851,6 +11011,12 @@
               }
             ],
             "title": "Draftversionname"
+          },
+          "formula": {
+            "default": "",
+            "description": "The formula as TEXT, with names — the one spelling, written by the server from the stored tree. The tree is in `definition` and names things by id, which is what makes a rename break nothing; this is what a person reads and types. Empty for a measure that carries no formula.",
+            "title": "Formula",
+            "type": "string"
           },
           "id": {
             "title": "Id",
@@ -10927,6 +11093,15 @@
             ],
             "title": "Updatedat"
           },
+          "usedBy": {
+            "default": [],
+            "description": "Every measure that rests on this one, by name. What a refusal lists when somebody deletes a basis, and what a screen shows before they change one — twelve numbers may move with it.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Usedby",
+            "type": "array"
+          },
           "version": {
             "title": "Version",
             "type": "integer"
@@ -10938,7 +11113,6 @@
           "label",
           "description",
           "tableId",
-          "aggregation",
           "concept",
           "version",
           "status",
@@ -11135,6 +11309,12 @@
             "description": "Last day of a custom range, inclusive.",
             "title": "End"
           },
+          "explain": {
+            "default": false,
+            "description": "Also hand back the value of every PART of the formula — on the total, on each point of the series and on each group. \"The margin fell\" is not an explanation; \"revenue held and cost rose\" is. Off by default: a tile wants a number.",
+            "title": "Explain",
+            "type": "boolean"
+          },
           "filters": {
             "default": [],
             "description": "Extra conditions, on top of the measure's own.",
@@ -11246,8 +11426,14 @@
           },
           "useDraft": {
             "default": false,
-            "description": "Read the working definition instead of the published one — for an author previewing a measure before publishing it.",
+            "description": "Read the working definition instead of the published one — for an author previewing a measure before publishing it. The measures it CALLS still resolve to their published definitions; ask for useDraftChain as well to read their drafts too.",
             "title": "Usedraft",
+            "type": "boolean"
+          },
+          "useDraftChain": {
+            "default": false,
+            "description": "Also read the working definitions of the measures UNDER this one. A different question from useDraft: certified means the whole chain, so a preview of a margin must not silently recompute every basis beneath it from unpublished work. The answer says per part which version each thing behind it was read from.",
+            "title": "Usedraftchain",
             "type": "boolean"
           }
         },
@@ -11319,6 +11505,18 @@
             ],
             "description": "Relative change against the comparison: 0.096 is +9.6%.",
             "title": "Change"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "With `ok` false: the formula-spec code behind the refusal, when it has one. `breaks_measure` means the model moved under this number — a column, a table or a relationship it reads is gone — so the tile shows the reason instead of a figure. The codes are the ones in GET /measures/formula-spec.",
+            "title": "Code"
           },
           "comparisonPeriod": {
             "anyOf": [
@@ -11418,6 +11616,15 @@
             "description": "The newest date among the table's rows.",
             "title": "Lastdate"
           },
+          "leaves": {
+            "default": [],
+            "description": "Each part of the formula this number is made of — the SAME shape POST /measures/validate answers with, so an editor reads one leaf whether it previewed or validated. `readFrom` is what makes a preview trustworthy: a figure read from drafts looks identical to the published one without it. Empty for a measure from before the formula.",
+            "items": {
+              "$ref": "#/components/schemas/FormulaLeaf"
+            },
+            "title": "Leaves",
+            "type": "array"
+          },
           "measure": {
             "anyOf": [
               {
@@ -11434,6 +11641,28 @@
           "ok": {
             "title": "Ok",
             "type": "boolean"
+          },
+          "parts": {
+            "anyOf": [
+              {
+                "items": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "With explain: what each part of the formula answered for the TOTAL, in the same order as `leaves`. Null when no explanation was asked for. Each point of `series` and each entry of `groups` carries the same list for itself.",
+            "title": "Parts"
           },
           "period": {
             "anyOf": [
@@ -11538,6 +11767,16 @@
             ],
             "description": "When the measure's DEFINITION last changed.",
             "title": "Updatedat"
+          },
+          "warnings": {
+            "default": [],
+            "description": "What is worth knowing about this number without it being wrong: `{code, message, where, severity}`. `empty_leaf` says which PART of a formula found no rows in this period — in a sum an empty side counts as nought, which is right for the arithmetic and invisible to the reader, so a feed that stopped loading would otherwise just look like a bad month. The codes are the ones in GET /measures/formula-spec.",
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Warnings",
+            "type": "array"
           }
         },
         "required": [
@@ -11551,8 +11790,15 @@
         "description": "One measure as the Library list reads it.",
         "properties": {
           "aggregation": {
-            "title": "Aggregation",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Aggregation"
           },
           "concept": {
             "title": "Concept",
@@ -11568,6 +11814,15 @@
               }
             ],
             "title": "Createdat"
+          },
+          "dependsOn": {
+            "default": [],
+            "description": "Every measure this one rests on, by name — the WHOLE chain, not only what its formula names. Publishing reads it: certified is the whole chain, not only the top of it.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Dependson",
+            "type": "array"
           },
           "description": {
             "title": "Description",
@@ -11670,6 +11925,15 @@
             ],
             "title": "Updatedat"
           },
+          "usedBy": {
+            "default": [],
+            "description": "Every measure that rests on this one, by name. What a refusal lists when somebody deletes a basis, and what a screen shows before they change one — twelve numbers may move with it.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Usedby",
+            "type": "array"
+          },
           "version": {
             "title": "Version",
             "type": "integer"
@@ -11681,7 +11945,6 @@
           "label",
           "description",
           "tableId",
-          "aggregation",
           "concept",
           "version",
           "status",
@@ -14789,6 +15052,37 @@
           }
         },
         "title": "ReachableOutputsResponse",
+        "type": "object"
+      },
+      "ReadFromEntry": {
+        "description": "One thing a part of a formula was read from, and which version.",
+        "properties": {
+          "kind": {
+            "description": "Whether this step of the provenance is a measure or a table.",
+            "enum": [
+              "measure",
+              "table"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "description": "Its handle in the model.",
+            "title": "Name",
+            "type": "string"
+          },
+          "version": {
+            "description": "The version actually read: `v2` for a published major version, `draft` for the working copy, empty when it is not known.",
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "name",
+          "version"
+        ],
+        "title": "ReadFromEntry",
         "type": "object"
       },
       "ReconcileResult": {
@@ -19572,6 +19866,12 @@
             "description": "Whether every row must carry a value for this column.",
             "title": "Required",
             "type": "boolean"
+          },
+          "unique": {
+            "default": false,
+            "description": "Whether no two rows may hold the same value in this column — a case id, an invoice number. An add or update that would repeat a value is refused, naming the column and the value. Compared the way find compares, so 'C-17' and 'c-17' are the same value; empty cells do not count. Only for text, number, date, datetime, time, email, url and choice columns. Making a column unique while rows repeat a value is refused, naming those values.",
+            "title": "Unique",
+            "type": "boolean"
           }
         },
         "title": "TableColumnPayload",
@@ -21977,6 +22277,22 @@
             ],
             "title": "Allowedoperations"
           },
+          "calendars": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/CalendarPayload"
+                },
+                "maxItems": 10,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Replaces the whole set of calendars when sent.",
+            "title": "Calendars"
+          },
           "clearProvenance": {
             "default": false,
             "description": "True takes the source away. The rows already there stay — removing them is a separate decision about the table.",
@@ -22004,6 +22320,18 @@
             ],
             "description": "Replaces the whole design when sent.",
             "title": "Columns"
+          },
+          "dateTable": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Marks or unmarks this table as the workspace's date table. Unmarking it takes its calendars with it.",
+            "title": "Datetable"
           },
           "description": {
             "anyOf": [

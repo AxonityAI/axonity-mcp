@@ -1097,7 +1097,17 @@ columns and the dimensions each table reaches.
 - **Derived** — arithmetic over other measures by name: a sum over two facts,
   a margin, a share of the total with \`ignore\`.
 - **Time** and **cumulative** — the same measure in another window, or a
-  running total. Use them only where the spec marks them \`available\`.
+  running total, measured in a calendar of the workspace's date table.
+
+**Time runs over one date table.** One table per workspace is the date table
+(\`dateTable: true\`, a row per day), and its \`calendars\` say which column
+holds the year, quarter, month, week and day — a production calendar is just
+another calendar. Every fact reaches it through its own time axis, so a week
+means the same thing to each of them. A series runs over the calendar's
+periods: a period without rows is shown empty, not left out. A window's total
+is the window ending at the end of the period asked for; a running total per
+month is the standing at the end of each month, never their sum. A fact kept
+per month is not asked per week (\`grain_too_fine\`).
 
 **Row logic belongs in the table's source query, not in a measure.** A value
 per row (net = gross − discount) is a column, added to the table's
@@ -1115,8 +1125,15 @@ rests on itself, euros added to dogs, a format that does not fit what the
 number counts: each is refused with a code. \`validate_measure\` returns them
 before you save; repair on the code before asking a person.
 
+**Explain a number by its parts.** \`query_measures\` with \`explain: true\`
+gives what each part of the formula answered, on the total and per period and
+group. Use it to say why a number moved, instead of reading rows.
+
 **Order.** Base measures first, each with its \`quantity\`; then the derived
-ones; \`validate_measure\` before every save; publish from the bottom up.
+ones; \`validate_measure\` before every save; publish from the bottom up — a
+published measure over an unpublished one is refused. A measure knows what
+rests on it (\`usedBy\`, \`dashboards\` on \`read_measure\`): read that before
+you change or delete one, because those numbers move with it.
 `;
 
 /** Read this deploy's semantic-knowledge rules, or say why not. Exported for testing. */
