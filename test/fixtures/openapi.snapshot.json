@@ -703,6 +703,136 @@
         "title": "AppStatusResponse",
         "type": "object"
       },
+      "ApplicationExecutorsResponse": {
+        "description": "The executors one application runs on.",
+        "properties": {
+          "executorIds": {
+            "description": "Ids of the executors this application runs on.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Executorids",
+            "type": "array"
+          }
+        },
+        "title": "ApplicationExecutorsResponse",
+        "type": "object"
+      },
+      "ApplicationResponse": {
+        "properties": {
+          "createdAt": {
+            "title": "Createdat",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "draftMajorVersion": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draftmajorversion"
+          },
+          "draftVersionName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draftversionname"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "isSystem": {
+            "title": "Issystem",
+            "type": "boolean"
+          },
+          "limits": {
+            "additionalProperties": true,
+            "title": "Limits",
+            "type": "object"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "publishedMajorVersion": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publishedmajorversion"
+          },
+          "source": {
+            "enum": [
+              "human",
+              "agent",
+              "framework"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "active",
+              "archived"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "technology": {
+            "enum": [
+              "win32",
+              "web"
+            ],
+            "title": "Technology",
+            "type": "string"
+          },
+          "tenantId": {
+            "title": "Tenantid",
+            "type": "string"
+          },
+          "updatedAt": {
+            "title": "Updatedat",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "tenantId",
+          "name",
+          "description",
+          "technology",
+          "limits",
+          "source",
+          "isSystem",
+          "status",
+          "version",
+          "createdAt",
+          "updatedAt"
+        ],
+        "title": "ApplicationResponse",
+        "type": "object"
+      },
       "ApprovalDecisionResponse": {
         "description": "Response after approving or rejecting an approval.",
         "properties": {
@@ -3516,6 +3646,162 @@
         "title": "CreateAgentResponse",
         "type": "object"
       },
+      "CreateApplicationRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "default": "",
+            "description": "What the application is and what it is used for.",
+            "maxLength": 10000,
+            "title": "Description",
+            "type": "string"
+          },
+          "limits": {
+            "additionalProperties": true,
+            "description": "What an agent may never do in this application, enforced by the executor. A JSON object with only these keys, all optional: `processes` (executables it may touch, e.g. `app.exe`), `windows` (window classes it may act in, e.g. `TMainForm`), `never_keys` (key combinations it may never send, e.g. `ctrl+a`), `never_buttons` (button captions it may never press), `folders` (folders it stays inside), `domains` (web domains it stays inside), and `readers` (per control class, how a screen reader reads it, e.g. `{\"TDBGrid\": {\"open\": \"f2\", \"close\": \"esc\"}}`). Lists are strings; an unknown key is refused. The executor receives only the PUBLISHED limits, never a draft.",
+            "title": "Limits",
+            "type": "object",
+            "x-limits-schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "additionalProperties": false,
+              "properties": {
+                "domains": {
+                  "description": "Web domains the agent stays inside (web applications).",
+                  "items": {
+                    "maxLength": 512,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "maxItems": 200,
+                  "type": "array"
+                },
+                "folders": {
+                  "description": "Folders the agent stays inside.",
+                  "items": {
+                    "maxLength": 512,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "maxItems": 200,
+                  "type": "array"
+                },
+                "home": {
+                  "description": "A website's start address, e.g. https://www.example.org/.",
+                  "maxLength": 2000,
+                  "pattern": "^https?://",
+                  "type": "string"
+                },
+                "never_buttons": {
+                  "description": "Button captions the agent may never press.",
+                  "items": {
+                    "maxLength": 512,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "maxItems": 200,
+                  "type": "array"
+                },
+                "never_keys": {
+                  "description": "Key combinations the agent may never send, e.g. ctrl+a.",
+                  "items": {
+                    "maxLength": 512,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "maxItems": 200,
+                  "type": "array"
+                },
+                "processes": {
+                  "description": "Executables the agent may touch, e.g. app.exe.",
+                  "items": {
+                    "maxLength": 512,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "maxItems": 200,
+                  "type": "array"
+                },
+                "readers": {
+                  "additionalProperties": {
+                    "type": "object"
+                  },
+                  "description": "Per control class, how a screen reader reads it, e.g. {\"TDBGrid\": {\"open\": \"f2\", \"close\": \"esc\"}}.",
+                  "maxProperties": 50,
+                  "propertyNames": {
+                    "maxLength": 512,
+                    "minLength": 1
+                  },
+                  "type": "object"
+                },
+                "secrets": {
+                  "description": "Workspace secrets the agent may type into this application, by name.",
+                  "items": {
+                    "maxLength": 512,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "maxItems": 200,
+                  "type": "array"
+                },
+                "windows": {
+                  "description": "Window classes the agent may act in, e.g. TMainForm.",
+                  "items": {
+                    "maxLength": 512,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "maxItems": 200,
+                  "type": "array"
+                }
+              },
+              "type": "object"
+            }
+          },
+          "name": {
+            "description": "Name of the application, e.g. `Example App`. Unique in the workspace.",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "source": {
+            "default": "human",
+            "description": "Who authored this: human, agent, or framework.",
+            "enum": [
+              "human",
+              "agent",
+              "framework"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "status": {
+            "default": "active",
+            "description": "Lifecycle status of the application.",
+            "enum": [
+              "active",
+              "archived"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "technology": {
+            "description": "How the executor reaches the application: `win32` (a Windows desktop program) or `web` (a site in a browser).",
+            "enum": [
+              "win32",
+              "web"
+            ],
+            "title": "Technology",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "technology"
+        ],
+        "title": "CreateApplicationRequest",
+        "type": "object"
+      },
       "CreateApprovalRequest": {
         "description": "POST /api/v1/publish-approvals — request that an entity be published.\n\nThe server computes the readiness envelope and creates a pending approval;\nit never publishes. A human approves it later.",
         "properties": {
@@ -3554,7 +3840,9 @@
               "prompt_snippet",
               "output_schema",
               "data_table",
+              "application",
               "measure",
+              "query",
               "company"
             ],
             "title": "Entitytype",
@@ -3886,6 +4174,22 @@
           "name"
         ],
         "title": "CreateDeployCredentialRequest",
+        "type": "object"
+      },
+      "CreateExecutorRequest": {
+        "description": "POST /api/v1/executors — register an executor and mint its token.",
+        "properties": {
+          "name": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "CreateExecutorRequest",
         "type": "object"
       },
       "CreateFileRequest": {
@@ -6450,6 +6754,17 @@
         "title": "DeleteAgentResponse",
         "type": "object"
       },
+      "DeleteApplicationResponse": {
+        "properties": {
+          "success": {
+            "default": true,
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "title": "DeleteApplicationResponse",
+        "type": "object"
+      },
       "DeleteAttachmentResponse": {
         "description": "Confirmation payload for a soft-delete.",
         "properties": {
@@ -7704,6 +8019,53 @@
         "title": "EdgeSchema",
         "type": "object"
       },
+      "ElementKnowledge": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind"
+          },
+          "label": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "place": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Place"
+          },
+          "purpose": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Purpose",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "purpose"
+        ],
+        "title": "ElementKnowledge",
+        "type": "object"
+      },
       "EnsureDraftVersionResponse": {
         "description": "Response from POST .../versions/ensure — idempotent draft setup.",
         "properties": {
@@ -8383,6 +8745,172 @@
           "success"
         ],
         "title": "ExecuteStoredConnectorResponse",
+        "type": "object"
+      },
+      "ExecutorApplicationsResponse": {
+        "description": "The applications one executor may operate.",
+        "properties": {
+          "applicationIds": {
+            "description": "Ids of the live applications this executor may operate.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Applicationids",
+            "type": "array"
+          }
+        },
+        "title": "ExecutorApplicationsResponse",
+        "type": "object"
+      },
+      "ExecutorCommandInfo": {
+        "description": "One command an executor knows (#1863 A4) — what a tool can ask for.",
+        "properties": {
+          "defaultTimeoutS": {
+            "title": "Defaulttimeouts",
+            "type": "integer"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "inputSchema": {
+            "additionalProperties": true,
+            "title": "Inputschema",
+            "type": "object"
+          },
+          "kind": {
+            "enum": [
+              "read",
+              "navigate"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "kind",
+          "label",
+          "description",
+          "inputSchema",
+          "defaultTimeoutS"
+        ],
+        "title": "ExecutorCommandInfo",
+        "type": "object"
+      },
+      "ExecutorResponse": {
+        "description": "An executor as the list and detail show it — never the secret.",
+        "properties": {
+          "createdAt": {
+            "title": "Createdat",
+            "type": "string"
+          },
+          "createdByName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Createdbyname"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "lastSeenAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lastseenat"
+          },
+          "limitsConfirmed": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Limitsconfirmed",
+            "type": "object"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "reported": {
+            "additionalProperties": true,
+            "title": "Reported",
+            "type": "object"
+          },
+          "revokedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revokedat"
+          },
+          "status": {
+            "enum": [
+              "online",
+              "offline",
+              "busy"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "tokenExpiresAt": {
+            "title": "Tokenexpiresat",
+            "type": "string"
+          },
+          "tokenPrefix": {
+            "title": "Tokenprefix",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "status",
+          "tokenPrefix",
+          "tokenExpiresAt",
+          "createdAt"
+        ],
+        "title": "ExecutorResponse",
+        "type": "object"
+      },
+      "ExecutorTokenResponse": {
+        "description": "Register — the ONLY place the plaintext token appears.",
+        "properties": {
+          "executor": {
+            "$ref": "#/components/schemas/ExecutorResponse"
+          },
+          "token": {
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "executor",
+          "token"
+        ],
+        "title": "ExecutorTokenResponse",
         "type": "object"
       },
       "ExitToolSchema": {
@@ -10482,6 +11010,54 @@
         "title": "InstantiateTemplateRequest",
         "type": "object"
       },
+      "InstructionKnowledge": {
+        "additionalProperties": false,
+        "properties": {
+          "instruction": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Instruction",
+            "type": "string"
+          },
+          "proof": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/KnowledgeProof"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "startsFrom": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Startsfrom"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/KnowledgeStep"
+            },
+            "maxItems": 30,
+            "minItems": 1,
+            "title": "Steps",
+            "type": "array"
+          }
+        },
+        "required": [
+          "instruction",
+          "steps"
+        ],
+        "title": "InstructionKnowledge",
+        "type": "object"
+      },
       "InvocationMessagesResponse": {
         "description": "One agent invocation's transcript, fetched on open (#875).\n\nThe body behind a row in ``RunDetail.agent_invocations``, which\ncarries metadata and a ``messageCount`` and no message bodies at all.\nSame shape as :class:`RunValueResponse` and the session-memory file\nread: the collection view carries handles, a body arrives when\nsomeone asks to see it.\n\n``messages`` is the FULLY DECODED conversation — a transcript stored\nafter #855 is marker-encoded on disk, and the repository resolves it,\nso a caller never has to know which shape the row was written in.\nEmpty list for an invocation that has not taken a turn yet.",
         "properties": {
@@ -10503,6 +11079,237 @@
           "messages"
         ],
         "title": "InvocationMessagesResponse",
+        "type": "object"
+      },
+      "KnowledgeItem": {
+        "properties": {
+          "content": {
+            "additionalProperties": true,
+            "title": "Content",
+            "type": "object"
+          },
+          "createdAt": {
+            "title": "Createdat",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "lastWorkedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lastworkedat"
+          },
+          "learnedInRun": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Learnedinrun"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          },
+          "worked": {
+            "title": "Worked",
+            "type": "integer"
+          },
+          "writtenBy": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Writtenby"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "key",
+          "version",
+          "content",
+          "source",
+          "status",
+          "worked",
+          "createdAt"
+        ],
+        "title": "KnowledgeItem",
+        "type": "object"
+      },
+      "KnowledgeProof": {
+        "additionalProperties": false,
+        "properties": {
+          "text": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          },
+          "window": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Window"
+          }
+        },
+        "title": "KnowledgeProof",
+        "type": "object"
+      },
+      "KnowledgeStep": {
+        "additionalProperties": false,
+        "description": "One action of a learned instruction, by the element's label.",
+        "properties": {
+          "action": {
+            "enum": [
+              "click",
+              "double_click",
+              "triple_click",
+              "right_click",
+              "middle_click",
+              "press_and_hold",
+              "hover",
+              "drag",
+              "scroll",
+              "select_text",
+              "type_text",
+              "type_secret",
+              "press_key",
+              "hold_key",
+              "wait",
+              "bring_to_front",
+              "open_address",
+              "go_back",
+              "go_forward",
+              "reload",
+              "stop_loading",
+              "go_home",
+              "new_tab",
+              "switch_tab",
+              "close_tab",
+              "dismiss"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "options": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    }
+                  ]
+                },
+                "maxProperties": 10,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Options"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target"
+          },
+          "toTarget": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Totarget"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "title": "KnowledgeStep",
         "type": "object"
       },
       "LayerSchema": {
@@ -10604,6 +11411,22 @@
           "colorRgb"
         ],
         "title": "LayerSchema",
+        "type": "object"
+      },
+      "LessonKnowledge": {
+        "additionalProperties": false,
+        "properties": {
+          "text": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "LessonKnowledge",
         "type": "object"
       },
       "LoginRequest": {
@@ -12543,6 +13366,42 @@
         "title": "PackageInfoResponse",
         "type": "object"
       },
+      "Page_ApplicationResponse_": {
+        "properties": {
+          "hasMore": {
+            "default": false,
+            "title": "Hasmore",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ApplicationResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          },
+          "pageSize": {
+            "title": "Pagesize",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "pageSize"
+        ],
+        "title": "Page[ApplicationResponse]",
+        "type": "object"
+      },
       "Page_AuditEventItem_": {
         "properties": {
           "hasMore": {
@@ -12757,6 +13616,42 @@
           "pageSize"
         ],
         "title": "Page[DataTableSummary]",
+        "type": "object"
+      },
+      "Page_KnowledgeItem_": {
+        "properties": {
+          "hasMore": {
+            "default": false,
+            "title": "Hasmore",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/KnowledgeItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          },
+          "pageSize": {
+            "title": "Pagesize",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "pageSize"
+        ],
+        "title": "Page[KnowledgeItem]",
         "type": "object"
       },
       "Page_MeasureSummary_": {
@@ -14428,7 +15323,9 @@
               "prompt_snippet",
               "output_schema",
               "data_table",
+              "application",
               "measure",
+              "query",
               "company"
             ],
             "title": "Entitytype",
@@ -18621,6 +19518,27 @@
         "title": "SessionResponse",
         "type": "object"
       },
+      "SetApplicationExecutorsRequest": {
+        "additionalProperties": false,
+        "description": "Replace the whole set of executors an application runs on.",
+        "properties": {
+          "executorIds": {
+            "description": "Ids of the executors this application runs on. Replaces the current set; an empty list runs it on none.",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 50,
+            "title": "Executorids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "executorIds"
+        ],
+        "title": "SetApplicationExecutorsRequest",
+        "type": "object"
+      },
       "SetEnabledRequest": {
         "description": "Arm or disarm a schedule without destroying the rules behind it.",
         "properties": {
@@ -18633,6 +19551,27 @@
           "enabled"
         ],
         "title": "SetEnabledRequest",
+        "type": "object"
+      },
+      "SetExecutorApplicationsRequest": {
+        "additionalProperties": false,
+        "description": "Replace the whole set of applications an executor may operate.",
+        "properties": {
+          "applicationIds": {
+            "description": "Ids of the applications this executor may operate. Replaces the current set; an empty list unlinks every application.",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 200,
+            "title": "Applicationids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "applicationIds"
+        ],
+        "title": "SetExecutorApplicationsRequest",
         "type": "object"
       },
       "SetToolboxAuthRequest": {
@@ -22151,6 +23090,110 @@
           "version"
         ],
         "title": "UpdateAgentResponse",
+        "type": "object"
+      },
+      "UpdateApplicationRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 10000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the application is and what it is used for.",
+            "title": "Description"
+          },
+          "expectedVersion": {
+            "description": "Version the edit is based on; a stale value is rejected with HTTP 409 (optimistic locking).",
+            "title": "Expectedversion",
+            "type": "integer"
+          },
+          "limits": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What an agent may never do in this application, enforced by the executor. A JSON object with only these keys, all optional: `processes` (executables it may touch, e.g. `app.exe`), `windows` (window classes it may act in, e.g. `TMainForm`), `never_keys` (key combinations it may never send, e.g. `ctrl+a`), `never_buttons` (button captions it may never press), `folders` (folders it stays inside), `domains` (web domains it stays inside), and `readers` (per control class, how a screen reader reads it, e.g. `{\"TDBGrid\": {\"open\": \"f2\", \"close\": \"esc\"}}`). Lists are strings; an unknown key is refused. The executor receives only the PUBLISHED limits, never a draft.",
+            "title": "Limits"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Name of the application. Unique in the workspace.",
+            "title": "Name"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "enum": [
+                  "human",
+                  "agent",
+                  "framework"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Who authored this: human, agent, or framework.",
+            "title": "Source"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "active",
+                  "archived"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Lifecycle status of the application.",
+            "title": "Status"
+          },
+          "technology": {
+            "anyOf": [
+              {
+                "enum": [
+                  "win32",
+                  "web"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How the executor reaches the application: `win32` (a Windows desktop program) or `web` (a site in a browser).",
+            "title": "Technology"
+          }
+        },
+        "required": [
+          "expectedVersion"
+        ],
+        "title": "UpdateApplicationRequest",
         "type": "object"
       },
       "UpdateAttachmentRequest": {
@@ -25971,6 +27014,56 @@
         "title": "WorkspaceSummary",
         "type": "object"
       },
+      "WriteKnowledgeRequest": {
+        "additionalProperties": false,
+        "description": "A designer writes or corrects one entry: always a new version.",
+        "properties": {
+          "element": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ElementKnowledge"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "instruction": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/InstructionKnowledge"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "kind": {
+            "enum": [
+              "element",
+              "instruction",
+              "lesson"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "lesson": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LessonKnowledge"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "WriteKnowledgeRequest",
+        "type": "object"
+      },
       "_ResponseShape": {
         "description": "One queued response for the stub provider.",
         "properties": {
@@ -28188,6 +29281,1624 @@
         "summary": "Get Agent Version",
         "tags": [
           "agents"
+        ]
+      }
+    },
+    "/api/v1/applications": {
+      "get": {
+        "description": "One page of this workspace's applications, newest first (B-NB8).",
+        "operationId": "list_applications_api_v1_applications_get",
+        "parameters": [
+          {
+            "description": "Page size (max 200).",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Page size (max 200).",
+              "title": "Limit"
+            }
+          },
+          {
+            "description": "Opaque continuation cursor from a previous response's nextCursor. Omit for the first page.",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Opaque continuation cursor from a previous response's nextCursor. Omit for the first page.",
+              "title": "Cursor"
+            }
+          },
+          {
+            "description": "Only the application with exactly this name.",
+            "in": "query",
+            "name": "name",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only the application with exactly this name.",
+              "title": "Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_ApplicationResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Applications",
+        "tags": [
+          "applications"
+        ]
+      },
+      "post": {
+        "operationId": "create_application_api_v1_applications_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateApplicationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Application",
+        "tags": [
+          "applications"
+        ]
+      }
+    },
+    "/api/v1/applications/deleted": {
+      "get": {
+        "description": "Soft-deleted applications that can still be restored.",
+        "operationId": "list_deleted_applications_api_v1_applications_deleted_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeletedEntityListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Deleted Applications",
+        "tags": [
+          "applications"
+        ]
+      }
+    },
+    "/api/v1/applications/{application_id}": {
+      "delete": {
+        "operationId": "delete_application_api_v1_applications__application_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "application_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Application Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "expected_version",
+            "required": true,
+            "schema": {
+              "title": "Expected Version",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteApplicationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Application",
+        "tags": [
+          "applications"
+        ]
+      },
+      "get": {
+        "operationId": "get_application_api_v1_applications__application_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "application_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Application Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Application",
+        "tags": [
+          "applications"
+        ]
+      },
+      "put": {
+        "operationId": "update_application_api_v1_applications__application_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "application_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Application Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateApplicationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Application",
+        "tags": [
+          "applications"
+        ]
+      }
+    },
+    "/api/v1/applications/{application_id}/discard-draft": {
+      "post": {
+        "description": "Discard working-draft edits, reverting to the published limits.",
+        "operationId": "discard_application_draft_api_v1_applications__application_id__discard_draft_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "application_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Application Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiscardDraftResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Discard Application Draft",
+        "tags": [
+          "applications"
+        ]
+      }
+    },
+    "/api/v1/applications/{application_id}/executors": {
+      "get": {
+        "description": "The executors this application runs on.",
+        "operationId": "get_application_executors_api_v1_applications__application_id__executors_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "application_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Application Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationExecutorsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Application Executors",
+        "tags": [
+          "applications"
+        ]
+      },
+      "put": {
+        "description": "Replace the executors this application runs on.",
+        "operationId": "set_application_executors_api_v1_applications__application_id__executors_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "application_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Application Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetApplicationExecutorsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationExecutorsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Set Application Executors",
+        "tags": [
+          "applications"
+        ]
+      }
+    },
+    "/api/v1/applications/{application_id}/knowledge": {
+      "get": {
+        "description": "What the application knows now: elements, instructions, lessons (current versions).",
+        "operationId": "list_application_knowledge_api_v1_applications__application_id__knowledge_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "application_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Application Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "element",
+                    "instruction",
+                    "lesson"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            }
+          },
+          {
+            "description": "Page size (max 200).",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Page size (max 200).",
+              "title": "Limit"
+            }
+          },
+          {
+            "description": "Opaque cursor from a previous response's nextCursor; omit for the first page.",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Opaque cursor from a previous response's nextCursor; omit for the first page.",
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_KnowledgeItem_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Application Knowledge",
+        "tags": [
+          "applications"
+        ]
+      },
+      "post": {
+        "description": "A person writes or corrects one entry: a new version, the old one kept.",
+        "operationId": "write_application_knowledge_api_v1_applications__application_id__knowledge_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "application_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Application Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WriteKnowledgeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KnowledgeItem"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Write Application Knowledge",
+        "tags": [
+          "applications"
+        ]
+      }
+    },
+    "/api/v1/applications/{application_id}/knowledge/{knowledge_id}/forget": {
+      "post": {
+        "description": "Stop using an entry; it is kept, as forgotten, with its versions.",
+        "operationId": "forget_application_knowledge_api_v1_applications__application_id__knowledge__knowledge_id__forget_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "application_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Application Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "knowledge_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Knowledge Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KnowledgeItem"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Forget Application Knowledge",
+        "tags": [
+          "applications"
+        ]
+      }
+    },
+    "/api/v1/applications/{application_id}/knowledge/{knowledge_id}/restore": {
+      "post": {
+        "description": "Make an older or forgotten version current again, as a new version.",
+        "operationId": "restore_application_knowledge_api_v1_applications__application_id__knowledge__knowledge_id__restore_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "application_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Application Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "knowledge_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Knowledge Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KnowledgeItem"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Restore Application Knowledge",
+        "tags": [
+          "applications"
+        ]
+      }
+    },
+    "/api/v1/applications/{application_id}/knowledge/{knowledge_id}/versions": {
+      "get": {
+        "description": "Every version of one entry, newest first.",
+        "operationId": "list_application_knowledge_versions_api_v1_applications__application_id__knowledge__knowledge_id__versions_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "application_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Application Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "knowledge_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Knowledge Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Page size (max 200).",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Page size (max 200).",
+              "title": "Limit"
+            }
+          },
+          {
+            "description": "Opaque cursor from nextCursor.",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Opaque cursor from nextCursor.",
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_KnowledgeItem_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Application Knowledge Versions",
+        "tags": [
+          "applications"
+        ]
+      }
+    },
+    "/api/v1/applications/{application_id}/restore": {
+      "post": {
+        "description": "Un-delete an application. Idempotent; takes no expected version.",
+        "operationId": "restore_application_api_v1_applications__application_id__restore_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "application_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Application Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RestoreEntityResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Restore Application",
+        "tags": [
+          "applications"
+        ]
+      }
+    },
+    "/api/v1/applications/{application_id}/versions": {
+      "get": {
+        "operationId": "list_application_versions_api_v1_applications__application_id__versions_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "application_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Application Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "type",
+            "required": false,
+            "schema": {
+              "default": "all",
+              "enum": [
+                "checkpoint",
+                "major",
+                "all"
+              ],
+              "title": "Type",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VersionListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Application Versions",
+        "tags": [
+          "applications"
+        ]
+      },
+      "post": {
+        "description": "Create a named version using Save As semantics.",
+        "operationId": "create_application_major_version_api_v1_applications__application_id__versions_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "application_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Application Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMajorVersionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MajorVersionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Application Major Version",
+        "tags": [
+          "applications"
+        ]
+      }
+    },
+    "/api/v1/applications/{application_id}/versions/deleted": {
+      "get": {
+        "description": "Removed versions that can still be restored (declared before ``/{version}``).",
+        "operationId": "list_deleted_application_versions_api_v1_applications__application_id__versions_deleted_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "application_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Application Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeletedVersionListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Deleted Application Versions",
+        "tags": [
+          "applications"
+        ]
+      }
+    },
+    "/api/v1/applications/{application_id}/versions/ensure": {
+      "post": {
+        "description": "Ensure a working draft version exists (idempotent).",
+        "operationId": "ensure_application_draft_version_api_v1_applications__application_id__versions_ensure_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "application_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Application Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnsureDraftVersionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Ensure Application Draft Version",
+        "tags": [
+          "applications"
+        ]
+      }
+    },
+    "/api/v1/applications/{application_id}/versions/major/{major_version}": {
+      "patch": {
+        "operationId": "rename_application_version_api_v1_applications__application_id__versions_major__major_version__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "application_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Application Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "major_version",
+            "required": true,
+            "schema": {
+              "title": "Major Version",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RenameVersionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RenameVersionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Rename Application Version",
+        "tags": [
+          "applications"
+        ]
+      }
+    },
+    "/api/v1/applications/{application_id}/versions/publish/{major_version}": {
+      "post": {
+        "description": "Publish a major version: these limits become what executors receive.\n\nClosed to service tokens: an external agent asks for a publish through\nthe approval queue, it never publishes limits directly.",
+        "operationId": "publish_application_version_api_v1_applications__application_id__versions_publish__major_version__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "application_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Application Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "major_version",
+            "required": true,
+            "schema": {
+              "title": "Major Version",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Publish Application Version",
+        "tags": [
+          "applications"
+        ]
+      }
+    },
+    "/api/v1/applications/{application_id}/versions/published": {
+      "get": {
+        "description": "The published limits + their document, or null.",
+        "operationId": "get_application_published_version_api_v1_applications__application_id__versions_published_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "application_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Application Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/PublishedVersionInfo"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Get Application Published Version Api V1 Applications  Application Id  Versions Published Get"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Application Published Version",
+        "tags": [
+          "applications"
+        ]
+      }
+    },
+    "/api/v1/applications/{application_id}/versions/unpublish": {
+      "post": {
+        "description": "Withdraw the published limits.",
+        "operationId": "unpublish_application_api_v1_applications__application_id__versions_unpublish_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "application_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Application Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnpublishResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Unpublish Application",
+        "tags": [
+          "applications"
+        ]
+      }
+    },
+    "/api/v1/applications/{application_id}/versions/{version_id}": {
+      "delete": {
+        "description": "Delete one snapshot from an application's version history.",
+        "operationId": "delete_application_version_api_v1_applications__application_id__versions__version_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "application_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Application Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteVersionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Application Version",
+        "tags": [
+          "applications"
+        ]
+      }
+    },
+    "/api/v1/applications/{application_id}/versions/{version_id}/restore": {
+      "post": {
+        "description": "Roll an application back to an earlier snapshot.",
+        "operationId": "restore_application_version_api_v1_applications__application_id__versions__version_id__restore_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "application_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Application Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RestoreVersionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RestoreResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Restore Application Version",
+        "tags": [
+          "applications"
+        ]
+      }
+    },
+    "/api/v1/applications/{application_id}/versions/{version_id}/restore-deleted": {
+      "post": {
+        "operationId": "restore_deleted_application_version_api_v1_applications__application_id__versions__version_id__restore_deleted_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "application_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Application Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RestoreDeletedVersionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Restore Deleted Application Version",
+        "tags": [
+          "applications"
+        ]
+      }
+    },
+    "/api/v1/applications/{application_id}/versions/{version}": {
+      "get": {
+        "operationId": "get_application_version_api_v1_applications__application_id__versions__version__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "application_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Application Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version",
+            "required": true,
+            "schema": {
+              "title": "Version",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VersionDetailResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Application Version",
+        "tags": [
+          "applications"
         ]
       }
     },
@@ -34760,6 +37471,317 @@
         "summary": "Resolve Connectable",
         "tags": [
           "deployment"
+        ]
+      }
+    },
+    "/api/v1/executors": {
+      "get": {
+        "description": "List the workspace's executors with their status — never a secret.",
+        "operationId": "list_executors_api_v1_executors_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ExecutorResponse"
+                  },
+                  "title": "Response List Executors Api V1 Executors Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Executors",
+        "tags": [
+          "executors"
+        ]
+      },
+      "post": {
+        "description": "Register an executor. Its token is returned ONCE, here only.",
+        "operationId": "create_executor_api_v1_executors_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateExecutorRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecutorTokenResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Executor",
+        "tags": [
+          "executors"
+        ]
+      }
+    },
+    "/api/v1/executors/commands": {
+      "get": {
+        "description": "Every command an executor tool can ask for, with its kind and arguments.\n\nWorded from the platform's published texts (#2002).",
+        "operationId": "list_executor_commands_api_v1_executors_commands_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ExecutorCommandInfo"
+                  },
+                  "title": "Response List Executor Commands Api V1 Executors Commands Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Executor Commands",
+        "tags": [
+          "executors"
+        ]
+      }
+    },
+    "/api/v1/executors/{executor_id}": {
+      "get": {
+        "description": "One executor with its status.",
+        "operationId": "get_executor_api_v1_executors__executor_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "executor_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Executor Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecutorResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Executor",
+        "tags": [
+          "executors"
+        ]
+      }
+    },
+    "/api/v1/executors/{executor_id}/applications": {
+      "get": {
+        "description": "The applications this executor may operate (#1901).",
+        "operationId": "get_executor_applications_api_v1_executors__executor_id__applications_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "executor_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Executor Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecutorApplicationsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Executor Applications",
+        "tags": [
+          "executors"
+        ]
+      },
+      "put": {
+        "description": "Replace the applications this executor may operate (#1901).",
+        "operationId": "set_executor_applications_api_v1_executors__executor_id__applications_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "executor_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Executor Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetExecutorApplicationsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecutorApplicationsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Set Executor Applications",
+        "tags": [
+          "executors"
+        ]
+      }
+    },
+    "/api/v1/executors/{executor_id}/revoke": {
+      "post": {
+        "description": "Revoke the executor and its token for good; its socket is closed.",
+        "operationId": "revoke_executor_api_v1_executors__executor_id__revoke_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "executor_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Executor Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecutorResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Revoke Executor",
+        "tags": [
+          "executors"
         ]
       }
     },

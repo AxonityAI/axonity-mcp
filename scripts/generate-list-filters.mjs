@@ -53,6 +53,7 @@ const LIST_ROUTES = {
   table_relationship: "/api/v1/table-relationships",
   dashboard: "/api/v1/dashboards",
   measure: "/api/v1/measures",
+  application: "/api/v1/applications",
 };
 
 /**
