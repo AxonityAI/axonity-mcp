@@ -195,7 +195,14 @@ export function registerApprovalTools(
       "does not undo the entries before it. The response is " +
       "`{ results: [{ id, success, status, error }], succeededCount, " +
       "failedCount }`. Read the per-entry results — retrying the whole list " +
-      "because failedCount is non-zero double-requests everything that worked.",
+      "because failedCount is non-zero double-requests everything that worked." +
+      "\n\nA SEMANTIC LAYER GOES LIVE HERE TOO: measures, data tables and " +
+      "queries are among the kinds below, so pointing forty measures at their " +
+      "concept is one call with forty entries, not forty requests. Concepts " +
+      "and their links are rows of a table — publish them as that " +
+      "`data_table`. A DASHBOARD IS NOT HERE because it has nothing to " +
+      "publish: it has no draft, and saving it is what everyone it is shared " +
+      "with sees. Its numbers come from measures, which are.",
     {
       requests: z
         .array(

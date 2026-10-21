@@ -10,11 +10,11 @@
  * shows, and duplicating a dashboard.
  *
  * **There are no sync tools any more.** A sync was a separate object beside
- * the table it filled; the semantic model made it the table's own
- * `provenance` (source, query, grain, key, mode, schedule), so a changed query
- * goes through the same approval as a changed column. Filling a table is now
- * `create_data_table` / `update_data_table` with `provenance`, and running it
- * early is `refresh_data_table` (tools/dataTables.ts). A measure is no longer
+ * the table it filled. The semantic model first made it the table's own
+ * `provenance`; axonity-flow#2013 then moved the source, SQL and grain into a
+ * named query (tools/queries.ts), leaving the table its `filledBy`,
+ * `fillingQueryId` and `rhythm`. Running a fill early is `refresh_data_table`
+ * (tools/dataTables.ts). A measure is no longer
  * a field on a table either: it is its own versioned entity (`create_measure`
  * and the rest of the generic family).
  *
@@ -82,7 +82,7 @@ export function registerDataSourceTools(
       "query. `containerWord` is what this warehouse calls the container " +
       "(\"dataset\" on BigQuery, \"schema\" on PostgreSQL). Column types are " +
       "the warehouse's own names, passed through. Read this before writing a " +
-      "query or a table's provenance, rather than guessing table names. " +
+      "query, rather than guessing table names. " +
       "On a source restricted to `policy.allowedDatasets` it reads those " +
       "datasets one by one, so it answers even when the key may not list " +
       "the whole project.",
@@ -95,8 +95,9 @@ export function registerDataSourceTools(
     "query_data_source",
     "Run a READ-ONLY SQL query against the warehouse and get the rows back. " +
       "For looking — checking what a warehouse table holds, trying the " +
-      "query a table's provenance will run. To fill a table regularly, give " +
-      "it a `provenance` (create_data_table / update_data_table). " +
+      "statement before it becomes a query. To fill a table regularly, make " +
+      "it a query (create_query, try it with test_query) and point the table " +
+      "at it: `filledBy: \"query\"`, `fillingQueryId`, `rhythm`. " +
       "\n\nTHE ROWS ARE CAPPED. `truncated: true` means rows were left out: " +
       "`rowCount` is what came back, `totalRows` is what matched. Never report " +
       "a count or a total off a truncated answer — aggregate in the SQL " +
@@ -122,7 +123,7 @@ export function registerDataSourceTools(
         .optional()
         .describe(
           "How many rows you want back. Clamped by the platform — a bigger " +
-            "answer belongs in a table with provenance, not in a response.",
+            "answer belongs in a table filled by a query, not in a response.",
         ),
     },
     async ({ id, sql, maxRows }) =>

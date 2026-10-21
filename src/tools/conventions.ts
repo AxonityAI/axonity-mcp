@@ -350,8 +350,9 @@ made any time before you attach them.
   then wire with the \`attach_*\` tools — see Wiring.
 - A reference doc has NO kind any more. What used to be a semantic note lives
   in the model itself: a word is a concept (\`create_concept\`), a table card
-  is the table's description and grain, a source query is the table's
-  \`provenance\`, an example question is a measure's \`questions\`. The
+  is the table's description and grain, a source query is a query of its
+  own (\`create_query\`, the table's \`fillingQueryId\`), an example question
+  is a measure's \`questions\`. The
   platform refuses \`semanticKind\`, \`semanticDetails\`, \`subjectTableId\`
   and \`subjectSourceId\` on a reference doc, and says where each one went.
   Building the SEMANTIC MODEL? Read \`axonity_semantic_conventions\` first —
@@ -1039,7 +1040,7 @@ const SEMANTIC_KNOWLEDGE_UNAVAILABLE =
   "The rules for writing the semantic layer could not be read from this deploy " +
   `(\`GET ${SEMANTIC_KNOWLEDGE_ROUTE}\`). This connector does not carry a copy ` +
   "of them. Do not build the semantic model — no concept, no measure, no " +
-  "table provenance — until they can be read: call " +
+  "query — until they can be read: call " +
   "`axonity_semantic_conventions` again, and if it still fails, report it " +
   "rather than deciding what the knowledge should say yourself.";
 
@@ -1118,9 +1119,9 @@ is the window ending at the end of the period asked for; a running total per
 month is the standing at the end of each month, never their sum. A fact kept
 per month is not asked per week (\`grain_too_fine\`).
 
-**Row logic belongs in the table's source query, not in a measure.** A value
-per row (net = gross − discount) is a column, added to the table's
-\`provenance.sql\` and described like any other column. A measure is computed
+**Row logic belongs in the query that fills the table, not in a measure.** A
+value per row (net = gross − discount) is a column, added to that query's
+\`sql\` and described like any other column. A measure is computed
 per question — period, grain, split, filters — and is never stored.
 
 **How a number is computed.** Each leaf is aggregated on its own table, over
@@ -1184,7 +1185,7 @@ export function registerConventions(server: McpServer, client: AxonityClient): v
   server.tool(
     "axonity_semantic_conventions",
     "Read BEFORE building a workspace's semantic model: the tables with " +
-      "their provenance and grain, the measures, and the concepts that say " +
+      "the queries that fill them and their grain, the measures, and the concepts that say " +
       "what a word or a number means. Returns this deploy's rules for writing " +
       "it: what a concept owes, what a measure's description and questions " +
       "must say, and what a table's grain must say about one row. Read live " +

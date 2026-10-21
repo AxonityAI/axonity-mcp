@@ -4116,11 +4116,29 @@
             "title": "Description",
             "type": "string"
           },
-          "isDynamic": {
-            "default": false,
-            "description": "False: the rows are reference data the author maintains. True: a workflow may change them, limited to allowedOperations.",
-            "title": "Isdynamic",
-            "type": "boolean"
+          "filledBy": {
+            "default": "author",
+            "description": "What fills this table, in one word. `author`: reference data its author maintains on the table's own screen. `workflow`: a workflow writes the rows, limited to allowedOperations. `query`: a named query fetches them, on the rhythm below or only when someone asks.",
+            "enum": [
+              "author",
+              "workflow",
+              "query"
+            ],
+            "title": "Filledby",
+            "type": "string"
+          },
+          "fillingQueryId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The named query that fetches the rows. Required when filledBy is `query`, refused otherwise. One query fills one table.",
+            "title": "Fillingqueryid"
           },
           "level": {
             "anyOf": [
@@ -4145,16 +4163,16 @@
             "title": "Name",
             "type": "string"
           },
-          "provenance": {
+          "rhythm": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/ProvenancePayload"
+                "$ref": "#/components/schemas/RhythmPayload"
               },
               {
                 "type": "null"
               }
             ],
-            "description": "Where the rows come from: a source, a query, its grain and its rhythm. A table with one has no other filler — a workflow may not also write its rows."
+            "description": "When it fills, and how the rows are written. Leave it out and it fills only when someone asks."
           },
           "rows": {
             "default": [],
@@ -6368,6 +6386,14 @@
             "title": "Allowedoperations",
             "type": "array"
           },
+          "audienceIds": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Audienceids",
+            "type": "array"
+          },
           "calendars": {
             "default": [],
             "description": "The calendars on the date table: which column names the year, the quarter, the month, the week and the day.",
@@ -6434,7 +6460,30 @@
                 "type": "null"
               }
             ],
-            "description": "What the last fill did. Null for a table with no source. Never part of a version: replaying an old one must not claim last month's refresh happened tonight."
+            "description": "What the last fill did. Null unless a query fills this table right now. Never part of a version: replaying an old one must not claim last month's refresh happened tonight."
+          },
+          "filledBy": {
+            "default": "author",
+            "description": "What fills this table, in one word: its author, a workflow, or a query.",
+            "enum": [
+              "author",
+              "workflow",
+              "query"
+            ],
+            "title": "Filledby",
+            "type": "string"
+          },
+          "fillingQueryId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The named query that fetches the rows, or null. Only a table filled by a query has one.",
+            "title": "Fillingqueryid"
           },
           "id": {
             "title": "Id",
@@ -6448,22 +6497,25 @@
             "title": "Issystem",
             "type": "boolean"
           },
-          "name": {
-            "title": "Name",
-            "type": "string"
-          },
-          "provenance": {
+          "level": {
             "anyOf": [
               {
-                "additionalProperties": true,
-                "type": "object"
+                "enum": [
+                  "public",
+                  "internal",
+                  "confidential"
+                ],
+                "type": "string"
               },
               {
                 "type": "null"
               }
             ],
-            "description": "Where the rows come from (#1876), or null when a workflow writes them or an author maintains them.",
-            "title": "Provenance"
+            "title": "Level"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
           },
           "publishedMajorVersion": {
             "anyOf": [
@@ -6476,6 +6528,19 @@
             ],
             "description": "The live major version, or null when this table has never been published. A run reads only a published table.",
             "title": "Publishedmajorversion"
+          },
+          "rhythm": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When it fills and how the rows are written, or null when it fills only on request.",
+            "title": "Rhythm"
           },
           "rowCount": {
             "default": 0,
@@ -6634,6 +6699,14 @@
             "title": "Allowedoperations",
             "type": "array"
           },
+          "audienceIds": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Audienceids",
+            "type": "array"
+          },
           "calendars": {
             "default": [],
             "description": "The calendars on the date table: which column names the year, the quarter, the month, the week and the day.",
@@ -6700,7 +6773,30 @@
                 "type": "null"
               }
             ],
-            "description": "What the last fill did. Null for a table with no source. Never part of a version: replaying an old one must not claim last month's refresh happened tonight."
+            "description": "What the last fill did. Null unless a query fills this table right now. Never part of a version: replaying an old one must not claim last month's refresh happened tonight."
+          },
+          "filledBy": {
+            "default": "author",
+            "description": "What fills this table, in one word: its author, a workflow, or a query.",
+            "enum": [
+              "author",
+              "workflow",
+              "query"
+            ],
+            "title": "Filledby",
+            "type": "string"
+          },
+          "fillingQueryId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The named query that fetches the rows, or null. Only a table filled by a query has one.",
+            "title": "Fillingqueryid"
           },
           "id": {
             "title": "Id",
@@ -6714,22 +6810,25 @@
             "title": "Issystem",
             "type": "boolean"
           },
-          "name": {
-            "title": "Name",
-            "type": "string"
-          },
-          "provenance": {
+          "level": {
             "anyOf": [
               {
-                "additionalProperties": true,
-                "type": "object"
+                "enum": [
+                  "public",
+                  "internal",
+                  "confidential"
+                ],
+                "type": "string"
               },
               {
                 "type": "null"
               }
             ],
-            "description": "Where the rows come from (#1876), or null when a workflow writes them or an author maintains them.",
-            "title": "Provenance"
+            "title": "Level"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
           },
           "publishedMajorVersion": {
             "anyOf": [
@@ -6742,6 +6841,19 @@
             ],
             "description": "The live major version, or null when this table has never been published. A run reads only a published table.",
             "title": "Publishedmajorversion"
+          },
+          "rhythm": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When it fills and how the rows are written, or null when it fills only on request.",
+            "title": "Rhythm"
           },
           "rowCount": {
             "default": 0,
@@ -6837,7 +6949,8 @@
               "find",
               "add",
               "update",
-              "delete"
+              "delete",
+              "write_many"
             ],
             "title": "Operation",
             "type": "string"
@@ -23531,10 +23644,16 @@
             "description": "Replaces the whole set of calendars when sent.",
             "title": "Calendars"
           },
-          "clearProvenance": {
+          "clearFillingQuery": {
             "default": false,
-            "description": "True takes the source away. The rows already there stay — removing them is a separate decision about the table.",
-            "title": "Clearprovenance",
+            "description": "True takes the filling query away. The rows already there stay — removing them is a separate decision about the table.",
+            "title": "Clearfillingquery",
+            "type": "boolean"
+          },
+          "clearRhythm": {
+            "default": false,
+            "description": "True takes the rhythm away: from then on the table fills only when someone asks. Different from pausing, which keeps the moment so switching back on resumes it.",
+            "title": "Clearrhythm",
             "type": "boolean"
           },
           "clearTimeAxis": {
@@ -23588,16 +23707,35 @@
             "title": "Expectedversion",
             "type": "integer"
           },
-          "isDynamic": {
+          "filledBy": {
             "anyOf": [
               {
-                "type": "boolean"
+                "enum": [
+                  "author",
+                  "workflow",
+                  "query"
+                ],
+                "type": "string"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Isdynamic"
+            "description": "What fills this table, in one word. `author`: reference data its author maintains on the table's own screen. `workflow`: a workflow writes the rows, limited to allowedOperations. `query`: a named query fetches them, on the rhythm below or only when someone asks.",
+            "title": "Filledby"
+          },
+          "fillingQueryId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Points the table at the query that fills it. Send clearFillingQuery to take it away.",
+            "title": "Fillingqueryid"
           },
           "level": {
             "anyOf": [
@@ -23628,16 +23766,16 @@
             ],
             "title": "Name"
           },
-          "provenance": {
+          "rhythm": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/ProvenancePayload"
+                "$ref": "#/components/schemas/RhythmPayload"
               },
               {
                 "type": "null"
               }
             ],
-            "description": "Replaces where the rows come from when sent."
+            "description": "Replaces when and how it fills when sent."
           },
           "rows": {
             "anyOf": [
@@ -30537,6 +30675,1055 @@
           "hasChildren"
         ],
         "title": "TreeNode",
+        "type": "object"
+      },
+      "ConceptLinkItem": {
+        "description": "One link: a word, what it is about, and why — epic #2010, S6 (#2016).",
+        "properties": {
+          "concept": {
+            "description": "The word this link is of.",
+            "title": "Concept",
+            "type": "string"
+          },
+          "note": {
+            "default": "",
+            "description": "Why THIS column is that word, when it is not obvious. Empty is normal; the meaning lives on the concept.",
+            "title": "Note",
+            "type": "string"
+          },
+          "refersTo": {
+            "description": "What in the model it is about, in one of the four forms a concept's own reference uses.",
+            "title": "Refersto",
+            "type": "string"
+          }
+        },
+        "required": [
+          "concept",
+          "refersTo"
+        ],
+        "title": "ConceptLinkItem",
+        "type": "object"
+      },
+      "ConceptLinkList": {
+        "description": "The links of one word, or the words of one thing.\n\n# paging-exempt: a link exists only for a concept, and the ontology is\n# capped at the write (`MAX_CONCEPTS`). This is that cap times the\n# columns an author hangs a word on — written by a person, never by\n# machine activity, which is the growth B-NB8 exists for.",
+        "properties": {
+          "items": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ConceptLinkItem"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "title": "ConceptLinkList",
+        "type": "object"
+      },
+      "ConceptLinkWrite": {
+        "additionalProperties": false,
+        "description": "Hang a word on something, or take it back off.",
+        "properties": {
+          "concept": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Concept",
+            "type": "string"
+          },
+          "note": {
+            "default": "",
+            "maxLength": 600,
+            "title": "Note",
+            "type": "string"
+          },
+          "refersTo": {
+            "maxLength": 400,
+            "minLength": 1,
+            "title": "Refersto",
+            "type": "string"
+          }
+        },
+        "required": [
+          "concept",
+          "refersTo"
+        ],
+        "title": "ConceptLinkWrite",
+        "type": "object"
+      },
+      "CreateQueryRequest": {
+        "additionalProperties": false,
+        "description": "Define a query.",
+        "properties": {
+          "dataSourceId": {
+            "description": "The source this query reads, by the id the data-source list gave you. There is no query without one.",
+            "format": "uuid",
+            "title": "Datasourceid",
+            "type": "string"
+          },
+          "description": {
+            "default": "",
+            "description": "What this query answers. It becomes the description of the tool an agent is granted, so it is what the agent reads.",
+            "maxLength": 4000,
+            "title": "Description",
+            "type": "string"
+          },
+          "grain": {
+            "default": "",
+            "description": "What ONE ROW is, in a sentence. Required before publishing.",
+            "maxLength": 1000,
+            "title": "Grain",
+            "type": "string"
+          },
+          "name": {
+            "description": "The handle a grant and a tool call name. Unique here.",
+            "maxLength": 255,
+            "title": "Name",
+            "type": "string"
+          },
+          "parameters": {
+            "items": {
+              "$ref": "#/components/schemas/QueryParameterPayload"
+            },
+            "maxItems": 20,
+            "title": "Parameters",
+            "type": "array"
+          },
+          "questions": {
+            "description": "The questions this query answers, as somebody would ask them.",
+            "items": {
+              "maxLength": 300,
+              "type": "string"
+            },
+            "maxItems": 20,
+            "title": "Questions",
+            "type": "array"
+          },
+          "returns": {
+            "items": {
+              "$ref": "#/components/schemas/QueryReturnPayload"
+            },
+            "maxItems": 200,
+            "title": "Returns",
+            "type": "array"
+          },
+          "sql": {
+            "default": "",
+            "description": "The statement, with its parameters written as :name.",
+            "maxLength": 65536,
+            "title": "Sql",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "dataSourceId"
+        ],
+        "title": "CreateQueryRequest",
+        "type": "object"
+      },
+      "DeleteQueryResponse": {
+        "description": "A query was removed and can be brought back.",
+        "properties": {
+          "deleted": {
+            "default": true,
+            "title": "Deleted",
+            "type": "boolean"
+          }
+        },
+        "title": "DeleteQueryResponse",
+        "type": "object"
+      },
+      "GrantedAgent": {
+        "description": "An agent that was given this query's tool.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "GrantedAgent",
+        "type": "object"
+      },
+      "Page_QuerySummary_": {
+        "properties": {
+          "hasMore": {
+            "default": false,
+            "title": "Hasmore",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/QuerySummary"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          },
+          "pageSize": {
+            "title": "Pagesize",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "pageSize"
+        ],
+        "title": "Page[QuerySummary]",
+        "type": "object"
+      },
+      "QueryDetail": {
+        "description": "One query with everything an editor needs.",
+        "properties": {
+          "createdAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Createdat"
+          },
+          "dataSourceId": {
+            "title": "Datasourceid",
+            "type": "string"
+          },
+          "dataSourceName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Datasourcename"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "draftMajorVersion": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draftmajorversion"
+          },
+          "draftVersionName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draftversionname"
+          },
+          "grain": {
+            "title": "Grain",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "isSystem": {
+            "title": "Issystem",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "parameterCount": {
+            "title": "Parametercount",
+            "type": "integer"
+          },
+          "parameters": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Parameters",
+            "type": "array"
+          },
+          "publishBlockers": {
+            "description": "Why this query cannot be published yet, each naming what is missing. Empty when it is ready.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Publishblockers",
+            "type": "array"
+          },
+          "questions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Questions",
+            "type": "array"
+          },
+          "returnCount": {
+            "title": "Returncount",
+            "type": "integer"
+          },
+          "returns": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Returns",
+            "type": "array"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "sql": {
+            "title": "Sql",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "updatedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updatedat"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "dataSourceId",
+          "grain",
+          "parameterCount",
+          "returnCount",
+          "questions",
+          "version",
+          "status",
+          "source",
+          "isSystem",
+          "sql",
+          "parameters",
+          "returns"
+        ],
+        "title": "QueryDetail",
+        "type": "object"
+      },
+      "QueryParameterPayload": {
+        "additionalProperties": false,
+        "description": "One declared input of a query.",
+        "properties": {
+          "choiceOptions": {
+            "anyOf": [
+              {
+                "items": {
+                  "maxLength": 500,
+                  "type": "string"
+                },
+                "maxItems": 200,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a choice: the values it offers.",
+            "title": "Choiceoptions"
+          },
+          "default": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The value used when none is given.",
+            "title": "Default"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What this input MEANS, for whoever fills it in and for the agent that has to choose a value.",
+            "title": "Description"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The parameter's stable id; left out when it is new.",
+            "title": "Id"
+          },
+          "kind": {
+            "default": "text",
+            "description": "What sort of value it carries: text, number, date, datetime, time, yes-no or choice. One value a condition compares; a file, an object or a list cannot be a parameter.",
+            "maxLength": 32,
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What a person reads above the field, e.g. \"First month\".",
+            "title": "Label"
+          },
+          "name": {
+            "description": "The name the statement writes as :name — letters, digits and underscores.",
+            "maxLength": 128,
+            "title": "Name",
+            "type": "string"
+          },
+          "required": {
+            "default": true,
+            "description": "Whether a value must be given. An optional one with no value binds NULL, which is what \"(:land is null or l = :land)\" is written for.",
+            "title": "Required",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "QueryParameterPayload",
+        "type": "object"
+      },
+      "QueryReturnPayload": {
+        "additionalProperties": false,
+        "description": "One column a query hands back.",
+        "properties": {
+          "concept": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The workspace's own word for what this column is, when there is one. Optional — most columns have none.",
+            "title": "Concept"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What this column MEANS. Required before the query can be published: an agent reading a column cannot use a name it has no meaning for.",
+            "title": "Description"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "kind": {
+            "default": "text",
+            "description": "What sort of value it holds: text, number, date, datetime, time, yes-no, choice, object or list.",
+            "maxLength": 32,
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "name": {
+            "description": "The column's name, exactly as the statement returns it.",
+            "maxLength": 128,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "QueryReturnPayload",
+        "type": "object"
+      },
+      "QuerySummary": {
+        "description": "One query as the Library list reads it.",
+        "properties": {
+          "createdAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Createdat"
+          },
+          "dataSourceId": {
+            "title": "Datasourceid",
+            "type": "string"
+          },
+          "dataSourceName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Datasourcename"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "draftMajorVersion": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draftmajorversion"
+          },
+          "draftVersionName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draftversionname"
+          },
+          "grain": {
+            "title": "Grain",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "isSystem": {
+            "title": "Issystem",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "parameterCount": {
+            "title": "Parametercount",
+            "type": "integer"
+          },
+          "questions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Questions",
+            "type": "array"
+          },
+          "returnCount": {
+            "title": "Returncount",
+            "type": "integer"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "updatedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updatedat"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "dataSourceId",
+          "grain",
+          "parameterCount",
+          "returnCount",
+          "questions",
+          "version",
+          "status",
+          "source",
+          "isSystem"
+        ],
+        "title": "QuerySummary",
+        "type": "object"
+      },
+      "QueryTestColumn": {
+        "description": "One column of a test result, as the warehouse named it.",
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "type"
+        ],
+        "title": "QueryTestColumn",
+        "type": "object"
+      },
+      "QueryTestResult": {
+        "description": "What a test run answered, and the facts an author judges it by.",
+        "properties": {
+          "bytesScanned": {
+            "title": "Bytesscanned",
+            "type": "integer"
+          },
+          "columns": {
+            "items": {
+              "$ref": "#/components/schemas/QueryTestColumn"
+            },
+            "title": "Columns",
+            "type": "array"
+          },
+          "elapsedMs": {
+            "title": "Elapsedms",
+            "type": "integer"
+          },
+          "fromCache": {
+            "title": "Fromcache",
+            "type": "boolean"
+          },
+          "notANumber": {
+            "default": 0,
+            "description": "How many cells hold a value that is not a finite number (NaN, Infinity). They travel as their NAME rather than as null, because an empty cell means there is no value and these have one.",
+            "title": "Notanumber",
+            "type": "integer"
+          },
+          "ranAt": {
+            "title": "Ranat",
+            "type": "string"
+          },
+          "returns": {
+            "description": "The returned columns this result suggests, with every description already written kept as it is.",
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Returns",
+            "type": "array"
+          },
+          "rowCount": {
+            "title": "Rowcount",
+            "type": "integer"
+          },
+          "rows": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "truncated": {
+            "title": "Truncated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "columns",
+          "rows",
+          "rowCount",
+          "truncated",
+          "bytesScanned",
+          "fromCache",
+          "elapsedMs",
+          "ranAt",
+          "returns"
+        ],
+        "title": "QueryTestResult",
+        "type": "object"
+      },
+      "QueryToolState": {
+        "description": "The read tool a published query mints, and whether it is on the air.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "status": {
+            "description": "'active' while the query is published and the tool can be used, 'draft' once it is unpublished.",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "status"
+        ],
+        "title": "QueryToolState",
+        "type": "object"
+      },
+      "QueryUsage": {
+        "description": "Who can reach this query today.\n\n# paging-exempt: the agents granted ONE tool, bounded by the tenant's\n# agent roster (O(100) at any plausible scale). It grows with\n# deliberate human authoring, not with machine activity — the incident\n# B-NB8 exists for was 4,415 rows minted by a single launch. An agent\n# holds a tool once, so this cannot exceed the roster.\n\nThere is deliberately no run count: no tool call is recorded anywhere\nin the platform, and a number nobody can check is worse than none.",
+        "properties": {
+          "agents": {
+            "description": "The published agents that hold the tool. Still listed when it is off the air: a grant survives an unpublish, so republishing gives these agents the tool back.",
+            "items": {
+              "$ref": "#/components/schemas/GrantedAgent"
+            },
+            "title": "Agents",
+            "type": "array"
+          },
+          "tool": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QueryToolState"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "None while the query has never been published."
+          }
+        },
+        "title": "QueryUsage",
+        "type": "object"
+      },
+      "RhythmPayload": {
+        "additionalProperties": false,
+        "description": "WHEN a table fills, and how the rows are written — #2013.\n\nWhat used to be one bag with the SQL in it. The SQL, the source and\nthe grain left for the query that fills the table; what stays here is\nthe part that belongs to the TABLE, because a query returns rows and\nsomething else fires it.\n\nSending no rhythm at all is a choice: then nothing starts by itself\nand **Refresh now** is the only thing that fills the table.",
+        "properties": {
+          "cron": {
+            "default": "",
+            "description": "When it fills, as a cron expression in its timezone. Empty means it never fills by itself — only when someone asks.",
+            "maxLength": 100,
+            "title": "Cron",
+            "type": "string"
+          },
+          "enabled": {
+            "default": true,
+            "description": "False pauses it: the table keeps every row it has and gets no next turn. Different from having no rhythm, which says the author never wanted one.",
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "keyColumns": {
+            "default": [],
+            "description": "Which columns identify a row, for an upsert — usually the date plus whatever the query splits by. An append writes a key nowhere, so naming one there is refused.",
+            "items": {
+              "maxLength": 64,
+              "type": "string"
+            },
+            "maxItems": 10,
+            "title": "Keycolumns",
+            "type": "array"
+          },
+          "mode": {
+            "default": "upsert",
+            "description": "`upsert` replaces the rows that match the key and adds the rest, so a re-run of the same day does not double it. `append` adds what came back.",
+            "maxLength": 32,
+            "title": "Mode",
+            "type": "string"
+          },
+          "timezone": {
+            "default": "UTC",
+            "description": "The zone the cron expression is read in.",
+            "maxLength": 64,
+            "title": "Timezone",
+            "type": "string"
+          }
+        },
+        "title": "RhythmPayload",
+        "type": "object"
+      },
+      "RunQueryTestRequest": {
+        "additionalProperties": false,
+        "description": "Run this query once, with these values, and show what came back.",
+        "properties": {
+          "maxRows": {
+            "anyOf": [
+              {
+                "maximum": 10000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How many rows to show. Clamped to the platform's ceiling.",
+            "title": "Maxrows"
+          },
+          "values": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "maxLength": 4000,
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "description": "A value per declared parameter. They are BOUND, never written into the statement.",
+            "maxProperties": 20,
+            "propertyNames": {
+              "maxLength": 255
+            },
+            "title": "Values",
+            "type": "object"
+          }
+        },
+        "title": "RunQueryTestRequest",
+        "type": "object"
+      },
+      "UpdateQueryRequest": {
+        "additionalProperties": false,
+        "description": "Change a query. Only the fields present are applied.",
+        "properties": {
+          "dataSourceId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Datasourceid"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "expectedVersion": {
+            "description": "The version the client last read — the optimistic lock.",
+            "title": "Expectedversion",
+            "type": "integer"
+          },
+          "grain": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grain"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "parameters": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/QueryParameterPayload"
+                },
+                "maxItems": 20,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parameters"
+          },
+          "questions": {
+            "anyOf": [
+              {
+                "items": {
+                  "maxLength": 300,
+                  "type": "string"
+                },
+                "maxItems": 20,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Questions"
+          },
+          "returns": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/QueryReturnPayload"
+                },
+                "maxItems": 200,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Returns"
+          },
+          "sql": {
+            "anyOf": [
+              {
+                "maxLength": 65536,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sql"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          }
+        },
+        "required": [
+          "expectedVersion"
+        ],
+        "title": "UpdateQueryRequest",
         "type": "object"
       }
     },
@@ -37893,7 +39080,7 @@
             }
           },
           {
-            "description": "true: only tables a workflow may change. false: only reference data the author maintains. Omit for both.",
+            "description": "true: only tables whose rows change without an author typing them. false: only reference data the author maintains. Omit for both. Derived from filledBy, which is the more precise question.",
             "in": "query",
             "name": "is_dynamic",
             "required": false,
@@ -37906,8 +39093,31 @@
                   "type": "null"
                 }
               ],
-              "description": "true: only tables a workflow may change. false: only reference data the author maintains. Omit for both.",
+              "description": "true: only tables whose rows change without an author typing them. false: only reference data the author maintains. Omit for both. Derived from filledBy, which is the more precise question.",
               "title": "Is Dynamic"
+            }
+          },
+          {
+            "description": "Only tables filled this way: author, workflow or query. A value outside the three is refused rather than silently ignored.",
+            "in": "query",
+            "name": "filled_by",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "author",
+                    "workflow",
+                    "query"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only tables filled this way: author, workflow or query. A value outside the three is refused rather than silently ignored.",
+              "title": "Filled By"
             }
           }
         ],
@@ -63795,6 +65005,1479 @@
         "summary": "Get Member Roles",
         "tags": [
           "roles"
+        ]
+      }
+    },
+    "/api/v1/concept-links": {
+      "delete": {
+        "description": "Take one link back, and answer with what is left of that word.\n\nRemoving one that is not there is a success: two screens may take the\nsame link away, and the second must not read as a failure.",
+        "operationId": "delete_concept_link_api_v1_concept_links_delete",
+        "parameters": [
+          {
+            "description": "The word.",
+            "in": "query",
+            "name": "concept",
+            "required": true,
+            "schema": {
+              "description": "The word.",
+              "title": "Concept",
+              "type": "string"
+            }
+          },
+          {
+            "description": "What it was hung on.",
+            "in": "query",
+            "name": "refersTo",
+            "required": true,
+            "schema": {
+              "description": "What it was hung on.",
+              "title": "Refersto",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConceptLinkList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Concept Link",
+        "tags": [
+          "concepts"
+        ]
+      },
+      "get": {
+        "description": "The links, from either side.\n\nOne resource with two filters rather than two endpoints: a link IS one\nrow, and two surfaces that could answer differently about the same row\nis the drift this story removes one level up.",
+        "operationId": "list_concept_links_api_v1_concept_links_get",
+        "parameters": [
+          {
+            "description": "Only the links of this word.",
+            "in": "query",
+            "name": "concept",
+            "required": false,
+            "schema": {
+              "default": "",
+              "description": "Only the links of this word.",
+              "title": "Concept",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Only the words hung on this table, column or measure.",
+            "in": "query",
+            "name": "refersTo",
+            "required": false,
+            "schema": {
+              "default": "",
+              "description": "Only the words hung on this table, column or measure.",
+              "title": "Refersto",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConceptLinkList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Concept Links",
+        "tags": [
+          "concepts"
+        ]
+      },
+      "post": {
+        "description": "Hang a word on something, creating the links table on the first one.\n\nIdempotent: the same word on the same target is one fact and so one\nrow, whichever screen it was added from.",
+        "operationId": "create_concept_link_api_v1_concept_links_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConceptLinkWrite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConceptLinkItem"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Concept Link",
+        "tags": [
+          "concepts"
+        ]
+      }
+    },
+    "/api/v1/queries": {
+      "get": {
+        "description": "This workspace's queries, one bounded page at a time (B-NB8).",
+        "operationId": "list_queries_api_v1_queries_get",
+        "parameters": [
+          {
+            "description": "Only the queries that read this source.",
+            "in": "query",
+            "name": "dataSourceId",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only the queries that read this source.",
+              "title": "Datasourceid"
+            }
+          },
+          {
+            "description": "Opaque continuation token from the previous page's nextCursor. Send it back unchanged; never construct one.",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Opaque continuation token from the previous page's nextCursor. Send it back unchanged; never construct one.",
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 200,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_QuerySummary_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Queries",
+        "tags": [
+          "queries"
+        ]
+      },
+      "post": {
+        "description": "Define a query, draft and publishable from the moment it exists.",
+        "operationId": "create_query_api_v1_queries_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateQueryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueryDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Query",
+        "tags": [
+          "queries"
+        ]
+      }
+    },
+    "/api/v1/queries/deleted": {
+      "get": {
+        "description": "The queries that can still be brought back.",
+        "operationId": "list_deleted_queries_api_v1_queries_deleted_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeletedEntityListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Deleted Queries",
+        "tags": [
+          "queries"
+        ]
+      }
+    },
+    "/api/v1/queries/{query_id}": {
+      "delete": {
+        "description": "Remove a query, keeping it restorable.",
+        "operationId": "delete_query_api_v1_queries__query_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "query_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Query Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "expectedVersion",
+            "required": true,
+            "schema": {
+              "title": "Expectedversion",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteQueryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Query",
+        "tags": [
+          "queries"
+        ]
+      },
+      "get": {
+        "description": "One query, with its statement and what blocks its publish.",
+        "operationId": "get_query_api_v1_queries__query_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "query_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Query Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueryDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Query",
+        "tags": [
+          "queries"
+        ]
+      },
+      "put": {
+        "description": "Apply a partial edit under the optimistic lock.",
+        "operationId": "update_query_api_v1_queries__query_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "query_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Query Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateQueryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueryDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Query",
+        "tags": [
+          "queries"
+        ]
+      }
+    },
+    "/api/v1/queries/{query_id}/discard-draft": {
+      "post": {
+        "description": "Throw the draft away and go back to what is published.",
+        "operationId": "discard_query_draft_api_v1_queries__query_id__discard_draft_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "query_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Query Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiscardDraftResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Discard Query Draft",
+        "tags": [
+          "queries"
+        ]
+      }
+    },
+    "/api/v1/queries/{query_id}/live-versions": {
+      "get": {
+        "description": "Which major versions of this query are published.\n\n``published_major_versions`` is BULK by construction — it takes a list\nof ids and answers a dict of id → live major version — so a single id\ngoes in as a one-item list. The sibling route this was copied from\npassed the bare uuid, which SQLAlchemy refuses with \"IN expression\nlist … expected\"; the same shape, one entity along. An id that was\nnever published is ABSENT from the result rather than mapped to\n``None``, so an empty list is the honest answer for \"not live\".",
+        "operationId": "live_query_versions_api_v1_queries__query_id__live_versions_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "query_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Query Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "type": "integer"
+                  },
+                  "title": "Response Live Query Versions Api V1 Queries  Query Id  Live Versions Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Live Query Versions",
+        "tags": [
+          "queries"
+        ]
+      }
+    },
+    "/api/v1/queries/{query_id}/restore": {
+      "post": {
+        "description": "Bring a removed query back. Restoring a live one is a no-op.\n\nIdempotent — restoring a live query succeeds with ``restored=false``.\nTakes no ``expectedVersion``: a recovery must never lose to a stale\nversion check.",
+        "operationId": "restore_query_api_v1_queries__query_id__restore_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "query_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Query Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RestoreEntityResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Restore Query",
+        "tags": [
+          "queries"
+        ]
+      }
+    },
+    "/api/v1/queries/{query_id}/test": {
+      "post": {
+        "description": "Run the query once and answer with the rows and the four facts.\n\nThe statement goes down the one road every warehouse read takes, so the\nfive refusals, the cost cap and the time-out are the SOURCE's. Values\nare bound; nothing is written into the statement.\n\nThe two failures are mapped the way ``POST /data-sources/{id}/query``\nmaps them, because they are the same two: a refusal is Axonity's\nverdict on the statement and the author changes it (422), and an\nunreachable warehouse is the warehouse's answer and carries whether the\nsame statement is worth sending again (502). Unhandled, both would be\n\"Internal Server Error\" for a credential that was simply not granted a\ndataset — the defect #1875 closed on the source's own route.",
+        "operationId": "test_query_api_v1_queries__query_id__test_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "query_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Query Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunQueryTestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueryTestResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Test Query",
+        "tags": [
+          "queries"
+        ]
+      }
+    },
+    "/api/v1/queries/{query_id}/usage": {
+      "get": {
+        "description": "Who can reach this query today: its tool, and the agents given it.\n\nThe reverse of the agent's tool picker. An author who unpublishes or\nrenames a query changes what an agent can do, and the grant lives on\nthe agent — so without this the query screen cannot say who it affects.",
+        "operationId": "query_usage_api_v1_queries__query_id__usage_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "query_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Query Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueryUsage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Query Usage",
+        "tags": [
+          "queries"
+        ]
+      }
+    },
+    "/api/v1/queries/{query_id}/versions": {
+      "get": {
+        "description": "The version history of one query.",
+        "operationId": "list_query_versions_api_v1_queries__query_id__versions_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "query_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Query Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "type",
+            "required": false,
+            "schema": {
+              "default": "all",
+              "enum": [
+                "checkpoint",
+                "major",
+                "all"
+              ],
+              "title": "Type",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VersionListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Query Versions",
+        "tags": [
+          "queries"
+        ]
+      },
+      "post": {
+        "description": "Create a named version using Save As semantics.",
+        "operationId": "create_query_major_version_api_v1_queries__query_id__versions_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "query_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Query Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMajorVersionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MajorVersionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Query Major Version",
+        "tags": [
+          "queries"
+        ]
+      }
+    },
+    "/api/v1/queries/{query_id}/versions/deleted": {
+      "get": {
+        "description": "Removed versions that can still be restored.",
+        "operationId": "list_deleted_query_versions_api_v1_queries__query_id__versions_deleted_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "query_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Query Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeletedVersionListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Deleted Query Versions",
+        "tags": [
+          "queries"
+        ]
+      }
+    },
+    "/api/v1/queries/{query_id}/versions/ensure": {
+      "post": {
+        "description": "Make sure a working draft exists. Idempotent.",
+        "operationId": "ensure_query_draft_version_api_v1_queries__query_id__versions_ensure_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "query_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Query Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnsureDraftVersionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Ensure Query Draft Version",
+        "tags": [
+          "queries"
+        ]
+      }
+    },
+    "/api/v1/queries/{query_id}/versions/major/{major_version}": {
+      "patch": {
+        "description": "Rename a major version.",
+        "operationId": "rename_query_version_api_v1_queries__query_id__versions_major__major_version__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "query_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Query Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "major_version",
+            "required": true,
+            "schema": {
+              "title": "Major Version",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RenameVersionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RenameVersionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Rename Query Version",
+        "tags": [
+          "queries"
+        ]
+      }
+    },
+    "/api/v1/queries/{query_id}/versions/publish/{major_version}": {
+      "post": {
+        "description": "Publish a major version as the approved live query.\n\nThe SECOND road to live, and the one a person walks. An agent asks\nthrough the approval queue (``entity_publish_gateway``), which calls\nthe same service method — so the completeness rules bite either way.\nClosed to service tokens for exactly that reason (#676): an external\nagent never publishes directly.",
+        "operationId": "publish_query_version_api_v1_queries__query_id__versions_publish__major_version__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "query_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Query Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "major_version",
+            "required": true,
+            "schema": {
+              "title": "Major Version",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Publish Query Version",
+        "tags": [
+          "queries"
+        ]
+      }
+    },
+    "/api/v1/queries/{query_id}/versions/published": {
+      "get": {
+        "description": "The currently published definition and its document, or null.",
+        "operationId": "get_query_published_version_api_v1_queries__query_id__versions_published_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "query_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Query Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/PublishedVersionInfo"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Get Query Published Version Api V1 Queries  Query Id  Versions Published Get"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Query Published Version",
+        "tags": [
+          "queries"
+        ]
+      }
+    },
+    "/api/v1/queries/{query_id}/versions/unpublish": {
+      "post": {
+        "description": "Withdraw the live query, back to a draft.\n\nBack to DRAFT, never archived: a published thing that is no longer\nwanted returns to the state it can be edited in. The agent tool a\npublished query mints stops being granted the moment nothing is\nlive.",
+        "operationId": "unpublish_query_api_v1_queries__query_id__versions_unpublish_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "query_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Query Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnpublishResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Unpublish Query",
+        "tags": [
+          "queries"
+        ]
+      }
+    },
+    "/api/v1/queries/{query_id}/versions/{version_id}": {
+      "delete": {
+        "description": "Delete one version, keeping it restorable.",
+        "operationId": "delete_query_version_api_v1_queries__query_id__versions__version_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "query_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Query Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteVersionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Query Version",
+        "tags": [
+          "queries"
+        ]
+      }
+    },
+    "/api/v1/queries/{query_id}/versions/{version_id}/restore": {
+      "post": {
+        "description": "Roll the query back to an earlier snapshot.",
+        "operationId": "restore_query_version_api_v1_queries__query_id__versions__version_id__restore_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "query_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Query Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RestoreVersionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueryDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Restore Query Version",
+        "tags": [
+          "queries"
+        ]
+      }
+    },
+    "/api/v1/queries/{query_id}/versions/{version_id}/restore-deleted": {
+      "post": {
+        "description": "Un-delete one version, without making it live.",
+        "operationId": "restore_deleted_query_version_api_v1_queries__query_id__versions__version_id__restore_deleted_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "query_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Query Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RestoreDeletedVersionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Restore Deleted Query Version",
+        "tags": [
+          "queries"
+        ]
+      }
+    },
+    "/api/v1/queries/{query_id}/versions/{version}": {
+      "get": {
+        "description": "One version's stored snapshot.",
+        "operationId": "get_query_version_api_v1_queries__query_id__versions__version__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "query_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Query Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version",
+            "required": true,
+            "schema": {
+              "title": "Version",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VersionDetailResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Query Version",
+        "tags": [
+          "queries"
         ]
       }
     }

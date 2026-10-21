@@ -50,6 +50,7 @@ import { registerConceptTools } from "./tools/concepts.js";
 import { registerKnowledgeGraphTools } from "./tools/knowledgeGraph.js";
 import { registerOperationsTools } from "./tools/operations.js";
 import { registerPromptPlacementTools } from "./tools/promptPlacement.js";
+import { registerQueryTools } from "./tools/queries.js";
 import { LIST_FILTERS } from "./generated/listFilters.js";
 import { type EntityDef, registerEntityTools } from "./tools/register.js";
 import { registerRunTools } from "./tools/runs.js";
@@ -65,23 +66,33 @@ import {
 import { type VersionedEntity, registerVersionTools } from "./tools/versions.js";
 import { registerWorkflowMutations } from "./tools/workflowMutations.js";
 
-const PROVENANCE_NOTE =
-  "WHERE THE ROWS COME FROM — `provenance`, for a dynamic table filled from " +
-  "a warehouse. It replaces the old data-source sync: there is no separate " +
-  "sync object any more, so create_data_source_sync / run_data_source_sync " +
-  "do not exist. `provenance` is " +
-  "`{ sourceId, sql, grain, keyColumns?, mode?, cron, timezone?, enabled? }`: " +
-  "`sourceId` the data source; `sql` the query whose RESULT fills the table " +
-  "(try it first with query_data_source); `grain` what ONE ROW of that " +
-  "result is, as a sentence (\"one row per month per country\") — " +
-  "mandatory, it decides what the table can be asked for ever after; " +
-  "`keyColumns` which columns identify a row for `mode: \"upsert\"` (the " +
-  "default — `append` takes no key); `cron` when it runs, read in " +
-  "`timezone` (default UTC); `enabled: false` pauses it. A table with " +
-  "provenance has no other filler — a workflow may not also write its " +
-  "rows. It is part of the table's design, so a changed query is published " +
-  "through request_publish_data_table like a changed column. To fill it " +
-  "now rather than at its next turn: refresh_data_table. " +
+/**
+ * What fills a table (axonity-flow#2013). The inline `provenance` bag is gone:
+ * its SQL, source and grain moved to a named query, and what stays on the
+ * table is which filler it has and when it runs.
+ */
+const FILL_NOTE =
+  "WHAT FILLS IT — `filledBy`, one word: `author` (the default: reference " +
+  "data its author maintains), `workflow` (a workflow writes the rows, " +
+  "limited to `allowedOperations`) or `query` (a named query fetches them). " +
+  "A table has ONE filler. `isDynamic` is no longer sent: it follows from " +
+  "`filledBy` — a table filled by a query or a workflow is dynamic, and " +
+  "ONLY A DYNAMIC TABLE CAN BE READ BY A MEASURE. Never set `filledBy: " +
+  "\"workflow\"` on a table no workflow fills just to make a measure read " +
+  "it; give it a query. " +
+  "\n\nFILLED BY A QUERY: `fillingQueryId` is the query (create_query, " +
+  "list_queries) — required with `filledBy: \"query\"`, refused otherwise, " +
+  "and one query fills one table. The query carries the SQL, the source " +
+  "and the grain. `rhythm` says when and how it fills: " +
+  "`{ cron, timezone?, keyColumns?, mode?, enabled? }` — `cron` when it " +
+  "runs, read in `timezone` (default UTC; an empty cron never runs by " +
+  "itself); `mode` `upsert` (the default: replaces the rows that match " +
+  "`keyColumns` and adds the rest) or `append` (takes no key); `enabled: " +
+  "false` pauses it and keeps its rows. Leave `rhythm` out and the table " +
+  "fills only when asked: refresh_data_table. The fill runs the query as " +
+  "it stands. " +
+  "\n\n`provenance` and `clearProvenance` no longer exist and are refused " +
+  "— the query took their place. " +
   "\n\nMEASURES ARE NOT ON THE TABLE. A measure is its own entity " +
   "(create_measure); a table carries only its `timeAxis` " +
   "(`{ column, grain }`), which every measure over it reads.";
@@ -124,8 +135,8 @@ const MEASURE_NOTE =
   "as text or as the stored tree. Four kinds, one grammar: " +
   "\n- a BASE aggregates one COLUMN of one table: " +
   "`sum(orders.amount) where orders.channel = 'd2c'`. It reads a column, " +
-  "never a calculation per row — a value per row belongs in the table's " +
-  "source query (`provenance.sql`), as a column of its own; " +
+  "never a calculation per row — a value per row belongs in the query " +
+  "that fills the table, as a column of its own; " +
   "\n- a DERIVED measure computes with other measures by name: " +
   "`[revenue_d2c] + [revenue_retail]`, `divide([cm1], [net_revenue])`, " +
   "`divide([revenue_d2c], [net_revenue] ignore orders.channel)` for a share " +
@@ -222,6 +233,39 @@ const WORKFLOW_CLEARANCE_NOTE =
   "update_workflow({ fields: { clearance } }). It takes effect through the " +
   "publish approval like the rest of the workflow, and no agent in the " +
   "process ever reads more than this.";
+
+/**
+ * What a query is made of (axonity-flow#2010, S1). A query is a named, typed
+ * read of one source: it answers an agent's question once published, and it
+ * fills a table. The SQL, source and grain that used to sit in a table's
+ * `provenance` live here now.
+ */
+const QUERY_NOTE =
+  "A QUERY is a named, typed read of one data source. Published, it does " +
+  "two things: it becomes a read tool an agent can be given (its " +
+  "`description` is what that agent reads), and it can fill a table " +
+  "(`filledBy: \"query\"`, `fillingQueryId` on the table). " +
+  "\n\nFields: `name` (unique in the workspace; the tool carries it), " +
+  "`description` (what it answers), `dataSourceId` (required — " +
+  "list_data_sources), `sql` (read-only, in the warehouse's own dialect, " +
+  "with each input written `:name`; read_data_source_schema spells the " +
+  "tables), `grain` (what ONE ROW is, as a sentence — \"one row per month " +
+  "per country\"), `questions` (how somebody would ask for this, at most " +
+  "20), `parameters` and `returns`. " +
+  "\n\n`parameters` (at most 20): `[{ name, label?, kind, description?, " +
+  "required?, default?, choiceOptions? }]`. `kind` is text, number, date, " +
+  "datetime, time, yes-no or choice — one value, never a list or an " +
+  "object. A value is BOUND, never written into the statement. An optional " +
+  "one with no value binds NULL, which is what `(:land is null or l = " +
+  ":land)` is written for. " +
+  "\n\n`returns`: `[{ name, label?, kind, description, concept? }]`, one " +
+  "per column the statement hands back, named exactly as it returns it. " +
+  "`kind` adds object and list to the parameter kinds. Every column needs " +
+  "a `description` before the query can be published. " +
+  "\n\nThe statement can carry its own figures: a query with no table " +
+  "behind it (a `select … union all select …` of plan values) is a query " +
+  "like any other. Try it with test_query before you ask for publication; " +
+  "its answer suggests `returns` from what came back.";
 
 /**
  * The entities the connector covers. Core entities (C4), memory entities (C5)
@@ -334,15 +378,17 @@ const ENTITIES: EntityDef[] = [
     label: "tables (authored reference data agents and decisions read)",
     deleteVersionParam: "expected_version",
     listPaging: { defaultPageSize: 20, maxPageSize: 200 },
-    createNote: `${PROVENANCE_NOTE}\n\n${DATE_TABLE_NOTE}\n\n${LABEL_NOTE}`,
+    createNote: `${FILL_NOTE}\n\n${DATE_TABLE_NOTE}\n\n${LABEL_NOTE}`,
     deleteNote: BREAKS_MEASURE_NOTE,
     publishNote: BREAKS_MEASURE_NOTE,
     updateWarning:
-      PROVENANCE_NOTE +
+      FILL_NOTE +
+      " On an update: `clearFillingQuery: true` takes the query away and " +
+      "leaves the rows that are there; `rhythm` is replaced whole when sent; " +
+      "`clearRhythm: true` takes it away (the table then fills only when " +
+      "asked), which is not the same as pausing it. " +
       "\n\n" +
       DATE_TABLE_NOTE +
-      " Sending `provenance` replaces it whole; `clearProvenance: true` " +
-      "takes the source away and leaves the rows that are there. " +
       "\n\n`rows` AND `columns` ARE WHOLE-COLLECTION FIELDS: sending either " +
       "REPLACES it entirely. Passing one row in `rows` does not append it — it " +
       "deletes every other row in the table. To change content, use " +
@@ -386,6 +432,34 @@ const ENTITIES: EntityDef[] = [
       " `tableId` and `clearTable` are gone: a measure has no home table, " +
       "the tables it reads follow from its formula. Sending `definition` " +
       "replaces it whole, so send the `expression` with it.",
+  },
+  {
+    // A named read of one source (axonity-flow#2010, S1), with routes in the
+    // same order and spelling as a measure's — so the whole family comes from
+    // the registrars. Running it once, and who holds its tool, are in
+    // tools/queries.ts.
+    singular: "query",
+    basePath: "/api/v1/queries",
+    updateMethod: "PUT",
+    plural: "queries",
+    label: "queries (named, typed reads of a data source that answer an agent and fill tables)",
+    deleteVersionParam: "expectedVersion",
+    listPaging: { defaultPageSize: 20, maxPageSize: 200 },
+    createNote: QUERY_NOTE,
+    deleteNote:
+      "A query that fills a table, or whose tool an agent holds, is used: " +
+      "read_query_usage says who holds its tool, and list_data_tables " +
+      "({ filledBy: \"query\" }) which tables it fills.",
+    publishNote:
+      "Refused while read_query's `publishBlockers` is not empty — each one " +
+      "names what is missing (a grain, a column without a description, a " +
+      "parameter the statement does not use). Publishing makes its read tool " +
+      "live for every agent that holds it.",
+    updateWarning:
+      QUERY_NOTE +
+      " On an update, `parameters`, `returns` and `questions` are replaced " +
+      "WHOLE when sent: read first and send the complete list, each item " +
+      "with its `id` so it stays the same item.",
   },
   {
     // A program an agent operates through an executor (axonity-flow#1901),
@@ -442,9 +516,9 @@ const ENTITIES: EntityDef[] = [
       "(maxBytesBilled, maxSeconds, allowedDatasets, forbiddenDatasets, " +
       "personalColumns, dateFilters); all are empty by default. " +
       "\n\nThen test_data_source to see whether it answers. A table is " +
-      "filled from this source through its own `provenance.sourceId` " +
-      "(create_data_table) — not through a sync, and not through a " +
-      "reference doc.",
+      "filled from this source by a query that reads it (create_query, " +
+      "then `filledBy: \"query\"` and `fillingQueryId` on the table) — not " +
+      "through a sync, and not through a reference doc.",
     updateWarning:
       "NO DRAFT: this changes the live source, which every table it fills and every query " +
       "uses at once. `config` and `policy` are replaced WHOLE when sent — " +
@@ -528,6 +602,7 @@ const VERSIONED: VersionedEntity[] = [
     publishedPath: "versions",
   },
   { singular: "measure", basePath: "/api/v1/measures", publishedPath: "versions" },
+  { singular: "query", basePath: "/api/v1/queries", publishedPath: "versions" },
   {
     singular: "application",
     basePath: "/api/v1/applications",
@@ -582,6 +657,7 @@ export function registerAll(server: ServerLike, client: AxonityClient): void {
   registerMeasureFormulaTools(server as McpServer, client);
   registerDashboardTools(server as McpServer, client);
   registerConceptTools(server as McpServer, client);
+  registerQueryTools(server as McpServer, client);
   registerComponentTools(server as McpServer, client);
   registerApplicationTools(server as McpServer, client);
   registerAccessTools(server as McpServer, client);

@@ -91,9 +91,11 @@ describe("the three new entities", () => {
     const { descriptions } = setup();
     const text = descriptions.get("create_data_source")!;
     expect(text).toMatch(/list_data_source_drivers FIRST/);
-    // A table is filled through its own provenance now, not a reference doc
-    // pointing back at the source (#81).
-    expect(text).toMatch(/provenance\.sourceId/);
+    // A table is filled by a query that reads the source — not by a reference
+    // doc pointing back at it (#81), and not by an inline provenance (#90).
+    expect(text).toMatch(/create_query/);
+    expect(text).toMatch(/fillingQueryId/);
+    expect(text).not.toMatch(/provenance/);
     expect(text).not.toMatch(/subjectSourceId/);
   });
 });

@@ -54,6 +54,7 @@ const LIST_ROUTES = {
   dashboard: "/api/v1/dashboards",
   measure: "/api/v1/measures",
   application: "/api/v1/applications",
+  query: "/api/v1/queries",
 };
 
 /**
