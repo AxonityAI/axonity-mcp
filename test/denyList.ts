@@ -196,6 +196,45 @@ export const FORBIDDEN: Rule[] = [
   // require it to. `start_workflow_run` is the way to test a workflow from
   // here, and it names the trigger it means.
   { label: "fire a webhook by its token", path: /\/api\/v1\/triggers\/[^/]+$/ },
+
+  // ---- axonity-mcp#88 — the knowledge graph (axonity-flow#1918) ----------
+  // The READS are covered: search, topics, the tree, one fact, one source,
+  // what was archived. What follows is the rest of the Knowledge screen.
+
+  // Judging knowledge ENDS WITH A PERSON. Confirming, rejecting, correcting,
+  // archiving, restoring, relabelling and erasing a fact, answering a
+  // "which of these two is right" decision, answering a learning round,
+  // handing a doubtful case to a colleague, and recording which tips were
+  // shown: the design (KNOWLEDGE-DESIGN.md in axonity-flow) puts every
+  // correction and contradiction with a colleague who maintains the audience,
+  // and the platform says it in so many words — "a runtime reader (an agent, a
+  // process, a token, a recipient) maintains nothing". The decision list is
+  // here with its answer: it holds only the questions a reader maintains, so a
+  // token reading it would see nothing, ever.
+  {
+    label: "judging knowledge (ends with a person)",
+    path: /\/api\/v1\/knowledge\/(facts\/[^/]+\/(correct|archive|restore|relabel|confirm|reject|right-version)$|nodes\/[^/]+\/erase$|decisions(\/|$)|learning\/|oversight\/cases\/|tips\/shown$)/,
+  },
+
+  // The map and the network around a node are SCREENS: a window of
+  // coordinates to draw, and a picture of neighbours for a person to click
+  // through. An agent asks the same questions through search_knowledge_graph,
+  // list_knowledge_tree and list_related_topics, which answer in facts rather
+  // than in positions.
+  { label: "knowledge map and network (screens)", path: /\/api\/v1\/knowledge\/(map|network\/[^/]+)$/ },
+
+  // The WORK LISTS of the Oversight screen: what waits on a person, doubtful
+  // cases, facts about to expire, tips that were shown, and which of those
+  // lists are yours. Each holds only what the reader maintains or was handed,
+  // and a token maintains nothing and is never handed a case — so a tool here
+  // would answer an empty list every time, which reads as "nothing waits"
+  // when the truth is "you cannot see it". That is worse than no tool (the
+  // reasoning of the workflow-memory rule above). #88 asked for doubtful and
+  // expiring; the platform's filter is why they are not here.
+  {
+    label: "oversight work lists (a colleague's own)",
+    path: /\/api\/v1\/knowledge\/(attention|oversight\/(doubtful|expiring|tips|scope))$/,
+  },
 ];
 
 export function forbids(method: string, path: string): boolean {

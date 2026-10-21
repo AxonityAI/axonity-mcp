@@ -260,6 +260,9 @@
             "title": "Capabilitytier",
             "type": "string"
           },
+          "clearance": {
+            "$ref": "#/components/schemas/ClearanceSchema"
+          },
           "creativityTier": {
             "enum": [
               "low",
@@ -727,6 +730,21 @@
         "title": "ApprovalDecisionResponse",
         "type": "object"
       },
+      "AssignBody": {
+        "description": "The colleague the administrator hands a case to.",
+        "properties": {
+          "assigneeId": {
+            "format": "uuid",
+            "title": "Assigneeid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "assigneeId"
+        ],
+        "title": "AssignBody",
+        "type": "object"
+      },
       "AssignToolboxRequest": {
         "additionalProperties": false,
         "description": "PUT /api/v1/tools/{id}/toolbox — move one tool in or out.",
@@ -858,6 +876,90 @@
           "updatedAt"
         ],
         "title": "AttachmentResponse",
+        "type": "object"
+      },
+      "AttentionItem": {
+        "description": "A fact that waits for a person, and why (§8; S10 shows these on its screen).",
+        "properties": {
+          "fact": {
+            "$ref": "#/components/schemas/FactSummary"
+          },
+          "pendingValue": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pendingvalue"
+          },
+          "reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Reasons",
+            "type": "array"
+          }
+        },
+        "required": [
+          "fact"
+        ],
+        "title": "AttentionItem",
+        "type": "object"
+      },
+      "AudienceResponse": {
+        "properties": {
+          "createdAt": {
+            "title": "Createdat",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "internal": {
+            "title": "Internal",
+            "type": "boolean"
+          },
+          "isSystem": {
+            "title": "Issystem",
+            "type": "boolean"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "updatedAt": {
+            "title": "Updatedat",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "key",
+          "name",
+          "description",
+          "internal",
+          "isSystem",
+          "version",
+          "createdAt",
+          "updatedAt"
+        ],
+        "title": "AudienceResponse",
         "type": "object"
       },
       "AuditEventItem": {
@@ -1734,6 +1836,38 @@
           "code"
         ],
         "title": "ClassEntry",
+        "type": "object"
+      },
+      "ClearanceSchema": {
+        "description": "What a reader may read: up to a level, for audiences (§10.2).\n\n``maxLevel: null`` reads nothing — the state of a reader nobody has\ncleared yet; there is no implicit everyone.",
+        "properties": {
+          "audienceIds": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 200,
+            "title": "Audienceids",
+            "type": "array"
+          },
+          "maxLevel": {
+            "anyOf": [
+              {
+                "enum": [
+                  "public",
+                  "internal",
+                  "confidential"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Maxlevel"
+          }
+        },
+        "title": "ClearanceSchema",
         "type": "object"
       },
       "CloneSnippetRequest": {
@@ -3322,6 +3456,85 @@
         "title": "ConversationMessageRequest",
         "type": "object"
       },
+      "CorrectionBody": {
+        "description": "A correction from the fact card (§8.3): changed since a date, or wrong.",
+        "properties": {
+          "kind": {
+            "enum": [
+              "changed",
+              "wrong"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "since": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Since"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "CorrectionBody",
+        "type": "object"
+      },
+      "CorrectionOutcome": {
+        "properties": {
+          "fact": {
+            "format": "uuid",
+            "title": "Fact",
+            "type": "string"
+          },
+          "newFact": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Newfact"
+          },
+          "outcome": {
+            "enum": [
+              "noop",
+              "superseded",
+              "replaced",
+              "open"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          }
+        },
+        "required": [
+          "outcome",
+          "fact"
+        ],
+        "title": "CorrectionOutcome",
+        "type": "object"
+      },
       "CreateAgentRequest": {
         "additionalProperties": false,
         "description": "POST /api/v1/agents — create a new agent.\n\nStrict (``extra=\"forbid\"``): an undeclared key is a 422 naming the\nfield, not a silent discard. Every caller writes an explicit payload\n(frontend ``CreateAgentModal``, the MCP authoring tools, config\nimport), so there is no body carrying incidental keys.",
@@ -3355,6 +3568,17 @@
             ],
             "title": "Capabilitytier",
             "type": "string"
+          },
+          "clearance": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ClearanceSchema"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What this agent may READ (KNOWLEDGE-DESIGN.md §10.2): up to which level, and for which audiences. Set by an administrator. Left out on create: the workspace default, internal for Staff. Inside a process the agent never sees more than the process."
           },
           "creativityTier": {
             "default": "medium",
@@ -3766,6 +3990,23 @@
             "title": "Allowedoperations",
             "type": "array"
           },
+          "audienceIds": {
+            "anyOf": [
+              {
+                "items": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "maxItems": 200,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Whom this is meant for: ids of the workspace's audiences. Left out: the workspace default, Staff. Compared on id, never on name.",
+            "title": "Audienceids"
+          },
           "calendars": {
             "default": [],
             "description": "The calendars on the date table. Only the date table carries them.",
@@ -3802,6 +4043,23 @@
             "description": "False: the rows are reference data the author maintains. True: a workflow may change them, limited to allowedOperations.",
             "title": "Isdynamic",
             "type": "boolean"
+          },
+          "level": {
+            "anyOf": [
+              {
+                "enum": [
+                  "public",
+                  "internal",
+                  "confidential"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How sensitive this is: public, internal or confidential (KNOWLEDGE-DESIGN.md §10.1). Left out: the workspace default, internal. Sent as null: no label — readable by nobody until a maintainer labels it.",
+            "title": "Level"
           },
           "name": {
             "description": "The handle this table is known by. Unique within the workspace — a tool grant and a decision rule name it.",
@@ -4154,10 +4412,44 @@
             ],
             "description": "Optional activation gate controlling when the policy is injected at runtime: `tools` (only on turns where the agent holds one of these) and `delegation` (top / delegate / any). Role tags no longer gate anything — link the policy to its agents instead."
           },
+          "audienceIds": {
+            "anyOf": [
+              {
+                "items": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "maxItems": 200,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Whom this is meant for: ids of the workspace's audiences. Left out: the workspace default, Staff. Compared on id, never on name.",
+            "title": "Audienceids"
+          },
           "bodyMd": {
             "description": "Full policy text in Markdown.",
             "title": "Bodymd",
             "type": "string"
+          },
+          "level": {
+            "anyOf": [
+              {
+                "enum": [
+                  "public",
+                  "internal",
+                  "confidential"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How sensitive this is: public, internal or confidential (KNOWLEDGE-DESIGN.md §10.1). Left out: the workspace default, internal. Sent as null: no label — readable by nobody until a maintainer labels it.",
+            "title": "Level"
           },
           "name": {
             "description": "Human-readable name of the policy.",
@@ -4322,6 +4614,23 @@
       },
       "CreateReferenceDocRequest": {
         "properties": {
+          "audienceIds": {
+            "anyOf": [
+              {
+                "items": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "maxItems": 200,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Whom this is meant for: ids of the workspace's audiences. Left out: the workspace default, Staff. Compared on id, never on name.",
+            "title": "Audienceids"
+          },
           "autoInject": {
             "default": false,
             "description": "Whether the doc is automatically injected into context (vs fetched on demand).",
@@ -4343,6 +4652,23 @@
             "description": "Short human-readable description of what the document covers.",
             "title": "Description",
             "type": "string"
+          },
+          "level": {
+            "anyOf": [
+              {
+                "enum": [
+                  "public",
+                  "internal",
+                  "confidential"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How sensitive this is: public, internal or confidential (KNOWLEDGE-DESIGN.md §10.1). Left out: the workspace default, internal. Sent as null: no label — readable by nobody until a maintainer labels it.",
+            "title": "Level"
           },
           "ownerId": {
             "anyOf": [
@@ -4615,6 +4941,23 @@
       },
       "CreateSkillV2Request": {
         "properties": {
+          "audienceIds": {
+            "anyOf": [
+              {
+                "items": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "maxItems": 200,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Whom this is meant for: ids of the workspace's audiences. Left out: the workspace default, Staff. Compared on id, never on name.",
+            "title": "Audienceids"
+          },
           "bodyMd": {
             "description": "Full skill content in Markdown (the instructions the agent follows).",
             "title": "Bodymd",
@@ -4624,6 +4967,23 @@
             "description": "Short human-readable description of what the skill does.",
             "title": "Description",
             "type": "string"
+          },
+          "level": {
+            "anyOf": [
+              {
+                "enum": [
+                  "public",
+                  "internal",
+                  "confidential"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How sensitive this is: public, internal or confidential (KNOWLEDGE-DESIGN.md §10.1). Left out: the workspace default, internal. Sent as null: no label — readable by nobody until a maintainer labels it.",
+            "title": "Level"
           },
           "name": {
             "description": "Human-readable name of the skill.",
@@ -6438,6 +6798,259 @@
         "title": "DataTableToolsResponse",
         "type": "object"
       },
+      "DecisionBody": {
+        "description": "The answer: ``answer`` to *addition or contradiction?*, ``keep`` (the fact\nthat is right) to *which is right?*.",
+        "properties": {
+          "answer": {
+            "anyOf": [
+              {
+                "enum": [
+                  "addition",
+                  "contradiction"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answer"
+          },
+          "keep": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Keep"
+          }
+        },
+        "title": "DecisionBody",
+        "type": "object"
+      },
+      "DecisionFact": {
+        "description": "One of the two facts of a question, with all its evidence (§8.5).",
+        "properties": {
+          "certaintyPercent": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Certaintypercent"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind"
+          },
+          "knownSince": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Knownsince"
+          },
+          "label": {
+            "$ref": "#/components/schemas/LabelView"
+          },
+          "passages": {
+            "items": {
+              "$ref": "#/components/schemas/DecisionPassage"
+            },
+            "title": "Passages",
+            "type": "array"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/SourceRef"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "validFrom": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Validfrom"
+          },
+          "validUntil": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Validuntil"
+          }
+        },
+        "required": [
+          "id",
+          "text",
+          "label"
+        ],
+        "title": "DecisionFact",
+        "type": "object"
+      },
+      "DecisionItem": {
+        "description": "A question about two facts for a colleague with maintain rights (§8.4, §8.5).\n\nBoth facts with their sources, scores, passages and dates side by side, and\nnothing else: no advice, no summary, no preferred answer (K15). The existing\nfact comes first, the new one second.",
+        "properties": {
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "facts": {
+            "items": {
+              "$ref": "#/components/schemas/DecisionFact"
+            },
+            "title": "Facts",
+            "type": "array"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "question": {
+            "enum": [
+              "addition_or_contradiction",
+              "which_is_right"
+            ],
+            "title": "Question",
+            "type": "string"
+          },
+          "relation": {
+            "title": "Relation",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "question",
+          "relation",
+          "createdAt",
+          "facts"
+        ],
+        "title": "DecisionItem",
+        "type": "object"
+      },
+      "DecisionOutcome": {
+        "properties": {
+          "decision": {
+            "format": "uuid",
+            "title": "Decision",
+            "type": "string"
+          },
+          "outcome": {
+            "title": "Outcome",
+            "type": "string"
+          },
+          "settled": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Settled",
+            "type": "array"
+          }
+        },
+        "required": [
+          "decision",
+          "outcome"
+        ],
+        "title": "DecisionOutcome",
+        "type": "object"
+      },
+      "DecisionPassage": {
+        "description": "One passage behind a fact in a question, with its source and when it came in.",
+        "properties": {
+          "createdAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Createdat"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourceRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "text"
+        ],
+        "title": "DecisionPassage",
+        "type": "object"
+      },
       "DeleteAgentResponse": {
         "description": "Response after deleting an agent.",
         "properties": {
@@ -7327,6 +7940,100 @@
           "task"
         ],
         "title": "DismissWakeTaskResponse",
+        "type": "object"
+      },
+      "DoubtfulCaseView": {
+        "description": "One doubtful case (§12.1): the fact, why it is one, how much a judgement\nchanges, and who holds it. ``run_id`` is the run the fact was learned in.",
+        "properties": {
+          "assignedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assignedat"
+          },
+          "assignee": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PersonRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "escalatedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Escalatedat"
+          },
+          "fact": {
+            "$ref": "#/components/schemas/FactSummary"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Reasons",
+            "type": "array"
+          },
+          "reasonsSaid": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Reasonssaid",
+            "type": "array"
+          },
+          "runId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Runid"
+          },
+          "score": {
+            "title": "Score",
+            "type": "number"
+          },
+          "uncertaintyPercent": {
+            "title": "Uncertaintypercent",
+            "type": "integer"
+          },
+          "uses": {
+            "title": "Uses",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "fact",
+          "uncertaintyPercent",
+          "uses",
+          "score"
+        ],
+        "title": "DoubtfulCaseView",
         "type": "object"
       },
       "DraftMigrationApplyRequest": {
@@ -8416,6 +9123,30 @@
         "title": "ExitToolSchema",
         "type": "object"
       },
+      "ExpiringItem": {
+        "description": "A fact whose shelf life ends soon or ended (§12.3 *Expiring*).",
+        "properties": {
+          "archiveProposed": {
+            "default": false,
+            "title": "Archiveproposed",
+            "type": "boolean"
+          },
+          "fact": {
+            "$ref": "#/components/schemas/FactSummary"
+          },
+          "shelfLifeUntil": {
+            "format": "date-time",
+            "title": "Shelflifeuntil",
+            "type": "string"
+          }
+        },
+        "required": [
+          "fact",
+          "shelfLifeUntil"
+        ],
+        "title": "ExpiringItem",
+        "type": "object"
+      },
       "ExposedValidatorTool": {
         "additionalProperties": false,
         "description": "One pre-flight tool exposure — wraps a registered validator as an\nagent-facing tool (``validator_tools.py`` entry shape).\n\n``error_message`` is allowed: production entries carry it as the\nformatted failure template the wrapper returns on a failing check.\nSnake_case on the wire for the same reason as :class:`ValidatorSpec`\n— one declaration format at every level.\n\nLike a submit-time spec, an exposure names EITHER a shipped predicate\n(``validator_name``) or a validator tool from the library\n(``validator_tool``), and each brings its own binding keys: the registry\nform is bound by ``value_from_field`` + ``static_args``, the tool form by\n``inputs``. Neither dispatch path reads the other's keys.\n\nThe reference key is ``validator_tool`` and not ``tool``, which is what a\nsubmit-time spec calls it. An entry already carries ``tool_name`` — the\nname the AGENT sees — and two keys a character apart meaning different\nthings is a trap that keeps costing. It pairs with ``validator_name``\ninstead: the two answers to what backs this exposure.",
@@ -8529,6 +9260,368 @@
           "tool_name"
         ],
         "title": "ExposedValidatorTool",
+        "type": "object"
+      },
+      "FactCard": {
+        "description": "Everything of §4.2 and §9.2 for one fact.",
+        "properties": {
+          "about": {
+            "items": {
+              "$ref": "#/components/schemas/NodeRef"
+            },
+            "title": "About",
+            "type": "array"
+          },
+          "archivedReason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Archivedreason"
+          },
+          "certaintyPercent": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Certaintypercent"
+          },
+          "doubtful": {
+            "default": false,
+            "title": "Doubtful",
+            "type": "boolean"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/FactEventView"
+            },
+            "title": "Events",
+            "type": "array"
+          },
+          "formulations": {
+            "items": {
+              "$ref": "#/components/schemas/FormulationView"
+            },
+            "title": "Formulations",
+            "type": "array"
+          },
+          "held": {
+            "default": false,
+            "title": "Held",
+            "type": "boolean"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind"
+          },
+          "knownSince": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Knownsince"
+          },
+          "label": {
+            "$ref": "#/components/schemas/LabelView"
+          },
+          "mayJudge": {
+            "default": false,
+            "title": "Mayjudge",
+            "type": "boolean"
+          },
+          "mayMaintain": {
+            "default": false,
+            "title": "Maymaintain",
+            "type": "boolean"
+          },
+          "passages": {
+            "items": {
+              "$ref": "#/components/schemas/PassageView"
+            },
+            "title": "Passages",
+            "type": "array"
+          },
+          "pendingCorrection": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pendingcorrection"
+          },
+          "provenance": {
+            "additionalProperties": true,
+            "title": "Provenance",
+            "type": "object"
+          },
+          "questionOpen": {
+            "default": false,
+            "title": "Questionopen",
+            "type": "boolean"
+          },
+          "shelfLifeUntil": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shelflifeuntil"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "tip": {
+            "default": false,
+            "title": "Tip",
+            "type": "boolean"
+          },
+          "tipSource": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourceRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "topics": {
+            "items": {
+              "$ref": "#/components/schemas/NodeRef"
+            },
+            "title": "Topics",
+            "type": "array"
+          },
+          "validFrom": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Validfrom"
+          },
+          "validUntil": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Validuntil"
+          }
+        },
+        "required": [
+          "id",
+          "text",
+          "label"
+        ],
+        "title": "FactCard",
+        "type": "object"
+      },
+      "FactEventView": {
+        "description": "One entry of a fact's history (§5, §12): what happened, when, by whom, in which run.",
+        "properties": {
+          "actorKind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actorkind"
+          },
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "delta": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delta"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "title": "Payload",
+            "type": "object"
+          },
+          "runId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Runid"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "at"
+        ],
+        "title": "FactEventView",
+        "type": "object"
+      },
+      "FactSummary": {
+        "properties": {
+          "certaintyPercent": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Certaintypercent"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "$ref": "#/components/schemas/LabelView"
+          },
+          "mayJudge": {
+            "default": false,
+            "title": "Mayjudge",
+            "type": "boolean"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "tip": {
+            "default": false,
+            "title": "Tip",
+            "type": "boolean"
+          },
+          "tipSource": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourceRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "validFrom": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Validfrom"
+          },
+          "validUntil": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Validuntil"
+          }
+        },
+        "required": [
+          "id",
+          "text",
+          "label"
+        ],
+        "title": "FactSummary",
         "type": "object"
       },
       "FanOutProgress": {
@@ -9541,6 +10634,36 @@
         "title": "FormulaProblem",
         "type": "object"
       },
+      "FormulationView": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "language": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Language"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "text"
+        ],
+        "title": "FormulationView",
+        "type": "object"
+      },
       "FunctionEntry": {
         "description": "A single function definition with its name and code.",
         "properties": {
@@ -9599,6 +10722,9 @@
             ],
             "title": "Capabilitytier",
             "type": "string"
+          },
+          "clearance": {
+            "$ref": "#/components/schemas/ClearanceSchema"
           },
           "createdAt": {
             "title": "Createdat",
@@ -10505,6 +11631,100 @@
         "title": "InvocationMessagesResponse",
         "type": "object"
       },
+      "JudgementBody": {
+        "description": "Why a colleague rejects a fact — optional, kept with the event.",
+        "properties": {
+          "reason": {
+            "default": "",
+            "maxLength": 2000,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "title": "JudgementBody",
+        "type": "object"
+      },
+      "LabelView": {
+        "properties": {
+          "audienceIds": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Audienceids",
+            "type": "array"
+          },
+          "level": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Level"
+          }
+        },
+        "title": "LabelView",
+        "type": "object"
+      },
+      "LandingPlace": {
+        "description": "One of the eight: a fact or a topic summary, with what hangs around it.",
+        "properties": {
+          "distance": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Distance"
+          },
+          "fact": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PackageFact"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "kind": {
+            "enum": [
+              "fact",
+              "topic"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "neighbours": {
+            "items": {
+              "$ref": "#/components/schemas/PackageFact"
+            },
+            "title": "Neighbours",
+            "type": "array"
+          },
+          "topic": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PackageTopic"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "LandingPlace",
+        "type": "object"
+      },
       "LayerSchema": {
         "description": "Layer within the company framework.\n\nLayers are dynamic: users can add, remove, reorder, and hide them.\nEach layer has a row/position for layout and per-view visibility flags.",
         "properties": {
@@ -10606,6 +11826,293 @@
         "title": "LayerSchema",
         "type": "object"
       },
+      "LearningAnswerBody": {
+        "properties": {
+          "answer": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Answer",
+            "type": "string"
+          }
+        },
+        "required": [
+          "answer"
+        ],
+        "title": "LearningAnswerBody",
+        "type": "object"
+      },
+      "LearningChoiceBody": {
+        "description": "The colleague's own judgement when the answer is not plainly the fact.",
+        "properties": {
+          "outcome": {
+            "enum": [
+              "same",
+              "different"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          }
+        },
+        "required": [
+          "outcome"
+        ],
+        "title": "LearningChoiceBody",
+        "type": "object"
+      },
+      "LearningItemView": {
+        "description": "One question of a learning round, before it is answered: the question,\nnever the fact — that is shown once the colleague answered.",
+        "properties": {
+          "dueAt": {
+            "format": "date-time",
+            "title": "Dueat",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "lesson": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LessonView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "question": {
+            "title": "Question",
+            "type": "string"
+          },
+          "repeat": {
+            "title": "Repeat",
+            "type": "integer"
+          },
+          "source": {
+            "enum": [
+              "doubtful",
+              "topic",
+              "random"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "topicName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Topicname"
+          }
+        },
+        "required": [
+          "id",
+          "question",
+          "source",
+          "repeat",
+          "dueAt"
+        ],
+        "title": "LearningItemView",
+        "type": "object"
+      },
+      "LearningMeasure": {
+        "description": "The measurement (§12.2): right answers on the random items, per workspace.",
+        "properties": {
+          "answered": {
+            "title": "Answered",
+            "type": "integer"
+          },
+          "right": {
+            "title": "Right",
+            "type": "integer"
+          },
+          "shareRightPercent": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sharerightpercent"
+          },
+          "windowDays": {
+            "title": "Windowdays",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "right",
+          "answered",
+          "windowDays"
+        ],
+        "title": "LearningMeasure",
+        "type": "object"
+      },
+      "LearningReveal": {
+        "description": "After the answer: the fact with its sources, percentage and passages, and\nwhat the answer did. ``needs_choice``: say yourself whether you meant the same.",
+        "properties": {
+          "answer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answer"
+          },
+          "countedAsCheck": {
+            "default": false,
+            "title": "Countedascheck",
+            "type": "boolean"
+          },
+          "fact": {
+            "$ref": "#/components/schemas/DecisionFact"
+          },
+          "itemId": {
+            "format": "uuid",
+            "title": "Itemid",
+            "type": "string"
+          },
+          "mayMaintain": {
+            "default": false,
+            "title": "Maymaintain",
+            "type": "boolean"
+          },
+          "needsChoice": {
+            "default": false,
+            "title": "Needschoice",
+            "type": "boolean"
+          },
+          "nextDueAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextdueat"
+          },
+          "outcome": {
+            "anyOf": [
+              {
+                "enum": [
+                  "same",
+                  "different"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outcome"
+          },
+          "reported": {
+            "default": false,
+            "title": "Reported",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "itemId",
+          "fact"
+        ],
+        "title": "LearningReveal",
+        "type": "object"
+      },
+      "LearningRoundStatus": {
+        "description": "This month's round: how many items it holds.",
+        "properties": {
+          "items": {
+            "title": "Items",
+            "type": "integer"
+          },
+          "roundMonth": {
+            "format": "date-time",
+            "title": "Roundmonth",
+            "type": "string"
+          }
+        },
+        "required": [
+          "roundMonth",
+          "items"
+        ],
+        "title": "LearningRoundStatus",
+        "type": "object"
+      },
+      "LearningTopicBody": {
+        "description": "The topic a colleague learns; ``null`` goes back to the one their role gives.",
+        "properties": {
+          "topicId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Topicid"
+          }
+        },
+        "title": "LearningTopicBody",
+        "type": "object"
+      },
+      "LessonView": {
+        "description": "The reading before the questions of a topic (§12.2): the summaries of the\ndomain and the topic, as the graph holds them.",
+        "properties": {
+          "domainName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Domainname"
+          },
+          "domainSummary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Domainsummary"
+          },
+          "topicName": {
+            "title": "Topicname",
+            "type": "string"
+          },
+          "topicSummary": {
+            "title": "Topicsummary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "topicName",
+          "topicSummary"
+        ],
+        "title": "LessonView",
+        "type": "object"
+      },
       "LoginRequest": {
         "description": "Email + password login payload.",
         "properties": {
@@ -10705,6 +12212,105 @@
           "createdAt"
         ],
         "title": "MajorVersionResponse",
+        "type": "object"
+      },
+      "MapNode": {
+        "description": "One point or name on the map (§9.3): where it lies, which domain colours it,\nand how certain it is (a fact's point is full when certain, pale as a draft).",
+        "properties": {
+          "certaintyPercent": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Certaintypercent"
+          },
+          "domain": {
+            "title": "Domain",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          },
+          "x": {
+            "title": "X",
+            "type": "number"
+          },
+          "y": {
+            "title": "Y",
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "x",
+          "y",
+          "domain"
+        ],
+        "title": "MapNode",
+        "type": "object"
+      },
+      "MapWindow": {
+        "description": "The nodes of one layer inside the visible plane, at most a bounded number:\n``truncated`` says there were more — zoom in.",
+        "properties": {
+          "layer": {
+            "title": "Layer",
+            "type": "integer"
+          },
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/MapNode"
+            },
+            "title": "Nodes",
+            "type": "array"
+          },
+          "topLayer": {
+            "title": "Toplayer",
+            "type": "integer"
+          },
+          "truncated": {
+            "default": false,
+            "title": "Truncated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "layer",
+          "topLayer"
+        ],
+        "title": "MapWindow",
         "type": "object"
       },
       "MeasureDefinitionPayload": {
@@ -11954,6 +13560,27 @@
         "title": "MeasureSummary",
         "type": "object"
       },
+      "MemberRolesResponse": {
+        "properties": {
+          "roleIds": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Roleids",
+            "type": "array"
+          },
+          "userId": {
+            "title": "Userid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "userId",
+          "roleIds"
+        ],
+        "title": "MemberRolesResponse",
+        "type": "object"
+      },
       "ModelTierMap": {
         "additionalProperties": false,
         "description": "Per-tenant tier → concrete provider model.\n\nEvery value of ``CapabilityTier`` MUST be present.  Values cannot be\nempty strings — an empty model name would silently fall through to\nthe router fallback and surprise an admin who thought they had\nconfigured a tier.",
@@ -12063,6 +13690,225 @@
           "document"
         ],
         "title": "MutationResponse",
+        "type": "object"
+      },
+      "NetworkGroup": {
+        "description": "The neighbours of one kind; ``more`` is how many the network does not hold.",
+        "properties": {
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "more": {
+            "default": 0,
+            "title": "More",
+            "type": "integer"
+          },
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/NetworkNode"
+            },
+            "title": "Nodes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "kind",
+          "label"
+        ],
+        "title": "NetworkGroup",
+        "type": "object"
+      },
+      "NetworkNode": {
+        "description": "One node of the network (§9.3): a fact, passage, source, formulation, topic\nor group. ``score`` is a source's or a passage's source score, ``distance`` a\nrelated link's, ``count`` how many facts a topic stands for when grouped;\n``marker`` says a fact shown on a past date was later superseded or archived.",
+        "properties": {
+          "certaintyPercent": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Certaintypercent"
+          },
+          "count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Count"
+          },
+          "distance": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Distance"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "default": "",
+            "title": "Label",
+            "type": "string"
+          },
+          "marker": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Marker"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          },
+          "validFrom": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Validfrom"
+          },
+          "validUntil": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Validuntil"
+          }
+        },
+        "required": [
+          "id",
+          "type"
+        ],
+        "title": "NetworkNode",
+        "type": "object"
+      },
+      "NetworkView": {
+        "description": "The node in the middle and its neighbours by kind (§9.3), on a date or today.",
+        "properties": {
+          "asOf": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Asof"
+          },
+          "centre": {
+            "$ref": "#/components/schemas/NetworkNode"
+          },
+          "groupedByTopic": {
+            "default": false,
+            "title": "Groupedbytopic",
+            "type": "boolean"
+          },
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/NetworkGroup"
+            },
+            "title": "Groups",
+            "type": "array"
+          }
+        },
+        "required": [
+          "centre"
+        ],
+        "title": "NetworkView",
+        "type": "object"
+      },
+      "NodeRef": {
+        "description": "A node named on a card: a topic or a subject, by id and name.",
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "naturalKey": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Naturalkey"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "name"
+        ],
+        "title": "NodeRef",
         "type": "object"
       },
       "NotificationOut": {
@@ -12434,6 +14280,25 @@
         "title": "OutputSchemaResponse",
         "type": "object"
       },
+      "OversightScope": {
+        "description": "What the Oversight screen shows this colleague (§12.3): the work lists only\nto who maintains an audience; the cases nobody holds only to an administrator.",
+        "properties": {
+          "isAdmin": {
+            "title": "Isadmin",
+            "type": "boolean"
+          },
+          "maintains": {
+            "title": "Maintains",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "maintains",
+          "isAdmin"
+        ],
+        "title": "OversightScope",
+        "type": "object"
+      },
       "OwnerSchema": {
         "description": "Workflow owner.",
         "properties": {
@@ -12492,6 +14357,113 @@
         "title": "PackageCatalogResponse",
         "type": "object"
       },
+      "PackageFact": {
+        "description": "One fact as the agent reads it — with the four fields of §9.2 and ``held``.",
+        "properties": {
+          "certainty": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Certainty"
+          },
+          "certaintyPercent": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Certaintypercent"
+          },
+          "held": {
+            "default": false,
+            "title": "Held",
+            "type": "boolean"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "level": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Level"
+          },
+          "passages": {
+            "items": {
+              "$ref": "#/components/schemas/PackagePassage"
+            },
+            "title": "Passages",
+            "type": "array"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "topics": {
+            "items": {
+              "$ref": "#/components/schemas/TopicRef"
+            },
+            "title": "Topics",
+            "type": "array"
+          },
+          "validFrom": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Validfrom"
+          },
+          "validUntil": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Validuntil"
+          }
+        },
+        "required": [
+          "id",
+          "text"
+        ],
+        "title": "PackageFact",
+        "type": "object"
+      },
       "PackageInfoResponse": {
         "description": "A single package in the catalog.",
         "properties": {
@@ -12541,6 +14513,202 @@
           "commonClasses"
         ],
         "title": "PackageInfoResponse",
+        "type": "object"
+      },
+      "PackagePassage": {
+        "description": "A passage under a fact: the evidence, with its source's type, score and date.",
+        "properties": {
+          "date": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "reference": {
+            "additionalProperties": true,
+            "title": "Reference",
+            "type": "object"
+          },
+          "sourceName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcename"
+          },
+          "sourceScore": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcescore"
+          },
+          "sourceType": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcetype"
+          },
+          "sourceTypeName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcetypename"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "text"
+        ],
+        "title": "PackagePassage",
+        "type": "object"
+      },
+      "PackageTopic": {
+        "description": "A topic with its summary and the names of its related topics.",
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "level": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Level"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "related": {
+            "items": {
+              "$ref": "#/components/schemas/TopicRef"
+            },
+            "title": "Related",
+            "type": "array"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "summary"
+        ],
+        "title": "PackageTopic",
+        "type": "object"
+      },
+      "Page_AttentionItem_": {
+        "properties": {
+          "hasMore": {
+            "default": false,
+            "title": "Hasmore",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AttentionItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          },
+          "pageSize": {
+            "title": "Pagesize",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "pageSize"
+        ],
+        "title": "Page[AttentionItem]",
+        "type": "object"
+      },
+      "Page_AudienceResponse_": {
+        "properties": {
+          "hasMore": {
+            "default": false,
+            "title": "Hasmore",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AudienceResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          },
+          "pageSize": {
+            "title": "Pagesize",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "pageSize"
+        ],
+        "title": "Page[AudienceResponse]",
         "type": "object"
       },
       "Page_AuditEventItem_": {
@@ -12759,6 +14927,186 @@
         "title": "Page[DataTableSummary]",
         "type": "object"
       },
+      "Page_DecisionItem_": {
+        "properties": {
+          "hasMore": {
+            "default": false,
+            "title": "Hasmore",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/DecisionItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          },
+          "pageSize": {
+            "title": "Pagesize",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "pageSize"
+        ],
+        "title": "Page[DecisionItem]",
+        "type": "object"
+      },
+      "Page_DoubtfulCaseView_": {
+        "properties": {
+          "hasMore": {
+            "default": false,
+            "title": "Hasmore",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/DoubtfulCaseView"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          },
+          "pageSize": {
+            "title": "Pagesize",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "pageSize"
+        ],
+        "title": "Page[DoubtfulCaseView]",
+        "type": "object"
+      },
+      "Page_ExpiringItem_": {
+        "properties": {
+          "hasMore": {
+            "default": false,
+            "title": "Hasmore",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ExpiringItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          },
+          "pageSize": {
+            "title": "Pagesize",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "pageSize"
+        ],
+        "title": "Page[ExpiringItem]",
+        "type": "object"
+      },
+      "Page_FactSummary_": {
+        "properties": {
+          "hasMore": {
+            "default": false,
+            "title": "Hasmore",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/FactSummary"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          },
+          "pageSize": {
+            "title": "Pagesize",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "pageSize"
+        ],
+        "title": "Page[FactSummary]",
+        "type": "object"
+      },
+      "Page_LearningItemView_": {
+        "properties": {
+          "hasMore": {
+            "default": false,
+            "title": "Hasmore",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/LearningItemView"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          },
+          "pageSize": {
+            "title": "Pagesize",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "pageSize"
+        ],
+        "title": "Page[LearningItemView]",
+        "type": "object"
+      },
       "Page_MeasureSummary_": {
         "properties": {
           "hasMore": {
@@ -12831,6 +15179,42 @@
         "title": "Page[NotificationOut]",
         "type": "object"
       },
+      "Page_RelatedNode_": {
+        "properties": {
+          "hasMore": {
+            "default": false,
+            "title": "Hasmore",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RelatedNode"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          },
+          "pageSize": {
+            "title": "Pagesize",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "pageSize"
+        ],
+        "title": "Page[RelatedNode]",
+        "type": "object"
+      },
       "Page_ReleaseApprovalSummary_": {
         "properties": {
           "hasMore": {
@@ -12865,6 +15249,42 @@
           "pageSize"
         ],
         "title": "Page[ReleaseApprovalSummary]",
+        "type": "object"
+      },
+      "Page_RoleResponse_": {
+        "properties": {
+          "hasMore": {
+            "default": false,
+            "title": "Hasmore",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RoleResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          },
+          "pageSize": {
+            "title": "Pagesize",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "pageSize"
+        ],
+        "title": "Page[RoleResponse]",
         "type": "object"
       },
       "Page_RunItemResult_": {
@@ -13011,6 +15431,78 @@
         "title": "Page[TodoItem]",
         "type": "object"
       },
+      "Page_TopicSummary_": {
+        "properties": {
+          "hasMore": {
+            "default": false,
+            "title": "Hasmore",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/TopicSummary"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          },
+          "pageSize": {
+            "title": "Pagesize",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "pageSize"
+        ],
+        "title": "Page[TopicSummary]",
+        "type": "object"
+      },
+      "Page_TreeNode_": {
+        "properties": {
+          "hasMore": {
+            "default": false,
+            "title": "Hasmore",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/TreeNode"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          },
+          "pageSize": {
+            "title": "Pagesize",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "pageSize"
+        ],
+        "title": "Page[TreeNode]",
+        "type": "object"
+      },
       "Page_WorkspaceSummary_": {
         "properties": {
           "hasMore": {
@@ -13047,6 +15539,40 @@
         "title": "Page[WorkspaceSummary]",
         "type": "object"
       },
+      "PassageView": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "reference": {
+            "additionalProperties": true,
+            "title": "Reference",
+            "type": "object"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourceRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "text"
+        ],
+        "title": "PassageView",
+        "type": "object"
+      },
       "PatchWorkflowRequest": {
         "description": "PATCH /api/v1/workflows/{id} — partial update of workflow fields.\n\nOnly fields included in the request body are updated.\nUse empty string to clear optional string fields (stageId, capabilityId).",
         "properties": {
@@ -13060,6 +15586,17 @@
               }
             ],
             "title": "Capabilityid"
+          },
+          "clearance": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ClearanceSchema"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What this process may READ (KNOWLEDGE-DESIGN.md §10.9): up to which level, and for which audiences — the audiences of whoever it serves. Set by the author; travels through the publication gate. An agent in the process never sees more than this."
           },
           "definitionOfDone": {
             "anyOf": [
@@ -13172,6 +15709,26 @@
           "document"
         ],
         "title": "PatchWorkflowResponse",
+        "type": "object"
+      },
+      "PersonRef": {
+        "description": "A colleague, as a list names them.",
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "PersonRef",
         "type": "object"
       },
       "PersonaResponse": {
@@ -15085,6 +17642,22 @@
         "title": "ReadFromEntry",
         "type": "object"
       },
+      "ReasonBody": {
+        "description": "Why a fact is archived, or personal data erased — kept with the act.",
+        "properties": {
+          "reason": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "ReasonBody",
+        "type": "object"
+      },
       "ReconcileResult": {
         "description": "What the consistency check found and repaired.",
         "properties": {
@@ -15490,6 +18063,72 @@
           "refreshToken"
         ],
         "title": "RefreshRequest",
+        "type": "object"
+      },
+      "RelabelBody": {
+        "description": "A fact's new label (§10.9): narrowing always, widening is publishing.",
+        "properties": {
+          "audienceIds": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 50,
+            "minItems": 1,
+            "title": "Audienceids",
+            "type": "array"
+          },
+          "level": {
+            "enum": [
+              "public",
+              "internal",
+              "confidential"
+            ],
+            "title": "Level",
+            "type": "string"
+          }
+        },
+        "required": [
+          "level",
+          "audienceIds"
+        ],
+        "title": "RelabelBody",
+        "type": "object"
+      },
+      "RelatedNode": {
+        "description": "A node of the same layer one step across (§4.3), with the distance as it was stored.",
+        "properties": {
+          "distance": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Distance"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "name"
+        ],
+        "title": "RelatedNode",
         "type": "object"
       },
       "ReleaseApprovalItem": {
@@ -16395,6 +19034,103 @@
           }
         },
         "title": "RevokeServiceTokenResponse",
+        "type": "object"
+      },
+      "RightVersionBody": {
+        "description": "The right version of a fact that was corrected as wrong without one.",
+        "properties": {
+          "value": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "value"
+        ],
+        "title": "RightVersionBody",
+        "type": "object"
+      },
+      "RoleResponse": {
+        "properties": {
+          "createdAt": {
+            "title": "Createdat",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "holders": {
+            "title": "Holders",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "isSystem": {
+            "title": "Issystem",
+            "type": "boolean"
+          },
+          "maintainAudienceIds": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Maintainaudienceids",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "readAudienceIds": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Readaudienceids",
+            "type": "array"
+          },
+          "readMaxLevel": {
+            "anyOf": [
+              {
+                "enum": [
+                  "public",
+                  "internal",
+                  "confidential"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Readmaxlevel"
+          },
+          "updatedAt": {
+            "title": "Updatedat",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "readMaxLevel",
+          "readAudienceIds",
+          "maintainAudienceIds",
+          "isSystem",
+          "holders",
+          "version",
+          "createdAt",
+          "updatedAt"
+        ],
+        "title": "RoleResponse",
         "type": "object"
       },
       "RunCaller": {
@@ -17944,6 +20680,44 @@
         "title": "SchemaTableOut",
         "type": "object"
       },
+      "SearchPackage": {
+        "description": "A landing with its expansion (§9.1 steps 1 to 3).",
+        "properties": {
+          "factCount": {
+            "default": 0,
+            "title": "Factcount",
+            "type": "integer"
+          },
+          "landing": {
+            "items": {
+              "$ref": "#/components/schemas/LandingPlace"
+            },
+            "title": "Landing",
+            "type": "array"
+          },
+          "note": {
+            "default": "",
+            "title": "Note",
+            "type": "string"
+          },
+          "question": {
+            "title": "Question",
+            "type": "string"
+          },
+          "tips": {
+            "items": {
+              "$ref": "#/components/schemas/Tip"
+            },
+            "title": "Tips",
+            "type": "array"
+          }
+        },
+        "required": [
+          "question"
+        ],
+        "title": "SearchPackage",
+        "type": "object"
+      },
       "SecretListItem": {
         "description": "Secret listing item for overview — never includes values.",
         "properties": {
@@ -18961,6 +21735,147 @@
           "updatedAt"
         ],
         "title": "SkillV2Response",
+        "type": "object"
+      },
+      "SourceCard": {
+        "properties": {
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/FactEventView"
+            },
+            "title": "Events",
+            "type": "array"
+          },
+          "factCount": {
+            "title": "Factcount",
+            "type": "integer"
+          },
+          "factsActive": {
+            "default": 0,
+            "title": "Factsactive",
+            "type": "integer"
+          },
+          "factsIncorrect": {
+            "default": 0,
+            "title": "Factsincorrect",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "lastChange": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FactEventView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "nRight": {
+            "title": "Nright",
+            "type": "integer"
+          },
+          "nSilent": {
+            "title": "Nsilent",
+            "type": "integer"
+          },
+          "nWrong": {
+            "title": "Nwrong",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "pinned": {
+            "title": "Pinned",
+            "type": "boolean"
+          },
+          "score": {
+            "title": "Score",
+            "type": "number"
+          },
+          "silentVotes": {
+            "default": 0.0,
+            "title": "Silentvotes",
+            "type": "number"
+          },
+          "startScore": {
+            "title": "Startscore",
+            "type": "number"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          },
+          "typeName": {
+            "title": "Typename",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "key",
+          "name",
+          "type",
+          "typeName",
+          "score",
+          "startScore",
+          "nRight",
+          "nWrong",
+          "nSilent",
+          "pinned",
+          "factCount",
+          "createdAt"
+        ],
+        "title": "SourceCard",
+        "type": "object"
+      },
+      "SourceRef": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "score": {
+            "title": "Score",
+            "type": "number"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          },
+          "typeName": {
+            "title": "Typename",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "type",
+          "typeName",
+          "score"
+        ],
+        "title": "SourceRef",
         "type": "object"
       },
       "StageSchema": {
@@ -20782,6 +23697,112 @@
         "title": "TimeAxisPayload",
         "type": "object"
       },
+      "Tip": {
+        "description": "A fact below the inside threshold (§6.3): never in an answer; for a\ncolleague with maintain rights, attached to a handed-over question.",
+        "properties": {
+          "certainty": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Certainty"
+          },
+          "certaintyPercent": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Certaintypercent"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "sourceName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcename"
+          },
+          "sourceScore": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcescore"
+          },
+          "sourceTypeName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcetypename"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "text"
+        ],
+        "title": "Tip",
+        "type": "object"
+      },
+      "TipsShownBody": {
+        "description": "The tips a handed-over question carries, and the run it was handed over from.",
+        "properties": {
+          "ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 10,
+            "title": "Ids",
+            "type": "array"
+          },
+          "runId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Runid"
+          }
+        },
+        "required": [
+          "ids"
+        ],
+        "title": "TipsShownBody",
+        "type": "object"
+      },
       "TodoItem": {
         "description": "A step needing user input — displayed in the TO-DO panel.",
         "properties": {
@@ -21448,6 +24469,59 @@
         "title": "TopRowsResponse",
         "type": "object"
       },
+      "TopicRef": {
+        "description": "A topic named in the package: an id the agent may step to, and its name.",
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "TopicRef",
+        "type": "object"
+      },
+      "TopicSummary": {
+        "properties": {
+          "factCount": {
+            "title": "Factcount",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "$ref": "#/components/schemas/LabelView"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "summary",
+          "label",
+          "factCount"
+        ],
+        "title": "TopicSummary",
+        "type": "object"
+      },
       "TransitionSchema": {
         "description": "One outbound edge from a flow-step.\n\n- ``when='auto'``: unconditionally transitions to ``next``.\n- ``when='fork'``: reads ``fork_field`` from the exit-tool payload and\n  picks the target in ``routes`` matching that value. ``default`` is\n  used when no explicit route matches.\n\nStored as an entry in the JSONB ``transitions`` list on flow_steps.\nService-layer validation ensures referenced step identifiers exist.",
         "properties": {
@@ -21511,6 +24585,55 @@
           "when"
         ],
         "title": "TransitionSchema",
+        "type": "object"
+      },
+      "TreeNode": {
+        "description": "One node of the tree (§4.4): a domain (or a group above it) or a topic,\nwith how many facts in its subtree the reader may see.",
+        "properties": {
+          "factCount": {
+            "title": "Factcount",
+            "type": "integer"
+          },
+          "hasChildren": {
+            "title": "Haschildren",
+            "type": "boolean"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "$ref": "#/components/schemas/LabelView"
+          },
+          "layer": {
+            "title": "Layer",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "layer",
+          "name",
+          "summary",
+          "label",
+          "factCount",
+          "hasChildren"
+        ],
+        "title": "TreeNode",
         "type": "object"
       },
       "TriggerElementSchema": {
@@ -21823,6 +24946,17 @@
             "description": "Model capability tier: economy, standard, smart, or reasoning.",
             "title": "Capabilitytier"
           },
+          "clearance": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ClearanceSchema"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What this agent may READ (KNOWLEDGE-DESIGN.md §10.2): up to which level, and for which audiences. Set by an administrator. Left out on create: the workspace default, internal for Staff. Inside a process the agent never sees more than the process."
+          },
           "creativityTier": {
             "anyOf": [
               {
@@ -22014,6 +25148,9 @@
             ],
             "title": "Capabilitytier",
             "type": "string"
+          },
+          "clearance": {
+            "$ref": "#/components/schemas/ClearanceSchema"
           },
           "creativityTier": {
             "enum": [
@@ -22277,6 +25414,23 @@
             ],
             "title": "Allowedoperations"
           },
+          "audienceIds": {
+            "anyOf": [
+              {
+                "items": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "maxItems": 200,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Whom this is meant for: ids of the workspace's audiences; replaces the set. Adding one is widening, and needs maintain rights on it.",
+            "title": "Audienceids"
+          },
           "calendars": {
             "anyOf": [
               {
@@ -22360,6 +25514,23 @@
               }
             ],
             "title": "Isdynamic"
+          },
+          "level": {
+            "anyOf": [
+              {
+                "enum": [
+                  "public",
+                  "internal",
+                  "confidential"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How sensitive this is: public, internal or confidential. Sent as null: the label is removed. Lowering it is widening, and needs maintain rights on every audience it reaches.",
+            "title": "Level"
           },
           "name": {
             "anyOf": [
@@ -22873,6 +26044,23 @@
             ],
             "description": "Optional activation gate controlling when the policy is injected at runtime: `tools` (only on turns where the agent holds one of these) and `delegation` (top / delegate / any). Role tags no longer gate anything — link the policy to its agents instead."
           },
+          "audienceIds": {
+            "anyOf": [
+              {
+                "items": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "maxItems": 200,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Whom this is meant for: ids of the workspace's audiences; replaces the set. Adding one is widening, and needs maintain rights on it.",
+            "title": "Audienceids"
+          },
           "bodyMd": {
             "anyOf": [
               {
@@ -22889,6 +26077,23 @@
             "description": "Version the edit is based on; a stale value is rejected with HTTP 409 (optimistic locking).",
             "title": "Expectedversion",
             "type": "integer"
+          },
+          "level": {
+            "anyOf": [
+              {
+                "enum": [
+                  "public",
+                  "internal",
+                  "confidential"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How sensitive this is: public, internal or confidential. Sent as null: the label is removed. Lowering it is widening, and needs maintain rights on every audience it reaches.",
+            "title": "Level"
           },
           "name": {
             "anyOf": [
@@ -23135,6 +26340,23 @@
       },
       "UpdateReferenceDocRequest": {
         "properties": {
+          "audienceIds": {
+            "anyOf": [
+              {
+                "items": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "maxItems": 200,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Whom this is meant for: ids of the workspace's audiences; replaces the set. Adding one is widening, and needs maintain rights on it.",
+            "title": "Audienceids"
+          },
           "autoInject": {
             "anyOf": [
               {
@@ -23187,6 +26409,23 @@
             "description": "Version the edit is based on; a stale value is rejected with HTTP 409 (optimistic locking).",
             "title": "Expectedversion",
             "type": "integer"
+          },
+          "level": {
+            "anyOf": [
+              {
+                "enum": [
+                  "public",
+                  "internal",
+                  "confidential"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How sensitive this is: public, internal or confidential. Sent as null: the label is removed. Lowering it is widening, and needs maintain rights on every audience it reaches.",
+            "title": "Level"
           },
           "ownerId": {
             "anyOf": [
@@ -23435,6 +26674,23 @@
       },
       "UpdateSkillV2Request": {
         "properties": {
+          "audienceIds": {
+            "anyOf": [
+              {
+                "items": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "maxItems": 200,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Whom this is meant for: ids of the workspace's audiences; replaces the set. Adding one is widening, and needs maintain rights on it.",
+            "title": "Audienceids"
+          },
           "bodyMd": {
             "anyOf": [
               {
@@ -23463,6 +26719,23 @@
             "description": "Version the edit is based on; a stale value is rejected with HTTP 409 (optimistic locking).",
             "title": "Expectedversion",
             "type": "integer"
+          },
+          "level": {
+            "anyOf": [
+              {
+                "enum": [
+                  "public",
+                  "internal",
+                  "confidential"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How sensitive this is: public, internal or confidential. Sent as null: the label is removed. Lowering it is widening, and needs maintain rights on every audience it reaches.",
+            "title": "Level"
           },
           "name": {
             "anyOf": [
@@ -28188,6 +31461,126 @@
         "summary": "Get Agent Version",
         "tags": [
           "agents"
+        ]
+      }
+    },
+    "/api/v1/audiences": {
+      "get": {
+        "description": "The workspace's audiences, the platform's first.",
+        "operationId": "list_audiences_api_v1_audiences_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Limit"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_AudienceResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Audiences",
+        "tags": [
+          "audiences"
+        ]
+      }
+    },
+    "/api/v1/audiences/{audience_id}": {
+      "get": {
+        "operationId": "get_audience_api_v1_audiences__audience_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "audience_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Audience Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AudienceResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Audience",
+        "tags": [
+          "audiences"
         ]
       }
     },
@@ -36545,6 +39938,2130 @@
         "summary": "Create File",
         "tags": [
           "memory"
+        ]
+      }
+    },
+    "/api/v1/knowledge/archived": {
+      "get": {
+        "description": "What was archived in the last thirty days.",
+        "operationId": "list_archived_api_v1_knowledge_archived_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Limit"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_FactSummary_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Archived",
+        "tags": [
+          "knowledge"
+        ]
+      }
+    },
+    "/api/v1/knowledge/attention": {
+      "get": {
+        "description": "The facts that wait for a person, and why.",
+        "operationId": "list_attention_api_v1_knowledge_attention_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Limit"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_AttentionItem_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Attention",
+        "tags": [
+          "knowledge"
+        ]
+      }
+    },
+    "/api/v1/knowledge/decisions": {
+      "get": {
+        "description": "*Decision needed*: the questions about two facts this colleague maintains (§8.4, §8.5).",
+        "operationId": "list_decisions_api_v1_knowledge_decisions_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Limit"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_DecisionItem_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Decisions",
+        "tags": [
+          "knowledge"
+        ]
+      }
+    },
+    "/api/v1/knowledge/decisions/{decision_id}": {
+      "post": {
+        "description": "Answer one question: *addition* or *contradiction*, or which fact is right.",
+        "operationId": "answer_decision_api_v1_knowledge_decisions__decision_id__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "decision_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Decision Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecisionBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DecisionOutcome"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Answer Decision",
+        "tags": [
+          "knowledge"
+        ]
+      }
+    },
+    "/api/v1/knowledge/facts/{fact_id}": {
+      "get": {
+        "operationId": "get_fact_api_v1_knowledge_facts__fact_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "fact_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Fact Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FactCard"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Fact",
+        "tags": [
+          "knowledge"
+        ]
+      }
+    },
+    "/api/v1/knowledge/facts/{fact_id}/archive": {
+      "post": {
+        "description": "Remove a fact: archived with who, when and why — never erased (§8.2).",
+        "operationId": "archive_fact_api_v1_knowledge_facts__fact_id__archive_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "fact_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Fact Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReasonBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FactCard"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Archive Fact",
+        "tags": [
+          "knowledge"
+        ]
+      }
+    },
+    "/api/v1/knowledge/facts/{fact_id}/confirm": {
+      "post": {
+        "description": "A colleague who maintains the fact's audience confirms it (§6.4, first event).",
+        "operationId": "confirm_fact_api_v1_knowledge_facts__fact_id__confirm_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "fact_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Fact Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FactCard"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Confirm Fact",
+        "tags": [
+          "knowledge"
+        ]
+      }
+    },
+    "/api/v1/knowledge/facts/{fact_id}/correct": {
+      "post": {
+        "description": "§8.3 from the fact card: changed since a date, or wrong (with or without the right value).",
+        "operationId": "correct_fact_api_v1_knowledge_facts__fact_id__correct_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "fact_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Fact Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CorrectionBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CorrectionOutcome"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Correct Fact",
+        "tags": [
+          "knowledge"
+        ]
+      }
+    },
+    "/api/v1/knowledge/facts/{fact_id}/reject": {
+      "post": {
+        "description": "A colleague who maintains the fact's audience rejects it: incorrect, \"+1 wrong\".",
+        "operationId": "reject_fact_api_v1_knowledge_facts__fact_id__reject_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "fact_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Fact Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JudgementBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FactCard"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Reject Fact",
+        "tags": [
+          "knowledge"
+        ]
+      }
+    },
+    "/api/v1/knowledge/facts/{fact_id}/relabel": {
+      "post": {
+        "description": "§10.9: narrowing always; widening is publishing, for audiences one maintains.",
+        "operationId": "relabel_fact_api_v1_knowledge_facts__fact_id__relabel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "fact_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Fact Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RelabelBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FactCard"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Relabel Fact",
+        "tags": [
+          "knowledge"
+        ]
+      }
+    },
+    "/api/v1/knowledge/facts/{fact_id}/restore": {
+      "post": {
+        "operationId": "restore_fact_api_v1_knowledge_facts__fact_id__restore_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "fact_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Fact Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FactCard"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Restore Fact",
+        "tags": [
+          "knowledge"
+        ]
+      }
+    },
+    "/api/v1/knowledge/facts/{fact_id}/right-version": {
+      "post": {
+        "description": "Give a fact corrected as wrong its right version (§8.3); returns the new fact's card.",
+        "operationId": "add_right_version_api_v1_knowledge_facts__fact_id__right_version_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "fact_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Fact Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RightVersionBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FactCard"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Add Right Version",
+        "tags": [
+          "knowledge"
+        ]
+      }
+    },
+    "/api/v1/knowledge/learning/items": {
+      "get": {
+        "description": "The questions due now — the question, never the fact before the answer.",
+        "operationId": "list_learning_items_api_v1_knowledge_learning_items_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Limit"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_LearningItemView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Learning Items",
+        "tags": [
+          "knowledge"
+        ]
+      }
+    },
+    "/api/v1/knowledge/learning/items/{item_id}/answer": {
+      "post": {
+        "description": "Answer one question; the fact comes back with its sources and passages.",
+        "operationId": "answer_learning_item_api_v1_knowledge_learning_items__item_id__answer_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Item Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LearningAnswerBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LearningReveal"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Answer Learning Item",
+        "tags": [
+          "knowledge"
+        ]
+      }
+    },
+    "/api/v1/knowledge/learning/items/{item_id}/choice": {
+      "post": {
+        "description": "Say yourself whether your answer meant the same as the fact.",
+        "operationId": "choose_learning_outcome_api_v1_knowledge_learning_items__item_id__choice_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Item Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LearningChoiceBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LearningReveal"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Choose Learning Outcome",
+        "tags": [
+          "knowledge"
+        ]
+      }
+    },
+    "/api/v1/knowledge/learning/items/{item_id}/report": {
+      "post": {
+        "description": "\"I think the graph is wrong\": the fact becomes a doubtful case for who maintains it.",
+        "operationId": "report_learning_item_api_v1_knowledge_learning_items__item_id__report_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Item Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LearningReveal"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Report Learning Item",
+        "tags": [
+          "knowledge"
+        ]
+      }
+    },
+    "/api/v1/knowledge/learning/measure": {
+      "get": {
+        "description": "The measurement (§12.2): right answers on the random items, for the workspace.",
+        "operationId": "learning_measure_api_v1_knowledge_learning_measure_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LearningMeasure"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Learning Measure",
+        "tags": [
+          "knowledge"
+        ]
+      }
+    },
+    "/api/v1/knowledge/learning/round": {
+      "post": {
+        "description": "This month's learning round (§12.2), made the first time it is asked for.",
+        "operationId": "ensure_learning_round_api_v1_knowledge_learning_round_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LearningRoundStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Ensure Learning Round",
+        "tags": [
+          "knowledge"
+        ]
+      }
+    },
+    "/api/v1/knowledge/learning/topic": {
+      "put": {
+        "description": "The topic you learn from the next round on; empty for the one your role gives.",
+        "operationId": "choose_learning_topic_api_v1_knowledge_learning_topic_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LearningTopicBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LearningTopicBody"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Choose Learning Topic",
+        "tags": [
+          "knowledge"
+        ]
+      }
+    },
+    "/api/v1/knowledge/map": {
+      "get": {
+        "description": "The map (§9.3): the nodes of one layer inside the visible plane — 0 the facts,\n1 the topics, above them the groups — under your reader, bounded. With\n``as_of``, the facts as they held on that day (the time slider).",
+        "operationId": "map_window_api_v1_knowledge_map_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "layer",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "maximum": 12,
+              "minimum": 0,
+              "title": "Layer",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "x0",
+            "required": false,
+            "schema": {
+              "default": -100.0,
+              "maximum": 1000000.0,
+              "minimum": -1000000.0,
+              "title": "X0",
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "y0",
+            "required": false,
+            "schema": {
+              "default": -100.0,
+              "maximum": 1000000.0,
+              "minimum": -1000000.0,
+              "title": "Y0",
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "x1",
+            "required": false,
+            "schema": {
+              "default": 100.0,
+              "maximum": 1000000.0,
+              "minimum": -1000000.0,
+              "title": "X1",
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "y1",
+            "required": false,
+            "schema": {
+              "default": 100.0,
+              "maximum": 1000000.0,
+              "minimum": -1000000.0,
+              "title": "Y1",
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Limit"
+            }
+          },
+          {
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "As Of"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MapWindow"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Map Window",
+        "tags": [
+          "knowledge"
+        ]
+      }
+    },
+    "/api/v1/knowledge/network/{node_id}": {
+      "get": {
+        "description": "The network (§9.3): the node in the middle and its neighbours by kind, at\nmost the setting's count (300), under your reader; with ``as_of``, the facts\nas they held on that day.",
+        "operationId": "network_around_api_v1_knowledge_network__node_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "node_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Node Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "As Of"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NetworkView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Network Around",
+        "tags": [
+          "knowledge"
+        ]
+      }
+    },
+    "/api/v1/knowledge/nodes/{node_id}/erase": {
+      "post": {
+        "description": "The one erasure (§8.2): a fact or passage with personal data, by an administrator.",
+        "operationId": "erase_personal_data_api_v1_knowledge_nodes__node_id__erase_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "node_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Node Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReasonBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Erase Personal Data",
+        "tags": [
+          "knowledge"
+        ]
+      }
+    },
+    "/api/v1/knowledge/oversight/cases/{case_id}/assign": {
+      "post": {
+        "description": "The administrator hands a case on (§12.1).",
+        "operationId": "assign_case_api_v1_knowledge_oversight_cases__case_id__assign_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "case_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Case Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonRef"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Assign Case",
+        "tags": [
+          "knowledge"
+        ]
+      }
+    },
+    "/api/v1/knowledge/oversight/cases/{case_id}/candidates": {
+      "get": {
+        "description": "Who the administrator may hand this case to.",
+        "operationId": "list_case_candidates_api_v1_knowledge_oversight_cases__case_id__candidates_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "case_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Case Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PersonRef"
+                  },
+                  "title": "Response List Case Candidates Api V1 Knowledge Oversight Cases  Case Id  Candidates Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Case Candidates",
+        "tags": [
+          "knowledge"
+        ]
+      }
+    },
+    "/api/v1/knowledge/oversight/doubtful": {
+      "get": {
+        "description": "*Doubtful cases* (§12.1): your own, highest uncertainty × use first. An\nadministrator sees all of them, or with ``escalated`` the ones nobody holds.",
+        "operationId": "list_doubtful_cases_api_v1_knowledge_oversight_doubtful_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "escalated",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Escalated",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Limit"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_DoubtfulCaseView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Doubtful Cases",
+        "tags": [
+          "knowledge"
+        ]
+      }
+    },
+    "/api/v1/knowledge/oversight/expiring": {
+      "get": {
+        "description": "*Expiring* (§12.3): facts you maintain whose shelf life ends soon or ended.",
+        "operationId": "list_expiring_api_v1_knowledge_oversight_expiring_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Limit"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_ExpiringItem_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Expiring",
+        "tags": [
+          "knowledge"
+        ]
+      }
+    },
+    "/api/v1/knowledge/oversight/scope": {
+      "get": {
+        "description": "Which lists of *Oversight* are this colleague's.",
+        "operationId": "oversight_scope_api_v1_knowledge_oversight_scope_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OversightScope"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Oversight Scope",
+        "tags": [
+          "knowledge"
+        ]
+      }
+    },
+    "/api/v1/knowledge/oversight/tips": {
+      "get": {
+        "description": "*Tips from weak sources* (§12.3): tips you maintain that were shown.",
+        "operationId": "list_tips_api_v1_knowledge_oversight_tips_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Limit"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_FactSummary_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Tips",
+        "tags": [
+          "knowledge"
+        ]
+      }
+    },
+    "/api/v1/knowledge/search": {
+      "get": {
+        "description": "The search bar (§9.4): the same landing and expansion the agent gets, under\nthe reader of the request. Bounded by the settings of §15 (8 · 4 · 40).",
+        "operationId": "search_api_v1_knowledge_search_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": true,
+            "schema": {
+              "maxLength": 2000,
+              "minLength": 1,
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "As Of"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchPackage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Search",
+        "tags": [
+          "knowledge"
+        ]
+      }
+    },
+    "/api/v1/knowledge/sources/{source_id}": {
+      "get": {
+        "operationId": "get_source_api_v1_knowledge_sources__source_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Source Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceCard"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Source",
+        "tags": [
+          "knowledge"
+        ]
+      }
+    },
+    "/api/v1/knowledge/tips/shown": {
+      "post": {
+        "description": "The tips of a handed-over question this colleague may maintain; each showing\nis logged (§6.3). At most ten by the body's own bound.",
+        "operationId": "show_tips_api_v1_knowledge_tips_shown_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TipsShownBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_FactSummary_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Show Tips",
+        "tags": [
+          "knowledge"
+        ]
+      }
+    },
+    "/api/v1/knowledge/topics": {
+      "get": {
+        "description": "The topics this reader may read, newest first, with their summary.",
+        "operationId": "list_topics_api_v1_knowledge_topics_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Limit"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_TopicSummary_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Topics",
+        "tags": [
+          "knowledge"
+        ]
+      }
+    },
+    "/api/v1/knowledge/topics/{topic_id}/facts": {
+      "get": {
+        "operationId": "list_facts_of_topic_api_v1_knowledge_topics__topic_id__facts_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "topic_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Topic Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Limit"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_FactSummary_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Facts Of Topic",
+        "tags": [
+          "knowledge"
+        ]
+      }
+    },
+    "/api/v1/knowledge/tree": {
+      "get": {
+        "description": "One level of the tree: the top layer, or the children of ``parent``.",
+        "operationId": "list_tree_api_v1_knowledge_tree_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "parent",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Parent"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Limit"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_TreeNode_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Tree",
+        "tags": [
+          "knowledge"
+        ]
+      }
+    },
+    "/api/v1/knowledge/tree/{node_id}/related": {
+      "get": {
+        "description": "The related nodes of a topic or group, nearest first (at most five, §4.3).",
+        "operationId": "list_related_api_v1_knowledge_tree__node_id__related_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "node_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Node Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_RelatedNode_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Related",
+        "tags": [
+          "knowledge"
         ]
       }
     },
@@ -44932,6 +50449,126 @@
         ]
       }
     },
+    "/api/v1/roles": {
+      "get": {
+        "description": "The workspace's roles with how many colleagues hold each.",
+        "operationId": "list_roles_api_v1_roles_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Limit"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_RoleResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Roles",
+        "tags": [
+          "roles"
+        ]
+      }
+    },
+    "/api/v1/roles/{role_id}": {
+      "get": {
+        "operationId": "get_role_api_v1_roles__role_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "role_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Role Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoleResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Role",
+        "tags": [
+          "roles"
+        ]
+      }
+    },
     "/api/v1/runs": {
       "get": {
         "description": "One page of the tenant's runs across every workflow (#811 S5).\n\nThe cross-workflow sibling of ``GET /workflows/{id}/runs``, in the\nsame envelope and on the same keyset cursor — follow ``nextCursor``,\nnever an offset (see :mod:`src.repositories.paging`). Item results a\nFOR EACH produced never appear here; they belong inside their launch.\n\nOptional filters, all applied in the QUERY ahead of the page cut:\n- status: comma-separated, e.g. ?status=running,pending\n- created_after / created_before: ISO date strings, e.g. ?created_after=2026-04-14\n- include_archived: bool, default false\n\nCost is flat in page size: one query for the page plus a bounded set\nof name lookups — not the per-row pair this list used to do.",
@@ -52281,6 +57918,54 @@
         "summary": "Issue Password Reset Link",
         "tags": [
           "users"
+        ]
+      }
+    },
+    "/api/v1/users/{user_id}/roles": {
+      "get": {
+        "operationId": "get_member_roles_api_v1_users__user_id__roles_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "User Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberRolesResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Member Roles",
+        "tags": [
+          "roles"
         ]
       }
     },

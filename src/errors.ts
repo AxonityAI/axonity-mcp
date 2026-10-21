@@ -248,26 +248,64 @@ export class AuthError extends AxonityApiError {
  * cannot…" here sends it and its human to the token settings for something no
  * token setting fixes (#78).
  */
-const ADMIN_ONLY_SENTENCE = /only administrators/i;
+const ADMIN_ONLY_SENTENCE = /only (administrators|an administrator)\b/i;
+
+/**
+ * The platform's sentence when a whole MODULE is off in the workspace
+ * ("Cortex is switched off in this workspace…"). Not the token's fault and not
+ * the call's: the advice is the opposite of the scope advice, so it gets its
+ * own words (axonity-mcp#88).
+ */
+const MODULE_OFF_SENTENCE = /is switched off in this workspace/i;
+
+/**
+ * The platform's refusal to WIDEN a label — make knowledge readable for more
+ * people. Widening is publishing, and only a colleague who maintains the
+ * audiences may do it; a token never can, whatever its scopes (axonity-mcp#88).
+ */
+const WIDENING_SENTENCE = /widen(ing)? a label/i;
+
+/** The 403 explanation for a refusal whose body says why. */
+function forbiddenExplanation(said: string): string {
+  if (MODULE_OFF_SENTENCE.test(said)) {
+    return (
+      "Forbidden (403): MODULE SWITCHED OFF. This part of Axonity is switched " +
+      "off in this workspace, so nothing in it can be read or changed — this " +
+      "is not a mistake in your call and not a limit of your token. Tell your " +
+      "human: a platform administrator can switch it on."
+    );
+  }
+  if (WIDENING_SENTENCE.test(said)) {
+    return (
+      "Forbidden (403): WIDENING A LABEL. Making something readable for more " +
+      "people (a lower level, or an audience added) is publishing it, and only " +
+      "a colleague who maintains those audiences may do that — never an agent " +
+      "or a token. Narrowing is always allowed. Keep the label as it is, or ask " +
+      "a colleague to widen it in Axonity."
+    );
+  }
+  if (ADMIN_ONLY_SENTENCE.test(said)) {
+    return (
+      "Forbidden (403): ADMINISTRATOR ONLY. This action is reserved for a " +
+      "workspace administrator, and a service token always counts as a " +
+      "member — so no token can do it, whatever its scopes. This is not a " +
+      "mistake in your call and retrying will not help. Tell your human: " +
+      "an administrator can do it in Axonity."
+    );
+  }
+  return (
+    "Forbidden (403): this service token is not allowed to perform that action. " +
+    "A read-only token cannot create, update, delete, or request-publish, and no " +
+    "token may publish directly — use request_publish_* and let a human approve."
+  );
+}
 
 /** 403 — the token lacks the scope for this action (e.g. read-only on a write). */
 export class ForbiddenError extends AxonityApiError {
   constructor(body?: unknown) {
     const env = asEnvelope(body);
-    const adminOnly = ADMIN_ONLY_SENTENCE.test(describeBody(body) ?? "");
     super(
-      withDetail(
-        adminOnly
-          ? "Forbidden (403): ADMINISTRATOR ONLY. This action is reserved for a " +
-              "workspace administrator, and a service token always counts as a " +
-              "member — so no token can do it, whatever its scopes. This is not a " +
-              "mistake in your call and retrying will not help. Tell your human: " +
-              "an administrator can do it in Axonity."
-          : "Forbidden (403): this service token is not allowed to perform that action. " +
-              "A read-only token cannot create, update, delete, or request-publish, and no " +
-              "token may publish directly — use request_publish_* and let a human approve.",
-        body,
-      ),
+      withDetail(forbiddenExplanation(describeBody(body) ?? ""), body),
       403,
       body,
       env?.code ?? "forbidden",

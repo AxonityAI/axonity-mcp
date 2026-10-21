@@ -975,6 +975,15 @@ the rows; the rows come from \`read_data_table\`.
   the box, call \`list_toolbox_dependent_tools\` — it names the tools that would
   start failing at run time with a bare 401.
 
+## Who may read what
+Every policy, skill, reference doc and table carries a label: \`level\`
+(public, internal, confidential) and \`audienceIds\`, whom it is meant for. An
+agent and a workflow carry a \`clearance\`; so does your token, and you read
+with it. Look audience ids up with \`list_audiences\` — never guess one, and
+compare on id, never on name. \`level: null\` makes a thing readable by nobody.
+Narrowing a label is always allowed; widening it is a colleague's act, never
+yours.
+
 ## Tenant
 - Your token fixes the tenant. You cannot act across tenants; never send a
   tenant id in a body.
