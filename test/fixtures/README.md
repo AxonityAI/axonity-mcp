@@ -11,6 +11,26 @@ diff in review.
 
 ## Provenance
 
+- **Queries, concept links and what fills a table, on top of the above:**
+  axonity-flow#2010 (S1 queries, #2011; S6 concept links, #2016) and #2013
+  (a table's filler), dumped with `dump_openapi.py` from axonity-flow `main`
+  at `6dcfd64f` and consumed by axonity-mcp#90, #91, #92 and #93. Spliced in,
+  not a full dump, PER OPERATION: every operation under `/api/v1/queries`
+  (24), the three of `/api/v1/concept-links`, and `GET /api/v1/data-tables`
+  (its new `filled_by` filter) — with the 18 schemas they reach that were not
+  here yet (`QueryDetail`, `RhythmPayload`, `ConceptLinkItem` among them).
+  Replaced whole, because the filler moved inside them: `CreateDataTableRequest`,
+  `UpdateDataTableRequest`, `DataTableResponse`, `DataTableSummary` (no more
+  `provenance` / `clearProvenance` / `isDynamic`; `filledBy`,
+  `fillingQueryId`, `rhythm`, `clearFillingQuery`, `clearRhythm` instead)
+  and `DataTableToolSummary`. 22 of the query operations are COVERED; the
+  direct publish/unpublish pair falls under the standing rule. Left out on
+  purpose: `PATCH`/`DELETE /api/v1/data-tables/{table_id}/rows/{row_id}`, the
+  table editor's by-id road to the same row writes the match-based tools
+  already make — #79's to decide, not this work's. After this,
+  `npm run check:contract` against `6dcfd64f` lists 95 operations missing
+  rather than 117, and no route under `/queries`, `/concept-links` or
+  `/data-tables` with a different contract.
 - **Applications and executors, on top of the above:** axonity-flow#1901
   (with #1965, #2009 and #2030), dumped with `dump_openapi.py` from
   axonity-flow `main` at `3ee90b58` — the build live on the sandbox — and

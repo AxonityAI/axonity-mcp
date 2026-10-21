@@ -321,7 +321,7 @@ describe("a number made of parts is explained, not summed", () => {
   });
 
   it("the semantic guide keeps row logic in the source query", () => {
-    expect(MEASURE_FORMULA_SECTION).toMatch(/Row logic belongs in the table's source query/);
+    expect(MEASURE_FORMULA_SECTION).toMatch(/Row logic belongs in the query that fills the table/);
     expect(MEASURE_FORMULA_SECTION).toMatch(/never joined/);
   });
 });

@@ -46,23 +46,41 @@ function setup() {
   return { handlers, descriptions, client };
 }
 
-describe("a table's provenance replaces the sync", () => {
+describe("what fills a table replaces the sync and the provenance (#90, #91)", () => {
   it("refresh_data_table posts to the table's refresh route", async () => {
     const { handlers, client } = setup();
     await handlers.get("refresh_data_table")!({ id: "t1" });
     expect(client.post).toHaveBeenCalledWith("/api/v1/data-tables/t1/refresh");
   });
 
-  it("create and update name provenance, its grain, and the end of syncs", () => {
+  it("create and update name the filler, its query and rhythm, and retire provenance", () => {
     const { descriptions } = setup();
     for (const name of ["create_data_table", "update_data_table"]) {
       const text = descriptions.get(name)!;
-      expect(text).toMatch(/`provenance`/);
-      expect(text).toMatch(/`grain`/);
+      expect(text).toMatch(/`filledBy`/);
+      expect(text).toMatch(/`fillingQueryId`/);
+      expect(text).toMatch(/`rhythm`/);
       expect(text).toMatch(/refresh_data_table/);
-      expect(text).toMatch(/run_data_source_sync/);
+      // A measure reads only a dynamic table — the dead end #91 hit.
+      expect(text).toMatch(/ONLY A DYNAMIC TABLE CAN BE READ BY A MEASURE/);
+      // Mentioned only as refused, never as something to send.
+      expect(text).toMatch(/`provenance` and `clearProvenance` no longer exist and are refused/);
     }
-    expect(descriptions.get("update_data_table")).toMatch(/clearProvenance/);
+    const update = descriptions.get("update_data_table")!;
+    expect(update).toMatch(/clearFillingQuery/);
+    expect(update).toMatch(/clearRhythm/);
+    expect(descriptions.get("refresh_data_table")).toMatch(/run_data_source_sync/);
+  });
+
+  it("no description tells an agent to send provenance", () => {
+    const { descriptions } = setup();
+    for (const [name, text] of descriptions) {
+      const told = text.replace(/`provenance` and `clearProvenance` no longer exist and are refused/g, "");
+      // The knowledge graph's facts carry a `provenance` of their own (which
+      // run taught them); that is a different thing with the same word.
+      if (name === "read_fact") continue;
+      expect(told, name).not.toMatch(/provenance/i);
+    }
   });
 });
 

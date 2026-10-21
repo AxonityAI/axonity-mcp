@@ -105,7 +105,14 @@ export const LIST_FILTERS: Record<string, ListFilter[]> = {
       query: "is_dynamic",
       type: "boolean",
       description:
-        "true: only tables a workflow may change. false: only reference data the author maintains. Omit for both.",
+        "true: only tables whose rows change without an author typing them. false: only reference data the author maintains. Omit for both. Derived from filledBy, which is the more precise question.",
+    },
+    {
+      arg: "filledBy",
+      query: "filled_by",
+      type: "string",
+      description:
+        "Only tables filled this way: author, workflow or query. A value outside the three is refused rather than silently ignored.",
     },
   ],
   "data_source": [
@@ -142,6 +149,15 @@ export const LIST_FILTERS: Record<string, ListFilter[]> = {
       type: "string",
       description:
         "Only the application with exactly this name.",
+    },
+  ],
+  "query": [
+    {
+      arg: "dataSourceId",
+      query: "dataSourceId",
+      type: "string",
+      description:
+        "Only the queries that read this source.",
     },
   ],
 };

@@ -259,10 +259,11 @@ across these routes — the tool parameter names say which.
     would yield), `toolId` (whether a row exists) and `isLive` (whether a run
     can reach it) separately — an author who ticked "may add rows" and has not
     published has granted nothing yet.
-- **The semantic model** (`data_source`, `data_table` with provenance,
-  `table_relationship`, `measure`, concepts, `dashboard`): a workspace
-  connects a warehouse such as BigQuery, dynamic tables are filled from it on
-  a schedule, measures define the numbers over those tables, concepts say
+- **The semantic model** (`data_source`, `query`, `data_table`,
+  `table_relationship`, `measure`, concepts and their links, `dashboard`): a
+  workspace connects a warehouse such as BigQuery, named queries read it,
+  dynamic tables are filled by those queries on a schedule, measures define
+  the numbers over those tables, concepts say
   what each word and number means, and dashboards show the measures. Read
   `axonity_semantic_conventions` before building one — the platform serves
   those rules.
@@ -277,12 +278,24 @@ across these routes — the tool parameter names say which.
     `query_data_source` runs read-only SQL with capped rows (`truncated` says
     when rows were left out); a 422 is the query being refused, a 502 is the
     warehouse.
-  - **There is no sync object.** A dynamic table carries its own
-    `provenance` — `{ sourceId, sql, grain, keyColumns, mode, cron, timezone,
-    enabled }` — on `create_data_table` / `update_data_table`, so a changed
-    query is published like a changed column. `refresh_data_table` fills it
-    now instead of at its next turn (it does not wait for the result; read
-    the table's `fill` afterwards).
+  - **A query is its own versioned entity** (`query`): the generic family
+    plus the version tools, `request_publish_query`, `test_query` (run it
+    once with values; it suggests the `returns`), `read_query_usage` (the
+    read tool its publication mints, and which agents hold it) and
+    `list_query_live_versions`. It carries the SQL, the source, the grain,
+    its typed `parameters` and its described `returns`.
+  - **There is no sync object, and no `provenance`.** A table says what fills
+    it in `filledBy` — `author`, `workflow` or `query` — and a query-filled
+    table names its query in `fillingQueryId` and when it runs in `rhythm`
+    (`{ cron, timezone, keyColumns, mode, enabled }`). Only a table filled by
+    a query or a workflow is dynamic, and only a dynamic table can be read by
+    a measure. `refresh_data_table` fills it now instead of at its next turn
+    (it does not wait for the result; read the table's `fill` afterwards).
+  - **Concept links**: a concept's `refersTo` points at one thing;
+    `link_concept`, `unlink_concept` and `list_concept_links` hang the same
+    word on every column, table, measure, value or query that means it. The
+    links are rows of the `concept_links` table and go live when that table
+    is published.
   - **A measure is its own versioned entity**: the generic family plus the
     version tools, `request_publish_measure`, and `list_measure_live_versions`.
     It names the concept it means in `concept`, and the questions it answers

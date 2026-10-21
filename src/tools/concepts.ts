@@ -30,6 +30,7 @@ import type { AxonityClient } from "../client.js";
 import { guard, jsonResult } from "./result.js";
 
 const BASE = "/api/v1/concepts";
+const LINKS = "/api/v1/concept-links";
 
 const KIND = z
   .enum(["concept", "state", "metric", "rule"])
@@ -63,10 +64,13 @@ const SYNONYMS = z
 const REFERS_TO = z
   .string()
   .describe(
-    "What in the model this is about, in one of four forms: " +
+    "What in the model this is about, in one of five forms: " +
       "`measure:active_clients`, `table:orders_monthly`, " +
-      "`column:orders_monthly.country`, `value:orders_monthly.status=lost`. " +
-      "It must exist. Empty for a word that is not in the model yet.",
+      "`column:orders_monthly.country`, `value:orders_monthly.status=lost`, " +
+      "`query:plan_revenue` (or one of its columns, " +
+      "`query:plan_revenue.amount`). It must exist. Empty for a word that is " +
+      "not in the model yet. ONE thing only — to hang the word on more, " +
+      "use link_concept.",
   );
 const OWNER = z
   .string()
@@ -168,5 +172,98 @@ export function registerConceptTools(
         .describe("Must be true. Acknowledges the definition is removed from the draft."),
     },
     async ({ id }) => guard(async () => jsonResult(await client.del(`${BASE}/${id}`))),
+  );
+
+  // ---- links: one word, everything it means (axonity-mcp#92) ------------
+  // A concept's `refersTo` points at ONE thing. A word like "net revenue"
+  // lives in the revenue column of three tables; the links are what let it
+  // reach all three, so the word is made once instead of three times that
+  // drift apart. They are rows of a second table the platform keeps, with the
+  // same lifecycle as the concepts' own.
+
+  server.tool(
+    "list_concept_links",
+    "Which things a word is hung on, or which words are hung on a thing. " +
+      "Read-only. Pass `concept` for everything one word reaches, " +
+      "`refersTo` for every word on one table, column, measure, value or " +
+      "query — or neither for every link in the workspace. A thing with no " +
+      "word answers an empty list.",
+    {
+      concept: z
+        .string()
+        .optional()
+        .describe("Only the links of this word — the concept's `name`."),
+      refersTo: z
+        .string()
+        .optional()
+        .describe(
+          "Only the words hung on this, in the same forms as a concept's " +
+            "refersTo (`column:orders_monthly.net_revenue`).",
+        ),
+    },
+    async ({ concept, refersTo }) =>
+      guard(async () => jsonResult(await client.get(LINKS, { concept, refersTo }))),
+  );
+
+  server.tool(
+    "link_concept",
+    "Hang a word on one more thing it means: a column, a table, a measure, " +
+      "a value or a query. A concept's own `refersTo` points at one thing; " +
+      "a link is how one word reaches EVERY column that means it, so a " +
+      "question in the workspace's own words finds the right data wherever " +
+      "it lives. Make the word once and link it, never a second concept " +
+      "for the same word. " +
+      "\n\nThe word must be a concept of this workspace and the thing must " +
+      "exist; each is refused by name otherwise. Linking the same word to " +
+      "the same thing twice is one link — the second call changes nothing. " +
+      "The links table is created with the first link. " +
+      "\n\nNOT LIVE UNTIL PUBLISHED. The links live in a table of their own " +
+      "named `concept_links`: find its id with list_data_tables({ name: " +
+      "\"concept_links\" }) and request_publish_data_table on it — one " +
+      "approval for every link you wrote.",
+    {
+      concept: z
+        .string()
+        .describe("The word — the concept's `name`, as list_concepts gives it."),
+      refersTo: z
+        .string()
+        .describe(
+          "What it means here, in one of five forms: " +
+            "`column:orders_monthly.net_revenue`, `table:orders_monthly`, " +
+            "`measure:net_revenue`, `value:orders_monthly.status=lost`, " +
+            "`query:plan_revenue` or `query:plan_revenue.amount`.",
+        ),
+      note: z
+        .string()
+        .optional()
+        .describe(
+          "Why THIS column is that word, when it is not obvious. Empty is " +
+            "normal: the meaning lives on the concept.",
+        ),
+    },
+    async ({ concept, refersTo, note }) =>
+      guard(async () =>
+        jsonResult(
+          await client.post(LINKS, { concept, refersTo, ...(note ? { note } : {}) }),
+        ),
+      ),
+  );
+
+  server.tool(
+    "unlink_concept",
+    "Take one link back: the word no longer reaches that thing. Answers " +
+      "with the links the word has left. Taking away a link that is not " +
+      "there is a success, not an error. The concept itself stays; " +
+      "delete_concept removes the word. Like a new link, the removal counts " +
+      "once the `concept_links` table is published again " +
+      "(request_publish_data_table).",
+    {
+      concept: z.string().describe("The word — the concept's `name`."),
+      refersTo: z
+        .string()
+        .describe("What it was hung on, exactly as list_concept_links shows it."),
+    },
+    async ({ concept, refersTo }) =>
+      guard(async () => jsonResult(await client.del(LINKS, { concept, refersTo }))),
   );
 }

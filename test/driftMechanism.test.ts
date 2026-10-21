@@ -331,6 +331,8 @@ describe("list filters are generated, not kept (M4)", () => {
     // #78 is the same again: `enabled` on data sources and `table_id` on
     // relationships came out of the schema, one LIST_ROUTES line each.
     // And #86: `name` on applications, the same one line.
+    // And #91: `dataSourceId` on queries, one line; and `filled_by` on data
+    // tables arrived with the refreshed schema and no line at all.
     expect(Object.keys(table).sort()).toEqual([
       "agent",
       "application",
@@ -339,6 +341,7 @@ describe("list filters are generated, not kept (M4)", () => {
       "measure",
       "policy",
       "prompt_snippet",
+      "query",
       "reference_doc",
       "table_relationship",
       "workflow",
@@ -347,6 +350,7 @@ describe("list filters are generated, not kept (M4)", () => {
       "name",
       "status",
       "is_dynamic",
+      "filled_by",
     ]);
     expect(table.prompt_snippet.map((f) => f.query)).toEqual(["deleted"]);
   });
