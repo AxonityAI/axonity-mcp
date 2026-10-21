@@ -455,6 +455,11 @@ describe("MCP route surface conforms to the backend OpenAPI snapshot", () => {
         const op = operationFor(method, path);
         const ref = op?.responses?.["200"]?.content?.["application/json"]?.schema?.$ref ?? "";
         if (!ref.includes("/Page_")) continue;
+        // A route that answers in the page envelope but takes no cursor
+        // cannot be continued: it is bounded by construction (the related
+        // topics of a node — at most five). Demanding a cursor argument there
+        // would make the tool offer a continuation the route does not have.
+        if (!op?.parameters?.some((p) => p.name === "cursor" && p.in === "query")) continue;
         pagedRoutesSeen++;
 
         // The route is paged. The tool must let a caller ask for the next page

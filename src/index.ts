@@ -42,10 +42,12 @@ import {
   registerPersonaTools,
 } from "./tools/extras.js";
 import { registerApplicationTools } from "./tools/applications.js";
+import { registerAccessTools } from "./tools/access.js";
 import { registerAuthoringSpecTools } from "./tools/authoringSpec.js";
 import { registerCompanyTools } from "./tools/company.js";
 import { registerComponentTools } from "./tools/components.js";
 import { registerConceptTools } from "./tools/concepts.js";
+import { registerKnowledgeGraphTools } from "./tools/knowledgeGraph.js";
 import { registerOperationsTools } from "./tools/operations.js";
 import { registerPromptPlacementTools } from "./tools/promptPlacement.js";
 import { LIST_FILTERS } from "./generated/listFilters.js";
@@ -175,6 +177,53 @@ const APPLICATION_NOTE =
   "is set_application_executors.";
 
 /**
+ * Who may read a piece of knowledge (axonity-mcp#88, S2; axonity-flow#1918).
+ * The four knowledge kinds carry a label; the backend already took the fields,
+ * and nothing told an agent they exist or that `null` means "nobody".
+ */
+const LABEL_NOTE =
+  "WHO MAY READ IT — the label. `level` is how sensitive it is (public, " +
+  "internal or confidential); `audienceIds` is whom it is meant for, as ids " +
+  "from list_audiences — never guess one and never match on a name. Leave " +
+  "both out and it gets the workspace default: internal, for Staff. " +
+  "Sending `level: null` means NO label: nobody can read it — no colleague, " +
+  "no agent — until a colleague who maintains its audience labels it. You " +
+  "can only give a label you can read yourself.";
+
+const LABEL_UPDATE_NOTE =
+  "CHANGING WHO MAY READ IT. Narrowing is always allowed: a higher " +
+  "`level`, or an audience taken away. WIDENING — a lower level, or an " +
+  "audience added — makes it readable for more people, which is publishing " +
+  "it, and only a colleague who maintains those audiences may do that. A " +
+  "token never can: the refusal says so, and the way forward is to ask a " +
+  "colleague in Axonity, not to try another route. `audienceIds` replaces " +
+  "the whole set — send the ones it keeps too. `level: null` removes the " +
+  "label, which leaves it readable by nobody.";
+
+/** What an agent or a process may read (axonity-mcp#88, S2). */
+const CLEARANCE_SHAPE =
+  "`clearance` is `{ maxLevel, audienceIds }`: up to which level it reads " +
+  "(public, internal or confidential; null reads nothing) and for which " +
+  "audiences (ids from list_audiences).";
+
+const AGENT_CLEARANCE_NOTE =
+  "WHAT THE AGENT MAY READ. " +
+  CLEARANCE_SHAPE +
+  " Only an ADMINISTRATOR sets it, so a token sending it is refused: leave " +
+  "it out and the agent gets the workspace default, internal for Staff. " +
+  "Inside a workflow the agent never reads more than the workflow's own " +
+  "clearance.";
+
+const WORKFLOW_CLEARANCE_NOTE =
+  "WHAT THE PROCESS MAY READ. " +
+  CLEARANCE_SHAPE +
+  " Set it to the audiences of whoever the process serves. A new workflow " +
+  "starts with the workspace default (internal, for Staff); change it with " +
+  "update_workflow({ fields: { clearance } }). It takes effect through the " +
+  "publish approval like the rest of the workflow, and no agent in the " +
+  "process ever reads more than this.";
+
+/**
  * The entities the connector covers. Core entities (C4), memory entities (C5)
  * — skills, policies, reference docs — which have the same draft→publish
  * lifecycle via #443's unified versioning, and `data_table` (axonity-flow#1217),
@@ -187,6 +236,8 @@ const ENTITIES: EntityDef[] = [
     updateMethod: "PATCH",
     label: "workflows (business processes)",
     deleteVersionParam: "expectedVersion",
+    createNote: WORKFLOW_CLEARANCE_NOTE,
+    updateWarning: WORKFLOW_CLEARANCE_NOTE,
   },
   {
     singular: "agent",
@@ -194,6 +245,8 @@ const ENTITIES: EntityDef[] = [
     updateMethod: "PUT",
     label: "agents",
     deleteVersionParam: "expectedVersion",
+    createNote: AGENT_CLEARANCE_NOTE,
+    updateWarning: AGENT_CLEARANCE_NOTE,
   },
   {
     singular: "tool",
@@ -211,6 +264,8 @@ const ENTITIES: EntityDef[] = [
     updateMethod: "PUT",
     label: "skills (reusable know-how for agents)",
     deleteVersionParam: "expected_version",
+    createNote: LABEL_NOTE,
+    updateWarning: LABEL_UPDATE_NOTE,
   },
   {
     singular: "policy",
@@ -219,6 +274,8 @@ const ENTITIES: EntityDef[] = [
     label: "policies (rules and guardrails for agents)",
     plural: "policies",
     deleteVersionParam: "expected_version",
+    createNote: LABEL_NOTE,
+    updateWarning: LABEL_UPDATE_NOTE,
   },
   {
     singular: "reference_doc",
@@ -226,6 +283,8 @@ const ENTITIES: EntityDef[] = [
     updateMethod: "PUT",
     label: "reference docs (background knowledge for agents)",
     deleteVersionParam: "expected_version",
+    createNote: LABEL_NOTE,
+    updateWarning: LABEL_UPDATE_NOTE,
   },
   {
     singular: "output_schema",
@@ -275,7 +334,7 @@ const ENTITIES: EntityDef[] = [
     label: "tables (authored reference data agents and decisions read)",
     deleteVersionParam: "expected_version",
     listPaging: { defaultPageSize: 20, maxPageSize: 200 },
-    createNote: `${PROVENANCE_NOTE}\n\n${DATE_TABLE_NOTE}`,
+    createNote: `${PROVENANCE_NOTE}\n\n${DATE_TABLE_NOTE}\n\n${LABEL_NOTE}`,
     deleteNote: BREAKS_MEASURE_NOTE,
     publishNote: BREAKS_MEASURE_NOTE,
     updateWarning:
@@ -289,7 +348,9 @@ const ENTITIES: EntityDef[] = [
       "deletes every other row in the table. To change content, use " +
       "add_data_table_row / update_data_table_row / delete_data_table_row, " +
       "which address a single row and cannot destroy the rest. Use `rows` here " +
-      "only when you genuinely mean to replace the whole content.",
+      "only when you genuinely mean to replace the whole content." +
+      "\n\n" +
+      LABEL_UPDATE_NOTE,
   },
   {
     // A measure was a field on a table; the semantic model (axonity-flow#1881
@@ -523,6 +584,8 @@ export function registerAll(server: ServerLike, client: AxonityClient): void {
   registerConceptTools(server as McpServer, client);
   registerComponentTools(server as McpServer, client);
   registerApplicationTools(server as McpServer, client);
+  registerAccessTools(server as McpServer, client);
+  registerKnowledgeGraphTools(server as McpServer, client);
 }
 
 export function buildServer(client: AxonityClient): McpServer {

@@ -339,6 +339,24 @@ across these routes — the tool parameter names say which.
     correct it. Linking executors and changing knowledge are reserved for a
     workspace administrator on the platform, and a service token always
     counts as a member, so today those answer with a refusal that says so.
+- **Who may read what** (labels, audiences, roles): every policy, skill,
+  reference doc and table carries a label — `level` (public, internal,
+  confidential) and `audienceIds`, whom it is meant for. `list_audiences` /
+  `read_audience` give the ids to put there, `list_roles` / `read_role` say
+  what each role reads and maintains, and `read_member_roles` which roles a
+  colleague holds. Leave the label out and it gets the default (internal, for
+  Staff); `level: null` makes a thing readable by nobody. Narrowing a label is
+  always allowed; widening it is a colleague's act, and the refusal says so.
+  An agent's `clearance` is set by an administrator; a workflow's by its
+  author, through the publish approval. Managing audiences and roles is not
+  here yet.
+- **The knowledge graph** (Cortex), read with the token's own clearance:
+  `search_knowledge_graph`, `list_knowledge_topics`, `list_topic_facts`,
+  `read_fact` (passages, sources, certainty, validity, which run taught it),
+  `read_source`, `list_knowledge_tree`, `list_related_topics` and
+  `list_archived_facts`. Looking only: confirming, correcting, archiving or
+  relabelling a fact ends with a person. With the module off, every call says
+  so in plain words.
 - `list_deleted_prompt_snippets` calls `/api/v1/prompt-snippets/deleted`; the
   backend returns it as `{ items: [... ] }`, and the tool forwards that response
   unchanged.
