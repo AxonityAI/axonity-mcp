@@ -11,6 +11,25 @@ diff in review.
 
 ## Provenance
 
+- **Who may read what, and the knowledge graph, on top of the above:**
+  axonity-flow#1918 (PR #1939), dumped with `dump_openapi.py` from
+  axonity-flow `main` at `45d726fa` and consumed by axonity-mcp#88 (S1, S2,
+  S5). Spliced in, not a full dump, and spliced PER OPERATION: the `GET`s of
+  `/api/v1/audiences`, `/api/v1/roles` and `/api/v1/users/{user_id}/roles`,
+  and every operation under `/api/v1/knowledge` except the settings
+  (`/knowledge/settings`, `/knowledge/source-types*`, `PATCH
+  /knowledge/sources/{id}`) — 40 operations, with the 65 schemas they reach
+  (`ClearanceSchema` among them). Left out on purpose: the writes of audiences, roles
+  and a colleague's roles, and the graph's settings. Those are #88's S3 and
+  S4, which wait on a decision about what a token may administer; they arrive
+  with that work. Also spliced, PER FIELD: `level` and `audienceIds` on the
+  create/update requests of policy, skill, reference doc and data table, and
+  `clearance` on the agent schemas and `PatchWorkflowRequest`. Per field
+  because those schemas moved for other reasons too on `main` — notably a
+  data table no longer takes `provenance` there (`filledBy`,
+  `fillingQueryId`, `rhythm` instead), which is a change of its own and not
+  taken here. 8 of the knowledge operations are COVERED; the rest are
+  excluded with reasons in `test/denyList.ts`. Takes these out of #79's list.
 - **Measures as one formula, phases 2 and 3, on top of the above:**
   axonity-flow#1908 (PRs #1940 and #1946), dumped with `dump_openapi.py` from
   axonity-flow `main` at `cf8d0c19` and consumed by axonity-mcp#83. Spliced
