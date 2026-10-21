@@ -135,4 +135,13 @@ export const LIST_FILTERS: Record<string, ListFilter[]> = {
         "Only the measures that read this table — what a table page shows.",
     },
   ],
+  "application": [
+    {
+      arg: "name",
+      query: "name",
+      type: "string",
+      description:
+        "Only the application with exactly this name.",
+    },
+  ],
 };

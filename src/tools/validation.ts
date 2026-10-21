@@ -212,9 +212,17 @@ export function registerApprovalTools(
                 "output_schema",
                 "prompt_snippet",
                 "flow",
+                "data_table",
+                "application",
+                "measure",
+                "query",
                 "company",
               ])
-              .describe("What kind of entity this entry publishes."),
+              .describe(
+                "What kind of entity this entry publishes. The same kinds the " +
+                  "platform's approval queue takes — an application among them, " +
+                  "so its act/observe tools are rebuilt when it is approved.",
+              ),
             entityId: z
               .string()
               .optional()
@@ -260,7 +268,12 @@ export function registerApprovalTools(
       "approved. " +
       "\n\nA tenant-wide policy or reference doc is deliberately NOT in a " +
       "release: it applies to every agent regardless of this workflow, so it is " +
-      "part of the environment and is published on its own.",
+      "part of the environment and is published on its own. " +
+      "\n\nAN APPLICATION IS NOT IN A RELEASE YET: the tools an agent uses to " +
+      "operate a program (its act/observe tools) ride along, but the " +
+      "application they are rebuilt from does not. If its draft differs from " +
+      "what is live, request_publish_application next to this release — or " +
+      "the workflow goes live on the tools of the older version.",
     {
       workflowId: z
         .string()

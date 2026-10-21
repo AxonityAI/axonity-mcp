@@ -55,8 +55,9 @@ was kept here. A conformance test asserts their absence.
 
 ### The generic entity family
 
-Twelve entities — **workflow, agent, tool, skill, policy, reference_doc,
-persona, output_schema, prompt_snippet, flow, data_table, measure** — share one shape,
+Thirteen entities — **workflow, agent, tool, skill, policy, reference_doc,
+persona, output_schema, prompt_snippet, flow, data_table, measure,
+application** — share one shape,
 though not every entity gets every verb (see the per-entity notes below for the
 exceptions):
 
@@ -73,8 +74,9 @@ exceptions):
 | `request_publish_<entity>` | Ask for a draft to be published — creates a pending approval; never publishes. |
 
 Exceptions: `persona` has no `create_persona` (create only via
-`create_agent_persona`). And `list_data_tables` answers **one page**, not the
-whole library — see Tables below.
+`create_agent_persona`). And `list_data_tables` (like `list_measures` and
+`list_applications`) answers **one page**, not the whole library — see Tables
+below.
 
 Three more entities use the same verbs **without** the draft ones —
 **data_source, table_relationship, dashboard**. None is versioned: a change is
@@ -91,7 +93,8 @@ backend applies it before the rows come back:
 `list_prompt_snippets({ deleted? })`,
 `list_data_tables({ name?, status?, isDynamic? })`,
 `list_data_sources({ enabled? })`,
-`list_table_relationships({ tableId? })`.
+`list_table_relationships({ tableId? })`,
+`list_applications({ name? })`.
 
 That table is **generated** from the pinned schema's own query parameters
 (`npm run generate:filters` → `src/generated/listFilters.ts`), not hand-listed.
@@ -129,7 +132,8 @@ Plus:
 
 ### Version history, rollback, and version-level delete
 
-For the eleven versioned entities (including `flow` and `data_table`):
+For the versioned entities (including `flow`, `data_table`, `measure` and
+`application`):
 
 | Tool | What it does |
 |------|--------------|
@@ -317,6 +321,24 @@ across these routes — the tool parameter names say which.
     tile). Plus `duplicate_dashboard`.
   - A reference doc has no `semanticKind` any more; the platform refuses it
     and the other retired fields and says where each one went.
+- **Applications** (`application`): a program an agent operates through an
+  executor — a Windows program (`win32`) or a website (`web`) — with its
+  `limits`, what the agent may never do in it (processes, windows, keys,
+  buttons, folders, domains, secrets by name). The generic family and the
+  version tools, and `request_publish_application`: an executor receives only
+  the published limits, so only a human makes them live.
+  - **Executors**: `set_application_executors` / `read_application_executors`
+    choose the machines an application runs on (the whole set at once);
+    `list_executors`, `read_executor`, `read_executor_applications` and
+    `list_executor_commands` only read. Registering or revoking an executor
+    is a human's job — it mints a token, and no tool here ever returns one.
+  - **What it has learned**: `list_application_knowledge` (elements,
+    instructions, lessons, one page at a time) and
+    `list_application_knowledge_versions`; `forget_application_knowledge`,
+    `restore_application_knowledge` and `write_application_knowledge` to
+    correct it. Linking executors and changing knowledge are reserved for a
+    workspace administrator on the platform, and a service token always
+    counts as a member, so today those answer with a refusal that says so.
 - **Who may read what** (labels, audiences, roles): every policy, skill,
   reference doc and table carries a label — `level` (public, internal,
   confidential) and `audienceIds`, whom it is meant for. `list_audiences` /

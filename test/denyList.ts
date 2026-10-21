@@ -196,6 +196,23 @@ export const FORBIDDEN: Rule[] = [
   // require it to. `start_workflow_run` is the way to test a workflow from
   // here, and it names the trigger it means.
   { label: "fire a webhook by its token", path: /\/api\/v1\/triggers\/[^/]+$/ },
+  // ---- axonity-mcp#86 — executors ----------------------------------------
+
+  // Registering an executor MINTS ITS TOKEN, and the response is the one
+  // place that token appears in plaintext. A token is what lets a program on
+  // a customer's machine take commands from this workspace; an agent holding
+  // one could hand it anywhere. Revoking one cuts a machine off. Both are an
+  // administrator's act in Axonity (`require_admin`), and an agent reads the
+  // executors (`list_executors`, `read_executor`) without ever touching a
+  // token.
+  { label: "register or revoke an executor (mints a token)", path: /\/api\/v1\/executors(\/[^/]+\/revoke)?$/, methods: ["POST"] },
+  // The link between an application and its executors has two doors, one per
+  // side, and each REPLACES the whole set. Two writers of one link replace
+  // each other's sets without seeing them. The connector writes it from the
+  // application's side only (`set_application_executors`), where an agent
+  // designing an application already is; this side stays readable
+  // (`read_executor_applications`).
+  { label: "set an executor's applications (written from the application side)", path: /\/api\/v1\/executors\/[^/]+\/applications$/, methods: ["PUT"] },
 
   // ---- axonity-mcp#88 — the knowledge graph (axonity-flow#1918) ----------
   // The READS are covered: search, topics, the tree, one fact, one source,

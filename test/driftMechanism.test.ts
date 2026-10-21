@@ -330,8 +330,10 @@ describe("list filters are generated, not kept (M4)", () => {
     // to "is there one called X?" in one call is a walk through every page.
     // #78 is the same again: `enabled` on data sources and `table_id` on
     // relationships came out of the schema, one LIST_ROUTES line each.
+    // And #86: `name` on applications, the same one line.
     expect(Object.keys(table).sort()).toEqual([
       "agent",
+      "application",
       "data_source",
       "data_table",
       "measure",

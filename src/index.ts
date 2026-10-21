@@ -41,6 +41,7 @@ import {
   registerDependencyTools,
   registerPersonaTools,
 } from "./tools/extras.js";
+import { registerApplicationTools } from "./tools/applications.js";
 import { registerAccessTools } from "./tools/access.js";
 import { registerAuthoringSpecTools } from "./tools/authoringSpec.js";
 import { registerCompanyTools } from "./tools/company.js";
@@ -152,6 +153,28 @@ const MEASURE_NOTE =
   "refused with `legacy_field`. " +
   "\n\nIt is a DRAFT until published: request_publish_measure. Only a " +
   "published measure gives a certified number.";
+
+/**
+ * What an application is made of (axonity-flow#1901). The limits are the point:
+ * an executor enforces them on every command, so a wrong key is a limit nobody
+ * enforces — the platform refuses unknown keys, and this says which exist.
+ */
+const APPLICATION_NOTE =
+  "Fields: `name` (unique in the workspace), `technology` (`win32` for a " +
+  "Windows desktop program, `web` for a site in a browser), `description` " +
+  "and `limits` — what an agent may NEVER do in it, enforced by the executor " +
+  "on the machine. `limits` keys stay snake_case, the way the executor reads " +
+  "them, and an unknown key is refused: `processes` (executables it may " +
+  "touch, `app.exe`), `windows` (window classes it may act in), " +
+  "`never_keys` (key combinations it may never send, `ctrl+a`), " +
+  "`never_buttons` (button captions it may never press), `folders` (folders " +
+  "it stays inside), `domains` (web domains it stays inside, " +
+  "`nl.wikipedia.org`), `secrets` (workspace secrets it may type, BY NAME — " +
+  "never a value), `home` (a website's start address) and `readers` (per " +
+  "control class, how a screen reader reads it). " +
+  "\n\nAn executor receives only the PUBLISHED limits, never a draft: " +
+  "request_publish_application, then a human approves. Which machines run it " +
+  "is set_application_executors.";
 
 /**
  * Who may read a piece of knowledge (axonity-mcp#88, S2; axonity-flow#1918).
@@ -364,6 +387,37 @@ const ENTITIES: EntityDef[] = [
       "the tables it reads follow from its formula. Sending `definition` " +
       "replaces it whole, so send the `expression` with it.",
   },
+  {
+    // A program an agent operates through an executor (axonity-flow#1901),
+    // with routes in the same order and spelling as a table's — so the whole
+    // family comes from the registrars. What is not generic (the executors it
+    // runs on, what it has learned) is in tools/applications.ts.
+    singular: "application",
+    basePath: "/api/v1/applications",
+    updateMethod: "PUT",
+    label: "applications (programs an agent operates through an executor, with their limits)",
+    deleteVersionParam: "expected_version",
+    listPaging: { defaultPageSize: 20, maxPageSize: 200 },
+    createNote: APPLICATION_NOTE,
+    updateWarning:
+      APPLICATION_NOTE +
+      " `limits` is replaced WHOLE when sent: read the application first and " +
+      "send the complete object, or a limit you left out is gone.",
+    publishNote:
+      "The limits are what an executor on a customer's machine is allowed to " +
+      "do, which is why only a human makes them live. Until the approval is " +
+      "decided, the executors keep the limits published before. " +
+      "\n\nPublishing is also what rebuilds the application's act/observe " +
+      "tools from the published version. To publish again WITHOUT a change — " +
+      "an application already live, no draft, the request refused as " +
+      "`already_live` — call ensure_application_major_version first: it opens " +
+      "a draft of the current content, and this request then goes through. " +
+      "Never edit a field just to make a draft. A platform release rebuilds " +
+      "these tools by itself on start, so a new tool shape after a deploy " +
+      "needs no publish. To take a workflow live with the application its " +
+      "agents operate, request this alongside request_publish_release: a " +
+      "release does not carry the application yet.",
+  },
   // The three below arrived with axonity-flow#1849 (axonity-mcp#78). None is
   // versioned or publish-approved: a change is live the moment it is saved, so
   // there is no draft to discard and no request_publish_*. Each lists one page
@@ -474,6 +528,11 @@ const VERSIONED: VersionedEntity[] = [
     publishedPath: "versions",
   },
   { singular: "measure", basePath: "/api/v1/measures", publishedPath: "versions" },
+  {
+    singular: "application",
+    basePath: "/api/v1/applications",
+    publishedPath: "versions",
+  },
 ];
 
 /**
@@ -524,6 +583,7 @@ export function registerAll(server: ServerLike, client: AxonityClient): void {
   registerDashboardTools(server as McpServer, client);
   registerConceptTools(server as McpServer, client);
   registerComponentTools(server as McpServer, client);
+  registerApplicationTools(server as McpServer, client);
   registerAccessTools(server as McpServer, client);
   registerKnowledgeGraphTools(server as McpServer, client);
 }

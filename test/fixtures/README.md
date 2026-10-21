@@ -11,6 +11,17 @@ diff in review.
 
 ## Provenance
 
+- **Applications and executors, on top of the above:** axonity-flow#1901
+  (with #1965, #2009 and #2030), dumped with `dump_openapi.py` from
+  axonity-flow `main` at `3ee90b58` — the build live on the sandbox — and
+  consumed by axonity-mcp#86. Spliced in, not a full dump: every path under
+  `/api/v1/applications` and `/api/v1/executors` (34 operations), the 21
+  schemas they reference, and `application` (with `query`) in the
+  `entityType` enum of `CreateApprovalRequest` and `PublishApprovalItem`.
+  29 operations are COVERED; the direct publish/unpublish pair falls under the
+  standing rule, and registering, revoking and setting an executor's
+  applications from its own side are excluded with reasons in
+  `test/denyList.ts`. Takes these out of #79's list.
 - **Who may read what, and the knowledge graph, on top of the above:**
   axonity-flow#1918 (PR #1939), dumped with `dump_openapi.py` from
   axonity-flow `main` at `45d726fa` and consumed by axonity-mcp#88 (S1, S2,
