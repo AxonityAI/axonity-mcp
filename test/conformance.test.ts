@@ -7,6 +7,7 @@ import type { AxonityClient } from "../src/client.js";
 import { registerAll } from "../src/index.js";
 import { PROBE_ARGS as ARGS } from "../src/contract.js";
 import { projectCatalog } from "../src/tools/authoringSpec.js";
+import { registerApprovalTools } from "../src/tools/validation.js";
 
 /**
  * Drift guard (axonity-mcp#17, contract from axonity-flow#722, Option 1).
@@ -117,6 +118,33 @@ describe("MCP route surface conforms to the backend OpenAPI snapshot", () => {
       "evaluator",
     ]);
     expect(enumOf("AttachSnippetRequest", "target")).toEqual(["system", "user"]);
+  });
+
+  /**
+   * request_publish_bulk lists the kinds the approval queue takes by hand. It
+   * fell behind four times — data_table, application, measure, query — and an
+   * agent could not ask for an application's publication anywhere (18/10). Its
+   * list is the schema's list, in any order.
+   */
+  it("request_publish_bulk offers every kind the approval queue takes", () => {
+    let shape: Record<string, unknown> = {};
+    registerApprovalTools(
+      {
+        tool: (name: string, _d: string, s: Record<string, unknown>) => {
+          if (name === "request_publish_bulk") shape = s;
+        },
+      } as never,
+      {} as never,
+    );
+    const requests = shape.requests as {
+      element: { shape: { entityType: { options: string[] } } };
+    };
+    const offered = [...requests.element.shape.entityType.options].sort();
+    const accepted = [
+      ...(snapshot.components.schemas.CreateApprovalRequest?.properties?.entityType?.enum ?? []),
+    ].sort();
+    expect(accepted, "the enum vanished — check the snapshot").toContain("application");
+    expect(offered).toEqual(accepted);
   });
 
   /**

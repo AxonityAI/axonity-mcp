@@ -106,6 +106,35 @@ describe("applications", () => {
     expect(forbids("POST", "/api/v1/applications/a1/versions/unpublish")).toBe(true);
   });
 
+  /**
+   * 18/10: ActaLibra (lab) had to be published again to rebuild its tools, had
+   * no draft, and the MCP had no way in — a person changed a space in the UI.
+   * The platform already allows it: ensure opens a draft of the current
+   * content, and the request then passes `already_live`.
+   */
+  it("says how to publish again without a change, and that a release leaves the application out", async () => {
+    const { handlers, descriptions, client } = setup();
+    const publish = descriptions.get("request_publish_application")!;
+    expect(publish).toMatch(/ensure_application_major_version first/);
+    expect(publish).toMatch(/already_live/);
+    expect(publish).toMatch(/Never edit a field just to make a draft/);
+    expect(publish).toMatch(/release does not carry the application/);
+    expect(descriptions.get("request_publish_release")).toMatch(/APPLICATION IS NOT IN A RELEASE YET/);
+
+    await handlers.get("ensure_application_major_version")!({ id: "a1" });
+    expect(client.post).toHaveBeenCalledWith("/api/v1/applications/a1/versions/ensure");
+  });
+
+  it("can be asked for in a bulk request", async () => {
+    const { handlers, client } = setup();
+    await handlers.get("request_publish_bulk")!({
+      requests: [{ entityType: "application", entityId: "a1" }],
+    });
+    expect(client.post).toHaveBeenCalledWith("/api/v1/publish-approvals/bulk", {
+      requests: [{ entityType: "application", entityId: "a1" }],
+    });
+  });
+
   it("creates with the fields passed through, and deletes with the snake_case key", async () => {
     const { handlers, client } = setup();
     const fields = {

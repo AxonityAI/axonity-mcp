@@ -345,7 +345,17 @@ const ENTITIES: EntityDef[] = [
     publishNote:
       "The limits are what an executor on a customer's machine is allowed to " +
       "do, which is why only a human makes them live. Until the approval is " +
-      "decided, the executors keep the limits published before.",
+      "decided, the executors keep the limits published before. " +
+      "\n\nPublishing is also what rebuilds the application's act/observe " +
+      "tools from the published version. To publish again WITHOUT a change — " +
+      "an application already live, no draft, the request refused as " +
+      "`already_live` — call ensure_application_major_version first: it opens " +
+      "a draft of the current content, and this request then goes through. " +
+      "Never edit a field just to make a draft. A platform release rebuilds " +
+      "these tools by itself on start, so a new tool shape after a deploy " +
+      "needs no publish. To take a workflow live with the application its " +
+      "agents operate, request this alongside request_publish_release: a " +
+      "release does not carry the application yet.",
   },
   // The three below arrived with axonity-flow#1849 (axonity-mcp#78). None is
   // versioned or publish-approved: a change is live the moment it is saved, so
