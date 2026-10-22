@@ -137,8 +137,8 @@ describe("the validator contract in the guide is the platform's (#71)", () => {
 });
 
 /**
- * A response recorded from the REAL route on axonity-flow PR #2104
- * (`aanmaakcontract-live` at `431dc00f`), through the ASGI app, with
+ * A response recorded from the REAL route on axonity-flow `main`
+ * (`c9f77464`, after #2104), through the ASGI app, with
  * `?kinds=tool,conditional_trigger`. Re-record it when the route changes.
  */
 const RECORDED = JSON.parse(
@@ -227,7 +227,7 @@ describe("get_entity_authoring_contract reads the platform live (#95, axonity-fl
     expect(byName.get("checkConfig")?.refused).toBeDefined();
   });
 
-  it("matches the route in the snapshot (dumped from the PR branch)", () => {
+  it("matches the route in the snapshot (dumped from main)", () => {
     const op = (snapshot.paths[ENTITY_CONTRACT_ROUTE] as {
       get: { parameters: { name: string; in: string }[] };
     }).get;

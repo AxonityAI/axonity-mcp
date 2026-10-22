@@ -11,7 +11,20 @@ diff in review.
 
 ## Provenance
 
-- **Full refresh (#73, #95), replacing everything below:** a WHOLE dump with
+- **Full refresh after axonity-flow#2104, replacing everything below:** a
+  WHOLE dump with `dump_openapi.py` from a clean, read-only worktree of
+  axonity-flow `main` at `c9f77464` (#2103 merged as #2104). 749 → 749
+  operations: no route added or removed. `GET /api/v1/authoring/entity-contracts`
+  and its `EntityContractsResponse` now come from `main`, identical to the
+  branch dump they replace. What moved: `ConditionalTriggerIn` and
+  `ConditionalTriggerUpdate`, whose `checkKind`/`checkConfig` now carry
+  `x-refused` with where the value is authored instead (the workflow's trigger
+  element, effective at publish). No new undecided operation, so
+  `OPEN_FOR_DECISION_79` is unchanged. `entity-contracts.tool-conditional_trigger.json`
+  was re-recorded from the route on `main` (`?kinds=tool,conditional_trigger`,
+  through the ASGI app) and is byte-identical to the one it replaces;
+  `test/driftContract.test.ts` replays it.
+- **Full refresh (#73, #95), replaced by the entry above:** a WHOLE dump with
   `dump_openapi.py` from a clean checkout of axonity-flow `main` at
   `bbdc657a` — not a splice. 653 → 748 operations, none removed. Brings in,
   among the rest, `ConditionalTriggerIn` with `workflowId` required and the
@@ -21,16 +34,6 @@ diff in review.
   already covered by tools. The 38 operations the refresh brought in that no
   tool covers and no rule excludes are listed in `OPEN_FOR_DECISION_79` in
   `test/completeness.test.ts` — deliberately NOT decided here; that is #79.
-  ONE SPLICE on top, from an unmerged branch: `GET
-  /api/v1/authoring/entity-contracts` and its `EntityContractsResponse` come
-  from a dump of axonity-flow PR #2104 (`aanmaakcontract-live` at `431dc00f`,
-  axonity-flow#2103), taken from a temporary read-only worktree of that head.
-  Only those two entries; everything else stays at `main` `bbdc657a` (the PR
-  also changes other schemas, which arrive with the next refresh after it
-  merges). Until #2104 merges, the contract route is that PR's. Beside it,
-  `entity-contracts.tool-conditional_trigger.json` is a response recorded from
-  the real route on the same head (`?kinds=tool,conditional_trigger`, through
-  the ASGI app); `test/driftContract.test.ts` replays it.
 - **Queries, concept links and what fills a table, on top of the above:**
   axonity-flow#2010 (S1 queries, #2011; S6 concept links, #2016) and #2013
   (a table's filler), dumped with `dump_openapi.py` from axonity-flow `main`
