@@ -1,0 +1,1423 @@
+{
+  "contracts": {
+    "conditional_trigger": {
+      "contractVersion": "dc51bf4c68af",
+      "create": {
+        "fields": [
+          {
+            "format": "uuid",
+            "name": "workflowId",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "format": "uuid",
+            "name": "triggerId",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "format": "uuid",
+            "name": "agentId",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "maxLength": 2000,
+            "minLength": 1,
+            "name": "conditionText",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "maximum": 10080,
+            "minimum": 5,
+            "name": "repeatIntervalMinutes",
+            "required": true,
+            "type": "integer"
+          },
+          {
+            "default": true,
+            "name": "enabled",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "default": null,
+            "name": "checkKind",
+            "nullable": true,
+            "refused": {
+              "authoredIn": {
+                "entity": "workflow",
+                "path": "triggers.all[].config.checkKind",
+                "takesEffect": "publish"
+              }
+            },
+            "required": false,
+            "type": "string"
+          },
+          {
+            "default": null,
+            "name": "checkConfig",
+            "nullable": true,
+            "refused": {
+              "authoredIn": {
+                "entity": "workflow",
+                "path": "triggers.all[].config",
+                "takesEffect": "publish"
+              }
+            },
+            "required": false,
+            "type": "object"
+          }
+        ]
+      },
+      "publish": {
+        "approval": false,
+        "rules": []
+      },
+      "update": {
+        "fields": [
+          {
+            "default": null,
+            "maxLength": 2000,
+            "minLength": 1,
+            "name": "conditionText",
+            "nullable": true,
+            "required": false,
+            "type": "string"
+          },
+          {
+            "default": null,
+            "maximum": 10080,
+            "minimum": 5,
+            "name": "repeatIntervalMinutes",
+            "nullable": true,
+            "required": false,
+            "type": "integer"
+          },
+          {
+            "default": null,
+            "format": "uuid",
+            "name": "agentId",
+            "nullable": true,
+            "required": false,
+            "type": "string"
+          },
+          {
+            "default": null,
+            "name": "enabled",
+            "nullable": true,
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "default": null,
+            "name": "checkKind",
+            "nullable": true,
+            "refused": {
+              "authoredIn": {
+                "entity": "workflow",
+                "path": "triggers.all[].config.checkKind",
+                "takesEffect": "publish"
+              }
+            },
+            "required": false,
+            "type": "string"
+          },
+          {
+            "default": null,
+            "name": "checkConfig",
+            "nullable": true,
+            "refused": {
+              "authoredIn": {
+                "entity": "workflow",
+                "path": "triggers.all[].config",
+                "takesEffect": "publish"
+              }
+            },
+            "required": false,
+            "type": "object"
+          }
+        ]
+      }
+    },
+    "tool": {
+      "contractVersion": "08015d999e67",
+      "create": {
+        "fields": [
+          {
+            "description": "Human-readable name of the tool.",
+            "name": "name",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "default": null,
+            "description": "Human-readable description of what the tool does.",
+            "name": "description",
+            "nullable": true,
+            "required": false,
+            "type": "string"
+          },
+          {
+            "allowed": [
+              "function",
+              "connector",
+              "validator",
+              "evaluator",
+              "executor"
+            ],
+            "default": "function",
+            "description": "Tool kind: function (tenant code), connector (stored HTTP call), validator or evaluator.",
+            "name": "type",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "default": null,
+            "description": "JSON Schema of the tool's input arguments.",
+            "name": "inputSchema",
+            "nullable": true,
+            "required": false,
+            "type": "object"
+          },
+          {
+            "default": null,
+            "description": "JSON Schema of the tool's return value.",
+            "name": "outputSchema",
+            "nullable": true,
+            "required": false,
+            "type": "object"
+          },
+          {
+            "default": null,
+            "description": "Tool implementation payload (e.g. function code or connector config); shape depends on `type`.",
+            "name": "implementation",
+            "nullable": true,
+            "required": false,
+            "type": "object"
+          },
+          {
+            "default": null,
+            "description": "Authentication configuration for the tool's outbound calls (e.g. connector credentials reference). A LIST carries more than one credential on one connector (#1095) — an API that wants an OAuth2 token and a subscription-key header at the same time needs both. A single object stays valid and behaves as a list of one, so every stored connector keeps working.",
+            "items": {
+              "type": "object"
+            },
+            "name": "authConfig",
+            "nullable": true,
+            "required": false,
+            "type": [
+              "object",
+              "array"
+            ]
+          },
+          {
+            "allowed": [
+              "always",
+              "on_demand",
+              "inherit"
+            ],
+            "default": "inherit",
+            "description": "Whether the tool is always in the agent's tool list ('always'), fetched on demand ('on_demand'), or left to its toolbox to decide ('inherit', the default).",
+            "name": "surfacing",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "default": null,
+            "description": "Id of the toolbox to create this tool in, or null to leave it ungrouped. References a toolbox (GET /api/v1/toolboxes). A tool belongs to at most one. Moving an EXISTING tool is a separate endpoint (PUT /tools/{id}/toolbox), where an explicit null means 'take it out of its box'.",
+            "format": "uuid",
+            "name": "toolboxId",
+            "nullable": true,
+            "required": false,
+            "type": "string"
+          },
+          {
+            "default": null,
+            "description": "Which of this tool's `implementation` settings may differ per environment (#1641 B15). Declaring one puts it on the deployment screen's Values tab, where each environment states its own; the value itself never travels in the tool. Omit to leave unchanged; send `[]` to declare none.",
+            "items": {
+              "description": "One setting that may differ per environment.",
+              "shape": {
+                "fields": [
+                  {
+                    "description": "Path to the setting inside the tool's `implementation`. `baseUrl` for a top-level field, `pagination.pageSize` to reach into a block, `queryParams.userID` or `headers.X-Tenant` to address one header or query parameter by ITS OWN key (never by position — the editor reorders them). On a toolbox the same path is applied to every tool in the box.",
+                    "maxLength": 200,
+                    "name": "name",
+                    "required": true,
+                    "type": "string"
+                  },
+                  {
+                    "description": "What this setting is called on the deployment screen, in the words of the person filling it in — 'Address of the service', not 'baseUrl'.",
+                    "maxLength": 255,
+                    "name": "label",
+                    "required": true,
+                    "type": "string"
+                  },
+                  {
+                    "default": null,
+                    "description": "What an operator needs to know to answer it: what the value means, and where to find this environment's own.",
+                    "maxLength": 2000,
+                    "name": "description",
+                    "nullable": true,
+                    "required": false,
+                    "type": "string"
+                  },
+                  {
+                    "default": null,
+                    "description": "How the deployment screen should edit it: text, long-text, email, url, number, yes-no, date, datetime, time, choice or multi-choice. Omit to let the screen read it off the value the branch already carries, which is right for almost every connector field — a `timeout: 30` is a number whether or not anybody says so. State it only where the value it will BECOME differs from the one it holds today.",
+                    "maxLength": 50,
+                    "name": "kind",
+                    "nullable": true,
+                    "required": false,
+                    "type": "string"
+                  },
+                  {
+                    "default": false,
+                    "deprecated": true,
+                    "description": "Ignored. A value is the branch's standard until an environment states its own, so there is nothing for it to be missing and nothing it can hold up. Set the standard you want, and override it where an environment differs.",
+                    "name": "environmentRequired",
+                    "required": false,
+                    "type": "boolean"
+                  }
+                ],
+                "strict": true
+              },
+              "type": "object"
+            },
+            "maxItems": 200,
+            "name": "environmentValues",
+            "nullable": true,
+            "required": false,
+            "type": "array"
+          }
+        ],
+        "strict": true
+      },
+      "publish": {
+        "approval": true,
+        "rules": [
+          {
+            "allowed": [
+              "reads",
+              "acts"
+            ],
+            "appliesTo": {
+              "type": [
+                "connector"
+              ]
+            },
+            "code": "connector_effect_missing",
+            "enforcedAt": "publish",
+            "field": "implementation.effect",
+            "message": "Cannot publish connector: Set the connector's side effects (read-only or performs actions) before publishing."
+          },
+          {
+            "appliesTo": {
+              "type": [
+                "evaluator",
+                "function",
+                "validator"
+              ]
+            },
+            "code": "dry_run_required",
+            "enforcedAt": "readiness",
+            "message": "The tool's current code has not passed a clean dry-run yet. Dry-run it on a sample input and fix any error first. Only a dry-run of the tool's STORED code counts (POST /api/v1/tools/{id}/dry-run, or the Builder's dry_run_tool) — running caller-supplied code through /tools/execute deliberately does not, since that code need not be the tool's own."
+          },
+          {
+            "appliesTo": {
+              "type": [
+                "evaluator"
+              ]
+            },
+            "code": "evaluator_branch_choice_missing",
+            "enforcedAt": "publish",
+            "field": "implementation",
+            "message": "Cannot publish evaluator: it does not declare a branch choice. An evaluator must declare an implementation: either a `run` function that returns a branch id, or a builtin reference to a house evaluator."
+          },
+          {
+            "appliesTo": {
+              "type": [
+                "connector",
+                "evaluator",
+                "executor",
+                "function",
+                "validator"
+              ]
+            },
+            "code": "no_implementation",
+            "enforcedAt": "readiness",
+            "message": "The tool has no implementation yet."
+          },
+          {
+            "appliesTo": {
+              "type": [
+                "validator"
+              ]
+            },
+            "code": "validator_verdict_missing",
+            "enforcedAt": "publish",
+            "field": "implementation",
+            "message": "Cannot publish validator: it does not declare a strict pass/fail verdict. A validator must declare an implementation: either a `run` function that returns a pass/fail verdict, or a builtin reference to a house validator."
+          }
+        ]
+      },
+      "toolbox": {
+        "fields": [
+          {
+            "description": "Id of the toolbox to move this tool into, or null to ungroup it. Required — there is no 'leave unchanged' here, which is precisely why this is a separate endpoint from PUT /tools/{id}.",
+            "format": "uuid",
+            "name": "toolboxId",
+            "nullable": true,
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "strict": true
+      },
+      "update": {
+        "fields": [
+          {
+            "description": "Version the edit is based on; a stale value is rejected with HTTP 409 (optimistic locking).",
+            "name": "expectedVersion",
+            "required": true,
+            "type": "integer"
+          },
+          {
+            "default": null,
+            "description": "Human-readable name of the tool.",
+            "name": "name",
+            "nullable": true,
+            "required": false,
+            "type": "string"
+          },
+          {
+            "default": null,
+            "description": "Human-readable description of what the tool does.",
+            "name": "description",
+            "nullable": true,
+            "required": false,
+            "type": "string"
+          },
+          {
+            "allowed": [
+              "function",
+              "connector",
+              "validator",
+              "evaluator",
+              "executor"
+            ],
+            "default": null,
+            "description": "Tool kind: function (tenant code), connector (stored HTTP call), validator or evaluator.",
+            "name": "type",
+            "nullable": true,
+            "required": false,
+            "type": "string"
+          },
+          {
+            "default": null,
+            "description": "JSON Schema of the tool's input arguments.",
+            "name": "inputSchema",
+            "nullable": true,
+            "required": false,
+            "type": "object"
+          },
+          {
+            "default": null,
+            "description": "JSON Schema of the tool's return value.",
+            "name": "outputSchema",
+            "nullable": true,
+            "required": false,
+            "type": "object"
+          },
+          {
+            "default": null,
+            "description": "Tool implementation payload (e.g. function code or connector config); shape depends on `type`.",
+            "name": "implementation",
+            "nullable": true,
+            "required": false,
+            "type": "object"
+          },
+          {
+            "default": null,
+            "description": "Authentication configuration for the tool's outbound calls (e.g. connector credentials reference). A LIST carries more than one credential on one connector (#1095) — an API that wants an OAuth2 token and a subscription-key header at the same time needs both. A single object stays valid and behaves as a list of one, so every stored connector keeps working.",
+            "items": {
+              "type": "object"
+            },
+            "name": "authConfig",
+            "nullable": true,
+            "required": false,
+            "type": [
+              "object",
+              "array"
+            ]
+          },
+          {
+            "allowed": [
+              "draft",
+              "active",
+              "archived"
+            ],
+            "default": null,
+            "description": "Lifecycle status of the tool.",
+            "name": "status",
+            "nullable": true,
+            "required": false,
+            "type": "string"
+          },
+          {
+            "allowed": [
+              "always",
+              "on_demand",
+              "inherit"
+            ],
+            "default": null,
+            "description": "Whether the tool is always in the agent's tool list ('always'), fetched on demand ('on_demand'), or left to its toolbox to decide ('inherit'). Omit to leave unchanged. Moving a tool between toolboxes is a separate endpoint (PUT /tools/{id}/toolbox) so that an explicit null there can mean 'ungroup' without colliding with 'unchanged' here.",
+            "name": "surfacing",
+            "nullable": true,
+            "required": false,
+            "type": "string"
+          },
+          {
+            "default": null,
+            "description": "Which of this tool's `implementation` settings may differ per environment (#1641 B15). Declaring one puts it on the deployment screen's Values tab, where each environment states its own; the value itself never travels in the tool. Omit to leave unchanged; send `[]` to declare none.",
+            "items": {
+              "description": "One setting that may differ per environment.",
+              "shape": {
+                "fields": [
+                  {
+                    "description": "Path to the setting inside the tool's `implementation`. `baseUrl` for a top-level field, `pagination.pageSize` to reach into a block, `queryParams.userID` or `headers.X-Tenant` to address one header or query parameter by ITS OWN key (never by position — the editor reorders them). On a toolbox the same path is applied to every tool in the box.",
+                    "maxLength": 200,
+                    "name": "name",
+                    "required": true,
+                    "type": "string"
+                  },
+                  {
+                    "description": "What this setting is called on the deployment screen, in the words of the person filling it in — 'Address of the service', not 'baseUrl'.",
+                    "maxLength": 255,
+                    "name": "label",
+                    "required": true,
+                    "type": "string"
+                  },
+                  {
+                    "default": null,
+                    "description": "What an operator needs to know to answer it: what the value means, and where to find this environment's own.",
+                    "maxLength": 2000,
+                    "name": "description",
+                    "nullable": true,
+                    "required": false,
+                    "type": "string"
+                  },
+                  {
+                    "default": null,
+                    "description": "How the deployment screen should edit it: text, long-text, email, url, number, yes-no, date, datetime, time, choice or multi-choice. Omit to let the screen read it off the value the branch already carries, which is right for almost every connector field — a `timeout: 30` is a number whether or not anybody says so. State it only where the value it will BECOME differs from the one it holds today.",
+                    "maxLength": 50,
+                    "name": "kind",
+                    "nullable": true,
+                    "required": false,
+                    "type": "string"
+                  },
+                  {
+                    "default": false,
+                    "deprecated": true,
+                    "description": "Ignored. A value is the branch's standard until an environment states its own, so there is nothing for it to be missing and nothing it can hold up. Set the standard you want, and override it where an environment differs.",
+                    "name": "environmentRequired",
+                    "required": false,
+                    "type": "boolean"
+                  }
+                ],
+                "strict": true
+              },
+              "type": "object"
+            },
+            "maxItems": 200,
+            "name": "environmentValues",
+            "nullable": true,
+            "required": false,
+            "type": "array"
+          }
+        ],
+        "strict": true
+      },
+      "variants": {
+        "connector": {
+          "authConfig": {
+            "fields": [
+              {
+                "allowed": [
+                  "none",
+                  "api_key",
+                  "bearer",
+                  "basic",
+                  "oauth2_client_credentials",
+                  "google_service_account",
+                  "session_cookie"
+                ],
+                "default": "none",
+                "name": "type",
+                "required": false,
+                "type": "string"
+              },
+              {
+                "default": {},
+                "name": "config",
+                "required": false,
+                "type": "object"
+              },
+              {
+                "default": null,
+                "name": "secretId",
+                "nullable": true,
+                "required": false,
+                "type": "string"
+              }
+            ]
+          },
+          "credentialNamespace": "credential",
+          "implementation": {
+            "fields": [
+              {
+                "allowed": [
+                  "rest",
+                  "graphql"
+                ],
+                "default": "rest",
+                "description": "rest or graphql.",
+                "name": "connectorType",
+                "required": false,
+                "type": "string"
+              },
+              {
+                "allowed": [
+                  "rest",
+                  "graphql"
+                ],
+                "default": null,
+                "deprecated": true,
+                "description": "Older spelling of connectorType, still read when connectorType is absent.",
+                "name": "type",
+                "nullable": true,
+                "required": false,
+                "type": "string"
+              },
+              {
+                "default": "",
+                "description": "Scheme and host of the far end. A host that differs per environment is declared in the tool's environmentValues, not interpolated here.",
+                "name": "baseUrl",
+                "required": false,
+                "type": "string"
+              },
+              {
+                "allowed": [
+                  "GET",
+                  "POST",
+                  "PUT",
+                  "PATCH",
+                  "DELETE"
+                ],
+                "default": "GET",
+                "description": "HTTP method (rest).",
+                "name": "method",
+                "required": false,
+                "type": "string"
+              },
+              {
+                "default": "",
+                "description": "Path after baseUrl; may use {{input}} placeholders.",
+                "name": "path",
+                "required": false,
+                "type": "string"
+              },
+              {
+                "description": "A list of {key, value, enabled} entries, never an object.",
+                "items": {
+                  "description": "A single header key-value pair with enabled toggle.",
+                  "shape": {
+                    "fields": [
+                      {
+                        "name": "key",
+                        "required": true,
+                        "type": "string"
+                      },
+                      {
+                        "name": "value",
+                        "required": true,
+                        "type": "string"
+                      },
+                      {
+                        "default": true,
+                        "name": "enabled",
+                        "required": false,
+                        "type": "boolean"
+                      }
+                    ]
+                  },
+                  "type": "object"
+                },
+                "name": "headers",
+                "required": false,
+                "type": "array"
+              },
+              {
+                "description": "A list of {key, value, enabled} entries, never an object.",
+                "items": {
+                  "description": "A single query parameter key-value pair with enabled toggle.",
+                  "shape": {
+                    "fields": [
+                      {
+                        "name": "key",
+                        "required": true,
+                        "type": "string"
+                      },
+                      {
+                        "name": "value",
+                        "required": true,
+                        "type": "string"
+                      },
+                      {
+                        "default": true,
+                        "name": "enabled",
+                        "required": false,
+                        "type": "boolean"
+                      }
+                    ]
+                  },
+                  "type": "object"
+                },
+                "name": "queryParams",
+                "required": false,
+                "type": "array"
+              },
+              {
+                "default": null,
+                "description": "{type, content}; the raw payload goes in content.",
+                "name": "body",
+                "nullable": true,
+                "required": false,
+                "shape": {
+                  "fields": [
+                    {
+                      "allowed": [
+                        "json",
+                        "none",
+                        "form",
+                        "file"
+                      ],
+                      "default": "json",
+                      "name": "type",
+                      "required": false,
+                      "type": "string"
+                    },
+                    {
+                      "default": "",
+                      "name": "content",
+                      "required": false,
+                      "type": "string"
+                    },
+                    {
+                      "default": null,
+                      "exclusiveMinimum": 0,
+                      "name": "maxBytes",
+                      "nullable": true,
+                      "required": false,
+                      "type": "integer"
+                    }
+                  ]
+                },
+                "type": "object"
+              },
+              {
+                "default": null,
+                "description": "What becomes of the answer: jmespath, full or file.",
+                "name": "responseMapping",
+                "nullable": true,
+                "required": false,
+                "shape": {
+                  "fields": [
+                    {
+                      "allowed": [
+                        "jmespath",
+                        "full",
+                        "file"
+                      ],
+                      "default": "full",
+                      "name": "type",
+                      "required": false,
+                      "type": "string"
+                    },
+                    {
+                      "default": "",
+                      "name": "expression",
+                      "required": false,
+                      "type": "string"
+                    },
+                    {
+                      "default": "",
+                      "maxLength": 1024,
+                      "name": "filename",
+                      "required": false,
+                      "type": "string"
+                    }
+                  ]
+                },
+                "type": "object"
+              },
+              {
+                "default": null,
+                "description": "Optional sandboxed code that builds the request body: {enabled, implementation} with a run function.",
+                "name": "requestTransform",
+                "nullable": true,
+                "required": false,
+                "shape": {
+                  "fields": [
+                    {
+                      "default": false,
+                      "name": "enabled",
+                      "required": false,
+                      "type": "boolean"
+                    },
+                    {
+                      "default": null,
+                      "name": "implementation",
+                      "nullable": true,
+                      "required": false,
+                      "shape": {
+                        "fields": [
+                          {
+                            "default": "",
+                            "maxLength": 10000,
+                            "name": "imports",
+                            "required": false,
+                            "type": "string"
+                          },
+                          {
+                            "default": [],
+                            "items": {
+                              "description": "A single function definition with its name and code.",
+                              "shape": {
+                                "fields": [
+                                  {
+                                    "maxLength": 200,
+                                    "name": "name",
+                                    "required": true,
+                                    "type": "string"
+                                  },
+                                  {
+                                    "maxLength": 100000,
+                                    "name": "code",
+                                    "required": true,
+                                    "type": "string"
+                                  }
+                                ]
+                              },
+                              "type": "object"
+                            },
+                            "maxItems": 20,
+                            "name": "functions",
+                            "required": false,
+                            "type": "array"
+                          },
+                          {
+                            "default": null,
+                            "items": {
+                              "description": "A single class definition with its name and code.",
+                              "shape": {
+                                "fields": [
+                                  {
+                                    "maxLength": 200,
+                                    "name": "name",
+                                    "required": true,
+                                    "type": "string"
+                                  },
+                                  {
+                                    "maxLength": 100000,
+                                    "name": "code",
+                                    "required": true,
+                                    "type": "string"
+                                  }
+                                ]
+                              },
+                              "type": "object"
+                            },
+                            "maxItems": 20,
+                            "name": "classes",
+                            "nullable": true,
+                            "required": false,
+                            "type": "array"
+                          },
+                          {
+                            "default": [],
+                            "items": {
+                              "type": "string"
+                            },
+                            "maxItems": 200,
+                            "name": "selectedPackages",
+                            "required": false,
+                            "type": "array"
+                          }
+                        ]
+                      },
+                      "type": "object"
+                    }
+                  ]
+                },
+                "type": "object"
+              },
+              {
+                "default": null,
+                "description": "Optional sandboxed code over the mapped answer: {enabled, implementation} with run(input, response).",
+                "name": "responseTransform",
+                "nullable": true,
+                "required": false,
+                "shape": {
+                  "fields": [
+                    {
+                      "default": false,
+                      "name": "enabled",
+                      "required": false,
+                      "type": "boolean"
+                    },
+                    {
+                      "default": null,
+                      "name": "implementation",
+                      "nullable": true,
+                      "required": false,
+                      "shape": {
+                        "fields": [
+                          {
+                            "default": "",
+                            "maxLength": 10000,
+                            "name": "imports",
+                            "required": false,
+                            "type": "string"
+                          },
+                          {
+                            "default": [],
+                            "items": {
+                              "description": "A single function definition with its name and code.",
+                              "shape": {
+                                "fields": [
+                                  {
+                                    "maxLength": 200,
+                                    "name": "name",
+                                    "required": true,
+                                    "type": "string"
+                                  },
+                                  {
+                                    "maxLength": 100000,
+                                    "name": "code",
+                                    "required": true,
+                                    "type": "string"
+                                  }
+                                ]
+                              },
+                              "type": "object"
+                            },
+                            "maxItems": 20,
+                            "name": "functions",
+                            "required": false,
+                            "type": "array"
+                          },
+                          {
+                            "default": null,
+                            "items": {
+                              "description": "A single class definition with its name and code.",
+                              "shape": {
+                                "fields": [
+                                  {
+                                    "maxLength": 200,
+                                    "name": "name",
+                                    "required": true,
+                                    "type": "string"
+                                  },
+                                  {
+                                    "maxLength": 100000,
+                                    "name": "code",
+                                    "required": true,
+                                    "type": "string"
+                                  }
+                                ]
+                              },
+                              "type": "object"
+                            },
+                            "maxItems": 20,
+                            "name": "classes",
+                            "nullable": true,
+                            "required": false,
+                            "type": "array"
+                          },
+                          {
+                            "default": [],
+                            "items": {
+                              "type": "string"
+                            },
+                            "maxItems": 200,
+                            "name": "selectedPackages",
+                            "required": false,
+                            "type": "array"
+                          }
+                        ]
+                      },
+                      "type": "object"
+                    }
+                  ]
+                },
+                "type": "object"
+              },
+              {
+                "default": null,
+                "description": "Auto-pagination; off unless enabled.",
+                "name": "pagination",
+                "nullable": true,
+                "required": false,
+                "shape": {
+                  "fields": [
+                    {
+                      "default": false,
+                      "name": "enabled",
+                      "required": false,
+                      "type": "boolean"
+                    },
+                    {
+                      "default": "page",
+                      "name": "pageParam",
+                      "required": false,
+                      "type": "string"
+                    },
+                    {
+                      "default": "size",
+                      "name": "sizeParam",
+                      "required": false,
+                      "type": "string"
+                    },
+                    {
+                      "default": 0,
+                      "minimum": 0,
+                      "name": "startPage",
+                      "required": false,
+                      "type": "integer"
+                    },
+                    {
+                      "default": 100,
+                      "minimum": 1,
+                      "name": "pageSize",
+                      "required": false,
+                      "type": "integer"
+                    },
+                    {
+                      "default": "",
+                      "name": "itemsPath",
+                      "required": false,
+                      "type": "string"
+                    },
+                    {
+                      "default": 50,
+                      "minimum": 1,
+                      "name": "maxPages",
+                      "required": false,
+                      "type": "integer"
+                    }
+                  ]
+                },
+                "type": "object"
+              },
+              {
+                "default": 30,
+                "description": "Seconds before the call is given up.",
+                "name": "timeout",
+                "required": false,
+                "type": "integer"
+              },
+              {
+                "default": "",
+                "description": "GraphQL query (graphql).",
+                "name": "query",
+                "required": false,
+                "type": "string"
+              },
+              {
+                "default": "",
+                "description": "GraphQL variables as JSON text (graphql).",
+                "name": "variables",
+                "required": false,
+                "type": "string"
+              },
+              {
+                "default": "",
+                "description": "GraphQL operation name (graphql).",
+                "name": "operationName",
+                "required": false,
+                "type": "string"
+              },
+              {
+                "allowed": [
+                  "reads",
+                  "acts"
+                ],
+                "default": null,
+                "description": "What the connector does to the outside world: reads or acts. May be left out on a draft; required to publish (#1997).",
+                "name": "effect",
+                "nullable": true,
+                "required": false,
+                "type": "string"
+              },
+              {
+                "default": null,
+                "description": "Inputs filled from the credential's metadata: {input name: metadata key}. They override any value a caller sends (#967).",
+                "name": "secret_params",
+                "nullable": true,
+                "required": false,
+                "type": "object",
+                "values": {
+                  "type": "string"
+                }
+              },
+              {
+                "default": null,
+                "description": "Which inputs are outbound recipients (#968).",
+                "name": "recipient_guard",
+                "nullable": true,
+                "required": false,
+                "shape": {
+                  "fields": [
+                    {
+                      "description": "Names of the inputs that carry recipient addresses, e.g. to, cc, bcc.",
+                      "items": {
+                        "type": "string"
+                      },
+                      "name": "fields",
+                      "required": false,
+                      "type": "array"
+                    },
+                    {
+                      "default": "",
+                      "description": "Name of the input carrying the message body, where a redirected message names its intended recipients.",
+                      "name": "bodyField",
+                      "required": false,
+                      "type": "string"
+                    }
+                  ]
+                },
+                "type": "object"
+              }
+            ]
+          },
+          "literalCredentialFieldPattern": "^(authorization|cookie|proxy-authorization|.*[-_]?(key|token|secret|password|credential|auth)|api[-_.]?key)$",
+          "maxFileBytes": 26214400
+        },
+        "evaluator": {
+          "builtin": {
+            "allowed": [
+              "evaluators.condition_table",
+              "evaluators.table_lookup"
+            ],
+            "field": "implementation.builtin"
+          },
+          "implementation": {
+            "fields": [
+              {
+                "default": "",
+                "maxLength": 10000,
+                "name": "imports",
+                "required": false,
+                "type": "string"
+              },
+              {
+                "default": [],
+                "items": {
+                  "description": "A single function definition with its name and code.",
+                  "shape": {
+                    "fields": [
+                      {
+                        "maxLength": 200,
+                        "name": "name",
+                        "required": true,
+                        "type": "string"
+                      },
+                      {
+                        "maxLength": 100000,
+                        "name": "code",
+                        "required": true,
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "type": "object"
+                },
+                "maxItems": 20,
+                "name": "functions",
+                "required": false,
+                "type": "array"
+              },
+              {
+                "default": null,
+                "items": {
+                  "description": "A single class definition with its name and code.",
+                  "shape": {
+                    "fields": [
+                      {
+                        "maxLength": 200,
+                        "name": "name",
+                        "required": true,
+                        "type": "string"
+                      },
+                      {
+                        "maxLength": 100000,
+                        "name": "code",
+                        "required": true,
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "type": "object"
+                },
+                "maxItems": 20,
+                "name": "classes",
+                "nullable": true,
+                "required": false,
+                "type": "array"
+              },
+              {
+                "default": [],
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 200,
+                "name": "selectedPackages",
+                "required": false,
+                "type": "array"
+              }
+            ]
+          }
+        },
+        "executor": {
+          "commands": [
+            "desktop_click",
+            "desktop_double_click",
+            "desktop_focus",
+            "desktop_key",
+            "desktop_list_windows",
+            "desktop_observe",
+            "desktop_ocr",
+            "desktop_read_form",
+            "desktop_read_grid",
+            "desktop_read_tree",
+            "desktop_right_click",
+            "desktop_type",
+            "desktop_wait_for",
+            "files_list",
+            "files_read_text",
+            "web_close",
+            "web_open",
+            "web_read_text"
+          ],
+          "maxTimeoutSeconds": 120
+        },
+        "function": {
+          "implementation": {
+            "fields": [
+              {
+                "default": "",
+                "maxLength": 10000,
+                "name": "imports",
+                "required": false,
+                "type": "string"
+              },
+              {
+                "default": [],
+                "items": {
+                  "description": "A single function definition with its name and code.",
+                  "shape": {
+                    "fields": [
+                      {
+                        "maxLength": 200,
+                        "name": "name",
+                        "required": true,
+                        "type": "string"
+                      },
+                      {
+                        "maxLength": 100000,
+                        "name": "code",
+                        "required": true,
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "type": "object"
+                },
+                "maxItems": 20,
+                "name": "functions",
+                "required": false,
+                "type": "array"
+              },
+              {
+                "default": null,
+                "items": {
+                  "description": "A single class definition with its name and code.",
+                  "shape": {
+                    "fields": [
+                      {
+                        "maxLength": 200,
+                        "name": "name",
+                        "required": true,
+                        "type": "string"
+                      },
+                      {
+                        "maxLength": 100000,
+                        "name": "code",
+                        "required": true,
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "type": "object"
+                },
+                "maxItems": 20,
+                "name": "classes",
+                "nullable": true,
+                "required": false,
+                "type": "array"
+              },
+              {
+                "default": [],
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 200,
+                "name": "selectedPackages",
+                "required": false,
+                "type": "array"
+              }
+            ]
+          }
+        },
+        "validator": {
+          "builtin": {
+            "allowed": [
+              "validators.abs_min",
+              "validators.array_item_values_in_input_tokens",
+              "validators.array_items_field_in_set",
+              "validators.array_items_field_numeric_min_when",
+              "validators.array_items_field_required_when",
+              "validators.array_items_field_unique",
+              "validators.array_items_have_keys",
+              "validators.array_items_slot_any_differs",
+              "validators.array_items_slot_differs",
+              "validators.array_items_slot_min_length",
+              "validators.array_items_slot_no_control_chars",
+              "validators.both_or_neither",
+              "validators.differs",
+              "validators.has_keys",
+              "validators.in_range",
+              "validators.is_numeric",
+              "validators.is_present",
+              "validators.matches_pattern",
+              "validators.matches_template",
+              "validators.min_length",
+              "validators.min_length_when",
+              "validators.no_control_chars",
+              "validators.one_of",
+              "validators.slots_must_exist_in_session_memory"
+            ],
+            "field": "implementation.builtin"
+          },
+          "implementation": {
+            "fields": [
+              {
+                "default": "",
+                "maxLength": 10000,
+                "name": "imports",
+                "required": false,
+                "type": "string"
+              },
+              {
+                "default": [],
+                "items": {
+                  "description": "A single function definition with its name and code.",
+                  "shape": {
+                    "fields": [
+                      {
+                        "maxLength": 200,
+                        "name": "name",
+                        "required": true,
+                        "type": "string"
+                      },
+                      {
+                        "maxLength": 100000,
+                        "name": "code",
+                        "required": true,
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "type": "object"
+                },
+                "maxItems": 20,
+                "name": "functions",
+                "required": false,
+                "type": "array"
+              },
+              {
+                "default": null,
+                "items": {
+                  "description": "A single class definition with its name and code.",
+                  "shape": {
+                    "fields": [
+                      {
+                        "maxLength": 200,
+                        "name": "name",
+                        "required": true,
+                        "type": "string"
+                      },
+                      {
+                        "maxLength": 100000,
+                        "name": "code",
+                        "required": true,
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "type": "object"
+                },
+                "maxItems": 20,
+                "name": "classes",
+                "nullable": true,
+                "required": false,
+                "type": "array"
+              },
+              {
+                "default": [],
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 200,
+                "name": "selectedPackages",
+                "required": false,
+                "type": "array"
+              }
+            ]
+          }
+        }
+      }
+    }
+  },
+  "kinds": [
+    "agent",
+    "application",
+    "conditional_trigger",
+    "data_table",
+    "measure",
+    "output_schema",
+    "persona",
+    "policy",
+    "prompt_snippet",
+    "query",
+    "reference_doc",
+    "secret",
+    "skill",
+    "tool",
+    "toolbox",
+    "trigger_element"
+  ],
+  "rulesVersion": "435a453e5452"
+}

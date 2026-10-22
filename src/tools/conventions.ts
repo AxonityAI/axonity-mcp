@@ -246,6 +246,16 @@ has run cleanly once, at its current version.
 
 ## Per entity — what to create, and what "complete" means
 
+**The platform's live create contract wins.** \`get_entity_authoring_contract\`
+reads this deploy's own contract per entity — required fields, allowed values,
+and the rules a publication checks — generated from the code that enforces
+them, with a \`rulesVersion\`. The notes below are kept by hand in this
+connector: guidance on order and on what "complete" means, SUBORDINATE to that
+contract. Where they disagree, the contract is right and this text is behind.
+On a deploy that does not serve it yet the tool says so; then the platform's
+refusal on save or publish (and \`get_publish_release\`'s readiness) is the
+authority, not these notes.
+
 Build in dependency order: a thing you will REFERENCE must exist before the
 thing that references it. So: tools and output-schemas first, then agents (which
 list tool ids), then workflows (whose steps name agents and tools), then
@@ -256,7 +266,7 @@ made any time before you attach them.
 - Required: \`name\`. Also: \`description\`, \`type\`, \`inputSchema\`,
   \`outputSchema\`, \`implementation\`, \`authConfig\`, \`surfacing\`.
 - \`type\`: \`"function"\` (default) | \`"connector"\` | \`"validator"\` |
-  \`"evaluator"\`. \`surfacing\`: \`"always"\` (in the agent's tool list) |
+  \`"evaluator"\` | \`"executor"\`. \`surfacing\`: \`"always"\` (in the agent's tool list) |
   \`"on_demand"\`.
 - \`inputSchema\` / \`outputSchema\` are JSON-Schema objects describing the tool's
   params and result. Set them — an agent binds to a tool by its declared I/O; a
@@ -275,6 +285,23 @@ made any time before you attach them.
     or ""); a human fills the secret in Axonity. Test with
     \`execute_stored_connector\` (uses the real, server-side-decrypted secret;
     you see only the result).
+    - **\`implementation.effect\` is required to PUBLISH**: \`"reads"\` (fetches,
+      looks something up) or \`"acts"\` (sends, writes, starts something). A
+      draft saves without it; the publish approval refuses it ("Set the
+      connector's side effects … before publishing"). Set it at create time,
+      so the human approving is not the first to find out.
+    - **An answer that is a file**: \`responseMapping: { "type": "file",
+      "filename": "{{filename}}" }\` keeps the bytes as a file of the run and
+      returns its reference \`{ fileId, filename, contentType, sizeBytes }\` —
+      the shape an upload has, so Digitize documents reads it and a
+      sub-workflow's file parameter takes it. \`filename\` is optional (the
+      far end's \`Content-Disposition\` name, else \`document\`) and may use
+      the inputs. No \`responseTransform\` with a file answer. Outside a run
+      (\`execute_stored_connector\`) nothing is stored: you see name and size.
+  - **executor** — runs a command on a registered executor (a program on
+    the customer's side). The save refuses a tool that names no executor or a
+    command that executor does not know; \`list_executors\` and
+    \`list_executor_commands\` say what exists.
   - **validator / evaluator** — a constrained kind, and \`implementation\` takes
     ONE OF TWO shapes. Either \`{"builtin": "validators.<name>"}\`, naming a
     house predicate — look at the tenant's existing validator/evaluator tools
@@ -316,6 +343,15 @@ made any time before you attach them.
   - \`replace_workflow_document\` — a full-document atomic PUT.
 - The document is a graph: \`steps.all[]\` (each \`{ id, type, name, ... }\`) and
   \`steps.edges[]\` (each \`{ id, from, to, type? }\`) plus \`triggers\`.
+- A step's GOAL is read from a different place per step type: an \`agent\`
+  step's \`contract.goal\`, a \`manual\` or \`automation\` step's
+  \`config.goal\`. Written in the other place it is stored and read by nobody,
+  and the validator keeps reporting \`step_no_goal\`.
+- After every \`apply_workflow_mutations\` / \`replace_workflow_document\` the
+  connector runs \`validate_workflow\` on the stored workflow and returns its
+  verdict as \`validation\`. Report those issues as they are. Green there means
+  every PLATFORM check passed — none of them asks whether the editor can draw
+  the document, so open it in the editor before you call it done.
 - WHICH VALUES a step's \`type\` and a trigger's \`typeId\` may hold is answered
   by \`get_workflow_authoring_spec\`, read live from this deploy. This guide
   does not list them, on purpose: it used to name nine step types where seven
@@ -389,8 +425,10 @@ A validator is a GATE on a submitted output: it runs after an agent produces a
 result and can refuse it. Specs are written in two places and carry the same
 key names in both — \`permissions.outputValidators\` on an agent, and
 \`validators\` inside an output_schema's \`schemaBody\`. The backend's OpenAPI
-description of \`schemaBody\` is the source for the full contract; what follows
-is the part you cannot author without.
+description of \`schemaBody\` is the source for the full contract, and the
+platform's live contract (\`get_entity_authoring_contract\`, output_schema)
+wins over this section where this deploy serves it. What follows is the part
+you cannot author without, checked against the platform and SUBORDINATE to both.
 
 - A spec names its check in ONE of two ways, and each brings its own binding:
   - \`function\` — a shipped predicate (e.g. \`validators.min_length\`), bound
@@ -733,14 +771,15 @@ a document to find out what the platform did.
 ## Triggers
 - A published workflow still does nothing until it has a trigger. A trigger has
   TWO halves, and drawing one on the canvas is only the first.
-- **A schedule is reconciled for you.** Draw it in the document, publish, and
-  the firing row is brought into line. That is the exception.
-- **A webhook or conditional trigger is NOT.** Its row must be created
-  separately — \`create_webhook_trigger\` / \`create_conditional_trigger\` —
-  and publishing will not create one. A webhook drawn and published with no row
-  is an endpoint that does not exist; the validator says so with
-  \`trigger_not_wired\`, a WARNING, so the publish still goes through. Take the
-  warning seriously: nothing else will tell you.
+- **A schedule and a conditional start are reconciled for you.** Draw them in
+  the document, publish, and the firing row is brought into line: created,
+  updated, and removed when the element is gone. A deploy does the same and
+  brings new ones in switched off.
+- **A webhook is NOT.** Its row must be created separately —
+  \`create_webhook_trigger\` — and publishing will not create one. A webhook
+  drawn and published with no row is an endpoint that does not exist; the
+  validator says so with \`trigger_not_wired\`, a WARNING, so the publish still
+  goes through. Take the warning seriously: nothing else will tell you.
 - Trigger deletes are HARD deletes — no restore. Webhook tokens are shown once
   at create/rotate and are never retrievable; hand them straight to your human
   and never store one in an entity field.
@@ -757,26 +796,44 @@ a document to find out what the platform did.
 - \`list_all_cron_schedules\` answers "what runs tonight?" across the tenant;
   \`reconcile_cron_schedules\` answers "is that actually what runs?". The second
   reports rather than tidying silently and never arms something switched off.
-- **A conditional trigger without a CHECK starts the workflow every beat.** It
-  wakes on its interval and, with nothing set, runs regardless of whether there
-  was anything to do — a mailbox on fifteen minutes then makes ninety-six empty
-  runs a day. Set \`checkKind\` on \`create_conditional_trigger\`, or on an
-  existing one with \`update_conditional_trigger\`; every trigger authored
-  before checks existed has none, so read \`checkKind\` in
-  \`list_conditional_triggers\` before assuming otherwise.
-- \`checkKind: "automatic"\` is ONE tool call and one rule on its answer — no
-  model, so it is the cheap way to ask "is there anything there?". Its
-  \`checkConfig\` is \`{ toolId, inputs?, rule: { field, op, value } }\`, where
-  \`field\` names a key OF THE TOOL'S ANSWER. A rule pointing at a field the
-  tool never returns is reported as a broken setup, not as "condition not met".
-  \`"agent"\` is reserved for a model judging the condition and is refused
-  today. Do not pre-validate a check here — the backend judges it with the same
-  function the dispatcher runs when the trigger fires, and its refusal says
-  what to change.
-- **To take a check off again, send \`checkKind: ""\`** — the empty string. It
-  clears the kind and its config together and returns the trigger to starting
-  every beat. Omitting the field leaves the check standing, which is why the
-  empty string exists at all.
+- **A conditional start is authored in the workflow, on the trigger element.**
+  Its \`typeId\` is \`"conditional-poll"\`, its \`id\` MUST be a UUID (the
+  platform cannot make a row for any other id), and everything it does lives
+  on its \`config\`: \`conditionText\`, \`repeatIntervalMinutes\`, and the
+  CHECK — \`checkKind\` with that kind's settings. Write it with
+  \`apply_workflow_mutations\` (\`add_trigger\`, or \`update_trigger\`, which
+  REPLACES \`config\` whole — read it, change it, send all of it). Publishing
+  copies it onto the row \`list_conditional_triggers\` shows.
+  \`create_conditional_trigger\` is not the normal path, and the platform
+  refuses a check sent to it or to \`update_conditional_trigger\`: "A
+  conditional start's check is set on the start in the workflow, and takes
+  effect when the workflow is published."
+- **A conditional start without a CHECK starts the workflow every beat.** It
+  wakes on its interval and, with no \`checkKind\`, runs regardless of whether
+  there was anything to do — a mailbox on fifteen minutes then makes
+  ninety-six empty runs a day. Read \`checkKind\` in
+  \`list_conditional_triggers\` before assuming a start has one.
+- \`checkKind: "automatic"\` decides with no model, before a run exists. Its
+  settings on \`config\` are \`plan\` (the steps of an automation step, each
+  with a \`toolId\`), \`outputs\` (what the plan produces — not worked out by
+  an agent) and \`startsWhen\` (rules \`{ field, op, value }\` of a decision's
+  rule table, where \`field\` names one of those outputs). A look that cannot
+  be made — a broken tool, a rule on an output nothing produces — is a fault,
+  never a start.
+- \`checkKind: "agent"\` is for a condition that needs judgement: the beat
+  becomes a run whose first step asks the agent named by \`config.agentId\`
+  (else the workflow's owner); it stays out of the Runs list until the answer
+  is yes. Settings: \`agentId\`, \`toolIds\`, \`inputs\`, \`reasoningLevel\`.
+- Do not pre-validate a check here. \`validate_workflow\` judges it
+  (\`conditional_check_invalid\`) with the same function the dispatcher runs
+  when the start fires, and the refusal says what to change.
+- **Removing \`checkKind\` does NOT take a check off.** A \`config\` without it
+  is read as a start written before checks existed, and the row keeps the
+  check it has. There is no way to return a start to "every beat" today; say
+  so to your human rather than looking for a route to the row.
+- Publishing also switches every start of the workflow back ON. An
+  \`update_conditional_trigger({ enabled: false })\` lasts until the next
+  publish of that workflow.
 
 ## Evaluating what you built
 - There is no findings endpoint and no evaluator entity. To judge a run, read it:

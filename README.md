@@ -40,7 +40,7 @@ tenant + scope on every call, so the connector is not a trust boundary.
 
 ## Tools
 
-346 tools total. `axonity_conventions` (read this first) covers the authoring
+476 tools total. `axonity_conventions` (read this first) covers the authoring
 rules — drafts vs live, optimistic locking, per-entity fields, delete/restore,
 and how to tell a retryable error from one that will never succeed.
 `axonity_semantic_conventions` is its counterpart for one job only: building a
@@ -120,10 +120,24 @@ Plus:
   value is discoverable without a release here. `operations` is an index by
   default; pass `types` for a command's live payload schema. `rulesVersion` is
   a content hash over all seven — same hash, nothing to re-fetch.
+- `get_entity_authoring_contract` — the platform's **create contract per
+  entity kind** (tools with each type's implementation, agents, personas,
+  knowledge, schemas, tables, toolboxes, secrets, starts), read live from
+  `GET /api/v1/authoring/entity-contracts` (axonity-flow#2103):
+  `{ kinds, contracts, rulesVersion }`, per kind the create/update fields and
+  the `publish.rules` that stop it going live. Pass `kinds` to narrow it (sent
+  as `?kinds=a,b`; an unknown kind is the platform's 422). On a backend that
+  does not serve it yet it says so plainly; it never falls back to a copy. The
+  per-entity notes in `axonity_conventions` are marked subordinate to it.
 - `apply_workflow_mutations` for structural workflow edits (add steps, connect
   edges) via mutation commands, sequenced and version-threaded for you.
 - `replace_workflow_document` for one-shot full-document replacement in a single
   atomic PUT.
+- Both end with the platform's **catalog-checked verdict**: the connector runs
+  `validate_workflow` on the stored workflow after the write and returns it,
+  verbatim, as `validation` (`catalogChecked`, `launchable`, every issue). The
+  write's own `launchable` is structural only. None of the platform's checks
+  asks whether the editor can draw the document (#65).
 - `read_workflow_trigger_parameters` — how to start the workflow:
   `{ triggers, constants }`, every start with its own parameters and a `pinned`
   flag marking the values the author owns.
@@ -160,7 +174,12 @@ across these routes — the tool parameter names say which.
 - **Connectors** (a tool of type `connector`): `create_connector`,
   `update_connector` — `authConfig` must be placeholders only; a human fills real
   secrets in Axonity. (`create_tool`/`update_tool` carry the same guard, so a
-  connector authored either way is covered.)
+  connector authored either way is covered.) A connector **must declare
+  `implementation.effect`** (`reads` | `acts`) before it can be published; a
+  draft saves without it and the approval refuses it. `responseMapping:
+  { type: "file", filename? }` keeps the answer as a file of the run and
+  returns `{ fileId, filename, contentType, sizeBytes }`, which Digitize
+  documents and a sub-workflow's file parameter take.
 - **Toolboxes** (the group a tool is filed under): `list_toolboxes`,
   `create_toolbox`, `update_toolbox`, `delete_toolbox`, `set_toolbox_tools`,
   `assign_tool_toolbox`, `set_toolbox_auth`, `list_toolbox_dependent_tools`.
@@ -389,8 +408,9 @@ across these routes — the tool parameter names say which.
 
 `list_/create_/delete_` for **webhook triggers** (plus
 `rotate_webhook_trigger`), **cron schedules**, and **conditional triggers**
-(plus `update_conditional_trigger`). Trigger deletes are **hard** deletes with
-no restore, and a webhook token is shown **once** at create or rotate.
+(plus `update_conditional_trigger` and `list_tenant_conditional_triggers`).
+Trigger deletes are **hard** deletes with no restore, and a webhook token is
+shown **once** at create or rotate.
 
 **A schedule is a claim you can now check.** `run_cron_schedule_now` fires one
 immediately *without* moving `nextFireAt` — testing a schedule must not consume
@@ -410,23 +430,18 @@ trigger must exist in the **published** document. Rule shapes come from
 `get_workflow_authoring_spec` → `scheduleRuleKinds`; this connector names none
 of its own.
 
-**A conditional trigger without a check starts the workflow every beat.** It
-wakes on its interval and, with nothing set, runs whether or not there was
-anything to do — a mailbox on fifteen minutes makes ninety-six empty runs a
-day. `checkKind` decides instead, and it is a gate ahead of the run being
-created: `"automatic"` is one tool call plus one rule on its answer, no model.
-Its `checkConfig` is `{ toolId, inputs?, rule: { field, op, value } }`, where
-`field` names a key of the *tool's* answer. `"agent"` is reserved for a model
-judging the condition and is refused today.
-
-Set it on `create_conditional_trigger` or on an existing trigger with
-`update_conditional_trigger` — everything authored before checks existed has
-none, which `list_conditional_triggers` shows as `checkKind: null`. **To take a
-check off, send `checkKind: ""`**: the empty string clears the kind and its
-config together, where omitting the field leaves it standing. The connector
-does not judge a check — the backend validates it with the same function the
-dispatcher runs when the trigger fires, so a setting that saves is one that
-runs, and a bad one comes back as a refusal naming what to fix.
+**A conditional start is authored in the workflow, not on its row.** The
+trigger element (`typeId: "conditional-poll"`, a UUID `id`) carries
+`conditionText`, `repeatIntervalMinutes` and the **check** (`checkKind` plus
+that kind's settings) on its `config`, written with `apply_workflow_mutations`.
+Publishing the workflow creates or updates the row from the document, and
+removes the rows whose element is gone. The platform **refuses** a check sent to
+`create_/update_conditional_trigger` — so those tools no longer take one, and
+`create_conditional_trigger` (rarely what you want) now sends the `workflowId`
+the platform's body schema requires. Without a check, every beat starts the
+workflow: a mailbox on fifteen minutes makes ninety-six empty runs a day.
+`"automatic"` decides with no model (a plan, its outputs, and a `startsWhen`
+rule); `"agent"` makes the beat a run whose first step asks an agent.
 
 ### Runs — evaluating what you built
 

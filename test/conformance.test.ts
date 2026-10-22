@@ -116,8 +116,16 @@ describe("MCP route surface conforms to the backend OpenAPI snapshot", () => {
       "connector",
       "validator",
       "evaluator",
+      "executor",
     ]);
     expect(enumOf("AttachSnippetRequest", "target")).toEqual(["system", "user"]);
+    // create_connector and the guide name all three mappings and `filename`
+    // (axonity-mcp#95, axonity-flow#2079).
+    expect(enumOf("ConnectorResponseMapping", "type")).toEqual(["jmespath", "full", "file"]);
+    expect(
+      snapshot.components.schemas.ConnectorResponseMapping?.properties?.filename,
+      "responseMapping.filename vanished — create_connector documents it",
+    ).toBeDefined();
   });
 
   /**
