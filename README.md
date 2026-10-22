@@ -121,11 +121,13 @@ Plus:
   default; pass `types` for a command's live payload schema. `rulesVersion` is
   a content hash over all seven — same hash, nothing to re-fetch.
 - `get_entity_authoring_contract` — the platform's **create contract per
-  entity** (tool, connector, agent, table, knowledge, schema …), read live from
-  `GET /api/v1/authoring/entity-contracts` (axonity-flow#2103): required
-  fields, allowed values and the rules a publication checks, with a
-  `rulesVersion`. Pass `entityTypes` to narrow it. On a backend that does not
-  serve it yet it says so plainly; it never falls back to a copy. The
+  entity kind** (tools with each type's implementation, agents, personas,
+  knowledge, schemas, tables, toolboxes, secrets, starts), read live from
+  `GET /api/v1/authoring/entity-contracts` (axonity-flow#2103):
+  `{ kinds, contracts, rulesVersion }`, per kind the create/update fields and
+  the `publish.rules` that stop it going live. Pass `kinds` to narrow it (sent
+  as `?kinds=a,b`; an unknown kind is the platform's 422). On a backend that
+  does not serve it yet it says so plainly; it never falls back to a copy. The
   per-entity notes in `axonity_conventions` are marked subordinate to it.
 - `apply_workflow_mutations` for structural workflow edits (add steps, connect
   edges) via mutation commands, sequenced and version-threaded for you.

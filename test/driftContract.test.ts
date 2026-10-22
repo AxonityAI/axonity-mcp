@@ -4,13 +4,12 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it, vi } from "vitest";
 
 import type { AxonityClient } from "../src/client.js";
-import { AxonityApiError, BackendVersionSkewError } from "../src/errors.js";
+import { AxonityApiError, BackendVersionSkewError, errorForStatus } from "../src/errors.js";
 import { registerAll } from "../src/index.js";
 import { CONVENTIONS } from "../src/tools/conventions.js";
 import {
   ENTITY_CONTRACT_ROUTE,
   ENTITY_CONTRACT_UNAVAILABLE,
-  projectContract,
   readEntityContract,
 } from "../src/tools/entityContract.js";
 import { registerWorkflowMutations } from "../src/tools/workflowMutations.js";
@@ -137,11 +136,41 @@ describe("the validator contract in the guide is the platform's (#71)", () => {
   });
 });
 
+/**
+ * A response recorded from the REAL route on axonity-flow PR #2104
+ * (`aanmaakcontract-live` at `431dc00f`), through the ASGI app, with
+ * `?kinds=tool,conditional_trigger`. Re-record it when the route changes.
+ */
+const RECORDED = JSON.parse(
+  readFileSync(
+    fileURLToPath(
+      new URL("./fixtures/entity-contracts.tool-conditional_trigger.json", import.meta.url),
+    ),
+    "utf8",
+  ),
+) as {
+  kinds: string[];
+  rulesVersion: string;
+  contracts: Record<string, Record<string, unknown>>;
+};
+
+/** The platform's 422 for an unknown kind, as the route answered it. */
+const UNKNOWN_KIND_422 = {
+  error: "validation_error",
+  code: "validation_error",
+  retryable: false,
+  message:
+    "Unknown entity kind: nonsense. Known kinds: agent, application, " +
+    "conditional_trigger, data_table, measure, output_schema, persona, policy, " +
+    "prompt_snippet, query, reference_doc, secret, skill, tool, toolbox, " +
+    "trigger_element.",
+};
+
 describe("get_entity_authoring_contract reads the platform live (#95, axonity-flow#2103)", () => {
-  const client = (get: (path: string) => Promise<unknown>) =>
+  const client = (get: (path: string, query?: unknown) => Promise<unknown>) =>
     ({ get: vi.fn(get) }) as unknown as AxonityClient & { get: ReturnType<typeof vi.fn> };
 
-  it("is registered and reads the route", async () => {
+  it("is registered and reads the route with no query when no kinds are asked", async () => {
     const { handlers, client: c } = all();
     expect(handlers.has("get_entity_authoring_contract")).toBe(true);
     await handlers.get("get_entity_authoring_contract")!({});
@@ -149,40 +178,81 @@ describe("get_entity_authoring_contract reads the platform live (#95, axonity-fl
     expect(ENTITY_CONTRACT_ROUTE).toBe("/api/v1/authoring/entity-contracts");
   });
 
-  it("serves markdown under its rulesVersion on a 200", async () => {
-    const result = (await readEntityContract(
-      client(async () => ({ markdown: "## connector\n- effect required", rulesVersion: "ec-1" })),
-    )) as ToolResult;
+  it("sends kinds as ONE comma-separated query parameter, as the route reads it", async () => {
+    const c = client(async () => RECORDED);
+    await readEntityContract(c, ["tool", " conditional_trigger "]);
+    expect(c.get).toHaveBeenCalledWith(ENTITY_CONTRACT_ROUTE, {
+      kinds: "tool,conditional_trigger",
+    });
+  });
+
+  it("passes the recorded real response through unchanged", async () => {
+    const result = (await readEntityContract(client(async () => RECORDED), [
+      "tool",
+      "conditional_trigger",
+    ])) as ToolResult;
     expect(result.isError).toBeUndefined();
-    expect(result.content[0].text).toContain("rulesVersion `ec-1`");
-    expect(result.content[0].text).toContain("## connector");
+    expect(JSON.parse(result.content[0].text)).toEqual(RECORDED);
   });
 
-  it("passes JSON through on a 200, narrowed when asked", async () => {
-    const body = {
-      rulesVersion: "ec-2",
-      entities: { connector: { required: ["implementation.effect"] }, agent: { required: ["name"] } },
+  it("the recorded response carries what this connector's prose points at", () => {
+    // If the platform renames these, the guide's pointers are wrong: re-record
+    // the fixture and this test says what moved.
+    expect(Object.keys(RECORDED).sort()).toEqual(["contracts", "kinds", "rulesVersion"]);
+    expect(Object.keys(RECORDED.contracts).sort()).toEqual(["conditional_trigger", "tool"]);
+    expect(RECORDED.kinds).toContain("output_schema");
+
+    const tool = RECORDED.contracts.tool as {
+      publish: { rules: { code: string; allowed?: string[] }[] };
+      variants: { connector: { implementation: { fields: Record<string, unknown>[] } } };
     };
-    const whole = JSON.parse(
-      ((await readEntityContract(client(async () => body))) as ToolResult).content[0].text,
-    );
-    expect(whole).toEqual(body);
+    const effect = tool.publish.rules.find((r) => r.code === "connector_effect_missing");
+    expect(effect?.allowed).toEqual(["reads", "acts"]);
+    const mapping = tool.variants.connector.implementation.fields.find(
+      (f) => f.name === "responseMapping",
+    ) as { shape: { fields: { name: string; allowed?: string[] }[] } };
+    expect(mapping.shape.fields.find((f) => f.name === "type")?.allowed).toEqual([
+      "jmespath",
+      "full",
+      "file",
+    ]);
+    expect(mapping.shape.fields.map((f) => f.name)).toContain("filename");
 
-    const narrowed = JSON.parse(
-      ((await readEntityContract(client(async () => body), ["connector", "nope"])) as ToolResult)
-        .content[0].text,
-    );
-    expect(narrowed.rulesVersion).toBe("ec-2");
-    expect(Object.keys(narrowed.entities)).toEqual(["connector"]);
-    expect(narrowed.unknownEntityTypes).toEqual(["nope"]);
+    const trigger = RECORDED.contracts.conditional_trigger as {
+      create: { fields: { name: string; required?: boolean; refused?: unknown }[] };
+    };
+    const byName = new Map(trigger.create.fields.map((f) => [f.name, f]));
+    expect(byName.get("workflowId")?.required).toBe(true);
+    expect(byName.get("checkKind")?.refused).toBeDefined();
+    expect(byName.get("checkConfig")?.refused).toBeDefined();
   });
 
-  it("narrows a list-shaped contract by its type key", () => {
-    const out = projectContract(
-      { rulesVersion: "x", entities: [{ entityType: "tool" }, { entityType: "agent" }] },
-      ["agent"],
-    ) as { entities: unknown[] };
-    expect(out.entities).toEqual([{ entityType: "agent" }]);
+  it("matches the route in the snapshot (dumped from the PR branch)", () => {
+    const op = (snapshot.paths[ENTITY_CONTRACT_ROUTE] as {
+      get: { parameters: { name: string; in: string }[] };
+    }).get;
+    expect(op.parameters.map((p) => `${p.in}:${p.name}`)).toEqual(["query:kinds"]);
+    const schema = snapshot.components.schemas.EntityContractsResponse as {
+      properties?: Record<string, unknown>;
+      description?: string;
+    };
+    expect(Object.keys(schema.properties ?? {}).sort()).toEqual([
+      "contracts",
+      "kinds",
+      "rulesVersion",
+    ]);
+    expect(JSON.stringify(schema)).not.toMatch(/PROVISIONAL/);
+  });
+
+  it("passes the platform's 422 for an unknown kind on as an error", async () => {
+    const result = (await readEntityContract(
+      client(async () => {
+        throw errorForStatus(422, UNKNOWN_KIND_422);
+      }),
+      ["tool", "nonsense"],
+    )) as ToolResult;
+    expect(result.isError).toBe(true);
+    expect(result.content[0].text).toMatch(/Known kinds: agent/);
   });
 
   it.each([
@@ -208,10 +278,6 @@ describe("get_entity_authoring_contract reads the platform live (#95, axonity-fl
     )) as ToolResult;
     expect(result.isError).toBe(true);
     expect(result.content[0].text).not.toMatch(/NOT AVAILABLE/);
-  });
-
-  it("the route is in the (provisionally spliced) snapshot", () => {
-    expect(snapshot.paths).toHaveProperty(ENTITY_CONTRACT_ROUTE);
   });
 });
 

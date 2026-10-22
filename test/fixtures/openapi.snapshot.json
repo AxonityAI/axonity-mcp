@@ -11043,30 +11043,34 @@
         "type": "object"
       },
       "EntityContractsResponse": {
-        "description": "PROVISIONAL — spliced by axonity-mcp#95 ahead of axonity-flow#2103, which is not merged. The per-entity create contract and its ``rulesVersion``. Replace with the real dump when #2103 lands.",
+        "description": "GET /api/v1/authoring/entity-contracts — what each kind takes (#2103).\n\nPer entity kind: the create and update fields (from the schemas the routes\nvalidate with), the variants a kind has (a tool's implementation per\ntype), and what stops it from going live (from the checks that decide\nit). ``rulesVersion`` covers the whole catalogue, whatever ``kinds`` was\nasked for, so a client caches on \"same version, nothing to re-fetch\".",
         "properties": {
-          "entities": {
-            "additionalProperties": true,
-            "title": "Entities",
+          "contracts": {
+            "additionalProperties": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "description": "kind → contract: create/update {fields[{name, required, type, allowed?, default?, description?, shape?, items?, refused?}], strict?}; publish {approval, rules[{code, message, enforcedAt, field?, allowed?, appliesTo?, examples?}]}; contractVersion; and kind-specific vocabularies (tool variants, secret value keys, trigger types).",
+            "title": "Contracts",
             "type": "object"
           },
-          "markdown": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Markdown"
+          "kinds": {
+            "description": "Every kind this deploy serves a contract for, sorted.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Kinds",
+            "type": "array"
           },
           "rulesVersion": {
+            "description": "Content fingerprint of the whole catalogue; changes exactly when a contract does.",
             "title": "Rulesversion",
             "type": "string"
           }
         },
         "required": [
+          "kinds",
+          "contracts",
           "rulesVersion"
         ],
         "title": "EntityContractsResponse",
@@ -44389,8 +44393,28 @@
     },
     "/api/v1/authoring/entity-contracts": {
       "get": {
-        "description": "PROVISIONAL (axonity-flow#2103, not merged): the create contract per entity, generated from the schemas and checks that enforce it, with a ``rulesVersion``.",
+        "description": "What each kind of entity takes, and what stops it from going live (#2103).\n\nThe single source an authoring client reads for tools (connectors and\ntheir implementation included), agents, personas, knowledge, schemas,\ntables, toolboxes, secrets and starts — the counterpart of\n``GET /workflows/operations`` for everything that is not a workflow\ndocument. Generated from the schemas and checks that enforce it\n(:mod:`src.services.entity_contracts`), so it cannot fall behind them the\nway the MCP's prose did.\n\nNo DB and no tenant data: it describes the DEPLOY, so a service token is\nenough (``get_auth_context`` admits them). Built once per process.",
         "operationId": "read_entity_contracts_api_v1_authoring_entity_contracts_get",
+        "parameters": [
+          {
+            "description": "Comma-separated kinds to return, e.g. tool,agent. Left out: every kind. An unknown kind is a 422 that names the known ones.",
+            "in": "query",
+            "name": "kinds",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Comma-separated kinds to return, e.g. tool,agent. Left out: every kind. An unknown kind is a 422 that names the known ones.",
+              "title": "Kinds"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -44401,6 +44425,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "security": [

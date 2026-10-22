@@ -1,6 +1,6 @@
 /**
- * The platform's create contract per entity, read live (axonity-mcp#95,
- * axonity-flow#2103).
+ * The platform's create contract per entity kind, read live (axonity-mcp#95,
+ * axonity-flow#2103, route from axonity-flow PR #2104).
  *
  * The rules for creating a tool, a connector, an agent, a table — required
  * fields, allowed values, what a publication checks — were kept as prose in
@@ -12,20 +12,21 @@
  *
  * For workflows that problem is already solved: `get_workflow_authoring_spec`
  * reads `GET /workflows/operations`, generated from the registry that enforces
- * it. This is the same move for every other entity: `GET
- * /api/v1/authoring/entity-contracts`, generated from the schemas and checks
- * that enforce it, with a `rulesVersion`.
+ * it. This is the same move for every other kind:
  *
- * FEATURE-DETECTED, NEVER SUBSTITUTED. A backend older than #2103 answers 404
- * (or 405). Then the tool says so in words — it does not fall back to the
+ *   GET /api/v1/authoring/entity-contracts?kinds=tool,agent
+ *   → { kinds: string[], contracts: { <kind>: {...} }, rulesVersion: string }
+ *
+ * `kinds` is ONE comma-separated query parameter, filtered by the platform; an
+ * unknown kind is the platform's 422, which names the known ones — passed on as
+ * the error it is, not re-judged here. `rulesVersion` covers the whole
+ * catalogue whatever `kinds` was. Authenticated like every route; a read-only
+ * service token is enough. The answer is passed through unchanged.
+ *
+ * FEATURE-DETECTED, NEVER SUBSTITUTED. A backend older than the route answers
+ * 404 (or 405). Then the tool says so in words — it does not fall back to the
  * hand-kept notes in `axonity_conventions`, because those notes are exactly
- * what drifted. Any other failure (auth, network) is reported as the error it
- * is: that is not "this deploy has no contract", and saying so would be false.
- *
- * The response shape is the platform's. Two forms are read: `markdown` (as the
- * placement and semantic-knowledge routes serve) is shown as text under its
- * version line; anything else is passed through as JSON, optionally narrowed to
- * the entity types asked for when it carries an `entities` map or list.
+ * what drifted. Any other failure is reported as the error it is.
  */
 
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -35,7 +36,7 @@ import type { AxonityClient } from "../client.js";
 import { AxonityApiError } from "../errors.js";
 import { errorResult, jsonResult } from "./result.js";
 
-/** Where this deploy serves its per-entity create contracts (axonity-flow#2103). */
+/** Where this deploy serves its per-kind create contracts (axonity-flow#2103). */
 export const ENTITY_CONTRACT_ROUTE = "/api/v1/authoring/entity-contracts";
 
 /** Said when the deploy does not serve the route. Not a fallback. */
@@ -50,64 +51,15 @@ export const ENTITY_CONTRACT_UNAVAILABLE =
   "`request_publish_*` / `get_publish_release`. Tell your human which " +
   "environment this token points at if you need the contract.";
 
-/** One entry of an `entities` list, by whichever key names its type. */
-function entryType(entry: unknown): string | undefined {
-  if (!entry || typeof entry !== "object") return undefined;
-  const e = entry as Record<string, unknown>;
-  for (const key of ["entityType", "entity", "type", "kind", "name"]) {
-    if (typeof e[key] === "string") return e[key] as string;
-  }
-  return undefined;
-}
-
-/**
- * Narrow a JSON contract to the entity types asked for. Unknown names come
- * back under `unknownEntityTypes` instead of failing; a shape this does not
- * recognise is returned whole, with a note, rather than guessed at.
- */
-export function projectContract(
-  response: unknown,
-  entityTypes: string[] | undefined,
-): unknown {
-  if (!entityTypes || entityTypes.length === 0) return response;
-  if (!response || typeof response !== "object") return response;
-  const r = response as Record<string, unknown>;
-  const entities = r.entities;
-  const wanted = new Set(entityTypes);
-
-  if (Array.isArray(entities)) {
-    const kept = entities.filter((e) => wanted.has(entryType(e) ?? ""));
-    const found = new Set(kept.map((e) => entryType(e)));
-    return {
-      ...r,
-      entities: kept,
-      unknownEntityTypes: entityTypes.filter((t) => !found.has(t)),
-    };
-  }
-  if (entities && typeof entities === "object") {
-    const map = entities as Record<string, unknown>;
-    return {
-      ...r,
-      entities: Object.fromEntries(entityTypes.filter((t) => t in map).map((t) => [t, map[t]])),
-      unknownEntityTypes: entityTypes.filter((t) => !(t in map)),
-    };
-  }
-  return {
-    ...r,
-    note:
-      "This deploy's contract has no `entities` map or list to narrow, so it " +
-      "is returned whole.",
-  };
-}
-
 /** What the tool answers: the live contract, the not-served notice, or the error. */
-export async function readEntityContract(
-  client: AxonityClient,
-  entityTypes?: string[],
-) {
-  let response: unknown;
+export async function readEntityContract(client: AxonityClient, kinds?: string[]) {
+  const wanted = (kinds ?? []).map((k) => k.trim()).filter((k) => k !== "");
   try {
-    response = await client.get(ENTITY_CONTRACT_ROUTE);
+    return jsonResult(
+      wanted.length === 0
+        ? await client.get(ENTITY_CONTRACT_ROUTE)
+        : await client.get(ENTITY_CONTRACT_ROUTE, { kinds: wanted.join(",") }),
+    );
   } catch (err) {
     if (err instanceof AxonityApiError && (err.status === 404 || err.status === 405)) {
       return {
@@ -116,50 +68,39 @@ export async function readEntityContract(
     }
     return errorResult(err);
   }
-
-  const r = (response ?? {}) as { markdown?: unknown; rulesVersion?: unknown };
-  if (typeof r.markdown === "string" && r.markdown.trim() !== "") {
-    const version = typeof r.rulesVersion === "string" ? r.rulesVersion : "unknown";
-    return {
-      content: [
-        {
-          type: "text" as const,
-          text:
-            "The entity create contracts below are served live by this deploy " +
-            `(rulesVersion \`${version}\`).\n\n${r.markdown}`,
-        },
-      ],
-    };
-  }
-  return jsonResult(projectContract(response, entityTypes));
 }
 
 export function registerEntityContractTools(server: McpServer, client: AxonityClient): void {
   server.tool(
     "get_entity_authoring_contract",
-    "Read this deploy's CREATE CONTRACT per entity — tool, connector, agent, " +
-      "data table, knowledge, output schema … — from the platform itself: the " +
-      "required fields, the allowed values, and the rules a PUBLICATION checks " +
-      "(e.g. a connector's `implementation.effect`). Generated from the code " +
-      "that enforces them, with a `rulesVersion`: while it is unchanged there " +
-      "is nothing to re-read. " +
+    "Read this deploy's CREATE CONTRACT per entity kind from the platform " +
+      "itself — tools (each type's `implementation`, connectors included), " +
+      "agents, personas, knowledge, schemas, tables, toolboxes, secrets and " +
+      "starts. Answers `{ kinds, contracts, rulesVersion }`: per kind the " +
+      "`create` and `update` fields (name, required, type, allowed values, " +
+      "shape, and `refused` with where the value is authored instead), and " +
+      "`publish.rules` — what stops it from going live, each with a `code` " +
+      "and the platform's own message (e.g. a connector without " +
+      "`implementation.effect`). Generated from the schemas and checks that " +
+      "enforce it. `rulesVersion` covers the whole catalogue: while it is " +
+      "unchanged there is nothing to re-read. " +
       "\n\nREAD IT BEFORE YOU CREATE an entity whose rules you have not checked " +
       "this session. Where it disagrees with `axonity_conventions` or a tool " +
       "description, it is right and they are behind. The workflow document's " +
-      "own vocabulary is in `get_workflow_authoring_spec`, not here. " +
-      "\n\nOn a backend that does not serve it yet, it SAYS SO instead of " +
-      "returning a copy: then the platform's refusal on save and the publish " +
-      "readiness are the authority.",
+      "own vocabulary is in `get_workflow_authoring_spec`. " +
+      "\n\nThe whole catalogue is large; pass `kinds` for the ones you need. " +
+      "`kinds` in the answer lists every kind this deploy serves. On a backend " +
+      "that does not serve the route yet, the tool SAYS SO instead of " +
+      "returning a copy.",
     {
-      entityTypes: z
+      kinds: z
         .array(z.string())
         .optional()
         .describe(
-          'Entity types to return, e.g. ["connector", "agent"]. Omit for all. ' +
-            "A name this deploy does not have comes back under " +
-            "`unknownEntityTypes` rather than as an error.",
+          'Kinds to return, e.g. ["tool", "agent"]. Omit for every kind. An ' +
+            "unknown kind is refused by the platform with the list of known ones.",
         ),
     },
-    async ({ entityTypes }) => readEntityContract(client, entityTypes),
+    async ({ kinds }) => readEntityContract(client, kinds),
   );
 }

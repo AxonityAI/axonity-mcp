@@ -21,11 +21,16 @@ diff in review.
   already covered by tools. The 38 operations the refresh brought in that no
   tool covers and no rule excludes are listed in `OPEN_FOR_DECISION_79` in
   `test/completeness.test.ts` — deliberately NOT decided here; that is #79.
-  ONE PROVISIONAL SPLICE on top: `GET /api/v1/authoring/entity-contracts` and
-  its `EntityContractsResponse`, ahead of axonity-flow#2103, which is not merged
-  yet — both say "PROVISIONAL" in their description. Replace them with the real
-  dump when #2103 lands; `get_entity_authoring_contract` reads whatever shape
-  the platform serves (markdown, or JSON with `entities`).
+  ONE SPLICE on top, from an unmerged branch: `GET
+  /api/v1/authoring/entity-contracts` and its `EntityContractsResponse` come
+  from a dump of axonity-flow PR #2104 (`aanmaakcontract-live` at `431dc00f`,
+  axonity-flow#2103), taken from a temporary read-only worktree of that head.
+  Only those two entries; everything else stays at `main` `bbdc657a` (the PR
+  also changes other schemas, which arrive with the next refresh after it
+  merges). Until #2104 merges, the contract route is that PR's. Beside it,
+  `entity-contracts.tool-conditional_trigger.json` is a response recorded from
+  the real route on the same head (`?kinds=tool,conditional_trigger`, through
+  the ASGI app); `test/driftContract.test.ts` replays it.
 - **Queries, concept links and what fills a table, on top of the above:**
   axonity-flow#2010 (S1 queries, #2011; S6 concept links, #2016) and #2013
   (a table's filler), dumped with `dump_openapi.py` from axonity-flow `main`
