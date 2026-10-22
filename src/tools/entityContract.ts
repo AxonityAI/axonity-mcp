@@ -1,6 +1,6 @@
 /**
  * The platform's create contract per entity kind, read live (axonity-mcp#95,
- * axonity-flow#2103, route from axonity-flow PR #2104).
+ * axonity-flow#2103, merged as axonity-flow#2104).
  *
  * The rules for creating a tool, a connector, an agent, a table — required
  * fields, allowed values, what a publication checks — were kept as prose in

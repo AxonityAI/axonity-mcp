@@ -4336,7 +4336,14 @@
                 "type": "null"
               }
             ],
-            "title": "Checkconfig"
+            "title": "Checkconfig",
+            "x-refused": {
+              "authoredIn": {
+                "entity": "workflow",
+                "path": "triggers.all[].config",
+                "takesEffect": "publish"
+              }
+            }
           },
           "checkKind": {
             "anyOf": [
@@ -4347,7 +4354,14 @@
                 "type": "null"
               }
             ],
-            "title": "Checkkind"
+            "title": "Checkkind",
+            "x-refused": {
+              "authoredIn": {
+                "entity": "workflow",
+                "path": "triggers.all[].config.checkKind",
+                "takesEffect": "publish"
+              }
+            }
           },
           "conditionText": {
             "maxLength": 2000,
@@ -4507,7 +4521,14 @@
                 "type": "null"
               }
             ],
-            "title": "Checkconfig"
+            "title": "Checkconfig",
+            "x-refused": {
+              "authoredIn": {
+                "entity": "workflow",
+                "path": "triggers.all[].config",
+                "takesEffect": "publish"
+              }
+            }
           },
           "checkKind": {
             "anyOf": [
@@ -4518,7 +4539,14 @@
                 "type": "null"
               }
             ],
-            "title": "Checkkind"
+            "title": "Checkkind",
+            "x-refused": {
+              "authoredIn": {
+                "entity": "workflow",
+                "path": "triggers.all[].config.checkKind",
+                "takesEffect": "publish"
+              }
+            }
           },
           "conditionText": {
             "anyOf": [
