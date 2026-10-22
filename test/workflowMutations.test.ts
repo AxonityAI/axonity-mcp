@@ -17,15 +17,27 @@ function fakeServer() {
   return { server, handlers };
 }
 
-/** A client whose mutation route increments the version, like the backend does. */
+/**
+ * A client whose mutation route increments the version, like the backend does.
+ * The catalog-checked validation each write ends with (#65) answers green and
+ * leaves the version alone.
+ */
 function versioningClient(startVersion = 1) {
   let version = startVersion;
   return {
-    post: vi.fn(async () => {
+    post: vi.fn(async (path: string) => {
+      if (path.endsWith("/validate")) {
+        return { launchable: true, catalogChecked: true, issues: [] };
+      }
       version += 1;
       return { version, document: { steps: [] }, launchable: true, validationIssues: [] };
     }),
   };
+}
+
+/** Only the mutation calls, not the validation that follows them. */
+function mutationCalls(client: { post: { mock: { calls: unknown[][] } } }): unknown[][] {
+  return client.post.mock.calls.filter((c) => String(c[0]).endsWith("/mutations"));
 }
 
 function apply(client: unknown) {
@@ -93,7 +105,7 @@ describe("apply_workflow_mutations", () => {
       ],
     });
 
-    expect(client.post).toHaveBeenCalledTimes(2);
+    expect(mutationCalls(client)).toHaveLength(2);
     // Exactly {type, payload, expectedVersion} — never a `mutations` array,
     // which is the shape that 422'd on every call before this was fixed.
     expect(client.post).toHaveBeenNthCalledWith(1, "/api/v1/workflows/wf-1/mutations", {
@@ -123,7 +135,7 @@ describe("apply_workflow_mutations", () => {
       ],
     });
 
-    const versions = client.post.mock.calls.map(
+    const versions = mutationCalls(client).map(
       (c) => (c[1] as { expectedVersion: number }).expectedVersion,
     );
     expect(versions).toEqual([5, 6, 7, 8, 9, 10]);

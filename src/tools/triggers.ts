@@ -249,58 +249,52 @@ export function registerTriggerTools(
   // ---- Conditional triggers ---------------------------------------------
 
   /**
-   * The condition CHECK (axonity-flow#1354/#1356/#1363).
+   * A conditional start is AUTHORED IN THE WORKFLOW DOCUMENT, and the row these
+   * tools address is a copy the platform writes at publish (axonity-mcp#95).
    *
-   * A conditional trigger wakes on its interval; the check decides whether that
-   * beat becomes a run at all. It is a gate in the dispatch loop, ahead of the
-   * run being created — so a miss costs one tool call instead of a whole empty
-   * run, and the next beat is planted as usual.
+   * The trigger element (`typeId: "conditional-poll"`) carries everything on
+   * its `config`: `conditionText`, `repeatIntervalMinutes`, `checkKind` and the
+   * kind's settings. Publishing the workflow syncs that onto the
+   * `conditional_triggers` row (`services/conditional_trigger_sync.py`):
+   * creates it, updates it, and deletes the rows whose element is gone. A
+   * deploy does the same, arriving switched off.
    *
-   * WITHOUT A CHECK (`checkKind: null`) EVERY BEAT STARTS THE WORKFLOW. That is
-   * what every trigger authored before this did, and it is why a mailbox on a
-   * fifteen-minute interval produces ninety-six empty runs a day.
+   * The check is refused HERE by the platform
+   * (`conditional_trigger_service._refuse_check_fields`): "A conditional
+   * start's check is set on the start in the workflow, and takes effect when
+   * the workflow is published." Writing it on the row would look like it
+   * worked until the next publish wrote the document's check back over it. So
+   * these tools no longer take `checkKind`/`checkConfig` — this connector used
+   * to advertise them (#66), and every call that used them was a 422.
    *
-   * Both fields are FORWARDED, NOT VALIDATED HERE. The backend judges a check
-   * with the same function the dispatcher uses when the trigger fires
-   * (`validate_check`), so a setting that saves is a setting that runs. A second
-   * list of rules in this connector would drift from that one, and the drift is
-   * the invisible kind: something passes here and fails at three in the morning,
-   * on the beat it was supposed to catch. So a bad `op`, a missing `toolId` or a
-   * kind the backend will not accept comes back as its 422 — which names what to
-   * fix — rather than as a Zod error phrased by us.
-   *
-   * That is also why the operators are described rather than listed. They are
-   * the decision-rule vocabulary, which no route serves and which this
-   * repository has been burned by hand-keeping before (#32): the refusal names
-   * the usable set, and a list here could only ever go stale against it.
+   * `create_conditional_trigger` also sends `workflowId` in the BODY. The
+   * route overrides it with the path, but `ConditionalTriggerIn` declares it
+   * required, and without it every create was a 422 "body.workflowId: Field
+   * required".
    */
-  const CHECK_KIND_DESCRIPTION =
-    'How this start decides. Omit to leave it as it is. `"automatic"` runs ONE ' +
-    "tool and holds its answer against one rule — no model, so it is the cheap " +
-    "way to ask \"is there anything there?\". `\"agent\"` is reserved for a " +
-    "model judging the condition; the backend REFUSES it today because that " +
-    "judgement is not built yet, and says so. With no check at all the workflow " +
-    "starts EVERY beat.";
-
-  const CHECK_CONFIG_DESCRIPTION =
-    "The check's settings, shaped by `checkKind`. For `automatic`: " +
-    '`{ toolId, inputs?, rule: { field, op, value } }` — `toolId` is the tool ' +
-    "that looks, `inputs` is what it is called with, and `rule` says which " +
-    "field OF THE TOOL'S ANSWER counts, how it is compared, and to what. The " +
-    "comparisons are the same ones a decision rule uses; send a wrong one and " +
-    "the refusal names the usable set. " +
-    "\n\nA rule naming a field the tool never returns is a FAULT, not a " +
-    'quiet "condition not met" — the trigger reports a broken setup rather ' +
-    "than silently never firing.";
+  const AUTHORED_IN_THE_DOCUMENT =
+    "\n\nTHE NORMAL PATH IS THE WORKFLOW, NOT THIS TOOL. A conditional start is " +
+    "a trigger element (`typeId: \"conditional-poll\"`) in the workflow " +
+    "document, written with `apply_workflow_mutations` (`add_trigger` / " +
+    "`update_trigger`), with `conditionText`, `repeatIntervalMinutes` and its " +
+    "CHECK (`checkKind` plus the kind's settings) on the element's `config`. " +
+    "Its `id` must be a UUID, or the platform cannot make a row for it. " +
+    "PUBLISHING the workflow creates or updates the row from the document and " +
+    "removes rows whose element is gone; a value written on the row is " +
+    "overwritten by the next publish. The check CANNOT be set on the row at " +
+    "all — the platform refuses it, because a check written here would be " +
+    "silently replaced by the document's at the next publish.";
 
   server.tool(
     "list_conditional_triggers",
-    "List a workflow's conditional triggers — a start that wakes on an " +
-      "interval and decides whether there is anything to do. " +
-      "\n\nREAD `checkKind` ON EACH ROW: `null` means the trigger has no check " +
+    "List a workflow's conditional triggers — the rows the runtime reads, one " +
+      "per conditional start in the PUBLISHED document. " +
+      "\n\nREAD `checkKind` ON EACH ROW: `null` means the start has no check " +
       "and every beat becomes a run, whether or not there was work. " +
-      "`\"automatic\"` means one tool call decides. `checkConfig` carries that " +
-      "setting. Set them with create_/update_conditional_trigger.",
+      "`checkConfig` is the check's settings as copied from the document. To " +
+      "change either, edit the trigger element's `config` in the workflow and " +
+      "publish — not create_/update_conditional_trigger." +
+      AUTHORED_IN_THE_DOCUMENT,
     { workflowId: z.string().describe("The workflow's id.") },
     async ({ workflowId }) =>
       guard(async () =>
@@ -336,24 +330,25 @@ export function registerTriggerTools(
 
   server.tool(
     "create_conditional_trigger",
-    "Create a conditional trigger on a workflow: it wakes every " +
-      "`repeatIntervalMinutes` and starts the workflow when there is something " +
-      "to do. " +
-      "\n\nSET `checkKind` UNLESS YOU MEAN EVERY BEAT TO START A RUN. Without " +
-      "it the trigger has no check and fires on the interval regardless — a " +
-      "mailbox at fifteen minutes then makes ninety-six empty runs a day. " +
-      '`checkKind: "automatic"` with a `checkConfig` is one tool call and one ' +
-      "rule, no model, deciding before a run exists.",
+    "Create the runtime row of a conditional start by hand. RARELY WHAT YOU " +
+      "WANT: publishing the workflow creates this row from the trigger element " +
+      "in the document, and the next publish overwrites what you set here. A " +
+      "row for a workflow that is not published yet is created switched OFF; " +
+      "publishing arms it. Takes NO check — set `checkKind` and its settings " +
+      "on the trigger element's `config` in the workflow instead." +
+      AUTHORED_IN_THE_DOCUMENT,
     {
       workflowId: z.string().describe("The workflow's id."),
       triggerId: z
         .string()
-        .describe("The id of the trigger node in the workflow document."),
+        .describe(
+          "The id of the trigger element in the workflow document — a UUID.",
+        ),
       agentId: z
         .string()
         .describe(
-          "The agent this start belongs to. Note it is NOT what decides " +
-            "whether the beat fires — `checkKind` is.",
+          "The agent this start belongs to. Not what decides whether the beat " +
+            "fires — the check on the trigger element does.",
         ),
       conditionText: z
         .string()
@@ -361,8 +356,7 @@ export function registerTriggerTools(
         .max(2000)
         .describe(
           "The condition, in plain language: what a person would say this " +
-            "start is waiting for. It records the intent; `checkKind` is what " +
-            "actually judges it.",
+            "start is waiting for.",
         ),
       repeatIntervalMinutes: z
         .number()
@@ -371,29 +365,19 @@ export function registerTriggerTools(
         .max(10080)
         .describe("How often to re-check, in minutes (5 to 10080)."),
       enabled: z.boolean().optional().describe("Defaults to true."),
-      checkKind: z.string().optional().describe(CHECK_KIND_DESCRIPTION),
-      checkConfig: z.record(z.unknown()).optional().describe(CHECK_CONFIG_DESCRIPTION),
     },
-    async ({
-      workflowId,
-      triggerId,
-      agentId,
-      conditionText,
-      repeatIntervalMinutes,
-      enabled,
-      checkKind,
-      checkConfig,
-    }) =>
+    async ({ workflowId, triggerId, agentId, conditionText, repeatIntervalMinutes, enabled }) =>
       guard(async () =>
         jsonResult(
           await client.post(`/api/v1/workflows/${workflowId}/conditional-triggers`, {
+            // Required by the platform's body schema (ConditionalTriggerIn);
+            // the route then overrides it with the path.
+            workflowId,
             triggerId,
             agentId,
             conditionText,
             repeatIntervalMinutes,
             ...(enabled === undefined ? {} : { enabled }),
-            ...(checkKind === undefined ? {} : { checkKind }),
-            ...(checkConfig === undefined ? {} : { checkConfig }),
           }),
         ),
       ),
@@ -401,36 +385,30 @@ export function registerTriggerTools(
 
   server.tool(
     "update_conditional_trigger",
-    "Change a conditional trigger's condition, interval, agent, enabled flag, " +
-      "or its CHECK. Send only what you are changing — an omitted field is " +
-      "left as it was. " +
-      "\n\nTHIS IS HOW YOU PUT A CHECK ON AN EXISTING START: pass `checkKind` " +
-      "and `checkConfig` together. An existing trigger has no check (that is " +
-      "what everything authored before checks existed looks like), so it fires " +
-      "every beat until you set one. " +
-      '\n\nTO CLEAR A CHECK, PASS `checkKind: ""` — the empty string, which ' +
-      "means \"start every beat again\" and drops the config with it. Omitting " +
-      "the field leaves the check standing; only the empty string removes it. " +
-      "Without that distinction a check could be switched on and never off.",
+    "Change a conditional trigger's row: its enabled flag, condition, interval " +
+      "or agent. Send only what you are changing. " +
+      "\n\nUSE IT TO SWITCH A START OFF OR ON (`enabled`) — and know that " +
+      "publishing the workflow switches its starts back ON. The other fields " +
+      "are copied from the workflow document at every publish, so a change " +
+      "here lasts only until the next one — change them on the trigger " +
+      "element instead. The CHECK cannot be changed here at all: the platform refuses " +
+      "it." +
+      AUTHORED_IN_THE_DOCUMENT,
     {
       triggerId: z.string().describe("The conditional trigger's id."),
       conditionText: z.string().min(1).max(2000).optional(),
       repeatIntervalMinutes: z.number().int().min(5).max(10080).optional(),
       agentId: z.string().optional(),
       enabled: z.boolean().optional(),
-      checkKind: z
-        .string()
-        .optional()
-        .describe(
-          `${CHECK_KIND_DESCRIPTION} Pass "" (empty string) to CLEAR the ` +
-            "check, which is a different intention from omitting the field.",
-        ),
-      checkConfig: z.record(z.unknown()).optional().describe(CHECK_CONFIG_DESCRIPTION),
     },
-    async ({ triggerId, ...fields }) =>
+    async ({ triggerId, conditionText, repeatIntervalMinutes, agentId, enabled }) =>
       guard(async () => {
+        // Named, not spread: a check field must never reach the row, whatever
+        // a caller sends — the platform refuses it there.
         const body = Object.fromEntries(
-          Object.entries(fields).filter(([, v]) => v !== undefined),
+          Object.entries({ conditionText, repeatIntervalMinutes, agentId, enabled }).filter(
+            ([, v]) => v !== undefined,
+          ),
         );
         return jsonResult(
           await client.patch(`/api/v1/conditional-triggers/${triggerId}`, body),
@@ -441,7 +419,10 @@ export function registerTriggerTools(
   server.tool(
     "delete_conditional_trigger",
     "Delete a conditional trigger. HARD delete — the row is removed and cannot " +
-      "be restored.",
+      "be restored. While the trigger element is still in the workflow " +
+      "document, the next publish creates the row again: to remove a start " +
+      "for good, remove the element (`remove_trigger`) and publish — that " +
+      "deletes the row too.",
     {
       triggerId: z.string().describe("The conditional trigger's id."),
       confirm: CONFIRM,

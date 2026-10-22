@@ -26,6 +26,7 @@ import { AxonityClient } from "./client.js";
 import { loadConfig } from "./config.js";
 import { reportContractSkew } from "./contract.js";
 import { registerConventions } from "./tools/conventions.js";
+import { registerEntityContractTools } from "./tools/entityContract.js";
 import {
   registerDashboardTools,
   registerDataSourceTools,
@@ -634,6 +635,7 @@ export function registerAll(server: ServerLike, client: AxonityClient): void {
     registerVersionTools(server as McpServer, client, def);
   }
   registerAuthoringSpecTools(server as McpServer, client);
+  registerEntityContractTools(server as McpServer, client);
   registerWorkflowMutations(server as McpServer, client);
   registerValidationTools(server as McpServer, client);
   registerExecutionTools(server as McpServer, client);

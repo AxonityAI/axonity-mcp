@@ -114,6 +114,7 @@ describe("conditional triggers", () => {
     expect(client.post).toHaveBeenCalledWith(
       "/api/v1/workflows/w-1/conditional-triggers",
       {
+        workflowId: "w-1",
         triggerId: "t-1",
         agentId: "a-1",
         conditionText: "a new CV arrives",

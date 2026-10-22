@@ -449,6 +449,10 @@ export const ROUTES_ADDED_IN: { pattern: RegExp; addedBy: string }[] = [
     pattern: /^\/api\/v1\/workflows\/operations$/,
     addedBy: "axonity-flow#802 (the mutation catalog over HTTP)",
   },
+  {
+    pattern: /^\/api\/v1\/authoring\/entity-contracts$/,
+    addedBy: "axonity-flow#2103 (the create contract per entity over HTTP)",
+  },
 ];
 
 /** The skew error for this call, or undefined when the status says nothing. */

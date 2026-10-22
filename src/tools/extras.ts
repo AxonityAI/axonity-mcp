@@ -71,6 +71,44 @@ const CONNECTOR_SHAPE =
   "Any other shape cannot run: the connector saves and then fails when " +
   "called, with an error that does not point here.";
 
+/**
+ * Two rules the platform enforces on a connector that the shape above does not
+ * say (axonity-mcp#95).
+ *
+ * `implementation.effect` (axonity-flow#1997): a draft saves without it, and
+ * the publish approval then refuses it ("Cannot publish connector: Set the
+ * connector's side effects …", `version_service.publish_tool`). An agent that
+ * builds a connector from this description used to make one that failed at the
+ * human's approval, not at its own save.
+ *
+ * `responseMapping.type: "file"` (axonity-flow#2079): the answer is kept as a
+ * file of the run, not parsed. Without this sentence the only mappings an agent
+ * knew were the parsing ones.
+ *
+ * Kept short on purpose: the platform's live contract
+ * (`get_entity_authoring_contract`, axonity-flow#2103) is the authority, and
+ * this is guidance until every deploy serves it.
+ */
+const CONNECTOR_EFFECT_AND_FILE =
+  "\n\nDECLARE WHAT IT DOES — `implementation.effect`: `\"reads\"` (fetches, " +
+  "looks something up) or `\"acts\"` (sends, writes, starts something). A " +
+  "draft saves without it, but a connector WITHOUT `effect` CANNOT BE " +
+  "PUBLISHED: the approval is refused with \"Set the connector's side " +
+  "effects … before publishing\". Set it when you create the connector." +
+  "\n\nAN ANSWER THAT IS A FILE — `implementation.responseMapping: " +
+  '{ "type": "file", "filename": "{{filename}}" }`. The bytes are kept as a ' +
+  "file of the run and the connector returns its reference, `{ fileId, " +
+  "filename, contentType, sizeBytes }` — the shape an upload has, so Digitize " +
+  "documents reads it and a sub-workflow's file parameter takes it. " +
+  "`filename` is optional and may use the inputs (`{{name}}`); without it the " +
+  "far end's `Content-Disposition` name is used, else `document`. A file " +
+  "answer takes no `responseTransform`. Outside a run (e.g. " +
+  "`execute_stored_connector`) nothing is stored and you see only the name " +
+  "and size. The other mappings (`jmespath` with an `expression`, or `full`) " +
+  "parse the answer as data." +
+  "\n\nThe platform's own create contract, when this deploy serves it, is " +
+  "`get_entity_authoring_contract` — it wins over this description.";
+
 export function registerConnectorTools(
   server: McpServer,
   client: AxonityClient,
@@ -79,7 +117,8 @@ export function registerConnectorTools(
     "create_connector",
     "Create a connector draft (a tool of type 'connector'). Do NOT put real " +
       "credentials in authConfig — use placeholders; a human fills secrets in Axonity." +
-      CONNECTOR_SHAPE,
+      CONNECTOR_SHAPE +
+      CONNECTOR_EFFECT_AND_FILE,
     {
       fields: z
         .record(z.unknown())
@@ -98,7 +137,8 @@ export function registerConnectorTools(
     "update_connector",
     "Update a connector draft (a tool of type 'connector'). Read it first for its " +
       "version; keep authConfig as placeholders only." +
-      CONNECTOR_SHAPE,
+      CONNECTOR_SHAPE +
+      CONNECTOR_EFFECT_AND_FILE,
     {
       id: z.string().describe("The connector (tool) id."),
       expectedVersion: z.number().int().describe("Version last read — 409 if stale."),

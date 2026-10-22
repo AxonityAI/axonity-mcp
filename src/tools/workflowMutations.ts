@@ -228,6 +228,62 @@ function sequenceError(
   );
 }
 
+/** What `POST /workflows/{id}/validate` answers (`ValidateDocumentResponse`). */
+interface ValidateResponse {
+  launchable?: boolean;
+  catalogChecked?: boolean;
+  issues?: unknown[];
+}
+
+/**
+ * Validate the STORED workflow against the tenant catalog after a write, and
+ * put the platform's own verdict on the summary (axonity-mcp#65).
+ *
+ * A workflow written through this connector once passed every gate — the
+ * mutation's `launchable`, `validate_workflow`, the publish readiness — and the
+ * editor could not open it. The mutation response's verdict is structural
+ * only; the catalog check is a separate call, and an agent that reads
+ * "launchable: true" off a write has not made it. So every write makes it, and
+ * the summary carries the answer VERBATIM: `catalogChecked`, `launchable`, and
+ * every issue (capped like the mutation's, with the total). Nothing here
+ * re-words a verdict.
+ *
+ * A failed validation call does NOT fail the tool. The write has landed;
+ * reporting an error would invite a retry that applies it twice (#21). It says
+ * that no catalog-checked verdict exists instead, and why.
+ */
+export async function catalogVerdict(
+  client: AxonityClient,
+  workflowId: string,
+): Promise<Record<string, unknown>> {
+  try {
+    const v = await client.post<ValidateResponse>(`/api/v1/workflows/${workflowId}/validate`);
+    const issues = Array.isArray(v?.issues) ? v.issues : [];
+    const kept = issues.slice(0, MAX_VALIDATION_ISSUES);
+    return {
+      catalogChecked: v?.catalogChecked === true,
+      ...(v?.launchable === undefined ? {} : { launchable: v.launchable }),
+      issues: kept,
+      issueCount: issues.length,
+      ...(issues.length > kept.length ? { issuesTruncated: issues.length - kept.length } : {}),
+      source:
+        "validate_workflow on the stored workflow, as the platform answered it. " +
+        "The editor's ability to draw the document is NOT among the platform's " +
+        "checks — open it in the editor before calling it done.",
+    };
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err);
+    return {
+      catalogChecked: false,
+      unavailable: cap(reason, MAX_REASON_CHARS),
+      note:
+        "The write LANDED (see version). Its catalog-checked validation could " +
+        "not be read, so there is no verdict on whether it can run: call " +
+        "validate_workflow with this workflowId. Do not retry the write.",
+    };
+  }
+}
+
 export function registerWorkflowMutations(
   server: McpServer,
   client: AxonityClient,
@@ -239,7 +295,11 @@ export function registerWorkflowMutations(
       "Commands are applied IN ORDER, one backend call each, with the version " +
       "threaded automatically — pass the version you read, not one per command. " +
       "\n\nRESPONSE IS A SUMMARY, not the document: version, appliedCount, " +
-      "launchable, validationIssues, stepCount, edgeCount. A real workflow " +
+      "launchable, validationIssues, stepCount, edgeCount — and `validation`, " +
+      "the platform's CATALOG-CHECKED verdict on the stored workflow " +
+      "(validate_workflow by id), run after the last command. The top-level " +
+      "`launchable` is the mutation's structural answer; `validation` is the " +
+      "one that says whether it can run. Report its issues as they are. A real workflow " +
       "document can exceed the response limit, which would turn a call that " +
       "SUCCEEDED into an error you must not retry. Pass returnDocument: true, or " +
       "call read_workflow, when you need the document itself. " +
@@ -328,13 +388,10 @@ export function registerWorkflowMutations(
           version = last.version;
         }
 
-        return jsonResult(
-          summarizeMutation(
-            last ?? { version },
-            bodies.length,
-            returnDocument === true,
-          ),
-        );
+        return jsonResult({
+          ...summarizeMutation(last ?? { version }, bodies.length, returnDocument === true),
+          validation: await catalogVerdict(client, id),
+        });
       }),
   );
 
@@ -346,8 +403,10 @@ export function registerWorkflowMutations(
       "and treats the payload as the complete editable document — prefer the " +
       "mutation commands, which the backend validates and normalises per edit. " +
       "\n\nThe response is the same SUMMARY (version, launchable, " +
-      "validationIssues, stepCount, edgeCount), not the stored document; pass " +
-      "returnDocument: true or call read_workflow for that." +
+      "validationIssues, stepCount, edgeCount, and `validation` — the " +
+      "catalog-checked verdict of validate_workflow on the stored workflow), " +
+      "not the stored document; pass returnDocument: true or call read_workflow " +
+      "for that." +
       "\n\nDOCUMENT METADATA: name and description in the document ARE stored — " +
       "they sync onto the workflow's own columns, an omitted key leaves the " +
       "stored value alone, and an explicit \"\" clears it. stageId, " +
@@ -374,7 +433,10 @@ export function registerWorkflowMutations(
         );
         // One document written, so appliedCount is 1 — the same shape as a
         // single-command sequence, which is what a caller compares against.
-        return jsonResult(summarizeMutation(response, 1, returnDocument === true));
+        return jsonResult({
+          ...summarizeMutation(response, 1, returnDocument === true),
+          validation: await catalogVerdict(client, id),
+        });
       }),
   );
 
