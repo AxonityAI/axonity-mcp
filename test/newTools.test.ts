@@ -327,8 +327,10 @@ describe("release bundles — one approval for a workflow and its closure (#799)
       workflowId: "wf-1",
       changeSummary: "the refreshed rewrite prompt",
     });
-    // Requesting only. Nothing in this tool may decide.
-    expect(client.post).toHaveBeenCalledTimes(1);
+    // Requesting only. Nothing in this tool may decide: the one other call
+    // is the read-only validation of the warning gate.
+    expect(client.post).toHaveBeenCalledWith("/api/v1/workflows/wf-1/validate");
+    expect(client.post).toHaveBeenCalledTimes(2);
   });
 
   it("omits changeSummary rather than sending an empty one", async () => {
@@ -366,5 +368,75 @@ describe("release bundles — one approval for a workflow and its closure (#799)
     expect(description).toMatch(/all-or-nothing/);
     expect(description).toMatch(/does NOT publish/);
     expect(description).toMatch(/changedCount/);
+  });
+});
+
+describe("no workflow goes to approval while it has warnings", () => {
+  const warns = {
+    launchable: true,
+    issues: [
+      {
+        code: "input_source_not_guaranteed",
+        message: "Step \"Mail\": input[0] source 'scan' may not always run before this step",
+        severity: "warning",
+      },
+    ],
+  };
+
+  function clientAnswering(verdict: unknown) {
+    const client = fakeClient();
+    client.post = vi.fn(async (path: string) =>
+      path.endsWith("/validate") ? verdict : { ok: true },
+    ) as never;
+    return client;
+  }
+
+  it("refuses a release and names the warning", async () => {
+    const { server, handlers } = fakeServer();
+    const client = clientAnswering(warns);
+    registerApprovalTools(server as never, client as unknown as AxonityClient);
+
+    const result = await handlers.get("request_publish_release")!({ workflowId: "wf-1" });
+
+    expect(result.isError).toBe(true);
+    expect(text(result)).toMatch(/1 warning/);
+    expect(text(result)).toMatch(/input_source_not_guaranteed/);
+    expect(client.post).not.toHaveBeenCalledWith(
+      "/api/v1/publish-approvals/release",
+      expect.anything(),
+    );
+  });
+
+  it("lets a release through when only errors remain — the release may resolve them", async () => {
+    const { server, handlers } = fakeServer();
+    const client = clientAnswering({
+      issues: [{ code: "catalog_tool_unpublished", message: "x", severity: "error" }],
+    });
+    registerApprovalTools(server as never, client as unknown as AxonityClient);
+
+    await handlers.get("request_publish_release")!({ workflowId: "wf-1" });
+
+    expect(client.post).toHaveBeenCalledWith("/api/v1/publish-approvals/release", {
+      workflowId: "wf-1",
+    });
+  });
+
+  it("refuses a workflow entry of a bulk request before sending anything", async () => {
+    const { server, handlers } = fakeServer();
+    const client = clientAnswering(warns);
+    registerApprovalTools(server as never, client as unknown as AxonityClient);
+
+    const result = await handlers.get("request_publish_bulk")!({
+      requests: [
+        { entityType: "tool", entityId: "t-1" },
+        { entityType: "workflow", entityId: "wf-1" },
+      ],
+    });
+
+    expect(result.isError).toBe(true);
+    expect(client.post).not.toHaveBeenCalledWith(
+      "/api/v1/publish-approvals/bulk",
+      expect.anything(),
+    );
   });
 });
