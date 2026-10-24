@@ -32,6 +32,93 @@ import { guard, jsonResult } from "./result.js";
 
 const KNOWLEDGE = "/api/v1/knowledge";
 
+/** The platform workflow step whose output is the search answer. */
+const SEARCH_STEP = "search-knowledge";
+const TERMINAL = new Set(["completed", "failed", "cancelled", "expired"]);
+const POLL_EVERY_MS = 1500;
+/** Stop waiting after this long; the run keeps going on the platform. */
+const WAIT_LIMIT_MS = 90_000;
+
+interface SearchStart {
+  id: string;
+  workflowId: string;
+  status: string;
+}
+
+interface RunState {
+  id: string;
+  status: string;
+  stepStates?: Record<string, { output?: unknown; error?: unknown } | undefined>;
+}
+
+export interface SearchWait {
+  sleep?: (ms: number) => Promise<void>;
+  now?: () => number;
+}
+
+/** Digest marker a large step output leaves behind instead of the text. */
+function isValueMarker(value: unknown): value is { $run_value: string } {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    typeof (value as { $run_value?: unknown }).$run_value === "string"
+  );
+}
+
+/**
+ * Start the platform's "Search knowledge" run and wait for its answer.
+ *
+ * The search route only starts a run and returns its handle, so this polls the
+ * run until it reaches an end state, then reads the answer the search step
+ * wrote. A run that is still going after the wait limit is returned as such,
+ * not as an error: it keeps running, and `read_run` can pick it up later.
+ */
+export async function searchKnowledge(
+  client: AxonityClient,
+  q: string,
+  { sleep = (ms) => new Promise((r) => setTimeout(r, ms)), now = Date.now }: SearchWait = {},
+): Promise<Record<string, unknown>> {
+  const start = (await client.get(`${KNOWLEDGE}/search`, { q })) as SearchStart;
+  const began = now();
+  let run = (await client.get(`/api/v1/runs/${start.id}`)) as RunState;
+  const stateOf = (r: RunState) => {
+    if (typeof r?.status !== "string") {
+      throw new Error("The platform returned a run without a status.");
+    }
+    return r.status;
+  };
+
+  while (!TERMINAL.has(stateOf(run))) {
+    if (now() - began >= WAIT_LIMIT_MS) {
+      return {
+        runId: start.id,
+        status: stateOf(run),
+        finished: false,
+        note:
+          "The search is still running after 90 seconds. Call read_run with " +
+          "this runId later to read its result.",
+      };
+    }
+    await sleep(POLL_EVERY_MS);
+    run = (await client.get(`/api/v1/runs/${start.id}`)) as RunState;
+  }
+
+  const step = run.stepStates?.[SEARCH_STEP];
+  if (run.status !== "completed") {
+    const reason = typeof step?.error === "string" ? step.error : "no reason was recorded";
+    throw new Error(`The search run ended as ${run.status}: ${reason}`);
+  }
+
+  let answer = step?.output;
+  if (isValueMarker(answer)) {
+    answer = await client.get(`/api/v1/runs/${start.id}/values/${answer.$run_value}`);
+  }
+  if (typeof answer !== "string" || answer.trim() === "") {
+    throw new Error("The search run completed without an answer from its search step.");
+  }
+  return { runId: start.id, status: "completed", finished: true, answer };
+}
+
 /** Said on every tool: an empty answer is about the token, not the graph. */
 const CLEARANCE_NOTE =
   "\n\nYOU READ WITH YOUR TOKEN'S CLEARANCE: what it may not read is " +
@@ -59,40 +146,28 @@ const CURSOR = z
       "first page.",
   );
 
-const AS_OF = z
-  .string()
-  .optional()
-  .describe(
-    "A date (YYYY-MM-DD): answer as the graph stood at the end of that day — " +
-      "what was valid then. Omit for now.",
-  );
-
 export function registerKnowledgeGraphTools(
   server: McpServer,
   client: AxonityClient,
 ): void {
   server.tool(
     "search_knowledge_graph",
-    "Search what the workspace has learned, with a question in plain words. " +
-      "Read-only. The same search an agent in a run gets. " +
-      "\n\nThe answer lands on up to eight places (`landing`), each a fact " +
-      "or a topic with what hangs around it. A fact never comes bare: its " +
-      "`certainty`, `status`, validity (`validFrom`, `validUntil`), its " +
-      "topics and its `passages` — the evidence, each with its source, the " +
-      "source's score and a date. Report a fact with its certainty and " +
-      "source, not as plain truth. `tips` are facts below the threshold for " +
-      "an answer; they are only shown to someone who maintains them. " +
-      "\n\nUse read_fact for one fact's full card and read_source for where " +
-      "it came from." +
+    "Ask what the workspace has learned, with a question in plain words. " +
+      "Read-only. It runs the same platform search a person gets from the " +
+      "search bar: a short run (\"Search knowledge\") whose librarian reads " +
+      "the graph and writes a list of what it found. This tool starts that " +
+      "run and waits for the list, up to 90 seconds. " +
+      "\n\nThe answer is that list, in words, with no fact ids in it. Report " +
+      "it as what the search found, not as a verified truth, and keep any " +
+      "uncertainty the list states. Use read_fact or read_source only when " +
+      "you have a fact id from somewhere else. " +
+      "\n\nIf the search is still running after 90 seconds, the answer says " +
+      "so and gives the run's id: read_run reads its result later." +
       CLEARANCE_NOTE,
     {
       q: z.string().describe("The question, in plain words (at most 2000 characters)."),
-      asOf: AS_OF,
     },
-    async ({ q, asOf }) =>
-      guard(async () =>
-        jsonResult(await client.get(`${KNOWLEDGE}/search`, { q, as_of: asOf })),
-      ),
+    async ({ q }) => guard(async () => jsonResult(await searchKnowledge(client, q))),
   );
 
   server.tool(

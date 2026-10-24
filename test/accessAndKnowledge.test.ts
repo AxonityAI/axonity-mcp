@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { AxonityClient } from "../src/client.js";
 import { ForbiddenError, errorForStatus } from "../src/errors.js";
 import { registerAll } from "../src/index.js";
+import { searchKnowledge } from "../src/tools/knowledgeGraph.js";
 import { CONVENTIONS } from "../src/tools/conventions.js";
 import { forbids } from "./denyList.js";
 
@@ -204,12 +205,6 @@ describe("S2 — labels and clearances are described where they are written", ()
 
 describe("S5 — the knowledge graph is readable", () => {
   const cases: [string, Record<string, unknown>, string, Record<string, unknown> | undefined][] = [
-    [
-      "search_knowledge_graph",
-      { q: "who signs", asOf: "2026-10-01" },
-      "/api/v1/knowledge/search",
-      { q: "who signs", as_of: "2026-10-01" },
-    ],
     ["list_knowledge_topics", { limit: 3 }, "/api/v1/knowledge/topics", { limit: 3, cursor: undefined }],
     [
       "list_topic_facts",
@@ -240,6 +235,10 @@ describe("S5 — the knowledge graph is readable", () => {
       expect(client.post).not.toHaveBeenCalled();
     });
   }
+
+  it("search_knowledge_graph is not in the one-call table: it polls a run", () => {
+    expect(cases.map(([name]) => name)).not.toContain("search_knowledge_graph");
+  });
 
   it("every tool says it reads with the token's clearance", () => {
     const { descriptions } = setup();
@@ -308,5 +307,113 @@ describe("S5 — the knowledge graph is readable", () => {
     ]) {
       expect(forbids("GET", path), path).toBe(false);
     }
+  });
+});
+
+describe("search_knowledge_graph starts the search run and waits for its answer", () => {
+  const START = { id: "run-1", workflowId: "wf-1", status: "queued" };
+
+  /** A clock the poll can read, and a sleep that moves it forward. */
+  function fakeClock() {
+    let t = 0;
+    return {
+      now: () => t,
+      sleep: vi.fn(async (ms: number) => {
+        t += ms;
+      }),
+    };
+  }
+
+  /** Serves the start handle, then each run state in turn (the last repeats). */
+  function serveRuns(states: unknown[]) {
+    const { handlers, client } = setup();
+    let i = 0;
+    client.get.mockImplementation(async (path: string) => {
+      if (path === "/api/v1/knowledge/search") return START;
+      if (path.startsWith("/api/v1/runs/run-1/values/")) return "digest body";
+      const state = states[Math.min(i, states.length - 1)];
+      i += 1;
+      return state;
+    });
+    return { handlers, client };
+  }
+
+  it("starts the run with the question and reads the answer the search step wrote", async () => {
+    const { client } = serveRuns([
+      { id: "run-1", status: "completed", stepStates: { "search-knowledge": { output: "Ann signs." } } },
+    ]);
+    const out = await searchKnowledge(client as unknown as AxonityClient, "who signs", fakeClock());
+    expect(client.get.mock.calls[0]).toEqual(["/api/v1/knowledge/search", { q: "who signs" }]);
+    expect(client.get.mock.calls[1]).toEqual(["/api/v1/runs/run-1"]);
+    expect(out).toEqual({ runId: "run-1", status: "completed", finished: true, answer: "Ann signs." });
+  });
+
+  it("keeps polling while the run is in progress, and stops at an end state", async () => {
+    const clock = fakeClock();
+    const { client } = serveRuns([
+      { id: "run-1", status: "queued" },
+      { id: "run-1", status: "running" },
+      { id: "run-1", status: "completed", stepStates: { "search-knowledge": { output: "done" } } },
+    ]);
+    const out = await searchKnowledge(client as unknown as AxonityClient, "q", clock);
+    expect(clock.sleep).toHaveBeenCalledTimes(2);
+    expect(out).toMatchObject({ finished: true, answer: "done" });
+  });
+
+  it("returns a still-running answer after about 90 seconds, not an error", async () => {
+    const clock = fakeClock();
+    const { client } = serveRuns([{ id: "run-1", status: "running" }]);
+    const out = await searchKnowledge(client as unknown as AxonityClient, "q", clock);
+    expect(out).toMatchObject({ runId: "run-1", status: "running", finished: false });
+    expect(out.note).toMatch(/read_run/);
+    // Waited no longer than the limit: the last sleep started before 90 s.
+    expect(clock.now()).toBeGreaterThanOrEqual(90_000);
+    expect(clock.now()).toBeLessThan(90_000 + 1500);
+  });
+
+  it.each(["failed", "cancelled", "expired"])("a %s run is an error that says why", async (status) => {
+    const { client } = serveRuns([
+      { id: "run-1", status, stepStates: { "search-knowledge": { error: "model timed out" } } },
+    ]);
+    await expect(
+      searchKnowledge(client as unknown as AxonityClient, "q", fakeClock()),
+    ).rejects.toThrow(`The search run ended as ${status}: model timed out`);
+  });
+
+  it("reads a large answer from its value marker", async () => {
+    const { client } = serveRuns([
+      {
+        id: "run-1",
+        status: "completed",
+        stepStates: {
+          "search-knowledge": { output: { $run_value: "a".repeat(32), $bytes: 9000, $shape: "str" } },
+        },
+      },
+    ]);
+    const out = await searchKnowledge(client as unknown as AxonityClient, "q", fakeClock());
+    expect(client.get).toHaveBeenCalledWith(`/api/v1/runs/run-1/values/${"a".repeat(32)}`);
+    expect(out).toMatchObject({ answer: "digest body" });
+  });
+
+  it("a run state with no status is an error, never an endless wait", async () => {
+    const { client } = serveRuns([{ id: "run-1" }]);
+    await expect(
+      searchKnowledge(client as unknown as AxonityClient, "q", fakeClock()),
+    ).rejects.toThrow(/without a status/);
+  });
+
+  it("a completed run with no answer is an error, not an empty answer", async () => {
+    const { client } = serveRuns([{ id: "run-1", status: "completed", stepStates: {} }]);
+    await expect(
+      searchKnowledge(client as unknown as AxonityClient, "q", fakeClock()),
+    ).rejects.toThrow(/completed without an answer/);
+  });
+
+  it("the tool description says it waits, and no longer mentions landings or passages", () => {
+    const { descriptions } = setup();
+    const d = descriptions.get("search_knowledge_graph")!;
+    expect(d).toMatch(/90 seconds/);
+    expect(d).toMatch(/read_run/);
+    expect(d).not.toMatch(/landing|passages/);
   });
 });
