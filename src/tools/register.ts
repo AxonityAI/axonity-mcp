@@ -27,6 +27,7 @@ import { z } from "zod";
 
 import type { AxonityClient } from "../client.js";
 import { guard, jsonResult } from "./result.js";
+import { refuseWhileWorkflowWarns } from "./warningGate.js";
 
 /** A required literal — an agent cannot satisfy it by filling in a default. */
 const CONFIRM = z
@@ -408,14 +409,15 @@ export function registerEntityTools(
         .describe("A short note for the approver on what changed and why."),
     },
     async ({ id, changeSummary }) =>
-      guard(async () =>
-        jsonResult(
+      guard(async () => {
+        if (singular === "workflow") await refuseWhileWorkflowWarns(client, id);
+        return jsonResult(
           await client.post("/api/v1/publish-approvals", {
             entityType: singular,
             entityId: id,
             ...(changeSummary ? { changeSummary } : {}),
           }),
-        ),
-      ),
+        );
+      }),
   );
 }

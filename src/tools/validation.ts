@@ -12,6 +12,7 @@ import { z } from "zod";
 
 import type { AxonityClient } from "../client.js";
 import { guard, jsonResult } from "./result.js";
+import { refuseWhileWorkflowWarns } from "./warningGate.js";
 
 export function registerValidationTools(
   server: McpServer,
@@ -248,9 +249,14 @@ export function registerApprovalTools(
         .describe("One entry per entity to propose for publishing."),
     },
     async ({ requests }) =>
-      guard(async () =>
-        jsonResult(await client.post("/api/v1/publish-approvals/bulk", { requests })),
-      ),
+      guard(async () => {
+        for (const r of requests) {
+          if (r.entityType === "workflow" && r.entityId) {
+            await refuseWhileWorkflowWarns(client, r.entityId);
+          }
+        }
+        return jsonResult(await client.post("/api/v1/publish-approvals/bulk", { requests }));
+      }),
   );
 
   server.tool(
@@ -291,14 +297,15 @@ export function registerApprovalTools(
         .describe("A short note for the approver on what changed and why."),
     },
     async ({ workflowId, changeSummary }) =>
-      guard(async () =>
-        jsonResult(
+      guard(async () => {
+        await refuseWhileWorkflowWarns(client, workflowId);
+        return jsonResult(
           await client.post("/api/v1/publish-approvals/release", {
             workflowId,
             ...(changeSummary ? { changeSummary } : {}),
           }),
-        ),
-      ),
+        );
+      }),
   );
 
   server.tool(
