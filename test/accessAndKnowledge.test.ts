@@ -267,22 +267,12 @@ describe("S5 — the knowledge graph is readable", () => {
     expect(result.content[0].text).not.toMatch(/read-only token/);
   });
 
-  it("judging, screens and a colleague's work lists stay out", () => {
+  it("erasing, decisions, learning, screens and a colleague's work lists stay out", () => {
     const { handlers } = setup();
-    for (const name of [
-      "confirm_fact",
-      "reject_fact",
-      "correct_fact",
-      "archive_fact",
-      "list_doubtful_cases",
-      "list_expiring_facts",
-    ]) {
+    for (const name of ["erase_node", "list_doubtful_cases", "list_expiring_facts"]) {
       expect(handlers.has(name), name).toBe(false);
     }
     for (const [method, path] of [
-      ["POST", "/api/v1/knowledge/facts/f1/confirm"],
-      ["POST", "/api/v1/knowledge/facts/f1/correct"],
-      ["POST", "/api/v1/knowledge/facts/f1/right-version"],
       ["POST", "/api/v1/knowledge/nodes/n1/erase"],
       ["GET", "/api/v1/knowledge/decisions"],
       ["POST", "/api/v1/knowledge/decisions/d1"],
@@ -306,6 +296,55 @@ describe("S5 — the knowledge graph is readable", () => {
       "/api/v1/knowledge/sources/s1",
     ]) {
       expect(forbids("GET", path), path).toBe(false);
+    }
+  });
+});
+
+describe("maintaining a fact, as the person who made the token (axonity-flow#2202)", () => {
+  const cases: [string, Record<string, unknown>, string, unknown][] = [
+    ["archive_fact", { id: "f1", reason: "a duplicate" }, "/api/v1/knowledge/facts/f1/archive", { reason: "a duplicate" }],
+    ["restore_fact", { id: "f1" }, "/api/v1/knowledge/facts/f1/restore", undefined],
+    ["confirm_fact", { id: "f1" }, "/api/v1/knowledge/facts/f1/confirm", undefined],
+    ["reject_fact", { id: "f1", reason: "wrong" }, "/api/v1/knowledge/facts/f1/reject", { reason: "wrong" }],
+    ["reject_fact", { id: "f1" }, "/api/v1/knowledge/facts/f1/reject", { reason: "" }],
+    [
+      "correct_fact",
+      { id: "f1", kind: "changed", value: "June", since: "2026-06-01" },
+      "/api/v1/knowledge/facts/f1/correct",
+      { kind: "changed", value: "June", since: "2026-06-01" },
+    ],
+    [
+      "relabel_fact",
+      { id: "f1", level: "internal", audienceIds: ["a1"] },
+      "/api/v1/knowledge/facts/f1/relabel",
+      { level: "internal", audienceIds: ["a1"] },
+    ],
+    [
+      "give_right_version",
+      { id: "f1", value: "June" },
+      "/api/v1/knowledge/facts/f1/right-version",
+      { value: "June" },
+    ],
+  ];
+
+  for (const [name, args, path, body] of cases) {
+    it(`${name} posts ${path}`, async () => {
+      const { handlers, client } = setup();
+      const result = await handlers.get(name)!(args);
+      expect(result.isError).toBeUndefined();
+      const call = client.post.mock.calls[0] as unknown[];
+      expect(call[0]).toBe(path);
+      expect(call[1]).toEqual(body);
+    });
+  }
+
+  it("the fact routes are no longer excluded, and every tool says whose rights it uses", () => {
+    const { descriptions } = setup();
+    for (const action of ["archive", "restore", "confirm", "reject", "correct", "relabel", "right-version"]) {
+      expect(forbids("POST", `/api/v1/knowledge/facts/f1/${action}`), action).toBe(false);
+    }
+    for (const name of cases.map(([n]) => n)) {
+      expect(descriptions.get(name), name).toMatch(/person who made this token/i);
     }
   });
 });

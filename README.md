@@ -386,9 +386,11 @@ across these routes — the tool parameter names say which.
   `search_knowledge_graph`, `list_knowledge_topics`, `list_topic_facts`,
   `read_fact` (passages, sources, certainty, validity, which run taught it),
   `read_source`, `list_knowledge_tree`, `list_related_topics` and
-  `list_archived_facts`. Looking only: confirming, correcting, archiving or
-  relabelling a fact ends with a person. With the module off, every call says
-  so in plain words.
+  `list_archived_facts`. Maintaining one fact, as the person who made the
+  token (only for audiences that person maintains, recorded in their name):
+  `archive_fact`, `restore_fact`, `confirm_fact`, `reject_fact`,
+  `correct_fact`, `relabel_fact`, `give_right_version`. With the module off,
+  every call says so in plain words.
 - `list_deleted_prompt_snippets` calls `/api/v1/prompt-snippets/deleted`; the
   backend returns it as `{ items: [... ] }`, and the tool forwards that response
   unchanged.

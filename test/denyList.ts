@@ -218,19 +218,18 @@ export const FORBIDDEN: Rule[] = [
   // The READS are covered: search, topics, the tree, one fact, one source,
   // what was archived. What follows is the rest of the Knowledge screen.
 
-  // Judging knowledge ENDS WITH A PERSON. Confirming, rejecting, correcting,
-  // archiving, restoring, relabelling and erasing a fact, answering a
-  // "which of these two is right" decision, answering a learning round,
-  // handing a doubtful case to a colleague, and recording which tips were
-  // shown: the design (KNOWLEDGE-DESIGN.md in axonity-flow) puts every
-  // correction and contradiction with a colleague who maintains the audience,
-  // and the platform says it in so many words — "a runtime reader (an agent, a
-  // process, a token, a recipient) maintains nothing". The decision list is
-  // here with its answer: it holds only the questions a reader maintains, so a
-  // token reading it would see nothing, ever.
+  // Maintaining ONE FACT is covered since axonity-flow#2202 (decided 26 Oct
+  // 2026): a token acts as the person who made it and maintains what that
+  // person maintains — confirm, reject, correct, archive, restore, relabel, give
+  // the right version (tools in src/tools/knowledgeGraph.ts). What stays out:
+  // erasing personal data (irreversible, an administrator's act on the screen),
+  // answering a "which of these two is right" decision, a colleague's own
+  // learning round, handing a doubtful case to a colleague, and recording which
+  // tips a person was shown — each is a person's act about themselves or about
+  // another colleague, not maintenance of a fact.
   {
-    label: "judging knowledge (ends with a person)",
-    path: /\/api\/v1\/knowledge\/(facts\/[^/]+\/(correct|archive|restore|relabel|confirm|reject|right-version)$|nodes\/[^/]+\/erase$|decisions(\/|$)|learning\/|oversight\/cases\/|tips\/shown$)/,
+    label: "knowledge acts of a person (not maintenance of a fact)",
+    path: /\/api\/v1\/knowledge\/(nodes\/[^/]+\/erase$|decisions(\/|$)|learning\/|oversight\/cases\/|tips\/shown$)/,
   },
 
   // The map and the network around a node are SCREENS: a window of
@@ -242,12 +241,12 @@ export const FORBIDDEN: Rule[] = [
 
   // The WORK LISTS of the Oversight screen: what waits on a person, doubtful
   // cases, facts about to expire, tips that were shown, and which of those
-  // lists are yours. Each holds only what the reader maintains or was handed,
-  // and a token maintains nothing and is never handed a case — so a tool here
-  // would answer an empty list every time, which reads as "nothing waits"
-  // when the truth is "you cannot see it". That is worse than no tool (the
-  // reasoning of the workflow-memory rule above). #88 asked for doubtful and
-  // expiring; the platform's filter is why they are not here.
+  // lists are yours. Each holds only what the reader maintains or was handed.
+  // Until axonity-flow#2202 a token maintained nothing, so a tool here would
+  // have answered an empty list every time. A token now maintains as its
+  // person, but a case is handed to a PERSON, never to a token: opening these
+  // lists to tokens is its own decision, not taken yet. #88 asked for
+  // doubtful and expiring.
   {
     label: "oversight work lists (a colleague's own)",
     path: /\/api\/v1\/knowledge\/(attention|oversight\/(doubtful|expiring|tips|scope))$/,

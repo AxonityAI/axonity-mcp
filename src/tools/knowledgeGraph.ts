@@ -12,12 +12,12 @@
  * its topic, and not found by id. So an empty answer is an answer about what
  * THIS TOKEN may see, and the descriptions say so.
  *
- * **Looking, never judging.** Confirming, rejecting, correcting, archiving,
- * relabelling and erasing a fact, answering a decision or a learning round:
- * all of that ends with a person by design, and `test/denyList.ts` records it.
- * So do the work lists of the Oversight screen — they hold only what the
- * reader maintains or was handed, and a token maintains nothing, so a tool
- * over them could only ever answer an empty list.
+ * **Maintaining one fact, as the token's person** (axonity-flow#2202, decided
+ * 26 Oct 2026). A token acts as the person who made it: confirming, rejecting,
+ * correcting, archiving, restoring and relabelling a fact work for a fact whose
+ * audience that person maintains, in that person's name. Erasing personal
+ * data, answering a decision or a learning round, and the work lists of the
+ * Oversight screen stay out — `test/denyList.ts` says why for each.
  *
  * **The module can be off.** Every route here sits behind the Cortex module;
  * switched off, each answers 403 with the module's sentence, which
@@ -283,8 +283,7 @@ export function registerKnowledgeGraphTools(
     "list_archived_facts",
     "What was archived recently (the platform keeps them visible for a " +
       "while, thirty days to start with), so a second pair of eyes can look " +
-      "afterwards. Read-only. Restoring one is a colleague's decision, not " +
-      "something a token can do: report what you found." +
+      "afterwards. Read-only. restore_fact brings one back." +
       PAGE_NOTE +
       CLEARANCE_NOTE,
     { limit: LIMIT, cursor: CURSOR },
@@ -292,5 +291,131 @@ export function registerKnowledgeGraphTools(
       guard(async () =>
         jsonResult(await client.get(`${KNOWLEDGE}/archived`, { limit, cursor })),
       ),
+  );
+
+  registerFactMaintenanceTools(server, client);
+}
+
+/** Said on every maintaining tool: whose rights it acts with, and what a refusal means. */
+const MAINTAIN_NOTE =
+  "\n\nYOU ACT AS THE PERSON WHO MADE THIS TOKEN: the platform lets you do " +
+  "this only for a fact whose audience that person maintains (their roles, " +
+  "or every audience when they are an administrator), and records it in " +
+  "their name. A refusal means that person may not, not that the fact is " +
+  "wrong. Returns the fact's card as it is now.";
+
+const FACT_ID = z.string().describe("The fact's id, from a search, a topic or read_fact.");
+
+/** Confirm, reject, correct, archive, restore, relabel: one fact, as the token's person. */
+function registerFactMaintenanceTools(server: McpServer, client: AxonityClient): void {
+  const facts = `${KNOWLEDGE}/facts`;
+
+  server.tool(
+    "archive_fact",
+    "Remove a fact from the graph: archived with who, when and why, never " +
+      "erased, and restore_fact brings it back. Not a judgement on whether it " +
+      "is true — use it for a duplicate, test data or something that does not " +
+      "belong. When it was its topic's last open fact, the topic goes with it." +
+      MAINTAIN_NOTE,
+    {
+      id: FACT_ID,
+      reason: z
+        .string()
+        .min(1)
+        .max(2000)
+        .describe("Why it is removed, in a sentence; kept with the fact."),
+    },
+    async ({ id, reason }) =>
+      guard(async () => jsonResult(await client.post(`${facts}/${id}/archive`, { reason }))),
+  );
+
+  server.tool(
+    "restore_fact",
+    "Bring back an archived fact, and its topic with it when that went too." + MAINTAIN_NOTE,
+    { id: FACT_ID },
+    async ({ id }) => guard(async () => jsonResult(await client.post(`${facts}/${id}/restore`))),
+  );
+
+  server.tool(
+    "confirm_fact",
+    "Say the fact is right, as the group the token's person maintains it " +
+      "under: its sources get '+1 right' and its certainty is recomputed. " +
+      "Only for a fact that is still open (draft, not confirmed, active)." +
+      MAINTAIN_NOTE,
+    { id: FACT_ID },
+    async ({ id }) => guard(async () => jsonResult(await client.post(`${facts}/${id}/confirm`))),
+  );
+
+  server.tool(
+    "reject_fact",
+    "Say the fact is wrong: it becomes incorrect and its sources get '+1 " +
+      "wrong', which lowers their score. To take a fact out without judging " +
+      "it, use archive_fact instead." +
+      MAINTAIN_NOTE,
+    {
+      id: FACT_ID,
+      reason: z.string().max(2000).optional().describe("Why it is wrong; kept with the rejection."),
+    },
+    async ({ id, reason }) =>
+      guard(async () =>
+        jsonResult(await client.post(`${facts}/${id}/reject`, { reason: reason ?? "" })),
+      ),
+  );
+
+  server.tool(
+    "correct_fact",
+    "Correct a fact. `changed`: it held, and from `since` it is `value` — " +
+      "the old fact is superseded and nobody's source is charged. `wrong`: " +
+      "it never held — with `value` the right version takes its place, " +
+      "without it the question stays open (give_right_version answers it)." +
+      MAINTAIN_NOTE,
+    {
+      id: FACT_ID,
+      kind: z.enum(["changed", "wrong"]).describe("Changed since a date, or wrong from the start."),
+      value: z.string().max(2000).optional().describe("The right value; required for `changed`."),
+      since: z
+        .string()
+        .optional()
+        .describe("For `changed`: the day the new value holds from (YYYY-MM-DD)."),
+    },
+    async ({ id, kind, value, since }) =>
+      guard(async () =>
+        jsonResult(await client.post(`${facts}/${id}/correct`, { kind, value, since })),
+      ),
+  );
+
+  server.tool(
+    "relabel_fact",
+    "Give a fact a new label: up to which level and for which audiences it " +
+      "may be read. Narrowing is always allowed; widening only to audiences " +
+      "the token's person maintains. Audience ids come from list_audiences." +
+      MAINTAIN_NOTE,
+    {
+      id: FACT_ID,
+      level: z.enum(["public", "internal", "confidential"]).describe("The new level."),
+      audienceIds: z
+        .array(z.string())
+        .min(1)
+        .max(50)
+        .describe("The audiences it is meant for, from list_audiences."),
+    },
+    async ({ id, level, audienceIds }) =>
+      guard(async () =>
+        jsonResult(await client.post(`${facts}/${id}/relabel`, { level, audienceIds })),
+      ),
+  );
+
+  server.tool(
+    "give_right_version",
+    "Answer a fact that was corrected as wrong without the right value: the " +
+      "right version becomes a new fact and the question closes. Returns the " +
+      "new fact's card." +
+      MAINTAIN_NOTE,
+    {
+      id: FACT_ID,
+      value: z.string().min(1).max(2000).describe("The right value."),
+    },
+    async ({ id, value }) =>
+      guard(async () => jsonResult(await client.post(`${facts}/${id}/right-version`, { value }))),
   );
 }
