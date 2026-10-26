@@ -338,10 +338,17 @@ describe("search_knowledge_graph starts the search run and waits for its answer"
     return { handlers, client };
   }
 
+  /** A completed run whose search step wrote ``answer`` as its output, beside ``text``. */
+  function answered(answer: unknown, text: unknown = "") {
+    return {
+      id: "run-1",
+      status: "completed",
+      stepStates: { "search-knowledge": { output: text, structuredOutputs: { answer } } },
+    };
+  }
+
   it("starts the run with the question and reads the answer the search step wrote", async () => {
-    const { client } = serveRuns([
-      { id: "run-1", status: "completed", stepStates: { "search-knowledge": { output: "Ann signs." } } },
-    ]);
+    const { client } = serveRuns([answered("Ann signs.")]);
     const out = await searchKnowledge(client as unknown as AxonityClient, "who signs", fakeClock());
     expect(client.get.mock.calls[0]).toEqual(["/api/v1/knowledge/search", { q: "who signs" }]);
     expect(client.get.mock.calls[1]).toEqual(["/api/v1/runs/run-1"]);
@@ -353,7 +360,7 @@ describe("search_knowledge_graph starts the search run and waits for its answer"
     const { client } = serveRuns([
       { id: "run-1", status: "queued" },
       { id: "run-1", status: "running" },
-      { id: "run-1", status: "completed", stepStates: { "search-knowledge": { output: "done" } } },
+      answered("done"),
     ]);
     const out = await searchKnowledge(client as unknown as AxonityClient, "q", clock);
     expect(clock.sleep).toHaveBeenCalledTimes(2);
@@ -380,15 +387,20 @@ describe("search_knowledge_graph starts the search run and waits for its answer"
     ).rejects.toThrow(`The search run ended as ${status}: model timed out`);
   });
 
+  it("never takes the step's free text for the answer", async () => {
+    // The answer is the output the gate held to 'knowledge-answer-v1'; the
+    // step's text is a closing remark (sandbox run ea925576: text "").
+    const { client } = serveRuns([
+      { id: "run-1", status: "completed", stepStates: { "search-knowledge": { output: "Done." } } },
+    ]);
+    await expect(
+      searchKnowledge(client as unknown as AxonityClient, "q", fakeClock()),
+    ).rejects.toThrow(/completed without an answer/);
+  });
+
   it("reads a large answer from its value marker", async () => {
     const { client } = serveRuns([
-      {
-        id: "run-1",
-        status: "completed",
-        stepStates: {
-          "search-knowledge": { output: { $run_value: "a".repeat(32), $bytes: 9000, $shape: "str" } },
-        },
-      },
+      answered({ $run_value: "a".repeat(32), $bytes: 9000, $shape: "str" }),
     ]);
     const out = await searchKnowledge(client as unknown as AxonityClient, "q", fakeClock());
     expect(client.get).toHaveBeenCalledWith(`/api/v1/runs/run-1/values/${"a".repeat(32)}`);
