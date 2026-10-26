@@ -34,6 +34,8 @@ const KNOWLEDGE = "/api/v1/knowledge";
 
 /** The platform workflow step whose output is the search answer. */
 const SEARCH_STEP = "search-knowledge";
+/** That step's one output: the answer the gate held to 'knowledge-answer-v1'. */
+const SEARCH_ANSWER_OUTPUT = "answer";
 const TERMINAL = new Set(["completed", "failed", "cancelled", "expired"]);
 const POLL_EVERY_MS = 1500;
 /** Stop waiting after this long; the run keeps going on the platform. */
@@ -48,7 +50,10 @@ interface SearchStart {
 interface RunState {
   id: string;
   status: string;
-  stepStates?: Record<string, { output?: unknown; error?: unknown } | undefined>;
+  stepStates?: Record<
+    string,
+    { structuredOutputs?: Record<string, unknown>; error?: unknown } | undefined
+  >;
 }
 
 export interface SearchWait {
@@ -109,7 +114,9 @@ export async function searchKnowledge(
     throw new Error(`The search run ended as ${run.status}: ${reason}`);
   }
 
-  let answer = step?.output;
+  // The step's output, never its free text: the text is a closing remark and
+  // was "" on a run whose answer passed the gate.
+  let answer = step?.structuredOutputs?.[SEARCH_ANSWER_OUTPUT];
   if (isValueMarker(answer)) {
     answer = await client.get(`/api/v1/runs/${start.id}/values/${answer.$run_value}`);
   }
