@@ -84,8 +84,9 @@ export function registerAccessTools(server: McpServer, client: AxonityClient): v
       "hold it. `isSystem` marks the one the platform ships (Member). A " +
       "colleague with several roles reads with the widest. " +
       "\n\nRoles are for people. An agent, a workflow and your own token " +
-      "have a clearance of their own instead, and none of them ever " +
-      "maintains anything." +
+      "have a clearance of their own instead. An agent and a workflow never " +
+      "maintain anything; your token maintains what the person who made it " +
+      "maintains (their roles, or every audience for an administrator)." +
       PAGE_NOTE,
     { limit: LIMIT, cursor: CURSOR },
     async ({ limit, cursor }) =>
