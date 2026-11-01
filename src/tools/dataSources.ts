@@ -149,7 +149,7 @@ export function registerMeasureTools(
 ): void {
   server.tool(
     "read_measure_design",
-    "What a number over one dynamic table may ask for: its columns and its " +
+    "What a number over one table may ask for: its columns and its " +
       "time axis. Read-only. " +
       "\n\nTHE MEASURES ARE NOT HERE. A measure belongs to the model, not " +
       "to one table: list_measures({ tableId }) answers which measures read " +
@@ -162,7 +162,7 @@ export function registerMeasureTools(
       "month, week and day: what a time window (shift, to_date, rolling, " +
       "running) can be measured in.",
     {
-      tableId: z.string().describe("The dynamic table's id."),
+      tableId: z.string().describe("The table's id — any table but a source table."),
       useDraft: z
         .boolean()
         .optional()
@@ -183,7 +183,8 @@ export function registerMeasureTools(
       "own. Read-only. This is where a dashboard's numbers come from. " +
       "\n\nEach question is " +
       "`{ key, measure, tableId?, period?, start?, end?, compare?, grain?, " +
-      "splitBy?, filters?, limit?, useDraft?, useDraftChain?, explain? }`. `key` is your own label and " +
+      "splitBy?, filters?, limit?, useDraft?, useDraftChain?, explain?, " +
+      "statusMeasure? }`. `key` is your own label and " +
       "comes back on the answer. `measure` is the measure's NAME — its " +
       "handle, unique in the workspace (list_measures); `tableId` is " +
       "optional and no longer what finds it. `period` is one of: " +
@@ -210,6 +211,17 @@ export function registerMeasureTools(
       "`leaves` — and each point of `series` and each entry of `groups` " +
       "carries its own `parts`. \"The margin fell\" is not an explanation; " +
       "\"revenue held and cost rose\" is. Use it instead of reading rows. " +
+      "\n\nTHE STATUS of the total — `status`: on_track, watch, off_track " +
+      "or null — is read from a measure's `limits`: by default those of " +
+      "`measure` itself; with `statusMeasure` (a measure's NAME) those of " +
+      "that measure, computed over the same period and filters — show " +
+      "revenue, judge it by 'revenue against plan'. `statusFrom` says how it " +
+      "was reached: `{ measure, value, band }` (the measure read, its value " +
+      "and the band it fell in), `{ measure, error }` when that measure " +
+      "could not be read — the number itself still stands — or null when " +
+      "there are no limits to read. No limits, no status: there is no " +
+      "default, so do not call a number on or off track without one. " +
+      "`measure` in the answer carries its `limits`. " +
       "\n\nONE BAD QUESTION DOES NOT FAIL THE CALL: every answer carries " +
       "`ok`, and `ok: false` comes with an `error` of its own and, where it " +
       "has one, a `code` from get_measure_formula_spec — `grain_too_fine` " +

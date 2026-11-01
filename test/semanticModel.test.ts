@@ -61,8 +61,11 @@ describe("what fills a table replaces the sync and the provenance (#90, #91)", (
       expect(text).toMatch(/`fillingQueryId`/);
       expect(text).toMatch(/`rhythm`/);
       expect(text).toMatch(/refresh_data_table/);
-      // A measure reads only a dynamic table — the dead end #91 hit.
-      expect(text).toMatch(/ONLY A DYNAMIC TABLE CAN BE READ BY A MEASURE/);
+      // Since axonity-flow#2090 (with #1783 A1a) a measure reads every table
+      // but a source table, and an author's table as published: the dead end
+      // #91 hit is gone, and the old rule must not come back.
+      expect(text).not.toMatch(/ONLY A DYNAMIC TABLE CAN BE READ BY A MEASURE/);
+      expect(text).toMatch(/AS PUBLISHED/);
       // Mentioned only as refused, never as something to send.
       expect(text).toMatch(/`provenance` and `clearProvenance` no longer exist and are refused/);
     }

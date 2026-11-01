@@ -77,10 +77,14 @@ const FILL_NOTE =
   "data its author maintains), `workflow` (a workflow writes the rows, " +
   "limited to `allowedOperations`) or `query` (a named query fetches them). " +
   "A table has ONE filler. `isDynamic` is no longer sent: it follows from " +
-  "`filledBy` — a table filled by a query or a workflow is dynamic, and " +
-  "ONLY A DYNAMIC TABLE CAN BE READ BY A MEASURE. Never set `filledBy: " +
-  "\"workflow\"` on a table no workflow fills just to make a measure read " +
-  "it; give it a query. " +
+  "`filledBy` — a table filled by a query or a workflow is dynamic. " +
+  "\n\nWHAT A MEASURE READS: every table whose rows Flow holds, whatever " +
+  "fills it — not a source table, whose rows stay in its data source. A " +
+  "table its AUTHOR fills (a plan, a target per period, a mapping) is read " +
+  "AS PUBLISHED: a row changed in the draft counts for no number until the " +
+  "table is published again (ensure_data_table_major_version, then " +
+  "request_publish_data_table). Rows a query or a workflow fills are read " +
+  "as they are now. " +
   "\n\nFILLED BY A QUERY: `fillingQueryId` is the query (create_query, " +
   "list_queries) — required with `filledBy: \"query\"`, refused otherwise, " +
   "and one query fills one table. The query carries the SQL, the source " +
@@ -158,11 +162,29 @@ const MEASURE_NOTE =
   "measure needs one too), `questions` (what it answers, in the words " +
   "someone would ask) and optionally `name`, the handle — derived from the " +
   "label when omitted and unique in the workspace. `definition` is " +
-  "`{ expression, quantity?, format?, direction?, target?, watchMargin? }`; " +
+  "`{ expression, quantity?, format?, direction?, limits? }`; " +
   "`quantity` is derived for a formula over measures. " +
+  "\n\nA STATUS IS A MEASURE AND ITS LIMITS. `limits` are the bands a " +
+  "status is read from, LOWEST VALUES FIRST: `[{ status: \"off_track\", " +
+  "upTo: -0.05, includesUpTo: false }, { status: \"watch\", upTo: 0, " +
+  "includesUpTo: false }, { status: \"on_track\" }]`. `status` is " +
+  "on_track, watch or off_track. Every band but the last has `upTo`, in " +
+  "the measure's own unit as the number comes out (a percentage as a " +
+  "fraction: 0.05 is 5%), rising strictly from band to band, and " +
+  "`includesUpTo` — whether the bound itself belongs to this band; it is " +
+  "required, because whether exactly -5% is still off track is the " +
+  "owner's call. The last band has neither. At least two bands. Take the " +
+  "bounds from the owner — never invent them. No `limits`, no status: " +
+  "there is no default. A wrong list is refused with `bad_limits`. To " +
+  "watch a figure against its plan, write the measure 'deviation from " +
+  "plan' (recipe `against_plan_with_limits` in get_measure_formula_spec) " +
+  "and put the limits on THAT; a tile can show the figure and read its " +
+  "status from the deviation (`statusMeasure`). `direction` stays: it " +
+  "colours a change (is going up good?), not the status. " +
   "\n\nThe fields from before the formula — `tableId`, `clearTable`, " +
-  "`definition.aggregation`, `column`, `numerator`, `denominator` — are " +
-  "refused with `legacy_field`. " +
+  "`definition.aggregation`, `column`, `numerator`, `denominator` — and " +
+  "`definition.target` and `watchMargin`, from before a status was a " +
+  "measure and its limits, are refused with `legacy_field`. " +
   "\n\nIt is a DRAFT until published: request_publish_measure. Only a " +
   "published measure gives a certified number.";
 
@@ -562,10 +584,19 @@ const ENTITIES: EntityDef[] = [
       "default — everyone sees it — or \"private\") and `layout`, the " +
       "sections of tiles; omit it for an empty dashboard. A tile names a " +
       "measure by its name (list_measures). The layout is " +
-      "checked when saved and a refusal names what is wrong.",
+      "checked when saved and a refusal names what is wrong. " +
+      "\n\nA TILE'S STATUS comes from the limits of the measure it shows. " +
+      "To show one number and judge it by another — revenue, judged by " +
+      "'revenue against plan' — give the tile `config.statusMeasure`, the " +
+      "NAME of that measure: it is computed over the same period and filters " +
+      "as the number. Only a tile that shows a measure takes it; a number " +
+      "tile shows the status. While a tile names a measure as its " +
+      "`statusMeasure`, that measure cannot be renamed or deleted.",
     updateWarning:
       "NO DRAFT: a saved dashboard is what everyone it is shared with sees. " +
-      "`layout` is replaced WHOLE when sent — read first and send it complete.",
+      "`layout` is replaced WHOLE when sent — read first and send it complete. " +
+      "A tile may carry `config.statusMeasure`: the measure whose limits give " +
+      "it its status, when that is not the measure it shows.",
   },
 ];
 
