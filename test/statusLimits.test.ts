@@ -189,6 +189,11 @@ describe("the tools say how a status is reached", () => {
     }
   });
 
+  it("update_measure warns that a definition sent without its limits loses the status", () => {
+    const text = setup().descriptions.get("update_measure")!;
+    expect(text).toContain("send the `expression` and its `limits` with it");
+  });
+
   it("query_measures offers statusMeasure and explains statusFrom", () => {
     const text = setup().descriptions.get("query_measures")!;
     for (const word of ["statusMeasure?", "statusFrom", "{ measure, value, band }", "{ measure, error }"]) {

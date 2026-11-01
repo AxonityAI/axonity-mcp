@@ -454,7 +454,8 @@ const ENTITIES: EntityDef[] = [
       MEASURE_NOTE +
       " `tableId` and `clearTable` are gone: a measure has no home table, " +
       "the tables it reads follow from its formula. Sending `definition` " +
-      "replaces it whole, so send the `expression` with it.",
+      "replaces it whole, so send the `expression` and its `limits` with " +
+      "it — a definition sent without them takes the measure's status away.",
   },
   {
     // A named read of one source (axonity-flow#2010, S1), with routes in the
