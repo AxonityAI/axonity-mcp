@@ -17157,6 +17157,21 @@
               }
             ]
           },
+          "limits": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/MeasureLimitPayload"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The bands a status is read from, lowest values first: [{status: off_track, upTo: -0.05, includesUpTo: false}, {status: watch, upTo: 0, includesUpTo: false}, {status: on_track}]. No limits, no status — there is no default. To watch a number against a plan, write the measure 'deviation from plan' and put the limits on that; a tile can read its status from it while showing the number itself.",
+            "title": "Limits"
+          },
           "numerator": {
             "anyOf": [
               {
@@ -17181,27 +17196,11 @@
             "title": "Quantity"
           },
           "target": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "The value the owner aims for.",
+            "description": "Removed (#1783). Refused with legacy_field: a target is a measure, and a status is a measure and its limits.",
             "title": "Target"
           },
           "watchMargin": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Within this many percent of the target on the wrong side reads 'watch'.",
+            "description": "Removed (#1783). Refused with legacy_field; use limits.",
             "title": "Watchmargin"
           }
         },
@@ -17589,6 +17588,47 @@
         "title": "MeasureFormatPayload",
         "type": "object"
       },
+      "MeasureLimitPayload": {
+        "additionalProperties": false,
+        "description": "One band of a measure's limits (#1783 A1a).\n\nThe bands run from the lowest values up. Each one but the last has an\nupper bound; the last holds every value above the band before it. So\nthe whole line is covered and no value falls between two bands.",
+        "properties": {
+          "includesUpTo": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Whether the bound itself belongs to this band (true) or to the band above (false). Required on every band that has a bound: whether exactly -5% is still red is the owner's decision, not a default.",
+            "title": "Includesupto"
+          },
+          "status": {
+            "description": "What a value in this band reads as: on_track, watch or off_track. A tile's badge, its colour and later a signal all read this word.",
+            "maxLength": 32,
+            "title": "Status",
+            "type": "string"
+          },
+          "upTo": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The upper bound of this band, in the measure's own unit as the number comes out (a percentage as a fraction: 0.05 is 5%). Omitted on the last band, and only there.",
+            "title": "Upto"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "MeasureLimitPayload",
+        "type": "object"
+      },
       "MeasurePartPayload": {
         "additionalProperties": false,
         "description": "One side of a ratio: a sum, a count, or a count of distinct values.",
@@ -17772,6 +17812,19 @@
             ],
             "description": "First day of a custom range.",
             "title": "Start"
+          },
+          "statusMeasure": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The measure whose limits give this number its status, when it is not the number itself — show revenue, read the status from 'revenue against plan'. Calculated over the same period and the same filters as the number. Omit to read the limits of `measure`.",
+            "title": "Statusmeasure"
           },
           "tableId": {
             "anyOf": [
@@ -18082,7 +18135,21 @@
                 "type": "null"
               }
             ],
+            "description": "Where the number stands: the band of the status measure's limits its value fell in. Null when that measure has no limits — there is no default — or no value for the period.",
             "title": "Status"
+          },
+          "statusFrom": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How the status was reached: {measure, value, band} — the measure whose limits were read, its value for this period and the band it fell in. With {measure, error} instead when that measure could not be read; the number itself still stands. Null when there are no limits to read.",
+            "title": "Statusfrom"
           },
           "table": {
             "anyOf": [

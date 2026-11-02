@@ -11,6 +11,17 @@ diff in review.
 
 ## Provenance
 
+- **A status is a measure and its limits, on top of the above:**
+  axonity-flow#1783 A1a (PR axonity-flow#2297, branch
+  `feat/s9-1a-status-limits` at `0814e7c04`, not merged yet — this snapshot
+  and that PR are merged and rolled out together). Dumped with
+  `dump_openapi.py --stdout` from that branch and spliced in PER SCHEMA, not a
+  full dump: `MeasureDefinitionPayload` (`limits`; `target` and `watchMargin`
+  kept only as refused with `legacy_field`), the new `MeasureLimitPayload`,
+  `MeasureQueryItem` (`statusMeasure`) and `MeasureQueryResult` (`status`
+  described, `statusFrom`). No route added or removed. Left out on purpose:
+  `MeasureDesignResponse.measures`, which differs from `main` already and is
+  not this change's.
 - **Full refresh after axonity-flow#2104, replacing everything below:** a
   WHOLE dump with `dump_openapi.py` from a clean, read-only worktree of
   axonity-flow `main` at `c9f77464` (#2103 merged as #2104). 749 → 749

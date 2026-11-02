@@ -25,6 +25,11 @@
  * with `legacy_field`. The platform refuses them too since its form writes only
  * `expression`; the check stays here because a `definition` WITHOUT
  * `expression` is still stored there as a `sum` nobody wrote.
+ *
+ * `target` and `watchMargin` are refused the same way (axonity-flow#1783 A1a):
+ * a status is a measure and its `limits` now, and nothing judges a margin
+ * around a target any more. The platform refuses them with the same code;
+ * refusing here gives the same repair before the call is made.
  */
 
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -46,6 +51,8 @@ export const VALIDATE_ROUTE = `${MEASURES}/validate`;
 const LEGACY_TOP = ["tableId", "clearTable"] as const;
 /** Fields inside `definition` that the formula replaces. */
 const LEGACY_DEFINITION = ["aggregation", "column", "numerator", "denominator"] as const;
+/** Fields inside `definition` from before a status was a measure and its limits. */
+const LEGACY_STATUS = ["target", "watchMargin"] as const;
 
 /** Present in the sense that matters: sent, and not a null that clears nothing. */
 function isSent(value: unknown): boolean {
@@ -56,12 +63,14 @@ function isSent(value: unknown): boolean {
  * Refuse a measure write in the shape from before the formula.
  *
  * Throws with `legacy_field` — the platform's own code for it, so an agent
- * that repairs on codes reads the same word from either side. A `definition`
+ * that repairs on codes reads the same word from either side; `target` and
+ * `watchMargin` get their own sentence, pointing at `limits`. A `definition`
  * without `expression` is refused too: the platform would quietly store it as
  * a `sum`, which is a definition nobody wrote.
  */
 export function assertFormulaShape(fields: Record<string, unknown>): void {
   const found: string[] = LEGACY_TOP.filter((key) => isSent(fields[key]));
+  const status: string[] = [];
   const definition = fields.definition;
   if (definition !== undefined && definition !== null) {
     if (typeof definition !== "object" || Array.isArray(definition)) {
@@ -73,7 +82,10 @@ export function assertFormulaShape(fields: Record<string, unknown>): void {
         (key) => `definition.${key}`,
       ),
     );
-    if (found.length === 0 && !isSent(def.expression)) {
+    status.push(
+      ...LEGACY_STATUS.filter((key) => isSent(def[key])).map((key) => `definition.${key}`),
+    );
+    if (found.length === 0 && status.length === 0 && !isSent(def.expression)) {
       throw new Error(
         "legacy_field: `definition` has no `expression`. A measure is one " +
           "formula — send it as `definition.expression`, e.g. " +
@@ -83,17 +95,32 @@ export function assertFormulaShape(fields: Record<string, unknown>): void {
       );
     }
   }
-  if (found.length === 0) return;
-  throw new Error(
-    `legacy_field: ${found.map((f) => `\`${f}\``).join(", ")} ` +
-      `${found.length === 1 ? "is" : "are"} the shape from before the formula. ` +
-      "A measure is one `definition.expression` now, and the tables it reads " +
-      "follow from it: `sum(orders.amount)` instead of `tableId` + " +
-      "`aggregation` + `column`, `divide(sum(a.x), sum(b.y))` instead of a " +
-      "`numerator` and a `denominator`, `… where table.column = 'value'` " +
-      "for a condition on one part. Remove these fields and write the " +
-      "formula — validate_measure checks it before you save.",
-  );
+  if (found.length === 0 && status.length === 0) return;
+  const sentences: string[] = [];
+  if (found.length > 0) {
+    sentences.push(
+      `${found.map((f) => `\`${f}\``).join(", ")} ` +
+        `${found.length === 1 ? "is" : "are"} the shape from before the formula. ` +
+        "A measure is one `definition.expression` now, and the tables it reads " +
+        "follow from it: `sum(orders.amount)` instead of `tableId` + " +
+        "`aggregation` + `column`, `divide(sum(a.x), sum(b.y))` instead of a " +
+        "`numerator` and a `denominator`, `… where table.column = 'value'` " +
+        "for a condition on one part. Remove these fields and write the " +
+        "formula — validate_measure checks it before you save.",
+    );
+  }
+  if (status.length > 0) {
+    sentences.push(
+      `${status.map((f) => `\`${f}\``).join(", ")} ` +
+        `${status.length === 1 ? "is" : "are"} gone: a status is a measure and ` +
+        "its limits. Put the bands on this measure as `definition.limits`, or " +
+        "write the measure 'deviation from target' " +
+        "(`divide([revenue] - [planned_revenue], [planned_revenue])`) and put " +
+        "the limits on that — a tile can show the number itself and read its " +
+        "status from the deviation (`statusMeasure`).",
+    );
+  }
+  throw new Error(`legacy_field: ${sentences.join(" ")}`);
 }
 
 /** The parts of a stored measure `read_measure` needs to ask for its text. */
@@ -180,7 +207,8 @@ export function registerMeasureFormulaTools(
       "what it returns, its quantity rule and an example; the operators, " +
       "grains and limits; every refusal `code` with `when` and `fix`; " +
       "`recipes` for the numbers a management team asks for (a sum over two " +
-      "facts, a margin %, a share of the total); and `buildOrder`. A word " +
+      "facts, a margin %, a share of the total, a figure against its plan " +
+      "with a status); and `buildOrder`. A word " +
       "with `available: false` is coming and is refused by name " +
       "(`not_yet_supported`) — do not use it. " +
       "\n\n`includeWorkspace: true` adds THIS workspace's vocabulary as " +
@@ -251,7 +279,10 @@ export function registerMeasureFormulaTools(
       "read) and over which `window` — shift, to_date, rolling, running, " +
       "with its calendar. Empty `window` is the period asked for. " +
       "`quantity_generic` is a warning: the migration left the placeholder " +
-      "quantity — say what the number counts.",
+      "quantity — say what the number counts. " +
+      "\n\nA measure's `limits` (the bands its status is read from) are " +
+      "NOT checked here — only the formula is. They are checked when the " +
+      "measure is saved, and refused there with `bad_limits`.",
     {
       expression: z
         .union([z.string(), z.record(z.unknown())])
@@ -302,7 +333,9 @@ export function registerMeasureFormulaTools(
       "folds down to, each on its own table — `formula.quantity`, and " +
       "`formula.problems`: a measure that rests on a column or measure that " +
       "has since gone says so here. `readsTables` follows from the leaves; " +
-      "there is no home table. " +
+      "there is no home table. `definition.limits` holds the bands its " +
+      "status is read from, lowest values first; none means it has no " +
+      "status. " +
       "\n\nWHAT IT IS CONNECTED TO: `dependsOn` is every measure it rests " +
       "on — the whole chain, which publishing checks; `usedBy` every " +
       "measure that rests on IT; `dashboards` every dashboard with a tile " +
