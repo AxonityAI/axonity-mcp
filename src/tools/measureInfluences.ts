@@ -61,9 +61,9 @@ const WHY = z
 const OWNER = z
   .string()
   .describe(
-    'Who answers for this influence, as text: a role ("CFO", "Head of ' +
-      'Customer Care") or a person\'s name. Not a user account — it is ' +
-      "written as words, and it is who to ask when the link is disputed.",
+    'Who answers for this influence: a ROLE, as text ("CFO", "Head of ' +
+      'Customer Care") — a person\'s name only when there is no role for ' +
+      "it. Not a user account; it is who to ask when the link is disputed.",
   );
 const BASIS = z
   .string()
@@ -99,6 +99,13 @@ const LIVE =
   "ensure_data_table_major_version and request_publish_data_table on it — " +
   "one approval for every influence you wrote. An agent in a run and " +
   "read_measure_tree read what is published. " +
+  "\n\nPUBLISHING ITSELF CAN BE REFUSED. It is checked against what goes " +
+  "LIVE — the published measures with these influences, not the draft — " +
+  "and refused with the reason: a loop, or an influence a live formula " +
+  "already makes. The same holds the other way round when a measure is " +
+  "published against the published influences. When a link moves between " +
+  "a formula and an influence, publish the side that REMOVES it first, " +
+  "then the side that adds it. " +
   "\n\nTHEY TRAVEL WITH THE DEPLOY. Like the measures, the table is " +
   "configuration: build the influences in the first environment (staging), " +
   "and they go to the next one with the deployment. Never write them by " +

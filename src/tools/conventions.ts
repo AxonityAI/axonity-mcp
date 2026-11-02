@@ -1208,6 +1208,9 @@ number that must be computed from another, a measure not built yet — is a
 \`planned\` row, so \`read_measure_tree\` shows where "why did this move?"
 stops today. The influences are one table, \`measure_influences\`: published
 like any table, and carried to the next environment with the deploy.
+Publishing is checked against what goes live — the published measures and
+influences — and refused with the reason; when a link moves between a formula
+and an influence, publish the side that removes it first.
 
 **Order.** Base measures first, each with its \`quantity\`; then the derived
 ones; \`validate_measure\` before every save; publish from the bottom up — a

@@ -176,7 +176,8 @@ export const FULL_MONTH_NOTE =
   "on the last day of the LAST FULL MONTH instead: use them for a monthly " +
   "trend or a number held against a monthly budget, so two days of revenue " +
   "are not read against a whole month. year_to_last_full_month is the year " +
-  "that month belongs to — on 2 January, the whole year before.";
+  "that month belongs to — on 2 January, the whole year before. Today and " +
+  "the last full month are counted in Europe/Brussels time.";
 
 export function registerMeasureTools(
   server: McpServer,

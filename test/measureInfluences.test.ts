@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it, vi } from "vitest";
+import { z } from "zod";
 
 import type { AxonityClient } from "../src/client.js";
 import { errorForStatus } from "../src/errors.js";
@@ -197,6 +198,89 @@ describe("a refusal comes back as the backend wrote it", () => {
     expect(result.content[0].text).toContain(
       "`margin` → `complaints` → `revenue` → `margin`",
     );
+  });
+});
+
+describe("every tool hands the backend's refusal back unchanged", () => {
+  const cases: [string, "get" | "post" | "put" | "del", Record<string, unknown>, number, string][] = [
+    ["list_measure_influences", "get", {}, 403, "The module Insights is switched off for this workspace."],
+    [
+      "update_measure_influence",
+      "put",
+      { ...ROW },
+      404,
+      "There is no `complaints` → `lost_customers` (influence) to change.",
+    ],
+    [
+      "unlink_measures",
+      "del",
+      { fromMeasure: "complaints", toMeasure: "lost_customers", confirm: true },
+      403,
+      "The module Insights is switched off for this workspace.",
+    ],
+    ["read_measure_tree", "get", { measure: "nope" }, 404, "There is no measure called `nope`."],
+  ];
+
+  for (const [tool, method, args, status, message] of cases) {
+    it(`${tool}: ${status}`, async () => {
+      const { handlers, client } = setup();
+      client[method].mockRejectedValueOnce(
+        errorForStatus(status, { error: "x", code: "x", retryable: false, message }),
+      );
+      const result = await handlers.get(tool)!(args);
+      expect(result.isError).toBe(true);
+      expect(result.content[0].text).toContain(message);
+    });
+  }
+
+  it("publishing the table can be refused, and the descriptions say so", () => {
+    const { descriptions } = setup();
+    for (const tool of ["link_measures", "update_measure_influence"]) {
+      const text = descriptions.get(tool)!;
+      expect(text, tool).toMatch(/PUBLISHING ITSELF CAN BE REFUSED/);
+      expect(text, tool).toMatch(/what goes\s+LIVE/);
+      expect(text, tool).toMatch(/REMOVES it first/);
+    }
+    expect(MEASURE_FORMULA_SECTION).toMatch(/publish the side that removes it first/);
+  });
+});
+
+describe("the input is checked before anything is sent", () => {
+  const schemaOf = (tool: string) => {
+    const { schemas } = setup();
+    return z.object(schemas.get(tool) as unknown as z.ZodRawShape);
+  };
+
+  for (const tool of ["link_measures", "update_measure_influence"]) {
+    it(`${tool}: a whole row passes, a wrong effect or kind or a missing why/owner does not`, () => {
+      const row = schemaOf(tool);
+      expect(row.safeParse(ROW).success).toBe(true);
+      expect(row.safeParse({ ...ROW, kind: "formula", planned: true }).success).toBe(true);
+      expect(row.safeParse({ ...ROW, effect: "up" }).success).toBe(false);
+      expect(row.safeParse({ ...ROW, kind: "cause" }).success).toBe(false);
+      const { why: _why, ...noWhy } = ROW;
+      expect(row.safeParse(noWhy).success).toBe(false);
+      const { owner: _owner, ...noOwner } = ROW;
+      expect(row.safeParse(noOwner).success).toBe(false);
+      expect(row.safeParse({ ...ROW, planned: "yes" }).success).toBe(false);
+    });
+  }
+
+  it("unlink_measures: from and to are required, kind is one of two", () => {
+    const unlink = schemaOf("unlink_measures");
+    const ok = { fromMeasure: "a", toMeasure: "b", confirm: true };
+    expect(unlink.safeParse(ok).success).toBe(true);
+    expect(unlink.safeParse({ ...ok, kind: "cause" }).success).toBe(false);
+    expect(unlink.safeParse({ toMeasure: "b", confirm: true }).success).toBe(false);
+  });
+
+  it("list and tree: optional names, a boolean useDraft", () => {
+    for (const tool of ["list_measure_influences", "read_measure_tree"]) {
+      const schema = schemaOf(tool);
+      expect(schema.safeParse({}).success, tool).toBe(true);
+      expect(schema.safeParse({ measure: "x", useDraft: true }).success, tool).toBe(true);
+      expect(schema.safeParse({ useDraft: "no" }).success, tool).toBe(false);
+    }
   });
 });
 
