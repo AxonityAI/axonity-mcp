@@ -340,7 +340,14 @@ export function registerMeasureFormulaTools(
       "on — the whole chain, which publishing checks; `usedBy` every " +
       "measure that rests on IT; `dashboards` every dashboard with a tile " +
       "on it. Read `usedBy` and `dashboards` before you change or delete a " +
-      "measure: those numbers move with it.",
+      "measure: those numbers move with it. " +
+      "\n\nWHAT MOVES IT FROM OUTSIDE ITS FORMULA: `influencedBy` lists the " +
+      "influences into this measure, `influences` the measures it moves — " +
+      "each `{ measure, kind, effect, why, owner, basis, planned, state }`, " +
+      "`measure` being the OTHER one. Read from the DRAFT of the influences " +
+      "table, so what you just wrote shows; what is published is " +
+      "list_measure_influences({ useDraft: false }) or read_measure_tree. " +
+      "Its formula parts are `dependsOn`, never an influence.",
     {
       id: z.string().describe("The measure's id."),
       useDraftChain: z

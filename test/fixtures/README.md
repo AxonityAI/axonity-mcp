@@ -11,6 +11,23 @@ diff in review.
 
 ## Provenance
 
+- **What moves a number, and periods to the last full month, on top of the
+  above:** axonity-flow#1783 A2 (release 1b, branch `feat/s9-1b-measure-tree`
+  at `d023816d9`, not merged yet — this snapshot and that PR are merged and
+  rolled out together). Dumped with `dump_openapi.py --stdout` from that
+  branch and spliced in PER OPERATION, not a full dump: the four operations
+  of `/api/v1/measure-influences` and `GET /api/v1/measures/tree`, with the
+  schemas they reach (`MeasureInfluenceWrite`, `MeasureInfluenceItem`,
+  `MeasureInfluenceList`, `MeasureTree`, `TreeEdge`, `TreeGap`,
+  `src__schemas__measure_influence__TreeNode`) and `OtherMeasure`;
+  `MeasureDetail.influencedBy` / `.influences`; and the `period` enum of
+  `MeasureQueryItem` and `TopRowsRequest` (`last_3_full_months`,
+  `last_12_full_months`, `year_to_last_full_month`). The knowledge
+  `TreeNode` keeps its name here: the branch's dump renames it
+  `src__schemas__knowledge__TreeNode` only because a second `TreeNode`
+  appeared, and nothing else of the knowledge routes changed. Left out on
+  purpose: everything else that differs from `main` already and is not
+  this change's.
 - **A status is a measure and its limits, on top of the above:**
   axonity-flow#1783 A1a (PR axonity-flow#2297, branch
   `feat/s9-1a-status-limits` at `0814e7c04`, not merged yet — this snapshot

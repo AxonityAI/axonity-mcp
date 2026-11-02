@@ -17382,6 +17382,24 @@
             "title": "Id",
             "type": "string"
           },
+          "influencedBy": {
+            "default": [],
+            "description": "What moves this measure from outside its formula, from the draft of the influences table. Its formula parts are dependsOn.",
+            "items": {
+              "$ref": "#/components/schemas/OtherMeasure"
+            },
+            "title": "Influencedby",
+            "type": "array"
+          },
+          "influences": {
+            "default": [],
+            "description": "The measures this one moves from outside their formulas.",
+            "items": {
+              "$ref": "#/components/schemas/OtherMeasure"
+            },
+            "title": "Influences",
+            "type": "array"
+          },
           "isSystem": {
             "title": "Issystem",
             "type": "boolean"
@@ -17588,6 +17606,165 @@
         "title": "MeasureFormatPayload",
         "type": "object"
       },
+      "MeasureInfluenceItem": {
+        "description": "One influence as it is stored, and what it is now.",
+        "properties": {
+          "basis": {
+            "default": "",
+            "description": "Where it comes from; often empty.",
+            "title": "Basis",
+            "type": "string"
+          },
+          "effect": {
+            "description": "same or opposite.",
+            "title": "Effect",
+            "type": "string"
+          },
+          "fromMeasure": {
+            "description": "The measure that moves the other one.",
+            "title": "Frommeasure",
+            "type": "string"
+          },
+          "kind": {
+            "description": "influence, or formula on a planned row.",
+            "title": "Kind",
+            "type": "string"
+          },
+          "owner": {
+            "description": "The role or person who answers for it.",
+            "title": "Owner",
+            "type": "string"
+          },
+          "planned": {
+            "default": false,
+            "description": "Whether it marks a missing link.",
+            "title": "Planned",
+            "type": "boolean"
+          },
+          "state": {
+            "description": "active: both measures are there. planned: a missing link, still missing. done: a planned link that came true — it can be removed (a formula) or made an ordinary influence. points_nowhere: a measure it names was removed or renamed.",
+            "enum": [
+              "active",
+              "planned",
+              "done",
+              "points_nowhere"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "toMeasure": {
+            "description": "The measure that is moved.",
+            "title": "Tomeasure",
+            "type": "string"
+          },
+          "why": {
+            "description": "Why the first moves the second.",
+            "title": "Why",
+            "type": "string"
+          }
+        },
+        "required": [
+          "fromMeasure",
+          "toMeasure",
+          "kind",
+          "effect",
+          "why",
+          "owner",
+          "state"
+        ],
+        "title": "MeasureInfluenceItem",
+        "type": "object"
+      },
+      "MeasureInfluenceList": {
+        "description": "The influences of the workspace, or of one measure.\n\n# paging-exempt: an influence is written by a person, between two\n# measures somebody authored — never by machine activity, which is the\n# growth B-NB8 exists for.",
+        "properties": {
+          "items": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/MeasureInfluenceItem"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "title": "MeasureInfluenceList",
+        "type": "object"
+      },
+      "MeasureInfluenceWrite": {
+        "additionalProperties": false,
+        "description": "One influence to write into the draft of the influences table.",
+        "properties": {
+          "basis": {
+            "default": "",
+            "description": "Where it comes from — a budget sheet, a study. Empty is fine.",
+            "maxLength": 600,
+            "title": "Basis",
+            "type": "string"
+          },
+          "effect": {
+            "description": "same: when the first rises, the second rises. opposite: when the first rises, the second falls.",
+            "enum": [
+              "same",
+              "opposite"
+            ],
+            "title": "Effect",
+            "type": "string"
+          },
+          "fromMeasure": {
+            "description": "The measure that moves the other one, by its name.",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Frommeasure",
+            "type": "string"
+          },
+          "kind": {
+            "default": "influence",
+            "description": "influence: the first moves the second from outside its formula. formula: only with planned — the second must be computed from the first, and is not yet.",
+            "enum": [
+              "influence",
+              "formula"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "owner": {
+            "description": "The role or person who answers for this influence.",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Owner",
+            "type": "string"
+          },
+          "planned": {
+            "default": false,
+            "description": "True to mark a link that is still missing: it may name a measure that is not built yet, and may say formula.",
+            "title": "Planned",
+            "type": "boolean"
+          },
+          "toMeasure": {
+            "description": "The measure that is moved, by its name.",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Tomeasure",
+            "type": "string"
+          },
+          "why": {
+            "description": "One sentence: why the first moves the second.",
+            "maxLength": 600,
+            "minLength": 1,
+            "title": "Why",
+            "type": "string"
+          }
+        },
+        "required": [
+          "fromMeasure",
+          "toMeasure",
+          "effect",
+          "why",
+          "owner"
+        ],
+        "title": "MeasureInfluenceWrite",
+        "type": "object"
+      },
       "MeasureLimitPayload": {
         "additionalProperties": false,
         "description": "One band of a measure's limits (#1783 A1a).\n\nThe bands run from the lowest values up. Each one but the last has an\nupper bound; the last holds every value above the band before it. So\nthe whole line is covered and no value falls between two bands.",
@@ -17775,6 +17952,9 @@
                   "last_30_days",
                   "last_3_months",
                   "last_12_months",
+                  "last_3_full_months",
+                  "last_12_full_months",
+                  "year_to_last_full_month",
                   "all_time"
                 ],
                 "type": "string"
@@ -18381,6 +18561,52 @@
           "isSystem"
         ],
         "title": "MeasureSummary",
+        "type": "object"
+      },
+      "MeasureTree": {
+        "description": "The measure tree: from one measure down, or the whole workspace.\n\n# paging-exempt: the measures somebody authored and the influences\n# between them — the graph a person draws, not machine activity.",
+        "properties": {
+          "edges": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/TreeEdge"
+            },
+            "title": "Edges",
+            "type": "array"
+          },
+          "missing": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/TreeGap"
+            },
+            "title": "Missing",
+            "type": "array"
+          },
+          "nodes": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/src__schemas__measure_influence__TreeNode"
+            },
+            "title": "Nodes",
+            "type": "array"
+          },
+          "root": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The measure it starts from; null for all.",
+            "title": "Root"
+          }
+        },
+        "required": [
+          "root"
+        ],
+        "title": "MeasureTree",
         "type": "object"
       },
       "MemberRoleRef": {
@@ -19611,6 +19837,63 @@
           "branch"
         ],
         "title": "OpenProposalSchema",
+        "type": "object"
+      },
+      "OtherMeasure": {
+        "description": "An influence read from one measure's side (#1783 A2): the OTHER\nmeasure, and how the two are linked.",
+        "properties": {
+          "basis": {
+            "default": "",
+            "description": "Where it comes from; often empty.",
+            "title": "Basis",
+            "type": "string"
+          },
+          "effect": {
+            "description": "same or opposite.",
+            "title": "Effect",
+            "type": "string"
+          },
+          "kind": {
+            "description": "influence, or formula on a planned row.",
+            "title": "Kind",
+            "type": "string"
+          },
+          "measure": {
+            "description": "The other measure, by name.",
+            "title": "Measure",
+            "type": "string"
+          },
+          "owner": {
+            "description": "The role or person who answers for it.",
+            "title": "Owner",
+            "type": "string"
+          },
+          "planned": {
+            "default": false,
+            "description": "Whether it marks a missing link.",
+            "title": "Planned",
+            "type": "boolean"
+          },
+          "state": {
+            "description": "active, planned, done or points_nowhere — what it is now.",
+            "title": "State",
+            "type": "string"
+          },
+          "why": {
+            "description": "Why the one moves the other.",
+            "title": "Why",
+            "type": "string"
+          }
+        },
+        "required": [
+          "measure",
+          "kind",
+          "effect",
+          "why",
+          "owner",
+          "state"
+        ],
+        "title": "OtherMeasure",
         "type": "object"
       },
       "OutboundRecipientsResponse": {
@@ -32890,6 +33173,9 @@
                   "last_30_days",
                   "last_3_months",
                   "last_12_months",
+                  "last_3_full_months",
+                  "last_12_full_months",
+                  "year_to_last_full_month",
                   "all_time"
                 ],
                 "type": "string"
@@ -33099,6 +33385,129 @@
           "when"
         ],
         "title": "TransitionSchema",
+        "type": "object"
+      },
+      "TreeEdge": {
+        "description": "One line: ``from`` moves ``to``, by formula or by influence.",
+        "properties": {
+          "basis": {
+            "default": "",
+            "title": "Basis",
+            "type": "string"
+          },
+          "effect": {
+            "description": "same or opposite; empty for a formula part.",
+            "title": "Effect",
+            "type": "string"
+          },
+          "from": {
+            "description": "The measure that moves the other.",
+            "title": "From",
+            "type": "string"
+          },
+          "kind": {
+            "description": "formula or influence.",
+            "title": "Kind",
+            "type": "string"
+          },
+          "owner": {
+            "default": "",
+            "title": "Owner",
+            "type": "string"
+          },
+          "planned": {
+            "default": false,
+            "title": "Planned",
+            "type": "boolean"
+          },
+          "state": {
+            "enum": [
+              "active",
+              "planned",
+              "done",
+              "points_nowhere"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "to": {
+            "description": "The measure that is moved.",
+            "title": "To",
+            "type": "string"
+          },
+          "why": {
+            "default": "",
+            "title": "Why",
+            "type": "string"
+          }
+        },
+        "required": [
+          "from",
+          "to",
+          "kind",
+          "effect",
+          "state"
+        ],
+        "title": "TreeEdge",
+        "type": "object"
+      },
+      "TreeGap": {
+        "description": "A place where \"why did this move?\" stops.",
+        "properties": {
+          "from": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "From"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind"
+          },
+          "measure": {
+            "title": "Measure",
+            "type": "string"
+          },
+          "reason": {
+            "enum": [
+              "not_built",
+              "not_published",
+              "planned",
+              "points_nowhere"
+            ],
+            "title": "Reason",
+            "type": "string"
+          },
+          "to": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "To"
+          }
+        },
+        "required": [
+          "measure",
+          "reason"
+        ],
+        "title": "TreeGap",
         "type": "object"
       },
       "TreeNode": {
@@ -39582,6 +39991,49 @@
           "updatedAt"
         ],
         "title": "DashboardSummary",
+        "type": "object"
+      },
+      "src__schemas__measure_influence__TreeNode": {
+        "description": "One measure in the tree. No value: the screen asks for those.",
+        "properties": {
+          "built": {
+            "description": "False for a measure only a planned row names: not built yet.",
+            "title": "Built",
+            "type": "boolean"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "published": {
+            "description": "Whether a version of it is live.",
+            "title": "Published",
+            "type": "boolean"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "number, currency or percent.",
+            "title": "Unit"
+          }
+        },
+        "required": [
+          "name",
+          "label",
+          "published",
+          "built"
+        ],
+        "title": "TreeNode",
         "type": "object"
       },
       "src__schemas__run__DashboardSummary": {
@@ -56789,6 +57241,230 @@
         ]
       }
     },
+    "/api/v1/measure-influences": {
+      "delete": {
+        "description": "Take one influence out of the draft; answer with what is left of ``to``.\n\nRemoving one that is not there is a success: two screens may take the\nsame row away, and the second must not read as a failure.",
+        "operationId": "delete_measure_influence_api_v1_measure_influences_delete",
+        "parameters": [
+          {
+            "description": "The measure that moves.",
+            "in": "query",
+            "name": "fromMeasure",
+            "required": true,
+            "schema": {
+              "description": "The measure that moves.",
+              "title": "Frommeasure",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The measure that is moved.",
+            "in": "query",
+            "name": "toMeasure",
+            "required": true,
+            "schema": {
+              "description": "The measure that is moved.",
+              "title": "Tomeasure",
+              "type": "string"
+            }
+          },
+          {
+            "description": "influence, or formula for a planned row.",
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "default": "influence",
+              "description": "influence, or formula for a planned row.",
+              "title": "Kind",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeasureInfluenceList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Measure Influence",
+        "tags": [
+          "measures"
+        ]
+      },
+      "get": {
+        "description": "The influences, each with what it is now (``state``).",
+        "operationId": "list_measure_influences_api_v1_measure_influences_get",
+        "parameters": [
+          {
+            "description": "Only the influences into or out of this measure, by name.",
+            "in": "query",
+            "name": "measure",
+            "required": false,
+            "schema": {
+              "default": "",
+              "description": "Only the influences into or out of this measure, by name.",
+              "title": "Measure",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The draft of the influences table (default), or false for what is published — what an agent reads.",
+            "in": "query",
+            "name": "useDraft",
+            "required": false,
+            "schema": {
+              "default": true,
+              "description": "The draft of the influences table (default), or false for what is published — what an agent reads.",
+              "title": "Usedraft",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeasureInfluenceList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Measure Influences",
+        "tags": [
+          "measures"
+        ]
+      },
+      "post": {
+        "description": "Write one influence into the draft, creating the table on the first.\n\nRefused, with every reason: a measure that does not exist (unless the\nrow is planned), a second row with the same from, to and kind, a link\nthe formula already makes, a loop.",
+        "operationId": "create_measure_influence_api_v1_measure_influences_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MeasureInfluenceWrite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeasureInfluenceItem"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Measure Influence",
+        "tags": [
+          "measures"
+        ]
+      },
+      "put": {
+        "description": "Change the effect, words, owner, basis or planned of one influence.\n\nFound by ``fromMeasure``, ``toMeasure`` and ``kind`` — what makes it the\nsame influence. To change one of those, remove it and write a new one.",
+        "operationId": "update_measure_influence_api_v1_measure_influences_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MeasureInfluenceWrite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeasureInfluenceItem"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Measure Influence",
+        "tags": [
+          "measures"
+        ]
+      }
+    },
     "/api/v1/measures": {
       "get": {
         "description": "This workspace's measures, one bounded page at a time (B-NB8).",
@@ -57185,6 +57861,69 @@
           }
         ],
         "summary": "Get Measure Design",
+        "tags": [
+          "measures"
+        ]
+      }
+    },
+    "/api/v1/measures/tree": {
+      "get": {
+        "description": "The measure tree (#1783 A2): formula parts, influences, missing links.\n\nNo values: a screen asks for every node's number in one ``POST\n/measures/query``, so a number is computed one way. Declared before\n``/{measure_id}``, or \"tree\" would be read as an id.",
+        "operationId": "read_measure_tree_api_v1_measures_tree_get",
+        "parameters": [
+          {
+            "description": "The measure to start from, by name: the tree runs down along what its formula names and what moves it. Empty for the whole workspace.",
+            "in": "query",
+            "name": "measure",
+            "required": false,
+            "schema": {
+              "default": "",
+              "description": "The measure to start from, by name: the tree runs down along what its formula names and what moves it. Empty for the whole workspace.",
+              "title": "Measure",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Read the drafts of the measures and of the influences. Off by default: the tree is what is published, as an agent reads it.",
+            "in": "query",
+            "name": "useDraft",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "Read the drafts of the measures and of the influences. Off by default: the tree is what is published, as an agent reads it.",
+              "title": "Usedraft",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeasureTree"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Read Measure Tree",
         "tags": [
           "measures"
         ]
