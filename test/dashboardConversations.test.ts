@@ -151,6 +151,21 @@ describe("list_conversations", () => {
     expect(d).toMatch(/nextCursor/);
     expect(d).toMatch(/triggerInput\.focus/);
     expect(d).toMatch(/list_dashboards/);
+    // Only the dashboard filters; nothing is filtered locally over one page.
+    expect(d).toMatch(/ONLY FILTER/);
+  });
+
+  it("offers no filter the route lacks (status, dates, opener, text)", () => {
+    const input = inputOf("list_conversations");
+    const parsed = input.safeParse({
+      dashboardId: "d-1",
+      status: "failed",
+      createdAfter: "2026-11-01",
+      createdBy: "u-1",
+      search: "plan",
+    });
+    expect(parsed.success).toBe(true);
+    expect(Object.keys(parsed.data as object)).toEqual(["dashboardId"]);
   });
 });
 

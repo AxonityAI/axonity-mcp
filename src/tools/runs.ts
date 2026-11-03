@@ -766,7 +766,12 @@ export function registerRunTools(server: McpServer, client: AxonityClient): void
       "{ items, nextCursor, pageSize, hasMore }. Default page size is 20, max " +
       "200. While hasMore is true you have NOT seen every conversation — pass " +
       "the response's nextCursor back as cursor and repeat until nextCursor is " +
-      "null. Archived conversations are left out.",
+      "null. Archived conversations are left out. " +
+      "\n\nTHE DASHBOARD IS THE ONLY FILTER the backend offers on this list: " +
+      "there is no filter on status, date, opener or the question's text. To " +
+      "find one chat, walk the pages and read `question`, `status` and " +
+      "`createdAt` on every row — a match on page one only says nothing about " +
+      "the pages after it.",
     {
       dashboardId: z
         .string()
