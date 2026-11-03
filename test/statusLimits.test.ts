@@ -170,7 +170,7 @@ describe("the tools say how a status is reached", () => {
     const { descriptions } = setup();
     for (const tool of ["create_measure", "update_measure"]) {
       const text = descriptions.get(tool)!;
-      expect(text).toContain("direction?, limits? }");
+      expect(text).toContain("direction?, limits?, rangeMethod? }");
       expect(text).not.toMatch(/target\?|watchMargin\?/);
       for (const word of [
         "on_track",

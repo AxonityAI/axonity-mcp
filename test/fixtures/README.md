@@ -11,6 +11,41 @@ diff in review.
 
 ## Provenance
 
+- **Expected ranges and KPI comparisons, on top of the earlier splices:**
+  axonity-flow#1783 release 1c (PR #2328), branch
+  `feat/s9-1c-expected-range` at
+  `9b7c0de0853b703ce0183fb8902afb217faae9b2`, plus the #2324 branch at
+  `3a3c90b3c4e2651329bb689752472719d7266d8b`. These backend changes must
+  ship with this connector update. Two real `build_openapi()` dumps, spliced
+  **per field**, so unrelated backend arrivals stay outside this change:
+  - From 1c: the new `MeasureRangeMethodPayload` schema;
+    `MeasureDefinitionPayload.rangeMethod`; `MeasureQueryItem.expected` and
+    `.period`; `MeasureQueryResult.expected`, `.series` and `.warnings`
+    (including `expectedBasis`, `expectedReason` and scoped
+    `power_undefined`); `TopRowsRequest.period` (`last_quarter`).
+  - From #2324: `MeasureQueryItem.against`;
+    `MeasureQueryResult.against`, `.delta`, `.changeKind`;
+    `TopRowsRequest.start` and `.end`. The two dumps have identical period
+    schemas. `measure.quantity` and group changes are free response objects,
+    not invented typed schemas here.
+  - No operation metadata changed for query/rows/formula-spec/validate or
+    dashboard authoring. `CreateDashboardRequest`, `UpdateDashboardRequest`
+    and `DashboardResponse` were checked against both dumps and are already
+    identical: layout remains a free object, whose `periodPicker`,
+    `against`, `sparkline` and `showExpected` rules live in the backend's
+    `domain/dashboards.py`. No local typed layout or formula vocabulary.
+  - Safety: the dumps used the existing backend `venv/bin/python -B`,
+    with an audit hook installed **before backend imports** that rejects
+    opens of `.env*` paths, socket connect/bind, subprocesses and shell calls.
+    The process environment was cleared; `src.config.Settings.model_config`
+    had `env_file = None` set and `get_settings.cache_clear()` called before
+    importing `scripts.dump_openapi`. Then `serialize(build_openapi())`
+    wrote only scratch JSON in this worktree. No database, tenant, network,
+    dotenv or credential loading. The first attempt with the older `.venv`
+    stopped on a missing `pgvector` import; no dependency was installed.
+  Left out: unrelated `appliedFilters`/`comparisonSeries` schema arrivals,
+  B1 findings/settings/monitoring, and every other operation/schema diff.
+
 - **What moves a number, and periods to the last full month, on top of the
   above:** axonity-flow#1783 A2 (release 1b, branch `feat/s9-1b-measure-tree`
   at `d023816d9`, not merged yet — this snapshot and that PR are merged and

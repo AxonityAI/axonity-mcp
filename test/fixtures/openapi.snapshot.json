@@ -17195,6 +17195,17 @@
             "description": "What the number counts, in the words of the business: EUR, dogs, customers, orders, answers. Required for a single aggregation and derived for a formula. It is what lets the platform refuse adding euros to dogs — a 'number' format cannot, because it says how to show a figure and not what the figure is.",
             "title": "Quantity"
           },
+          "rangeMethod": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MeasureRangeMethodPayload"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How the expected range is worked out: {method, grain, periods}. Omit for no expected range — there is no default. A range says what is NORMAL for the number and never changes its status; a status is a measure and its limits."
+          },
           "target": {
             "description": "Removed (#1783). Refused with legacy_field: a target is a measure, and a status is a measure and its limits.",
             "title": "Target"
@@ -17863,6 +17874,19 @@
         "additionalProperties": false,
         "description": "One tile's question: a measure, over a period, maybe split.",
         "properties": {
+          "against": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Another measure to set this number against — the plan, the budget, a target — by its name. Calculated over the same period and the same filters as the number, and answered in `against` with its value and the gap. It gives no status: the status stays the limits' (`statusMeasure`).",
+            "title": "Against"
+          },
           "compare": {
             "default": "none",
             "description": "What the total is compared with.",
@@ -17886,6 +17910,12 @@
             ],
             "description": "Last day of a custom range, inclusive.",
             "title": "End"
+          },
+          "expected": {
+            "default": false,
+            "description": "Also give the expected range — what is normal for this number — from the measure's rangeMethod: on the total when the period is exactly one full period of the range's grain (last_month for a range per month, last_quarter per quarter), and on each point of a series drawn in that grain. Off by default: it reads the periods before as well. A range never changes the status.",
+            "title": "Expected",
+            "type": "boolean"
           },
           "explain": {
             "default": false,
@@ -17948,6 +17978,7 @@
                   "this_month",
                   "last_month",
                   "this_quarter",
+                  "last_quarter",
                   "year_to_date",
                   "last_30_days",
                   "last_3_months",
@@ -18077,6 +18108,19 @@
       "MeasureQueryResult": {
         "description": "One answer. ``ok`` false carries only ``key`` and ``error``.",
         "properties": {
+          "against": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "With `against` asked: {measure, label, total, delta, change, changeKind} — the other measure over the same period and filters, and the gap from it to this number (`delta` = total − against's total). {measure, error} instead when it could not be read, is of another quantity, or cannot take a filter; the number itself still stands. Null when nothing was asked.",
+            "title": "Against"
+          },
           "certified": {
             "anyOf": [
               {
@@ -18100,6 +18144,16 @@
             ],
             "description": "Relative change against the comparison: 0.096 is +9.6%.",
             "title": "Change"
+          },
+          "changeKind": {
+            "default": "relative",
+            "description": "How a change of this number is reported. `points`: it is a percentage or a score (quantity ratio, or a percent format), and its change is `delta` — in percentage points (pp) for a percentage, in points for a score; a percentage of a percentage misleads. `relative`: an amount or a count, and its change is `change` as a percentage. The same for `against` and for every compared group.",
+            "enum": [
+              "relative",
+              "points"
+            ],
+            "title": "Changekind",
+            "type": "string"
           },
           "code": {
             "anyOf": [
@@ -18145,6 +18199,18 @@
             ],
             "title": "Comparisontotal"
           },
+          "delta": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Absolute change against the comparison, in the number's own unit: `total` − `comparisonTotal`. For a percentage that is a fraction, so 0.029 is +2.9 percentage points.",
+            "title": "Delta"
+          },
           "error": {
             "anyOf": [
               {
@@ -18155,6 +18221,19 @@
               }
             ],
             "title": "Error"
+          },
+          "expected": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "With `expected`: the expected range of the total, {method, label, grain, periods, low, high, center, basis: {from, to, values, spread}, outside: below|above|null}. basis.values is how many periods before the one judged the band was read from (the setting's periods); from–to are the days read, a year earlier included for same_period_last_year. Week periods a year earlier are the same ISO week. When there is none, low and high are null and `reason` says why — no_range_method, not_with_split, period_is_not_one_full_<grain>, or not_enough_history with {needed, withValue} — and `detail` says it in words. Null when not asked for.",
+            "title": "Expected"
           },
           "freshAsOf": {
             "anyOf": [
@@ -18293,7 +18372,7 @@
           },
           "series": {
             "default": [],
-            "description": "One point per bucket (and group): {bucket, group, value}.",
+            "description": "One point per bucket (and group): {bucket, group, value}. With `expected` and a series in the range's grain, each point also carries {expectedLow, expectedHigh, partial}: the band read from the periods before it, and partial true — with no band — for a period that is not whole inside the question or not over yet. A point without a band also says why in expectedReason (partial, not_enough_history). A point with a band carries expectedBasis {from, to, values, spread}, the same history description as expected.basis on the total.",
             "items": {
               "additionalProperties": true,
               "type": "object"
@@ -18379,7 +18458,7 @@
           },
           "warnings": {
             "default": [],
-            "description": "What is worth knowing about this number without it being wrong: `{code, message, where, severity}`. `empty_leaf` says which PART of a formula found no rows in this period — in a sum an empty side counts as nought, which is right for the arithmetic and invisible to the reader, so a feed that stopped loading would otherwise just look like a bad month. The codes are the ones in GET /measures/formula-spec.",
+            "description": "What is worth knowing about this number without it being wrong: `{code, message, where, severity}`. `empty_leaf` says which PART of a formula found no rows in this period — in a sum an empty side counts as nought, which is right for the arithmetic and invisible to the reader, so a feed that stopped loading would otherwise just look like a bad month. `power_undefined` locates an undefined power in `where.scope` (total, groups, or series), with `where.group` for groups/series and `where.bucket` for series. The codes are the ones in GET /measures/formula-spec.",
             "items": {
               "additionalProperties": true,
               "type": "object"
@@ -18393,6 +18472,52 @@
           "ok"
         ],
         "title": "MeasureQueryResult",
+        "type": "object"
+      },
+      "MeasureRangeMethodPayload": {
+        "additionalProperties": false,
+        "description": "How a measure's expected range is worked out (#1783, 1c).\n\nEvery setting is the owner's choice: there is no default method, grain\nor number of periods. GET /measures/formula-spec lists the methods\n(`rangeMethods`), what each needs and when it fits.",
+        "properties": {
+          "grain": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The period that is judged: week, month or quarter. No finer than any table the measure reads.",
+            "title": "Grain"
+          },
+          "method": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "natural_limits (the average of the periods before, plus and minus 2.66 times their average moving range) or same_period_last_year (the growth against a year earlier, with the same band on that growth).",
+            "title": "Method"
+          },
+          "periods": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How many full periods before the one judged the range is read from — at least 2. Too few periods with a value means no range, with the reason and the count.",
+            "title": "Periods"
+          }
+        },
+        "title": "MeasureRangeMethodPayload",
         "type": "object"
       },
       "MeasureSummary": {
@@ -33143,6 +33268,19 @@
             "title": "Descending",
             "type": "boolean"
           },
+          "end": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Last day of that range, inclusive.",
+            "title": "End"
+          },
           "filters": {
             "default": [],
             "items": {
@@ -33169,6 +33307,7 @@
                   "this_month",
                   "last_month",
                   "this_quarter",
+                  "last_quarter",
                   "year_to_date",
                   "last_30_days",
                   "last_3_months",
@@ -33197,6 +33336,19 @@
               }
             ],
             "title": "Sortby"
+          },
+          "start": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "First day of a range of the viewer's own, with `end` and no `period`: one closed month or quarter a dashboard was set to (#2324).",
+            "title": "Start"
           },
           "tableId": {
             "format": "uuid",

@@ -150,6 +150,7 @@ export const PERIOD_PRESETS = [
   "this_month",
   "last_month",
   "this_quarter",
+  "last_quarter",
   "year_to_date",
   "last_30_days",
   "last_3_months",
@@ -177,7 +178,8 @@ export const FULL_MONTH_NOTE =
   "trend or a number held against a monthly budget, so two days of revenue " +
   "are not read against a whole month. year_to_last_full_month is the year " +
   "that month belongs to — on 2 January, the whole year before. Today and " +
-  "the last full month are counted in Europe/Brussels time.";
+  "the last full month are counted in Europe/Brussels time. " +
+  "last_quarter is the previous completed calendar quarter.";
 
 export function registerMeasureTools(
   server: McpServer,
@@ -220,13 +222,15 @@ export function registerMeasureTools(
       "\n\nEach question is " +
       "`{ key, measure, tableId?, period?, start?, end?, compare?, grain?, " +
       "splitBy?, filters?, limit?, useDraft?, useDraftChain?, explain?, " +
-      "statusMeasure? }`. `key` is your own label and " +
+      "statusMeasure?, against?, expected? }`. `key` is your own label and " +
       "comes back on the answer. `measure` is the measure's NAME — its " +
       "handle, unique in the workspace (list_measures); `tableId` is " +
       "optional and no longer what finds it. `period` is one of: " +
       PERIODS +
       " (default this_month) — or set it to null and send `start`/`end` " +
-      "(YYYY-MM-DD) for a custom range. " +
+      "(YYYY-MM-DD, end inclusive) for a custom range, including a chosen " +
+      "month or quarter. compare also works on these dates; month:YYYY-MM " +
+      "and quarter:YYYY-QN are viewer state, never API period presets. " +
       FULL_MONTH_NOTE +
       " `compare` is none, previous_period or " +
       "previous_year. `grain` (none, auto, day, week, month, quarter, year) " +
@@ -260,6 +264,44 @@ export function registerMeasureTools(
       "there are no limits to read. No limits, no status: there is no " +
       "default, so do not call a number on or off track without one. " +
       "`measure` in the answer carries its `limits`. " +
+      "\n\nAGAINST ANOTHER MEASURE: `against` is its NAME (string or null, " +
+      "not a {measure, label} object). It reads the same period and filters, " +
+      "without a comparison, series or split of its own. It reads published " +
+      "definitions even with useDraft; only useDraftChain reads its draft. " +
+      "`against` never determines the status. The answer is null when not " +
+      "asked, or `{measure, label, total, delta, change, changeKind}`. " +
+      "`against.error` instead explains a missing/unpublished measure, a " +
+      "different known quantity, an unsupported filter or a calculation " +
+      "failure; the main number can still be ok. Generic quantity count " +
+      "does not cause a quantity mismatch. An empty basis keeps " +
+      "total/delta/change null; a zero basis keeps delta but change is null. " +
+      "\n\nREPORT A CHANGE as `changeKind` says: points is `delta` in " +
+      "percentage points (pp) for a percentage, or points for a score; " +
+      "relative is `change` as a percentage. `measure.quantity` says what " +
+      "the number counts (count is the generic fallback); quantity ratio " +
+      "or a percent format gives points. `delta` is total - comparisonTotal " +
+      "in the number's own unit; `change` remains relative to the absolute " +
+      "comparisonTotal. With against they describe the gap to against.total. " +
+      "Missing values give null; a zero comparison gives change null. For " +
+      "a percentage delta 0.029 means +2.9 pp; for a score delta 5.2 is " +
+      "+5.2 points; a relative change 0.096 is +9.6%. Compared groups carry " +
+      "changeKind too. Use the server's values, never recalculate them. " +
+      "\n\nEXPECTED RANGE: ask `expected: true` (off by default). " +
+      "`expected` is null when not asked, otherwise " +
+      "`{method, label, grain, periods, low, high, center, basis: " +
+      "{from, to, values, spread}, outside: below|above|null}`. It describes " +
+      "what is normal, independently of the status. Without a band, low/high " +
+      "are null and reason/detail explain no_range_method, not_with_split, " +
+      "period_is_not_one_full_<grain>, or not_enough_history (needed, " +
+      "withValue). The method label comes from get_measure_formula_spec. " +
+      "`basis.values` is the chosen number of historical periods for both " +
+      "methods; same_period_last_year counts pairs, and from/to also covers " +
+      "last year. An ISO week 53 without a counterpart has no band; read " +
+      "detail. Only a series in the rangeMethod grain carries expectedLow, " +
+      "expectedHigh and partial: a running or incompletely requested period " +
+      "has partial true and no band. A missing band has expectedReason " +
+      "(partial or not_enough_history); a band has expectedBasis, the same " +
+      "{from, to, values, spread} as the total's basis. " +
       "\n\nONE BAD QUESTION DOES NOT FAIL THE CALL: every answer carries " +
       "`ok`, and `ok: false` comes with an `error` of its own and, where it " +
       "has one, a `code` from get_measure_formula_spec — `grain_too_fine` " +
@@ -268,9 +310,11 @@ export function registerMeasureTools(
       "relationship it reads is gone: the measure must be repaired, not the " +
       "question). Check each one. `warnings` do not make it wrong but are " +
       "worth saying: `empty_leaf` means one PART found no rows in this " +
-      "period — in a sum that side counts as nought, which is also what a " +
-      "feed that stopped loading looks like. A period with no rows in a " +
-      "series is shown empty, not left out. " +
+      "period — check whether its feed stopped loading. A period with no rows in a " +
+      "series is shown empty, not left out. `power_undefined` means a power " +
+      "has no real value. Read `where.scope` (total, groups, series), " +
+      "`where.group` for groups/series and `where.bucket` for series: a " +
+      "warning about one group or point does not invalidate a valid total. " +
       "\n\n`freshAsOf` says how old the newest row behind the number is; " +
       "`certified: false` means it was computed from a draft; `tables` names " +
       "every table the number came from. Say so when you " +
@@ -312,11 +356,19 @@ export function registerMeasureTools(
       limit: z.number().int().optional().describe("How many rows, 1-50. Defaults to 10."),
       period: z
         .string()
+        .nullable()
         .optional()
         .describe(
           `Only rows in this period, on the table's time axis: ${PERIODS}. ` +
+            "Set null (or omit) with start/end for a chosen month or quarter. " +
             FULL_MONTH_NOTE,
         ),
+      start: z.string().nullable().optional().describe(
+        "First day of a custom range, YYYY-MM-DD; send with end and no period.",
+      ),
+      end: z.string().nullable().optional().describe(
+        "Last day of a custom range, YYYY-MM-DD, inclusive.",
+      ),
       filters: z
         .array(z.record(z.unknown()))
         .optional()

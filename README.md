@@ -363,7 +363,25 @@ across these routes — the tool parameter names say which.
     its own, measures named by their handle), `list_measure_rows` (a list
     tile). Plus `duplicate_dashboard`. Besides the periods that run to date,
     `last_3_full_months`, `last_12_full_months` and `year_to_last_full_month`
-    end at the last full month.
+    end at the last full month. `last_quarter` is the previous completed
+    calendar quarter. Both question and row tools accept `period: null` with
+    `start`/`end` dates (end inclusive) for a chosen month or quarter.
+  - **Expected ranges**: choose `definition.rangeMethod` explicitly from the
+    live formula spec's `rangeMethods`; no method, grain or history length
+    is invented by the connector. `query_measures` with `expected: true`
+    returns the server's band and historical basis, or the reason none is
+    available. Series points retain `expectedBasis`, `expectedReason` and
+    `partial`. `power_undefined` warnings locate the affected total, group
+    or point. The formula spec and validation also carry `power` unchanged.
+  - **Number cards**: query `against` names another measure; the answer keeps
+    its value, gap and errors separate from the status. Report changes as
+    `changeKind` says: `delta` in points for a percentage/score, `change` as
+    a percentage for a relative change. A dashboard number tile accepts
+    `config.against: {measure, label?}` and `config.sparkline` (none, trend,
+    bullet); number and trend tiles accept `showExpected`. A dashboard's
+    `periodPicker` selects free, full_periods or hidden. These settings are
+    forwarded and validated by the backend; read the tool descriptions
+    before changing them, and preserve the whole layout on update.
   - A reference doc has no `semanticKind` any more; the platform refuses it
     and the other retired fields and says where each one went.
 - **Applications** (`application`): a program an agent operates through an
