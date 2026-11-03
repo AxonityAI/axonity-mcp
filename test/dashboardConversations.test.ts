@@ -97,18 +97,18 @@ describe("list_conversations", () => {
   it("across dashboards: /runs?kind=conversation, with status and dates in the query", async () => {
     const { handlers, client } = setup();
     await handlers.get("list_conversations")!({
-      status: "failed,completed",
+      status: "idle,failed",
       createdAfter: "2026-11-01",
-      createdBefore: "2026-11-03",
+      createdBefore: "2026-11-03T23:59:59",
       includeArchived: true,
       limit: 100,
       cursor: "c-2",
     });
     expect(client.get).toHaveBeenCalledWith("/api/v1/runs", {
       kind: "conversation",
-      status: "failed,completed",
+      status: "idle,failed",
       created_after: "2026-11-01",
-      created_before: "2026-11-03",
+      created_before: "2026-11-03T23:59:59",
       include_archived: true,
       limit: 100,
       cursor: "c-2",
@@ -237,6 +237,21 @@ describe("list_conversations", () => {
     const { schemas } = setup();
     const after = schemas.get("list_conversations")!.createdAfter.description ?? "";
     expect(after).toMatch(/IGNORED, not refused/);
+  });
+
+  it("says a bare createdBefore date excludes that day", () => {
+    const { schemas } = setup();
+    const before = schemas.get("list_conversations")!.createdBefore.description ?? "";
+    expect(before).toMatch(/EXCLUDES the chats of 3 November itself/);
+    expect(before).toMatch(/2026-11-03T23:59:59/);
+  });
+
+  it("names a conversation's statuses, with idle as answered", () => {
+    const { schemas } = setup();
+    const status = schemas.get("list_conversations")!.status.description ?? "";
+    expect(status).toMatch(/`idle` = answered/);
+    expect(status).toMatch(/NOT `completed`/);
+    expect(status).toMatch(/matches nothing/);
   });
 });
 

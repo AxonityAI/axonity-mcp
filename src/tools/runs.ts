@@ -802,14 +802,20 @@ export function registerRunTools(server: McpServer, client: AxonityClient): void
         .string()
         .optional()
         .describe(
-          'Comma-separated run statuses, e.g. "failed" or "running,completed". ' +
-            "Without dashboardId only. Omit for all.",
+          'Comma-separated run statuses, e.g. "idle" or "running,failed". ' +
+            "A conversation's own statuses: `idle` = answered, waiting for the " +
+            "next question (NOT `completed`: an answered chat never reaches it); " +
+            "`running` = the analyst is working on a turn; `failed`; " +
+            "`completed` only once a chat was ended. An unknown status is not " +
+            "refused — it just matches nothing, so an empty page may mean a " +
+            "misspelt status. Without dashboardId only. Omit for all.",
         ),
       createdAfter: z
         .string()
         .optional()
         .describe(
-          "ISO date or datetime lower bound on when the chat started, e.g. " +
+          "ISO date or datetime lower bound on when the chat started (a bare " +
+            "date is midnight at its start, so that day is included), e.g. " +
             '"2026-11-01". Without dashboardId only. A value the backend cannot ' +
             "parse is IGNORED, not refused — the list then comes back unfiltered " +
             "by it, so send a plain ISO date.",
@@ -818,7 +824,10 @@ export function registerRunTools(server: McpServer, client: AxonityClient): void
         .string()
         .optional()
         .describe(
-          "ISO date or datetime upper bound, inclusive. Without dashboardId " +
+          "ISO date or datetime upper bound, inclusive of that MOMENT. A bare " +
+            'date means midnight at its start, so "2026-11-03" EXCLUDES the ' +
+            'chats of 3 November itself: for "up to and including 3 November" ' +
+            'send "2026-11-04" or "2026-11-03T23:59:59". Without dashboardId ' +
             "only. Same caution: an unparseable value is silently ignored.",
         ),
       includeArchived: z
