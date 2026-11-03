@@ -11,6 +11,22 @@ diff in review.
 
 ## Provenance
 
+- **Completed week periods (#2330), on top of 1c/KPI below:**
+  axonity-flow `499bb42353e36d0d089af455fcff9c05bbc2abf3`, from
+  `backend/src/schemas/measure_query.py` (`PeriodPreset`) and
+  `backend/src/domain/measure_periods.py` (`PERIOD_PRESETS`, `last_full_weeks`).
+  Only `last_4_full_weeks`, `last_8_full_weeks`, `last_13_full_weeks` were
+  added to the `period` enums of `MeasureQueryItem` and `TopRowsRequest`.
+  The two source lists were extracted with Python `ast.parse`/`literal_eval`
+  and verified equal, without importing backend code or loading dotenv.
+  The presets mean 4, 8 or 13 completed Monday-to-Sunday weeks, ending on
+  the Sunday before the current week's Monday (Europe/Brussels).
+  The earlier `last_quarter` splice stays: #2330 is a parallel branch,
+  not a replacement for #2328/#2329. Ship all three backend changes before
+  using this connector's combined period vocabulary. No operation, default,
+  request field or other schema changed; `lastFullWeeks` is private to the
+  Analyst tool and is not an MCP query parameter.
+
 - **Expected ranges and KPI comparisons, on top of the earlier splices:**
   axonity-flow#1783 release 1c (PR #2328), branch
   `feat/s9-1c-expected-range` at

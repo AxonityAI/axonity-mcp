@@ -371,3 +371,31 @@ describe("periods that end at the last full month", () => {
     }
   });
 });
+
+describe("completed week periods from the Analyst contract (#2330)", () => {
+  const WEEKS = ["last_4_full_weeks", "last_8_full_weeks", "last_13_full_weeks"];
+
+  it("the shared list and both request enums include all three closed-week presets", () => {
+    expect(PERIOD_PRESETS).toEqual(expect.arrayContaining(WEEKS));
+    for (const model of ["MeasureQueryItem", "TopRowsRequest"]) {
+      const period = snapshot.components.schemas[model].properties!.period;
+      const enumeration = period.anyOf.find((o: { enum?: string[] }) => o.enum).enum;
+      expect(enumeration, model).toEqual(expect.arrayContaining(WEEKS));
+    }
+  });
+
+  it("each period surface explains full Monday-to-Sunday weeks without the current week", () => {
+    const { descriptions, schemas } = setup();
+    const texts: [string, string][] = [
+      ["query_measures", descriptions.get("query_measures")!],
+      ["list_measure_rows.period", schemas.get("list_measure_rows")!.period.description!],
+      ["create_dashboard", descriptions.get("create_dashboard")!],
+      ["update_dashboard", descriptions.get("update_dashboard")!],
+    ];
+    for (const [where, text] of texts) {
+      for (const preset of WEEKS) expect(text, where).toContain(preset);
+      expect(text, where).toContain("Monday to Sunday");
+      expect(text, where).toContain("current week excluded");
+    }
+  });
+});

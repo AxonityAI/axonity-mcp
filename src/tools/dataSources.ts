@@ -158,6 +158,9 @@ export const PERIOD_PRESETS = [
   "last_3_full_months",
   "last_12_full_months",
   "year_to_last_full_month",
+  "last_4_full_weeks",
+  "last_8_full_weeks",
+  "last_13_full_weeks",
   "all_time",
 ] as const;
 
@@ -167,7 +170,8 @@ export const PERIODS = PERIOD_PRESETS.join(", ");
 /**
  * What sets the `…full_month…` periods apart (axonity-flow#1783, 2 Nov): a
  * monthly number read against a monthly plan must not count the month in
- * progress. Said wherever a period is chosen.
+ * progress. Also explains the completed quarter and week presets. Said
+ * wherever a period is chosen.
  */
 export const FULL_MONTH_NOTE =
   "A period that runs to date — this_month, this_quarter, year_to_date, " +
@@ -179,7 +183,10 @@ export const FULL_MONTH_NOTE =
   "are not read against a whole month. year_to_last_full_month is the year " +
   "that month belongs to — on 2 January, the whole year before. Today and " +
   "the last full month are counted in Europe/Brussels time. " +
-  "last_quarter is the previous completed calendar quarter.";
+  "last_quarter is the previous completed calendar quarter. " +
+  "last_4_full_weeks, last_8_full_weeks and last_13_full_weeks are the last " +
+  "4, 8 or 13 completed weeks, Monday to Sunday, with the current week excluded. " +
+  "They end on the Sunday before this week's Monday, in Europe/Brussels time.";
 
 export function registerMeasureTools(
   server: McpServer,

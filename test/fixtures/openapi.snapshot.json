@@ -17986,6 +17986,9 @@
                   "last_3_full_months",
                   "last_12_full_months",
                   "year_to_last_full_month",
+                  "last_4_full_weeks",
+                  "last_8_full_weeks",
+                  "last_13_full_weeks",
                   "all_time"
                 ],
                 "type": "string"
@@ -33315,6 +33318,9 @@
                   "last_3_full_months",
                   "last_12_full_months",
                   "year_to_last_full_month",
+                  "last_4_full_weeks",
+                  "last_8_full_weeks",
+                  "last_13_full_weeks",
                   "all_time"
                 ],
                 "type": "string"
