@@ -141,7 +141,31 @@ const DATE_TABLE_NOTE =
 const TILE_PERIOD_NOTE =
   `THE PERIOD — the dashboard's own \`layout.period\`, a tile's ` +
   `\`config.period\`, and \`period\` on each compared row of a bars tile — ` +
-  `is one of: ${PERIODS}. ${FULL_MONTH_NOTE}`;
+  `is one of: ${PERIODS}. ${FULL_MONTH_NOTE} ` +
+  "`layout.periodPicker` is free (default), full_periods or hidden. " +
+  "full_periods requires layout.period to be last_month, last_quarter, " +
+  "last_3_full_months, last_12_full_months or year_to_last_full_month. " +
+  "The viewer may also choose a closed month/quarter without changing the " +
+  "saved layout; query it with period null and start/end dates, end inclusive. " +
+  "hidden hides the viewer's selector and keeps layout.period. A tile's own " +
+  "period or fixed start/end dates take precedence.";
+
+/** Number comparisons and expected bands are validated by the backend. */
+const TILE_NUMBER_NOTE =
+  "\n\nA NUMBER TILE may carry `config.against: {measure, label?}`: " +
+  "a non-empty measure NAME different from config.measure, and an optional " +
+  "label of at most 120 characters (otherwise the basis measure's label). " +
+  "This sets it against another number, never its status. Quantity and " +
+  "filter compatibility are checked when queried. `config.sparkline` is " +
+  "none, trend (default) or bullet; bullet requires config.against. " +
+  "none/bullet ask for grain none, trend for auto. Only number tiles accept " +
+  "against or sparkline. compare and against are independent: set " +
+  "`compare: \"none\"` explicitly for the basis comparison alone. " +
+  "For an S card with both comparisons, omit the trend or choose M; the " +
+  "viewer enforces this space constraint, not the API schema. " +
+  "`config.showExpected` is a boolean, only on number or trend tiles, " +
+  "to request the measure's expected band. The period and comparison " +
+  "caption come from the answer; caption remains context, with no variables.";
 
 /**
  * What writing a measure takes (axonity-flow#1908). The contract, not a manual:
@@ -175,7 +199,7 @@ const MEASURE_NOTE =
   "measure needs one too), `questions` (what it answers, in the words " +
   "someone would ask) and optionally `name`, the handle — derived from the " +
   "label when omitted and unique in the workspace. `definition` is " +
-  "`{ expression, quantity?, format?, direction?, limits? }`; " +
+  "`{ expression, quantity?, format?, direction?, limits?, rangeMethod? }`; " +
   "`quantity` is derived for a formula over measures. " +
   "\n\nA STATUS IS A MEASURE AND ITS LIMITS. `limits` are the bands a " +
   "status is read from, LOWEST VALUES FIRST: `[{ status: \"off_track\", " +
@@ -194,6 +218,13 @@ const MEASURE_NOTE =
   "and put the limits on THAT; a tile can show the figure and read its " +
   "status from the deviation (`statusMeasure`). `direction` stays: it " +
   "colours a change (is going up good?), not the status. " +
+  "\n\nAN EXPECTED RANGE is optional `definition.rangeMethod`: " +
+  "`{method, grain, periods}`. Read `rangeMethods` in " +
+  "get_measure_formula_spec for the methods, when they fit and their " +
+  "settings. The owner chooses all three; there is no default. The " +
+  "backend checks them on save (`bad_range_method`), including a time " +
+  "axis and a grain no finer than any table the measure reads. An " +
+  "expected range describes what is normal and never changes the status. " +
   "\n\nThe fields from before the formula — `tableId`, `clearTable`, " +
   "`definition.aggregation`, `column`, `numerator`, `denominator` — and " +
   "`definition.target` and `watchMargin`, from before a status was a " +
@@ -468,7 +499,9 @@ const ENTITIES: EntityDef[] = [
       " `tableId` and `clearTable` are gone: a measure has no home table, " +
       "the tables it reads follow from its formula. Sending `definition` " +
       "replaces it whole, so send the `expression` and its `limits` with " +
-      "it — a definition sent without them takes the measure's status away.",
+      "it — a definition sent without them takes the measure's status away. " +
+      "Sending definition without rangeMethod removes the expected range; " +
+      "include it to keep the range.",
   },
   {
     // A named read of one source (axonity-flow#2010, S1), with routes in the
@@ -607,13 +640,13 @@ const ENTITIES: EntityDef[] = [
       "tile shows the status. While a tile names a measure as its " +
       "`statusMeasure`, that measure cannot be renamed or deleted." +
       "\n\n" +
-      TILE_PERIOD_NOTE,
+      TILE_PERIOD_NOTE + TILE_NUMBER_NOTE,
     updateWarning:
       "NO DRAFT: a saved dashboard is what everyone it is shared with sees. " +
       "`layout` is replaced WHOLE when sent — read first and send it complete. " +
       "A tile may carry `config.statusMeasure`: the measure whose limits give " +
       "it its status, when that is not the measure it shows. " +
-      TILE_PERIOD_NOTE,
+      TILE_PERIOD_NOTE + TILE_NUMBER_NOTE,
   },
 ];
 

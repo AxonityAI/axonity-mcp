@@ -208,7 +208,12 @@ export function registerMeasureFormulaTools(
       "grains and limits; every refusal `code` with `when` and `fix`; " +
       "`recipes` for the numbers a management team asks for (a sum over two " +
       "facts, a margin %, a share of the total, a figure against its plan " +
-      "with a status); and `buildOrder`. A word " +
+      "with a status, or growth to a plan); and `buildOrder`. The live spec " +
+      "also supplies `power(base, exponent)`, its growth_to_a_plan recipe " +
+      "and its refusal/warning codes, plus `rangeMethods`: each method's " +
+      "label, description, fits, needs, readsLastYear and settings " +
+      "(grain choices and the minimum periods). Choose from this deploy's " +
+      "spec; the connector does not maintain a second register. A word " +
       "with `available: false` is coming and is refused by name " +
       "(`not_yet_supported`) — do not use it. " +
       "\n\n`includeWorkspace: true` adds THIS workspace's vocabulary as " +
@@ -282,7 +287,10 @@ export function registerMeasureFormulaTools(
       "quantity — say what the number counts. " +
       "\n\nA measure's `limits` (the bands its status is read from) are " +
       "NOT checked here — only the formula is. They are checked when the " +
-      "measure is saved, and refused there with `bad_limits`.",
+      "measure is saved, and refused there with `bad_limits`. " +
+      "`rangeMethod` is also checked only on save (`bad_range_method`); " +
+      "this tool checks the formula, including power and its bad_power " +
+      "refusal, using the platform's current specification.",
     {
       expression: z
         .union([z.string(), z.record(z.unknown())])
@@ -335,7 +343,9 @@ export function registerMeasureFormulaTools(
       "has since gone says so here. `readsTables` follows from the leaves; " +
       "there is no home table. `definition.limits` holds the bands its " +
       "status is read from, lowest values first; none means it has no " +
-      "status. " +
+      "status. `definition.rangeMethod`, when chosen, holds the expected " +
+      "range settings {method, grain, periods}; read rangeMethods in " +
+      "get_measure_formula_spec for their meaning. " +
       "\n\nWHAT IT IS CONNECTED TO: `dependsOn` is every measure it rests " +
       "on — the whole chain, which publishing checks; `usedBy` every " +
       "measure that rests on IT; `dashboards` every dashboard with a tile " +
