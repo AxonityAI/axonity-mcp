@@ -155,7 +155,15 @@ export const FORBIDDEN: Rule[] = [
   // session memory per run (list_run_session_memory) and reference_docs for
   // workflow-bound material. `end-conversation` belongs to this stack too: it
   // closes a Builder conversation run.
-  { label: "builder conversations and their files", path: /\/(conversations|conversation-attachments|files|folders)(\/|$)/ },
+  //
+  // The conversation COLLECTION itself (`GET`/`POST /conversations`) left this
+  // rule on 2026-11-03: the same routes open and list a chat about a dashboard
+  // with the Dashboard Analyst, and testing that analyst means reading and
+  // starting those chats (`list_conversations`, `start_conversation`). Both
+  // tools always name a dashboard, which is what makes the backend serve the
+  // Analyst and not the Builder team — the Builder chat stays undriven by
+  // construction, since a path rule cannot tell the two apart.
+  { label: "builder chat files and attachments", path: /\/(conversation-attachments|files|folders)(\/|$)/ },
   { label: "end a builder conversation run", path: /\/runs\/[^/]+\/end-conversation$/ },
 
   // ---- axonity-mcp#63 — what the refreshed snapshot brought with it -------

@@ -522,6 +522,23 @@ with stopping runs in bulk (admin), the tenant's storage footprint (admin), an
 inbound channel reply (authenticated by the email/WhatsApp adapter, not by a
 service token) and the retired `workflow-memory` placeholder.
 
+**Testing the Dashboard Analyst.** A chat about a dashboard is a run of kind
+`conversation`; `list_runs` asks for workflow runs only. `list_conversations`
+lists the chats (paged, newest first, only the ones opened by the person the
+token belongs to) in one of two ways: for one dashboard (`dashboardId`, no
+other filter), or across every dashboard that person can see, filtered by
+`status`, `createdAfter`/`createdBefore` and `includeArchived` (the backend's
+`GET /runs?kind=conversation`). No route combines a dashboard with those
+filters, so the tool refuses the mix instead of dropping one. Who opened a chat
+and the text of its question cannot be filtered on at all. `start_conversation` opens a new one with an opening
+question and, optionally, the tile it is about (`focus`) — the same request the
+dashboard's chat window sends. A follow-up is `send_run_message`. The answer and
+the tools the analyst called (`read_measure`, `show_visual`, with their
+arguments) are in the transcript: `read_run`, then
+`read_run_invocation_messages` on the orchestrator row. Starting a chat needs a
+token with the `author` scope, a follow-up the `operate` scope. The Builder chat
+and its files stay out of reach.
+
 **`list_todo_steps`** is the same question across the whole tenant: every step
 waiting on a human, in any run. It is paged over the waiting **runs**, so
 `items` can be longer than `pageSize` — one run may park several steps. Follow
