@@ -60,7 +60,9 @@ export function registerRunTools(server: McpServer, client: AxonityClient): void
       "quiet fallback to a different start. " +
       "\n\nA run may PARK on a step that asks a question instead of finishing. " +
       "read_run_waiting_on says what it is parked on; answer_run_question and " +
-      "send_run_message are how it moves again.",
+      "send_run_message are how it moves again. " +
+      "\n\nA chat with the Dashboard Analyst is not a workflow run: start one " +
+      "with start_conversation.",
     {
       workflowId: z.string().describe("The workflow's id."),
       triggerId: z
@@ -140,7 +142,10 @@ export function registerRunTools(server: McpServer, client: AxonityClient): void
       "and repeats rows between pages. Never build a cursor — echo back the " +
       "one you were given. " +
       "\n\nUnlike list_workflow_runs, this route does list per-item FOR EACH " +
-      "runs alongside their launches.",
+      "runs alongside their launches. " +
+      "\n\nCONVERSATIONS ARE NOT HERE. A chat about a dashboard with the " +
+      "Dashboard Analyst is a run of kind `conversation`, and this list leaves " +
+      "those out — list_conversations lists them, per dashboard.",
     {
       status: z
         .string()
@@ -268,7 +273,16 @@ export function registerRunTools(server: McpServer, client: AxonityClient): void
       "an error, which is the same trap apply_workflow_mutations avoids by not " +
       "forwarding a document either. Pass includeSnapshot: true when you " +
       "actually need to see what the run executed (e.g. it behaved unlike the " +
-      "current draft and you want to know which document it ran).",
+      "current draft and you want to know which document it ran)." +
+      "\n\nA CONVERSATION (`kind: conversation`, e.g. a chat with the Dashboard " +
+      "Analyst from list_conversations or start_conversation) reads here too. " +
+      "`status` says whether the analyst is still working on the last turn or " +
+      "is waiting for the next one; `triggerInput` holds the dashboard " +
+      "(`dashboardId`), the opening question (`message`) and the tile asked " +
+      "about (`focus`). The answer itself and the tools the analyst called are " +
+      "in the transcript: take the orchestrator row from `agentInvocations` " +
+      "and read it with read_run_invocation_messages. read_run_trace is not " +
+      "where a conversation's tool calls are.",
     {
       runId: z.string().describe("The run's id."),
       includeSnapshot: z
@@ -472,7 +486,13 @@ export function registerRunTools(server: McpServer, client: AxonityClient): void
       "metadata and a `messageCount` but not its messages. " +
       "\n\nThis is the read for 'what did this agent actually say?'. Fetch the " +
       "one invocation you are asking about: a run's transcripts together are " +
-      "routinely larger than everything else in it combined.",
+      "routinely larger than everything else in it combined. " +
+      "\n\nFOR A CONVERSATION this is where the conversation IS: every user " +
+      "turn, every answer the agent wrote, and every tool call with its " +
+      "arguments and result. For a chat with the Dashboard Analyst that means " +
+      "the numbers it read (`read_measure` — which measure, filters and " +
+      "period) and the charts it showed (`show_visual` — the tile it put on " +
+      "screen), so you can check an answer against the figures it was given.",
     {
       runId: z.string().describe("The run's id."),
       invocationId: z
@@ -491,7 +511,9 @@ export function registerRunTools(server: McpServer, client: AxonityClient): void
     "read_run_trace",
     "Read a run's chronological tool-call trace — each entry has the step, the " +
       "tool, its arguments, its output, and any error. This is what you read to " +
-      "work out WHY a run behaved as it did.",
+      "work out WHY a run behaved as it did. " +
+      "\n\nNot for a CONVERSATION: a chat's tool calls live in its transcript " +
+      "(read_run_invocation_messages), and this trace is typically empty for one.",
     { runId: z.string().describe("The run's id.") },
     async ({ runId }) =>
       guard(async () => jsonResult(await client.get(`/api/v1/runs/${runId}/trace`))),
@@ -697,7 +719,14 @@ export function registerRunTools(server: McpServer, client: AxonityClient): void
     "Send a user turn to a CONVERSATION run that is waiting on one. The server " +
       "resolves which step is parked, so unlike answer_run_question this takes " +
       "no stepId. Same caution: the turn is recorded as a person's, so use it " +
-      "on runs you started. Returns the run's updated detail.",
+      "on runs you started. Returns the run's updated detail. " +
+      "\n\nThis is the FOLLOW-UP QUESTION in a chat with the Dashboard Analyst " +
+      "(start one with start_conversation). Two refusals come from the backend " +
+      "and are passed on as they are: a 422 \"not awaiting a message right now\" " +
+      "while the analyst is still answering the previous turn — read_run until " +
+      "its status says it is waiting, then send — and a 404 on a dashboard " +
+      "conversation someone else opened, because a dashboard chat belongs to " +
+      "the person who opened it. Needs a token with the `operate` scope.",
     {
       runId: z.string().describe("The conversation run's id."),
       message: z.string().min(1).describe("The user turn to submit."),
@@ -705,6 +734,132 @@ export function registerRunTools(server: McpServer, client: AxonityClient): void
     async ({ runId, message }) =>
       guard(async () =>
         jsonResult(await client.post(`/api/v1/runs/${runId}/message`, { message })),
+      ),
+  );
+
+  // ---- Conversations with the Dashboard Analyst --------------------------
+  //
+  // A chat about a dashboard is a run of kind `conversation` with no workflow,
+  // so list_runs never shows it. These two are the dashboard chat's own doors:
+  // the history list it shows and the request it sends to open a chat. Both
+  // always name a dashboard — the same routes also serve the Builder chat,
+  // which stays out of this connector (test/denyList.ts says why).
+
+  server.tool(
+    "list_conversations",
+    "List the conversations about ONE dashboard with the Dashboard Analyst, " +
+      "newest first — the history the dashboard's chat window shows. Use it to " +
+      "find a chat to review; read it with read_run and " +
+      "read_run_invocation_messages. Find the dashboard's id with " +
+      "list_dashboards. " +
+      "\n\nWHOSE CONVERSATIONS: the ones opened by the person this connector's " +
+      "token belongs to (who minted it), and no one else's — the backend " +
+      "keeps a dashboard chat to its opener. A chat a colleague had in the app " +
+      "is not listed. A dashboard that does not exist or is not shared with " +
+      "that person is a 404. " +
+      "\n\nEach row: `id` (the run id), `question` (the opening question, null " +
+      "when the chat was opened without one), `dashboardId`, `status`, " +
+      "`createdAt`/`startedAt`/`completedAt`, `createdByName`. The tile a " +
+      "question was about is not in the row; it is `triggerInput.focus` in " +
+      "read_run. " +
+      "\n\nTHE RESPONSE IS ONE PAGE, NOT THE FULL LIST: " +
+      "{ items, nextCursor, pageSize, hasMore }. Default page size is 20, max " +
+      "200. While hasMore is true you have NOT seen every conversation — pass " +
+      "the response's nextCursor back as cursor and repeat until nextCursor is " +
+      "null. Archived conversations are left out.",
+    {
+      dashboardId: z
+        .string()
+        .min(1)
+        .describe("The dashboard the conversations are about, from list_dashboards."),
+      limit: z
+        .number()
+        .int()
+        .optional()
+        .describe(
+          "Page size. Defaults to 20, silently clamped to 200 — asking for " +
+            "more does not fail, it just returns 200.",
+        ),
+      cursor: z
+        .string()
+        .optional()
+        .describe(
+          "Opaque continuation cursor from the previous response's nextCursor. " +
+            "Omit for the first page. Do not parse or construct one.",
+        ),
+    },
+    async ({ dashboardId, limit, cursor }) =>
+      guard(async () =>
+        // The page envelope is forwarded WHOLE, as list_runs does (#37).
+        jsonResult(
+          await client.get("/api/v1/conversations", { dashboardId, limit, cursor }),
+        ),
+      ),
+  );
+
+  server.tool(
+    "start_conversation",
+    "Open a NEW conversation with the Dashboard Analyst about one dashboard, " +
+      "with an opening question — the same request the dashboard's chat window " +
+      "sends. This is how you TEST the analyst: one conversation per question, " +
+      "then send_run_message for a follow-up in the same chat. " +
+      "\n\nThis EXECUTES: the analyst runs on live models and reads the " +
+      "tenant's real figures, so it costs tokens. It does not change the " +
+      "dashboard: a chart the analyst shows is placed only by a person in the " +
+      "app. " +
+      "\n\nThe reply is not in the response. It returns the conversation run " +
+      "at its start; the analyst answers in the background. read_run shows " +
+      "the status (still working, or waiting for the next turn); the answer " +
+      "and the tools it called (`read_measure`, `show_visual`, with their " +
+      "arguments) are in the transcript — the orchestrator row of " +
+      "`agentInvocations`, read with read_run_invocation_messages. " +
+      "\n\nTHE CHAT IS OPENED AS A PERSON: the one this connector's token " +
+      "belongs to. The analyst reads with that person's access, and the chat " +
+      "appears in THEIR history on that dashboard in the app. Only they (and " +
+      "this token) can continue it. " +
+      "\n\nRefusals come from the backend unchanged: 404 when the dashboard " +
+      "does not exist or is not shared with that person, or when the Dashboard " +
+      "Analyst is not available in this workspace; 403 with the module's own " +
+      "sentence when the `insights` module is switched off here; 403 for a " +
+      "token without the `author` scope; 422 for an oversized focus.",
+    {
+      dashboardId: z
+        .string()
+        .min(1)
+        .describe("The dashboard the question is about, from list_dashboards."),
+      message: z
+        .string()
+        .min(1)
+        .describe("The opening question, as a person would type it in the chat."),
+      focus: z
+        .record(z.unknown())
+        .optional()
+        .describe(
+          "The tile the question is about, as the dashboard sends it when " +
+            "someone presses \"Ask about this\" on a tile: " +
+            "{ title, type, config, period } — the tile's title, its type and " +
+            "its `config` as read_dashboard returns them, and its period " +
+            "(the tile's own `config.period`, or the dashboard's: a preset " +
+            "name, or `period: null` with `start` and `end` dates). The " +
+            "analyst reads it as \"this number\". Omit it for a question about " +
+            "the dashboard as a whole, as the chat window does when opened " +
+            "without a tile. At most 16 KB as JSON.",
+        ),
+    },
+    async ({ dashboardId, message, focus }) =>
+      guard(async () =>
+        jsonResult(
+          // Exactly the body the dashboard chat sends (frontend
+          // conversationService.start): no workflow, the question, the
+          // dashboard and its focus. The dashboardId is what makes it the
+          // Analyst rather than the Builder team.
+          await client.post("/api/v1/conversations", {
+            targetWorkflowId: null,
+            message,
+            dashboardId,
+            focus: focus ?? null,
+          }),
+        ),
       ),
   );
 

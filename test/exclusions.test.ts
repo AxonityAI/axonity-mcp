@@ -168,7 +168,13 @@ describe("registered surface stays inside its authority boundary", () => {
     expect(forbids("POST", "/api/v1/cron-schedules/cs-1/run-now")).toBe(false);
 
     // The Builder chat surface, and the run tools that must survive beside it.
-    expect(forbids("GET", "/api/v1/conversations")).toBe(true);
+    // The conversation list and start are open: they serve the Dashboard
+    // Analyst's chats (list_conversations, start_conversation). The Builder
+    // chat's files and attachments stay closed.
+    expect(forbids("GET", "/api/v1/conversations")).toBe(false);
+    expect(forbids("POST", "/api/v1/conversations")).toBe(false);
+    expect(forbids("GET", "/api/v1/conversation-attachments")).toBe(true);
+    expect(forbids("POST", "/api/v1/conversation-attachments")).toBe(true);
     expect(forbids("GET", "/api/v1/folders/f-1/files")).toBe(true);
     expect(forbids("POST", "/api/v1/runs/r-1/end-conversation")).toBe(true);
     expect(forbids("POST", "/api/v1/runs/r-1/message")).toBe(false);
