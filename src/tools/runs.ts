@@ -144,8 +144,10 @@ export function registerRunTools(server: McpServer, client: AxonityClient): void
       "\n\nUnlike list_workflow_runs, this route does list per-item FOR EACH " +
       "runs alongside their launches. " +
       "\n\nCONVERSATIONS ARE NOT HERE. A chat about a dashboard with the " +
-      "Dashboard Analyst is a run of kind `conversation`, and this list leaves " +
-      "those out — list_conversations lists them, per dashboard.",
+      "Dashboard Analyst is a run of kind `conversation`; this tool asks the " +
+      "route for workflow runs only. list_conversations lists the chats — " +
+      "across dashboards on this same route (kind=conversation, with the same " +
+      "status and date filters), or for one dashboard.",
     {
       status: z
         .string()
@@ -739,24 +741,41 @@ export function registerRunTools(server: McpServer, client: AxonityClient): void
 
   // ---- Conversations with the Dashboard Analyst --------------------------
   //
-  // A chat about a dashboard is a run of kind `conversation` with no workflow,
-  // so list_runs never shows it. These two are the dashboard chat's own doors:
-  // the history list it shows and the request it sends to open a chat. Both
-  // always name a dashboard — the same routes also serve the Builder chat,
-  // which stays out of this connector (test/denyList.ts says why).
+  // A chat about a dashboard is a run of kind `conversation` with no workflow;
+  // list_runs asks for kind=workflow only. Two backend routes list these chats
+  // and neither does everything, so list_conversations picks one per call:
+  //   - GET /conversations?dashboardId= — one dashboard; no other filter.
+  //   - GET /runs?kind=conversation — every dashboard the person can see, with
+  //     status, created_after/created_before and include_archived in the query.
+  // No route combines a dashboard with those filters, so asking for both is a
+  // local refusal rather than a quiet drop of one of them. Both routes return
+  // only the token holder's own dashboard chats; the Builder chat never
+  // appears (test/denyList.ts says why it stays out).
 
   server.tool(
     "list_conversations",
-    "List the conversations about ONE dashboard with the Dashboard Analyst, " +
-      "newest first — the history the dashboard's chat window shows. Use it to " +
+    "List conversations with the Dashboard Analyst, newest first. Use it to " +
       "find a chat to review; read it with read_run and " +
-      "read_run_invocation_messages. Find the dashboard's id with " +
+      "read_run_invocation_messages. Find a dashboard's id with " +
       "list_dashboards. " +
-      "\n\nWHOSE CONVERSATIONS: the ones opened by the person this connector's " +
-      "token belongs to (who minted it), and no one else's — the backend " +
-      "keeps a dashboard chat to its opener. A chat a colleague had in the app " +
-      "is not listed. A dashboard that does not exist or is not shared with " +
-      "that person is a 404. " +
+      "\n\nTWO WAYS TO ASK, because the backend has two lists and neither " +
+      "does both: " +
+      "\n- With `dashboardId`: the chats about that one dashboard — the history " +
+      "its chat window shows. No other filter applies here; archived chats are " +
+      "left out. " +
+      "\n- Without `dashboardId`: the chats about EVERY dashboard the person can " +
+      "still see, filtered by `status`, `createdAfter`/`createdBefore` and " +
+      "`includeArchived` in the database before the page is cut — so \"which " +
+      "chats failed last week?\" is one page, not a walk. " +
+      "\nPassing `dashboardId` together with status, a date or includeArchived " +
+      "is refused here rather than half-applied: no backend route filters a " +
+      "dashboard's chats that way. Filter without the dashboard and keep the " +
+      "rows whose `dashboardId` matches, walking every page. " +
+      "\n\nWHAT CANNOT BE FILTERED AT ALL: who opened the chat, and the text of " +
+      "the question. Both lists return only the chats opened by the person " +
+      "this connector's token belongs to (who minted it) — a colleague's chat " +
+      "in the app is never listed. To find a question, read `question` on " +
+      "every row across all pages. " +
       "\n\nEach row: `id` (the run id), `question` (the opening question, null " +
       "when the chat was opened without one), `dashboardId`, `status`, " +
       "`createdAt`/`startedAt`/`completedAt`, `createdByName`. The tile a " +
@@ -765,18 +784,47 @@ export function registerRunTools(server: McpServer, client: AxonityClient): void
       "\n\nTHE RESPONSE IS ONE PAGE, NOT THE FULL LIST: " +
       "{ items, nextCursor, pageSize, hasMore }. Default page size is 20, max " +
       "200. While hasMore is true you have NOT seen every conversation — pass " +
-      "the response's nextCursor back as cursor and repeat until nextCursor is " +
-      "null. Archived conversations are left out. " +
-      "\n\nTHE DASHBOARD IS THE ONLY FILTER the backend offers on this list: " +
-      "there is no filter on status, date, opener or the question's text. To " +
-      "find one chat, walk the pages and read `question`, `status` and " +
-      "`createdAt` on every row — a match on page one only says nothing about " +
-      "the pages after it.",
+      "the response's nextCursor back as cursor, with the SAME other " +
+      "arguments, and repeat until nextCursor is null. " +
+      "\n\nRefusals come from the backend unchanged: 404 for a dashboard that " +
+      "does not exist or is not shared with that person; 403 with the module's " +
+      "own sentence when the `insights` module is switched off here.",
     {
       dashboardId: z
         .string()
         .min(1)
-        .describe("The dashboard the conversations are about, from list_dashboards."),
+        .optional()
+        .describe(
+          "Only the chats about this dashboard, from list_dashboards. Cannot be " +
+            "combined with status, createdAfter, createdBefore or includeArchived.",
+        ),
+      status: z
+        .string()
+        .optional()
+        .describe(
+          'Comma-separated run statuses, e.g. "failed" or "running,completed". ' +
+            "Without dashboardId only. Omit for all.",
+        ),
+      createdAfter: z
+        .string()
+        .optional()
+        .describe(
+          "ISO date or datetime lower bound on when the chat started, e.g. " +
+            '"2026-11-01". Without dashboardId only. A value the backend cannot ' +
+            "parse is IGNORED, not refused — the list then comes back unfiltered " +
+            "by it, so send a plain ISO date.",
+        ),
+      createdBefore: z
+        .string()
+        .optional()
+        .describe(
+          "ISO date or datetime upper bound, inclusive. Without dashboardId " +
+            "only. Same caution: an unparseable value is silently ignored.",
+        ),
+      includeArchived: z
+        .boolean()
+        .optional()
+        .describe("Include archived chats. Defaults to false. Without dashboardId only."),
       limit: z
         .number()
         .int()
@@ -793,13 +841,43 @@ export function registerRunTools(server: McpServer, client: AxonityClient): void
             "Omit for the first page. Do not parse or construct one.",
         ),
     },
-    async ({ dashboardId, limit, cursor }) =>
-      guard(async () =>
-        // The page envelope is forwarded WHOLE, as list_runs does (#37).
-        jsonResult(
-          await client.get("/api/v1/conversations", { dashboardId, limit, cursor }),
-        ),
-      ),
+    async ({ dashboardId, status, createdAfter, createdBefore, includeArchived, limit, cursor }) =>
+      guard(async () => {
+        // The page envelope is forwarded WHOLE on both routes, as list_runs
+        // does (#37).
+        if (dashboardId !== undefined) {
+          const unsupported = Object.entries({
+            status,
+            createdAfter,
+            createdBefore,
+            includeArchived,
+          })
+            .filter(([, value]) => value !== undefined)
+            .map(([name]) => name);
+          if (unsupported.length > 0) {
+            throw new Error(
+              `list_conversations: ${unsupported.join(", ")} cannot be combined ` +
+                "with dashboardId — the backend's per-dashboard list has no such " +
+                "filter. Leave dashboardId out to filter across every dashboard, " +
+                "and keep the rows whose dashboardId matches.",
+            );
+          }
+          return jsonResult(
+            await client.get("/api/v1/conversations", { dashboardId, limit, cursor }),
+          );
+        }
+        return jsonResult(
+          await client.get("/api/v1/runs", {
+            kind: "conversation",
+            status,
+            created_after: createdAfter,
+            created_before: createdBefore,
+            include_archived: includeArchived,
+            limit,
+            cursor,
+          }),
+        );
+      }),
   );
 
   server.tool(
@@ -820,13 +898,15 @@ export function registerRunTools(server: McpServer, client: AxonityClient): void
       "`agentInvocations`, read with read_run_invocation_messages. " +
       "\n\nTHE CHAT IS OPENED AS A PERSON: the one this connector's token " +
       "belongs to. The analyst reads with that person's access, and the chat " +
-      "appears in THEIR history on that dashboard in the app. Only they (and " +
-      "this token) can continue it. " +
+      "appears in THEIR history on that dashboard in the app. Only that person " +
+      "can continue it — in the app, or through any token they minted. " +
       "\n\nRefusals come from the backend unchanged: 404 when the dashboard " +
       "does not exist or is not shared with that person, or when the Dashboard " +
       "Analyst is not available in this workspace; 403 with the module's own " +
       "sentence when the `insights` module is switched off here; 403 for a " +
-      "token without the `author` scope; 422 for an oversized focus.",
+      "token that may not start one — \"This service token lacks the " +
+      "'author' scope\" (it has other write scopes, e.g. only `operate`) or " +
+      "\"This service token is read-only\"; 422 for an oversized focus.",
     {
       dashboardId: z
         .string()
@@ -848,7 +928,12 @@ export function registerRunTools(server: McpServer, client: AxonityClient): void
             "name, or `period: null` with `start` and `end` dates). The " +
             "analyst reads it as \"this number\". Omit it for a question about " +
             "the dashboard as a whole, as the chat window does when opened " +
-            "without a tile. At most 16 KB as JSON.",
+            "without a tile. The chat also sends two other shapes, when a person " +
+            "asks the analyst to MAKE a tile rather than explain one: " +
+            "{ purpose: \"new_tile\", section } (\"Add tile\" by asking, with the " +
+            "section's title) and { purpose: \"change_tile\", title, type, " +
+            "config, period } (\"Change by asking\" on an existing tile). At " +
+            "most 16 KB as JSON.",
         ),
     },
     async ({ dashboardId, message, focus }) =>

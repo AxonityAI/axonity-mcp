@@ -115,6 +115,9 @@ export const PROBE_VARIANTS: Record<string, unknown>[] = [
   { workflowId: undefined },
   // get_measure_formula_spec — the workspace's vocabulary only when asked.
   { includeWorkspace: true },
+  // list_conversations — one dashboard's history instead of the filtered
+  // cross-dashboard list. (start_conversation reads it too; harmless.)
+  { dashboardId: "x" },
 ];
 
 /** A route a tool actually called, as observed by the recording client. */

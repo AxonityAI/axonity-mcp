@@ -523,9 +523,14 @@ inbound channel reply (authenticated by the email/WhatsApp adapter, not by a
 service token) and the retired `workflow-memory` placeholder.
 
 **Testing the Dashboard Analyst.** A chat about a dashboard is a run of kind
-`conversation`, so `list_runs` does not show it. `list_conversations` lists the
-chats about one dashboard (paged, newest first, the ones opened by the person
-the token belongs to); `start_conversation` opens a new one with an opening
+`conversation`; `list_runs` asks for workflow runs only. `list_conversations`
+lists the chats (paged, newest first, only the ones opened by the person the
+token belongs to) in one of two ways: for one dashboard (`dashboardId`, no
+other filter), or across every dashboard that person can see, filtered by
+`status`, `createdAfter`/`createdBefore` and `includeArchived` (the backend's
+`GET /runs?kind=conversation`). No route combines a dashboard with those
+filters, so the tool refuses the mix instead of dropping one. Who opened a chat
+and the text of its question cannot be filtered on at all. `start_conversation` opens a new one with an opening
 question and, optionally, the tile it is about (`focus`) — the same request the
 dashboard's chat window sends. A follow-up is `send_run_message`. The answer and
 the tools the analyst called (`read_measure`, `show_visual`, with their
