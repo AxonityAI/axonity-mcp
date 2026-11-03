@@ -138,10 +138,46 @@ export function registerDataSourceTools(
   );
 }
 
-/** The period names a measure question accepts. Mirrors `PeriodPreset`. */
-const PERIODS =
-  "today, this_week, last_week, this_month, last_month, this_quarter, " +
-  "year_to_date, last_30_days, last_12_months, all_time";
+/**
+ * The period names a measure question, a list tile and a dashboard tile
+ * accept. Mirrors `PeriodPreset` (backend `src/domain/measure_periods.py`);
+ * `test/measureInfluences.test.ts` holds it to the pinned snapshot.
+ */
+export const PERIOD_PRESETS = [
+  "today",
+  "this_week",
+  "last_week",
+  "this_month",
+  "last_month",
+  "this_quarter",
+  "year_to_date",
+  "last_30_days",
+  "last_3_months",
+  "last_12_months",
+  "last_3_full_months",
+  "last_12_full_months",
+  "year_to_last_full_month",
+  "all_time",
+] as const;
+
+/** The names, as a list in a sentence. */
+export const PERIODS = PERIOD_PRESETS.join(", ");
+
+/**
+ * What sets the `…full_month…` periods apart (axonity-flow#1783, 2 Nov): a
+ * monthly number read against a monthly plan must not count the month in
+ * progress. Said wherever a period is chosen.
+ */
+export const FULL_MONTH_NOTE =
+  "A period that runs to date — this_month, this_quarter, year_to_date, " +
+  "last_3_months, last_12_months and the like — ends TODAY, the month in " +
+  "progress included. " +
+  "last_3_full_months, last_12_full_months and year_to_last_full_month end " +
+  "on the last day of the LAST FULL MONTH instead: use them for a monthly " +
+  "trend or a number held against a monthly budget, so two days of revenue " +
+  "are not read against a whole month. year_to_last_full_month is the year " +
+  "that month belongs to — on 2 January, the whole year before. Today and " +
+  "the last full month are counted in Europe/Brussels time.";
 
 export function registerMeasureTools(
   server: McpServer,
@@ -190,7 +226,9 @@ export function registerMeasureTools(
       "optional and no longer what finds it. `period` is one of: " +
       PERIODS +
       " (default this_month) — or set it to null and send `start`/`end` " +
-      "(YYYY-MM-DD) for a custom range. `compare` is none, previous_period or " +
+      "(YYYY-MM-DD) for a custom range. " +
+      FULL_MONTH_NOTE +
+      " `compare` is none, previous_period or " +
       "previous_year. `grain` (none, auto, day, week, month, quarter, year) " +
       "draws a series. `splitBy` names a column to group by; `limit` (1-50) " +
       "keeps the largest groups. `useDraft` reads this measure's draft; " +
@@ -275,7 +313,10 @@ export function registerMeasureTools(
       period: z
         .string()
         .optional()
-        .describe(`Only rows in this period, on the table's time axis: ${PERIODS}.`),
+        .describe(
+          `Only rows in this period, on the table's time axis: ${PERIODS}. ` +
+            FULL_MONTH_NOTE,
+        ),
       filters: z
         .array(z.record(z.unknown()))
         .optional()

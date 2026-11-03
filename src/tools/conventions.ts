@@ -1196,6 +1196,22 @@ before you save; repair on the code before asking a person.
 gives what each part of the formula answered, on the total and per period and
 group. Use it to say why a number moved, instead of reading rows.
 
+**A formula or an influence.** When a number IS computed from another —
+margin is revenue minus cost — that is its formula, and the platform reads
+the link from the formula (\`dependsOn\`). When one number MOVES another from
+outside — complaints push lost customers up, a price rise pulls conversion
+down — that is an influence (\`link_measures\`): which way it pushes
+(\`effect\`), why, whose it is (\`owner\`, a role as text) and, if there is
+one, its \`basis\`. Never both: a link the formula already makes is refused,
+and so is a loop over the two together. A link that is still missing — a
+number that must be computed from another, a measure not built yet — is a
+\`planned\` row, so \`read_measure_tree\` shows where "why did this move?"
+stops today. The influences are one table, \`measure_influences\`: published
+like any table, and carried to the next environment with the deploy.
+Publishing is checked against what goes live — the published measures and
+influences — and refused with the reason; when a link moves between a formula
+and an influence, publish the side that removes it first.
+
 **Order.** Base measures first, each with its \`quantity\`; then the derived
 ones; \`validate_measure\` before every save; publish from the bottom up — a
 published measure over an unpublished one is refused. A measure knows what

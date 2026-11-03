@@ -28,6 +28,8 @@ import { reportContractSkew } from "./contract.js";
 import { registerConventions } from "./tools/conventions.js";
 import { registerEntityContractTools } from "./tools/entityContract.js";
 import {
+  FULL_MONTH_NOTE,
+  PERIODS,
   registerDashboardTools,
   registerDataSourceTools,
   registerMeasureTools,
@@ -48,6 +50,7 @@ import { registerAuthoringSpecTools } from "./tools/authoringSpec.js";
 import { registerCompanyTools } from "./tools/company.js";
 import { registerComponentTools } from "./tools/components.js";
 import { registerConceptTools } from "./tools/concepts.js";
+import { registerMeasureInfluenceTools } from "./tools/measureInfluences.js";
 import { registerKnowledgeGraphTools } from "./tools/knowledgeGraph.js";
 import { registerOperationsTools } from "./tools/operations.js";
 import { registerPromptPlacementTools } from "./tools/promptPlacement.js";
@@ -129,6 +132,16 @@ const DATE_TABLE_NOTE =
   "whole, and a calendar sent without one is a new calendar. " +
   "`dateTable: false` takes the calendars with it. A fact table reaches " +
   "the date table through its own `timeAxis`.";
+
+/**
+ * A dashboard's periods — its own `layout.period`, a tile's `config.period`,
+ * `period` on each compared row of a bars tile — take the names
+ * query_measures takes (backend `src/domain/dashboards.py`).
+ */
+const TILE_PERIOD_NOTE =
+  `THE PERIOD — the dashboard's own \`layout.period\`, a tile's ` +
+  `\`config.period\`, and \`period\` on each compared row of a bars tile — ` +
+  `is one of: ${PERIODS}. ${FULL_MONTH_NOTE}`;
 
 /**
  * What writing a measure takes (axonity-flow#1908). The contract, not a manual:
@@ -592,12 +605,15 @@ const ENTITIES: EntityDef[] = [
       "NAME of that measure: it is computed over the same period and filters " +
       "as the number. Only a tile that shows a measure takes it; a number " +
       "tile shows the status. While a tile names a measure as its " +
-      "`statusMeasure`, that measure cannot be renamed or deleted.",
+      "`statusMeasure`, that measure cannot be renamed or deleted." +
+      "\n\n" +
+      TILE_PERIOD_NOTE,
     updateWarning:
       "NO DRAFT: a saved dashboard is what everyone it is shared with sees. " +
       "`layout` is replaced WHOLE when sent — read first and send it complete. " +
       "A tile may carry `config.statusMeasure`: the measure whose limits give " +
-      "it its status, when that is not the measure it shows.",
+      "it its status, when that is not the measure it shows. " +
+      TILE_PERIOD_NOTE,
   },
 ];
 
@@ -691,6 +707,7 @@ export function registerAll(server: ServerLike, client: AxonityClient): void {
   registerMeasureFormulaTools(server as McpServer, client);
   registerDashboardTools(server as McpServer, client);
   registerConceptTools(server as McpServer, client);
+  registerMeasureInfluenceTools(server as McpServer, client);
   registerQueryTools(server as McpServer, client);
   registerComponentTools(server as McpServer, client);
   registerApplicationTools(server as McpServer, client);

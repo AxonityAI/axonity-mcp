@@ -348,9 +348,22 @@ across these routes — the tool parameter names say which.
     synonyms, what it refers to, owner. They are rows of one table the
     platform keeps per workspace, so they are published with
     `request_publish_data_table` on the `tableId` every write returns.
+  - **What moves a number** (influences): `list_measure_influences`,
+    `link_measures`, `update_measure_influence`, `unlink_measures` — one
+    measure moves another from outside its formula, with an `effect` (same
+    or opposite), `why`, `owner` (a role as text) and an optional `basis`. A
+    link the formula already makes, a duplicate and a loop are refused; a
+    `planned` row marks a link that is still missing and may name a measure
+    not built yet. The rows live in the `measure_influences` table, go live
+    when it is published and travel with the deploy like the measures.
+    `read_measure_tree` reads formula parts and influences as one graph
+    (`{ root, nodes, edges, missing }`), published by default; `read_measure`
+    shows `influencedBy` and `influences`.
   - Reading numbers: `query_measures` (up to 40 questions, each answered on
     its own, measures named by their handle), `list_measure_rows` (a list
-    tile). Plus `duplicate_dashboard`.
+    tile). Plus `duplicate_dashboard`. Besides the periods that run to date,
+    `last_3_full_months`, `last_12_full_months` and `year_to_last_full_month`
+    end at the last full month.
   - A reference doc has no `semanticKind` any more; the platform refuses it
     and the other retired fields and says where each one went.
 - **Applications** (`application`): a program an agent operates through an
