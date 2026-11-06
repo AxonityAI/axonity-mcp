@@ -323,32 +323,45 @@ describe("the secret kinds are one list across the snapshot and the live contrac
     return found;
   };
 
-  /** Where an enum of secret kinds differs from ConnectorAuthConfig's (minus `none`). */
+  const CONNECTOR_KINDS_AT = "components.schemas.ConnectorAuthConfig.properties.type";
+
+  const connectorKinds = (doc: Doc): string[] =>
+    (doc.components.schemas.ConnectorAuthConfig as { properties: { type: { enum: string[] } } })
+      .properties.type.enum;
+
+  /** The secret kinds: a connector's kinds without `none`. */
+  const secretKinds = (doc: Doc = snapshot): string[] =>
+    connectorKinds(doc).filter((v) => v !== "none");
+
+  /**
+   * THE comparison, in one place: where the snapshot breaks the platform's
+   * invariant. A connector's kinds are `none` first and then the secret kinds;
+   * every other list of secret kinds, wherever it sits, is exactly those
+   * secret kinds in the same order (`none` aside). Returns the paths that
+   * break it; empty means one vocabulary.
+   */
   const secretKindMismatches = (doc: Doc = snapshot): string[] => {
-    const connector = (
-      (doc.components.schemas.ConnectorAuthConfig as { properties: { type: { enum: string[] } } })
-        .properties.type.enum
-    ).filter((v) => v !== "none");
-    return secretKindEnums(doc)
-      .filter(({ values }) => JSON.stringify(values.filter((v) => v !== "none")) !== JSON.stringify(connector))
-      .map(({ at }) => at);
+    const connector = connectorKinds(doc);
+    const kinds = secretKinds(doc);
+    const wrong: string[] = [];
+    if (connector[0] !== "none" || connector.length !== kinds.length + 1) {
+      wrong.push(CONNECTOR_KINDS_AT);
+    }
+    for (const { at, values } of secretKindEnums(doc)) {
+      if (JSON.stringify(values.filter((v) => v !== "none")) !== JSON.stringify(kinds)) {
+        wrong.push(at);
+      }
+    }
+    return wrong;
   };
 
   it("every schema that lists secret kinds lists the same ones, the refresh-token grant included", () => {
-    const enums = secretKindEnums();
     // The secret routes' requests and responses plus ConnectorAuthConfig.
-    expect(enums.length).toBeGreaterThanOrEqual(8);
-    // The platform's invariant: a connector's kinds are the secret kinds plus
-    // `none` (a connector without a secret), and nothing else.
-    const secretKinds = enums.find(({ values }) => !values.includes("none"))!.values;
-    for (const { at, values } of enums) {
-      expect(values.filter((v) => v !== "none"), at).toEqual(secretKinds);
-    }
-    const connector = (
-      snapshot.components.schemas.ConnectorAuthConfig.properties?.type as { enum?: string[] }
-    ).enum;
-    expect(connector).toEqual(["none", ...secretKinds]);
-    expect(secretKinds).toContain("oauth2_refresh_token");
+    expect(secretKindEnums().length).toBeGreaterThanOrEqual(8);
+    // The platform's invariant: a connector's kinds are `none` (a connector
+    // without a secret) and then the secret kinds, and nothing else.
+    expect(secretKindMismatches()).toEqual([]);
+    expect(secretKinds()).toContain("oauth2_refresh_token");
   });
 
   it("finds a list of secret kinds inline in an operation too, not only in a component schema", () => {
