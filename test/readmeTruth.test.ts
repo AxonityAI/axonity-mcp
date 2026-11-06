@@ -37,4 +37,32 @@ describe("the README carries no claim #107 corrected", () => {
     expect(README).not.toMatch(/four stateless analysis tools are the exception/);
     expect(README).toMatch(/`validate_workflow\(\{ workflowId \}\)`[^.]*`author` scope/);
   });
+
+  // One pin per corrected place (review 11 of #107): each turns red when only
+  // that place goes back to its old wording.
+  it("intro: the agent carries its persona; personas are not a listed entity", () => {
+    expect(README).toMatch(/\*\*workflows, agents \(with their persona\), tools,/);
+    expect(README).not.toMatch(/reference docs,\s+personas, output schemas/);
+  });
+
+  it("contract kinds: agents with their persona, not personas", () => {
+    expect(README).toMatch(/entity kind\*\* \(tools with each type's implementation, agents with their\s+persona,/);
+    expect(README).not.toMatch(/agents, personas,\s+knowledge/);
+  });
+
+  it("tables: a measure reads every table whose rows Flow holds", () => {
+    expect(README).toMatch(/a measure reads every table whose\s+rows Flow holds/);
+    expect(README).not.toMatch(/only a dynamic table can be read by\s+a measure/);
+  });
+
+  it("the validate_workflow row itself names the author scope", () => {
+    const row = README.split("\n").find((l) => l.startsWith("| `validate_workflow` |")) ?? "";
+    expect(row).toMatch(/By `workflowId`:[^|]*needs a token with the `author` scope/);
+  });
+
+  it("release: the agents it runs, each with its persona", () => {
+    expect(README).toMatch(/the agents it runs \(each with its\s+persona\), their tools, the flows it pins/);
+    expect(README).not.toMatch(/their tools and\s+personas, the flows it pins/);
+  });
 });
+
