@@ -142,8 +142,10 @@ export function registerRunTools(server: McpServer, client: AxonityClient): void
       "is a cursor and not an offset: an offset window under that rate skips " +
       "and repeats rows between pages. Never build a cursor — echo back the " +
       "one you were given. " +
-      "\n\nUnlike list_workflow_runs, this route does list per-item FOR EACH " +
-      "runs alongside their launches. " +
+      "\n\nLike list_workflow_runs, the per-item runs of a FOR EACH are NOT here: " +
+      "a launch over 4,415 items is ONE row. The item results live inside their " +
+      "launch — list_run_items for the rows, read_run_for_each_progress for the " +
+      "counts. " +
       "\n\nCONVERSATIONS ARE NOT HERE. A chat about a dashboard with the " +
       "Dashboard Analyst is a run of kind `conversation`; this tool asks the " +
       "route for workflow runs only. list_conversations lists the chats — " +

@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+
 import { describe, expect, it, vi } from "vitest";
 
 import type { AxonityClient } from "../src/client.js";
@@ -163,6 +166,26 @@ describe("the run lists say what kind of answer they are (#37)", () => {
     // Sending one is not harmless: it is what let an agent believe it was
     // advancing while re-reading page one.
     expect(params).not.toHaveProperty("offset");
+  });
+
+  it("list_runs says what the route says about FOR EACH items: they are not in it", () => {
+    // The tool said the opposite ("this route does list per-item FOR EACH runs")
+    // while the backend filters them out (`triggered_by_type != 'for_each'` in
+    // `run_repository._by_tenant_query`) and its own description says so. The
+    // route's OpenAPI description is the source this pins to.
+    const snapshot = JSON.parse(
+      readFileSync(
+        fileURLToPath(new URL("./fixtures/openapi.snapshot.json", import.meta.url)),
+        "utf8",
+      ),
+    ) as { paths: Record<string, { get: { description?: string } }> };
+    const route = snapshot.paths["/api/v1/runs"].get.description ?? "";
+    expect(route).toMatch(/Item results a\s+FOR EACH produced never appear here/);
+
+    const d = setup().descriptions.get("list_runs")!;
+    expect(d).not.toMatch(/does list per-item/);
+    expect(d).toMatch(/per-item runs of a FOR EACH are NOT here/);
+    expect(d).toMatch(/list_run_items/);
   });
 
   it("list_runs passes includePlatform as the route's include_platform (axonity-flow#2274)", async () => {
