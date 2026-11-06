@@ -472,7 +472,8 @@ const ENTITIES: EntityDef[] = [
       "`clearGrain: true` takes away what one row is; it is refused on a source " +
       "table, which must say it. " +
       "`clearTimeAxis: true` takes the time axis away; on a date table that " +
-      "carries calendars only together with `calendars: []` in the same " +
+      "carries calendars only together with `calendars: []` or " +
+      "`dateTable: false` (which takes the calendars with it) in the same " +
       "update, because a calendar needs a dated row per day. " +
       "\n\n" +
       DATE_TABLE_NOTE +

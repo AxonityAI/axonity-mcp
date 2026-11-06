@@ -433,11 +433,17 @@ made any time before you attach them.
 
 ## Validators — one shape, one call
 A validator is a GATE on a submitted output: it runs after an agent produces a
-result and can refuse it. Specs are written in ONE place: an output_schema's \`schemaBody\`
-(\`validators\`, and \`preflight\` for the checks an agent may run itself
-before it submits). The agent no longer carries specs (axonity-flow#2176): it
-names the schemas it answers in with \`outputSchemaIds\`, and a spec sent on
-the agent's strict create/update body is a 422. The backend's OpenAPI
+result and can refuse it. Specs carry the same keys wherever they are written:
+- an output_schema's \`schemaBody\` (\`validators\`, and \`preflight\` for the
+  checks an agent may run itself before it submits) — the gate on one value;
+- a workflow step's \`contract.output_validators\` — run on the step's WHOLE
+  submission, so a rule about how its outputs relate has something to look at;
+  \`validate_workflow\` reports a named validator tool that does not exist;
+- a conversation step's \`answerContract.validators\` — run on the answer the
+  agent hands in.
+The agent itself no longer carries specs (axonity-flow#2176): it names the
+schemas it answers in with \`outputSchemaIds\`, and a spec sent on the agent's
+strict create/update body is a 422. The backend's OpenAPI
 description of \`schemaBody\` is the source for the full contract, and the
 platform's live contract (\`get_entity_authoring_contract\`, output_schema)
 wins over this section where this deploy serves it. What follows is the part
@@ -500,8 +506,8 @@ unresolved values and nothing says so. (Rows whose schema declares no shape are
 left alone: there is nothing to check against, and guessing would refuse correct
 configurations.)
 
-WHERE \`field\` AND \`slots\` ARE ACCEPTED: inside an output_schema's
-\`schemaBody\`, which is stored verbatim — the only place a spec lives.
+WHERE \`field\` AND \`slots\` ARE CHECKED: when you save an output_schema, in
+its \`schemaBody\`, which is stored verbatim.
 
 ### The older, explicit binding
 A tool spec MAY declare \`inputs\` instead, and a spec with \`inputs\` does NOT

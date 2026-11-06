@@ -226,6 +226,9 @@ describe("the clear fields say where the platform takes them (review of #107)", 
     expect(x).not.toMatch(/any table/);
     expect(x).toMatch(/date table/);
     expect(x).toMatch(/`calendars: \[\]`/);
+    // Unmarking the date table takes its calendars with it
+    // (data_table_service.update_table), so `dateTable: false` works too.
+    expect(x).toMatch(/`dateTable: false`/);
   });
 });
 

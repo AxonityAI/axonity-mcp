@@ -70,12 +70,20 @@ describe("the authoring guide carries the validator contract", () => {
     expect(text).toMatch(/never looked up/i);
   });
 
-  it("says validator specs live in the output schema only, and an agent body refuses them", async () => {
-    // axonity-flow#2176 (R5b): the schema is the gate. The agent's `permissions`
-    // bag, where specs used to sit, is gone, and the agent's create/update body
-    // is strict: a spec written there is a 422, not a gate.
+  it("names every place a spec lives, and says the agent body refuses one", async () => {
+    // axonity-flow#2176 (R5b) took the agent's `permissions` bag away, and the
+    // agent's create/update body is strict: a spec written there is a 422. But
+    // the schema is not the ONLY place (review 8 of #107): a workflow step
+    // declares specs on its whole submission (`contract.output_validators`,
+    // execution/framework/step_output_contracts.py step_validators_of, run by
+    // agent_executor and checked by validate_workflow), and a conversation
+    // step on its answer (`answerContract.validators`, domain/conversation_answer.py).
     const text = await guide();
-    expect(text).toMatch(/ONE place: an output_schema's `schemaBody`/);
+    expect(text).not.toMatch(/ONE place/);
+    expect(text).not.toMatch(/the only place a spec lives/);
+    expect(text).toMatch(/output_schema's `schemaBody`/);
+    expect(text).toMatch(/`contract\.output_validators`/);
+    expect(text).toMatch(/`answerContract\.validators`/);
     expect(text).toMatch(/`outputSchemaIds`/);
     expect(text).toContain("422");
   });
