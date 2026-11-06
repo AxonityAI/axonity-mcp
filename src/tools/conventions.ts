@@ -163,8 +163,10 @@ has run cleanly once, at its current version.
 
 ## Field shape
 - All fields are camelCase JSON (e.g. \`capabilityTier\`, not \`capability_tier\`).
-  ONE documented exception: validator specs (\`validators\` and
-  \`preflight\` in an output_schema's \`schemaBody\`) use snake_case keys (\`function\`,
+  ONE documented exception: validator specs — in an output_schema's
+  \`schemaBody\` (\`validators\`, \`preflight\`), a step's
+  \`contract.output_validators\` and a conversation step's
+  \`answerContract.validators\` — use snake_case keys (\`function\`,
   \`target\`, \`args\`, \`when_present\`, \`inputs\`, \`error_message\`,
   \`tool_name\`, \`validator_name\`) — they are stored verbatim, so they are
   NOT camel-aliased. Send them in snake_case.
@@ -242,8 +244,12 @@ has run cleanly once, at its current version.
   are normal, not a sign of corruption.
 - \`restore_*\` can itself 409 if a live entity now holds the same name/slot —
   the error names the conflicting one.
-- There is no "archive" state for those entities — delete + restore IS the
-  lifecycle. Runs are the one exception with a true archive/unarchive (see below).
+- Deleting is not archiving. Some entities also have a \`status\` that can be
+  \`archived\` — kept, not offered — set with \`update_*\`: \`agent\`, \`tool\`,
+  \`skill\`, \`policy\`, \`reference_doc\`, \`output_schema\`, \`data_table\`,
+  \`measure\` and \`application\`. The values each takes are in
+  \`get_entity_authoring_contract\`. Runs have an archive of their own
+  (\`archive_run\` / \`unarchive_run\`, see below).
 
 ## Per entity — what to create, and what "complete" means
 
@@ -889,8 +895,8 @@ a document to find out what the platform did.
   have. It is PAGED over the waiting RUNS, so \`items\` can be longer than
   \`pageSize\` — one run may park several steps. Follow \`nextCursor\` until it
   is null before concluding anything about how much is waiting.
-- Runs are the only thing with a real archive state — \`archive_run\` is
-  reversible, \`bulk_delete_runs\` is not.
+- A run's archive is reversible (\`archive_run\` / \`unarchive_run\`);
+  \`bulk_delete_runs\` is not.
 
 ## Subworkflows — one workflow calling another
 Both halves live in the workflow DOCUMENT, so both are ordinary

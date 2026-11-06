@@ -125,8 +125,10 @@ Plus:
   default; pass `types` for a command's live payload schema. `rulesVersion` is
   a content hash over all of them — same hash, nothing to re-fetch.
 - `get_entity_authoring_contract` — the platform's **create contract per
-  entity kind** (tools with each type's implementation, agents with their
-  persona, knowledge, schemas, tables, toolboxes, secrets, starts), read live from
+  entity kind** (`tool` with each type's implementation, `agent` with its
+  persona, `application`, `measure`, `query`, `data_table`, `output_schema`,
+  `policy`, `skill`, `reference_doc`, `prompt_snippet`, `toolbox`, `secret`,
+  `conditional_trigger`, `trigger_element`), read live from
   `GET /api/v1/authoring/entity-contracts` (axonity-flow#2103):
   `{ kinds, contracts, rulesVersion }`, per kind the create/update fields and
   the `publish.rules` that stop it going live. Pass `kinds` to narrow it (sent

@@ -46,7 +46,7 @@ describe("the README carries no claim #107 corrected", () => {
   });
 
   it("contract kinds: agents with their persona, not personas", () => {
-    expect(README).toMatch(/entity kind\*\* \(tools with each type's implementation, agents with their\s+persona,/);
+    expect(README).toMatch(/entity kind\*\* \(`tool` with each type's implementation, `agent` with its\s+persona,/);
     expect(README).not.toMatch(/agents, personas,\s+knowledge/);
   });
 

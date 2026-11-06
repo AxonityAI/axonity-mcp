@@ -20,7 +20,8 @@ diff in review.
   contract (`GET /conversations` gains `status`, `createdAfter`,
   `createdBefore`, `q`; `GET /runs` gains `include_platform`;
   `GET /knowledge/search` answers `SearchRunStarted` and drops `as_of`).
-  Component schemas: 45 added, 15 removed, 68 changed (among them
+  Component schemas against the snapshot on `main`: 45 added, 15 removed, 68
+  changed (60 against #106's, which had already updated 8; among them
   `CreateAgentRequest` / `UpdateAgentRequest`, which lose `learningMode`,
   `canOwnProcess`, `episodicMemoryEnabled`, `permissions` and `tags` and gain
   `persona`, `delegation`, `outputSchemaIds` and more). Of the 34 new

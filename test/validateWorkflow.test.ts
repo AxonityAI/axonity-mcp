@@ -91,6 +91,10 @@ describe("validate_workflow describes both routes as main runs them", () => {
     expect(CONVENTIONS).not.toMatch(/without a catalog it can only judge STRUCTURE/);
     expect(CONVENTIONS).toMatch(/`validate_workflow\(\{ document \}\)` judges the document against the same\s+catalog/);
     expect(CONVENTIONS).not.toMatch(/These four are stateless and work with\s+read-only tokens/);
+    // Review 14: the guide's own sentence on the stored route's scope.
+    expect(CONVENTIONS).toMatch(
+      /except \`validate_workflow\(\{ workflowId \}\)\`,\s+which needs the \`author\` scope|except `validate_workflow\(\{ workflowId \}\)`,\s+which needs the `author` scope/,
+    );
   });
 });
 

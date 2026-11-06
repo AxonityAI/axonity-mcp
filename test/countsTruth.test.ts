@@ -247,3 +247,62 @@ describe("review 13 of #107: the guide's paged lists, the plan's count, the gene
   });
 });
 
+describe("review 14 of #107: archive state and the contract's kinds, from the schema and the recording", () => {
+  /** Entities whose update body takes a `status` that can be `archived`. */
+  const archivable = (): string[] => {
+    const schemas = snapshot.components.schemas as Record<
+      string,
+      { properties?: Record<string, { enum?: string[]; anyOf?: { enum?: string[] }[]; description?: string }> }
+    >;
+    const pascal = (e: string) => e.split("_").map((x) => x[0].toUpperCase() + x.slice(1)).join("");
+    return ENTITIES.map((e) => e.singular)
+      .filter((e) => {
+        const body = schemas[`Update${pascal(e)}Request`] ?? schemas[`Update${pascal(e)}V2Request`];
+        const status = body?.properties?.status;
+        if (!status) return false;
+        const values = [...(status.enum ?? []), ...(status.anyOf ?? []).flatMap((a) => a.enum ?? [])];
+        return values.includes("archived") || /`archived`/.test(status.description ?? "");
+      })
+      .sort();
+  };
+
+  it("the delete section names exactly the entities that also have an archived status", () => {
+    const start = CONVENTIONS.indexOf("## Delete is recoverable");
+    const section = CONVENTIONS.slice(start, CONVENTIONS.indexOf("\n## ", start + 1));
+    expect(section).not.toMatch(/There is no "archive" state/);
+    const bullet = section.slice(section.indexOf("- Deleting is not archiving."));
+    const named = [...bullet.slice(0, bullet.indexOf("\n- ") > 0 ? bullet.indexOf("\n- ") : undefined)
+      .matchAll(/`([a-z_]+)`/g)].map((m) => m[1]).filter((x) => ENTITIES.some((e) => e.singular === x));
+    expect(named.sort()).toEqual(archivable());
+  });
+
+  it("does not call runs the only thing with an archive state", () => {
+    expect(CONVENTIONS).not.toMatch(/Runs are the only thing with a real archive state/);
+    expect(CONVENTIONS).not.toMatch(/Runs are the one exception with a true archive/);
+  });
+
+  it("get_entity_authoring_contract and the README name exactly the kinds the route serves", () => {
+    const recorded = JSON.parse(read("./fixtures/entity-contracts.tool-conditional_trigger.json")) as {
+      kinds: string[];
+    };
+    const kinds = [...recorded.kinds].sort();
+    const d = tools().descriptions.get("get_entity_authoring_contract")!;
+    const inTool = d.slice(0, d.indexOf("Answers `{ kinds"));
+    const fromTool = [...new Set([...inTool.matchAll(/`([a-z_]+)`/g)].map((m) => m[1]))]
+      .filter((k) => !["implementation"].includes(k)).sort();
+    expect(fromTool).toEqual(kinds);
+    const readme = paragraph(README, "- `get_entity_authoring_contract`");
+    const head = readme.slice(0, readme.indexOf("read live from"));
+    const fromReadme = [...new Set([...head.matchAll(/`([a-z_]+)`/g)].map((m) => m[1]))]
+      .filter((k) => k !== "get_entity_authoring_contract").sort();
+    expect(fromReadme).toEqual(kinds);
+  });
+
+  it("the guide's field-shape exception names every place a spec lives", () => {
+    const shape = paragraph(CONVENTIONS, "## Field shape");
+    for (const place of ["schemaBody", "contract.output_validators", "answerContract.validators"]) {
+      expect(shape, place).toContain(place);
+    }
+  });
+});
+

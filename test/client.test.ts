@@ -222,8 +222,10 @@ describe("backend/connector version skew", () => {
     const err = (await client.post("/api/v1/agents/ag-1").catch((e: Error) => e)) as Error;
     expect((err as { code?: string }).code).toBe("backend_version_skew");
     expect(err.message).not.toMatch(/The backend is OLDER than this connector/);
-    expect(err.message).toMatch(/OLDER/);
-    expect(err.message).toMatch(/NEWER/);
+    // Both directions, as possibilities (review 14): "may be", never "is".
+    expect(err.message).toMatch(/the backend may be OLDER/);
+    expect(err.message).toMatch(/or NEWER/);
+    expect(err.message).not.toMatch(/the backend is OLDER/i);
     expect(err.message).toMatch(/update this connector/);
   });
 });
