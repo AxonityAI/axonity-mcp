@@ -75,8 +75,9 @@ Read this before creating or updating anything.
 1. \`read_*\` the entity (and \`read_*_published\` if you need to see what is live).
 2. Edit the DRAFT: \`update_*\`, or workflow-edit tools for workflow structure.
 3. Validate before publish: \`validate_workflow\` / \`analyze_workflow_reachable_outputs\` / 
-   \`validate_tool_code\` / \`format_tool_code\`. These four are stateless and work with
-   read-only tokens.
+   \`validate_tool_code\` / \`format_tool_code\`. These four save nothing, and a
+   read-only token may call them — except \`validate_workflow({ workflowId })\`,
+   which needs the \`author\` scope.
 4. Re-read and verify with a saved tool command: \`execute_tool\` /
    \`execute_stored_connector\`.
 5. Fix any issues and re-read again.
@@ -770,13 +771,18 @@ a document to find out what the platform did.
   \`removedEdges\`. An edge you did not ask for is this, not corruption.
 
 ## Validating: two questions, two calls
-- \`validate_workflow({ workflowId })\` checks the STORED workflow against the
-  tenant catalog — it confirms the agents, tools and flows the steps reference
-  actually exist. This is the "can this run?" answer, and it comes back with
-  \`catalogChecked: true\`.
-- \`validate_workflow({ document })\` is stateless and read-only-token safe, but
-  without a catalog it can only judge STRUCTURE: \`launchable\` there means the
-  graph is sound, not that it will run. It says so with \`catalogChecked: false\`.
+- \`validate_workflow({ workflowId })\` checks the workflow as SAVED against the
+  tenant catalog — whether the agents, tools and flows the steps reference
+  exist and are published — plus its own wiring (its triggers and the knowledge
+  attached to it). This is the "can this run?" answer. It needs a token with
+  the \`author\` scope.
+- \`validate_workflow({ document })\` judges the document against the same
+  catalog, saves nothing, and a read-only token may call it. Without the
+  workflow's id it skips the checks about that workflow's own wiring (its
+  triggers and the knowledge attached to it), so validate by \`workflowId\` once
+  it is saved. Either call answers \`catalogChecked: false\` when the catalog
+  could not be built: then \`launchable\` means the graph is sound, not that it
+  will run.
 - Pass exactly one. Before telling a human a workflow is ready, check
   \`catalogChecked\` — a green structural verdict is the easiest thing to
   over-read.

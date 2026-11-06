@@ -1,10 +1,11 @@
 /**
  * Validation and inspection verbs — check work before requesting publish.
  *
- * All four routes are stateless: they take a document or a code fragment and
- * return a verdict without touching stored state. That makes them safe to call
- * as often as the agent likes, and they are the cheapest way to close the
- * authoring loop (draft → validate → fix → request_publish).
+ * None of the four saves anything: they return a verdict and leave stored
+ * state as it is. That makes them safe to call as often as the agent likes,
+ * and they are the cheapest way to close the authoring loop (draft → validate
+ * → fix → request_publish). validate_workflow reads the tenant's catalog to
+ * judge a workflow; see its description for which token each route takes.
  */
 
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -24,15 +25,21 @@ export function registerValidationTools(
       "`issues` list (each with code, message, severity, stepIds, edgeIds). " +
       "\n\nPass EXACTLY ONE of workflowId or document — they answer different " +
       "questions:" +
-      "\n- workflowId → validates the STORED workflow against this tenant's " +
-      "catalog. This is the real 'can this run?': it confirms the agents, tools " +
-      "and flows the steps reference actually exist. Answers catalogChecked: true." +
-      "\n- document → validates the document you pass, STATELESSLY. No database, " +
-      "so read-only service tokens can call it, but with no catalog the " +
-      "cross-entity checks cannot run: `launchable` here means 'structurally " +
-      "sound', NOT 'this will run'. Answers catalogChecked: false. Use it for a " +
-      "draft you have not saved, or for fast feedback while editing." +
-      "\n\nA green verdict is what a reader remembers, so check `catalogChecked` " +
+      "\n- workflowId → validates the workflow as SAVED against this tenant's " +
+      "catalog, including the checks about this workflow's own wiring (its " +
+      "triggers and the knowledge attached to it). This is the real 'can this " +
+      "run?'. It needs a token with the `author` scope." +
+      "\n- document → validates the document you pass, as it stands, against " +
+      "the SAME catalog: whether the agents, tools and flows its steps reference " +
+      "exist and are published. It saves nothing, and a read-only token may " +
+      "call it. Without the workflow's id the checks about one workflow's own " +
+      "wiring — its triggers and the knowledge attached to it — are skipped, so " +
+      "for a workflow that exists, validate it by workflowId once it is saved. " +
+      "Use it for a draft you have not saved, or for fast feedback while editing." +
+      "\n\nBoth answer `catalogChecked`. `catalogChecked: false` means the " +
+      "catalog could not be built on this deploy and only the structure was " +
+      "judged: `launchable` then means 'structurally sound', NOT 'this will " +
+      "run'. A green verdict is what a reader remembers, so check `catalogChecked` " +
       "before telling anyone a workflow is ready. Call this after " +
       "apply_workflow_mutations and before request_publish_workflow.",
     {
@@ -47,7 +54,8 @@ export function registerValidationTools(
         .record(z.unknown())
         .optional()
         .describe(
-          "Validate this document statelessly (as returned by read_workflow). " +
+          "Validate this document as it stands (as returned by read_workflow), " +
+            "against the tenant catalog; nothing is saved. " +
             "Omit if you are passing a workflowId.",
         ),
     },
