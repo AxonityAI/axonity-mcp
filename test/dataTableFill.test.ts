@@ -240,3 +240,26 @@ describe("the guide's Who fills it heading lists exactly the schema's fillers (r
   });
 });
 
+describe("fillingQueryId says what the backend enforces, not what the schema text says", () => {
+  // The schema's description says "Required when filledBy is `query`", but no
+  // validator enforces it: on axonity-flow main a query table WITHOUT a query
+  // is allowed on purpose (domain/warehouse_sync.py, filled_by_errors: "A query
+  // table with NO query yet is allowed"). What is refused is a query on a table
+  // another filler fills (same function), a rhythm with no query to run
+  // (rhythm_errors), and a fill or refresh with none (data_table_service
+  // refresh_now, warehouse_sync_service). The strictest rule is the source.
+  const queryParagraph = (tool: string) =>
+    paragraph(descriptions().get(tool)!, "FILLED BY A QUERY");
+
+  it.each(["create_data_table", "update_data_table"])(
+    "%s does not call fillingQueryId required, and says what needs it",
+    (tool) => {
+      const text = queryParagraph(tool);
+      expect(text).not.toMatch(/required with `filledBy: "query"`/);
+      expect(text).toMatch(/may be saved without one/);
+      expect(text).toMatch(/`rhythm` without one is refused/);
+      expect(text).toMatch(/refused on a table another filler fills/);
+    },
+  );
+});
+

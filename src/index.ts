@@ -108,8 +108,10 @@ const FILL_NOTE =
   "`live` table — every table a query or a workflow fills, and an author's " +
   "table set to `live` — has its rows read as they are now. " +
   "\n\nFILLED BY A QUERY: `fillingQueryId` is the query (create_query, " +
-  "list_queries) — required with `filledBy: \"query\"`, refused otherwise, " +
-  "and one query fills one table. The query carries the SQL, the source " +
+  "list_queries), and one query fills one table. It is refused on a table " +
+  "another filler fills. A query table may be saved without one — unfinished, " +
+  "it fills nothing — but a `rhythm` without one is refused, and so is " +
+  "refresh_data_table. The query carries the SQL, the source " +
   "and the grain. `rhythm` says when and how it fills: " +
   "`{ cron, timezone?, keyColumns?, mode?, enabled? }` — `cron` when it " +
   "runs, read in `timezone` (default UTC; an empty cron never runs by " +
