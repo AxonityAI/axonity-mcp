@@ -67,6 +67,14 @@ export interface EntityDef {
   /** One-line human description of the entity, for the tool docs. */
   label: string;
   /**
+   * The field names `create_<entity>`'s `fields` example shows. Default
+   * `["name", "description"]`. Set it where the create body lacks one of
+   * those — the agent body is strict, and an example key it does not know is a
+   * 422 for whoever copies it. A test holds every example to the create
+   * body's schema.
+   */
+  createExample?: string[];
+  /**
    * Optional pre-write check on the caller's fields, applied to `create_*` and
    * `update_*`. Throws to reject. Used to run the connector credential guard on
    * plain tool writes, which would otherwise bypass it.
@@ -289,7 +297,9 @@ export function registerEntityTools(
           .record(z.unknown())
           .describe(
             `The ${singular}'s fields as a JSON object (camelCase keys), e.g. ` +
-              `{ "name": "…", "description": "…" }.`,
+              `{ ${(def.createExample ?? ["name", "description"])
+                .map((k) => `"${k}": "…"`)
+                .join(", ")} }.`,
           ),
       },
       async ({ fields }) =>

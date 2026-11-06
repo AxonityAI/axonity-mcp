@@ -306,3 +306,31 @@ describe("review 14 of #107: archive state and the contract's kinds, from the sc
   });
 });
 
+describe("the create_<entity> example fields are fields of that create body (review 14 of #107)", () => {
+  it("every key in a create tool's `fields` example is a property of the route's request schema", () => {
+    const paths = snapshot.paths as Record<
+      string,
+      { post?: { requestBody?: { content?: Record<string, { schema?: { $ref?: string } }> } } }
+    >;
+    const schemas = snapshot.components.schemas;
+    const { shapes } = tools();
+    const checked: string[] = [];
+    for (const e of ENTITIES.filter((x) => x.creatable !== false)) {
+      const shape = shapes.get(`create_${e.singular}`);
+      if (!shape) continue;
+      const described =
+        (shape.fields as unknown as { description?: string } | undefined)?.description ?? "";
+      const example = described.match(/e\.g\. (\{[^}]*\})/)?.[1];
+      expect(example, e.singular).toBeDefined();
+      const keys = [...example!.matchAll(/"([A-Za-z]+)":/g)].map((m) => m[1]);
+      const ref = paths[e.basePath]?.post?.requestBody?.content?.["application/json"]?.schema?.$ref;
+      expect(ref, `${e.singular}: POST ${e.basePath} has a body schema`).toBeDefined();
+      const props = Object.keys(schemas[ref!.split("/").pop()!]?.properties ?? {});
+      for (const k of keys) expect(props, `${e.singular}.${k}`).toContain(k);
+      checked.push(e.singular);
+    }
+    expect(checked).toContain("agent");
+    expect(checked.length).toBeGreaterThan(10);
+  });
+});
+
