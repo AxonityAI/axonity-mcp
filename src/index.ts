@@ -363,7 +363,7 @@ const QUERY_NOTE =
  * lifecycle via #443's unified versioning, and `data_table` (axonity-flow#1217),
  * which joins them on exactly the same shape.
  */
-const ENTITIES: EntityDef[] = [
+export const ENTITIES: EntityDef[] = [
   {
     singular: "workflow",
     basePath: "/api/v1/workflows",

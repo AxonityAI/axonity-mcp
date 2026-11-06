@@ -232,8 +232,8 @@ has run cleanly once, at its current version.
 ## Delete is recoverable — but not everything is
 - \`delete_*\` soft-deletes: the entity disappears from \`list_*\` but is not gone.
   \`restore_*\` brings it back; \`list_deleted_*\` shows what's waiting. This
-  applies uniformly to workflow, agent, tool, skill, policy, reference_doc,
-  output_schema, prompt_snippet, and flow.
+  applies uniformly to every entity that has a \`delete_*\` and a
+  \`restore_*\` tool.
 - The same applies one level down, to version HISTORY:
   \`delete_*_version\` removes one entry from history (the current draft and
   published version are protected and can't be targeted this way);
@@ -242,7 +242,7 @@ has run cleanly once, at its current version.
   are normal, not a sign of corruption.
 - \`restore_*\` can itself 409 if a live entity now holds the same name/slot —
   the error names the conflicting one.
-- There is no "archive" state for these ten entities — delete + restore IS the
+- There is no "archive" state for those entities — delete + restore IS the
   lifecycle. Runs are the one exception with a true archive/unarchive (see below).
 
 ## Per entity — what to create, and what "complete" means
@@ -653,10 +653,14 @@ The connector never carries a secret across: \`authConfig\` stays placeholders i
 the new tenant too, and a human fills the real value there.
 
 ## Structural workflow edits
-- **Start by reading the spec.** \`get_workflow_authoring_spec\` returns FOUR
-  lists this deploy generates from its own registries: the mutation commands,
-  the trigger types, the step types (including the ones you may not author, with
-  the reason), and the schedule-rule shapes with a working example each. Neither
+- **Start by reading the spec.** \`get_workflow_authoring_spec\` returns the
+  lists this deploy generates from its own registries: the mutation commands
+  (\`operations\`), the trigger types (\`triggerTypes\`), the step types
+  (\`stepTypes\`, including the ones you may not author, with the reason), the
+  schedule-rule shapes with a working example each (\`scheduleRuleKinds\`), the
+  value vocabularies (\`parameterTypes\`, \`outputKinds\`, \`schemaFieldKinds\`),
+  the decision evaluators (\`decisionEvaluators\`) and the column kinds of a
+  table (\`tableColumnKinds\`). Neither
   this guide nor the tool descriptions restate any of those lists: a list kept
   in the connector is right only by maintenance, and it has been wrong twice
   already, both times in the direction that costs an agent a 422 on something it
@@ -685,7 +689,8 @@ the new tenant too, and a human fills the real value there.
   Writing \`kind\` on a trigger parameter is not a 422; it is a key nothing
   reads, so the value silently falls back to text and the workflow runs with
   the wrong thing. Check which of the three you are writing before you write it.
-- \`rulesVersion\` in that response is a content hash over all four lists. While
+- \`rulesVersion\` in that response is a content hash over the whole
+  answer. While
   it is unchanged there is nothing to re-fetch; re-read the spec when it changes,
   or when a mutation fails with a 422 suggesting your idea of a command is stale.
 - \`apply_workflow_mutations\` takes a LIST of commands and applies them in order,

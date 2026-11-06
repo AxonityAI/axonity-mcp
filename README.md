@@ -74,7 +74,7 @@ exceptions):
 | `discard_<entity>_draft` | Reset the draft to the last published state. |
 | `request_publish_<entity>` | Ask for a draft to be published — creates a pending approval; never publishes. |
 
-Exception: `list_data_tables` (like `list_measures` and
+Exception: `list_data_tables` (like `list_measures`, `list_queries` and
 `list_applications`) answers **one page**, not the whole library — see Tables
 below.
 
@@ -113,13 +113,15 @@ Plus:
   are not interchangeable** — `parameterTypes` (a trigger parameter's or
   workflow constant's `type`), `outputKinds` (a step output's or input's
   `kind` — narrower, *different key*) and `schemaFieldKinds` (inside a field's
-  `schema`, which wins where present). Getting that last group wrong is silent:
+  `schema`, which wins where present), plus `decisionEvaluators` (what a
+  decision may branch with) and `tableColumnKinds` (a table column's kind).
+  Getting the three value vocabularies wrong is silent:
   a `kind` written on a trigger parameter is not a 422, it is a key nothing
   reads, so the value falls back to text. Every list is generated from the
   registry that *enforces* it, so the connector states none of them and a new
   value is discoverable without a release here. `operations` is an index by
   default; pass `types` for a command's live payload schema. `rulesVersion` is
-  a content hash over all seven — same hash, nothing to re-fetch.
+  a content hash over all of them — same hash, nothing to re-fetch.
 - `get_entity_authoring_contract` — the platform's **create contract per
   entity kind** (tools with each type's implementation, agents with their
   persona, knowledge, schemas, tables, toolboxes, secrets, starts), read live from

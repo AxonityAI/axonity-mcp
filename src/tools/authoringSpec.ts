@@ -145,7 +145,7 @@ export function registerAuthoringSpecTools(
     "get_workflow_authoring_spec",
     "Everything THIS Axonity deploy can be built from, read live from the " +
       "server — not a list this connector keeps. Read it at the start of an " +
-      "authoring task, before `apply_workflow_mutations`. Seven lists come back:" +
+      "authoring task, before `apply_workflow_mutations`. Nine lists come back:" +
       "\n- `operations` — the mutation commands, with their payload schemas." +
       "\n- `triggerTypes` — every value a trigger's `typeId` may hold. " +
       "`category: true` marks a broad category id rather than a concrete type; " +
@@ -171,6 +171,11 @@ export function registerAuthoringSpecTools(
       "\n- `schemaFieldKinds` — the canonical builder's vocabulary, used inside " +
       "a field's `schema`. Widest and newest; where a `schema` object is " +
       "present it WINS over the `type` or `kind` beside it." +
+      "\n\nAND TWO MORE:" +
+      "\n- `decisionEvaluators` — what a decision may branch with, each with " +
+      "the arguments it reads, generated from the registry that dispatches them." +
+      "\n- `tableColumnKinds` — the kind a table column may have, with its own " +
+      "spellings: do not carry a value across from the three above." +
       "\n\nGetting this wrong is silent. A `kind` written on a trigger " +
       "parameter is not a 422 — it is a key nothing reads, so the value falls " +
       "back to text and everything downstream binds the wrong shape. Read the " +
@@ -178,7 +183,7 @@ export function registerAuthoringSpecTools(
       "\n\nBy default `operations` is an INDEX: each command's `type` and " +
       "one-line `description`. Pass `types` to get the live `payloadSchema` for " +
       "the commands you are about to write — the full catalogue with every " +
-      "schema is ~20 KB, which is rarely what you need. The other six lists " +
+      "schema is ~20 KB, which is rarely what you need. The other lists " +
       "are always returned complete. " +
       "\n\n`rulesVersion` is a content hash over all of them: while it is " +
       "unchanged there is nothing to re-fetch. Re-read the spec when it changes, " +
