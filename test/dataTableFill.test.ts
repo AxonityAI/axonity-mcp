@@ -110,7 +110,8 @@ describe("every list of what fills a table is the schema's filledBy (S1, review 
       const d = descriptions().get(tool)!;
       const versioning = enumOf("versioning");
       expect(versioning.length).toBeGreaterThan(1);
-      const line = paragraph(d, "`versioning`");
+      // The paragraph that defines it ("`versioning` — …"), not a mention of it.
+      const line = paragraph(d, "`versioning` — ");
       expect(quotedValues(line).filter((v) => !FILLERS.includes(v)).sort()).toEqual(
         [...versioning].sort(),
       );
@@ -134,3 +135,34 @@ describe("every list of what fills a table is the schema's filledBy (S1, review 
     );
   });
 });
+
+describe("what is read live follows from versioning, not from filledBy (K1, final review of #107)", () => {
+  const sentences = (text: string): string[] =>
+    text.split(/(?<=\.)\s+/).map((x) => x.trim()).filter(Boolean);
+
+  it("the schema lets an author's table be live", () => {
+    const description =
+      (create.properties?.versioning as { description?: string } | undefined)?.description ?? "";
+    expect(description).toMatch(/Only `author` may be `config` or `live`/);
+  });
+
+  it.each(["create_data_table", "update_data_table"])(
+    "%s ties isDynamic and how a measure reads to versioning",
+    (tool) => {
+      const all = sentences(descriptions().get(tool)!);
+      const dynamic = all.filter((x) => x.includes("isDynamic"));
+      expect(dynamic.length, "it still says what isDynamic became").toBeGreaterThan(0);
+      for (const x of dynamic) {
+        expect(x, "isDynamic follows from versioning").toContain("`versioning`");
+        expect(x).not.toMatch(/follows from\s+`filledBy`/);
+      }
+      const published = all.filter((x) => x.includes("AS PUBLISHED"));
+      expect(published.length).toBeGreaterThan(0);
+      for (const x of published) expect(x, "read as published = config").toContain("`config`");
+      const now = all.filter((x) => /read as they are now/.test(x) && !x.startsWith("`versioning`"));
+      expect(now.length).toBeGreaterThan(0);
+      for (const x of now) expect(x, "read as they are now = live").toContain("`live`");
+    },
+  );
+});
+

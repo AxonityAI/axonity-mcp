@@ -81,7 +81,8 @@ const FILL_NOTE =
   "limited to `allowedOperations`), `query` (a named query fetches them) or " +
   "`source` (the rows stay in a data source and this table describes them). " +
   "A table has ONE filler. `isDynamic` is no longer sent: it follows from " +
-  "`filledBy` — a table filled by a query or a workflow is dynamic. " +
+  "`versioning` (below) — a table read live is dynamic, one frozen at each " +
+  "publication is not, and a source table never is. " +
   "\n\nA SOURCE TABLE (`filledBy: \"source\"`) holds no rows here. " +
   "`external` says where it lives: `sourceId` (one of this workspace's data " +
   "sources, list_data_sources), `container` (what that source calls the " +
@@ -100,11 +101,12 @@ const FILL_NOTE =
   "`live`. Left out: `config` for an author's table, `live` otherwise. " +
   "\n\nWHAT A MEASURE READS: every table whose rows Flow holds, whatever " +
   "fills it — not a source table, whose rows stay in its data source. A " +
-  "table its AUTHOR fills (a plan, a target per period, a mapping) is read " +
-  "AS PUBLISHED: a row changed in the draft counts for no number until the " +
-  "table is published again (ensure_data_table_major_version, then " +
-  "request_publish_data_table). Rows a query or a workflow fills are read " +
-  "as they are now. " +
+  "`config` table — an author's table by default (a plan, a target per " +
+  "period, a mapping) — is read AS PUBLISHED: a row changed in the draft " +
+  "counts for no number until the table is published again " +
+  "(ensure_data_table_major_version, then request_publish_data_table). A " +
+  "`live` table — every table a query or a workflow fills, and an author's " +
+  "table set to `live` — has its rows read as they are now. " +
   "\n\nFILLED BY A QUERY: `fillingQueryId` is the query (create_query, " +
   "list_queries) — required with `filledBy: \"query\"`, refused otherwise, " +
   "and one query fills one table. The query carries the SQL, the source " +
