@@ -303,6 +303,25 @@ describe("the secret kinds are one list across the snapshot and the live contrac
     webhooks?: Record<string, unknown>;
   };
 
+  /**
+   * A closed list of values, in either spelling OpenAPI 3.1 allows: `enum`, or
+   * an `anyOf`/`oneOf` whose every branch is a `const`.
+   */
+  const closedList = (record: Record<string, unknown>): string[] | undefined => {
+    if (Array.isArray(record.enum)) return record.enum as string[];
+    for (const keyword of ["anyOf", "oneOf"]) {
+      const branches = record[keyword];
+      if (
+        Array.isArray(branches) &&
+        branches.length > 0 &&
+        branches.every((b) => b !== null && typeof b === "object" && "const" in b)
+      ) {
+        return branches.map((b) => (b as { const: string }).const);
+      }
+    }
+    return undefined;
+  };
+
   const secretKindEnums = (doc: Doc = snapshot): { at: string; values: string[] }[] => {
     const found: { at: string; values: string[] }[] = [];
     const walk = (node: unknown, at: string): void => {
@@ -312,10 +331,8 @@ describe("the secret kinds are one list across the snapshot and the live contrac
       }
       if (node === null || typeof node !== "object") return;
       const record = node as Record<string, unknown>;
-      const values = record.enum;
-      if (Array.isArray(values) && values.includes(MARKER)) {
-        found.push({ at, values: values as string[] });
-      }
+      const values = closedList(record);
+      if (values?.includes(MARKER)) found.push({ at, values });
       for (const [key, value] of Object.entries(record)) {
         if (key !== "enum") walk(value, `${at}.${key}`);
       }
@@ -457,15 +474,46 @@ describe("the secret kinds are one list across the snapshot and the live contrac
     expect(secretKindMismatches(probe as unknown as Doc)).toEqual([expect.stringMatching(at)]);
   });
 
+  it.each<[string, (kinds: string[]) => string[]]>([
+    ["`none` moved to the end", (kinds) => [...kinds.filter((k) => k !== "none"), "none"]],
+    ["`none` missing", (kinds) => kinds.filter((k) => k !== "none")],
+  ])("a connector list with %s is named, and only it", (_what, reshape) => {
+    // The connector's own shape is its own branch of the comparison: every
+    // other list compares to it with `none` taken out, so only this branch
+    // sees `none` in the wrong place or gone (delta review on #106).
+    const probe = structuredClone(snapshot) as Doc;
+    const type = (
+      probe.components.schemas.ConnectorAuthConfig as { properties: { type: { enum: string[] } } }
+    ).properties.type;
+    type.enum = reshape(type.enum);
+    expect(secretKindMismatches(probe)).toEqual([CONNECTOR_KINDS_AT]);
+  });
+
+  it.each(["anyOf", "oneOf"])(
+    "a stale list written as %s of const values is found too",
+    (keyword) => {
+      // Pydantic writes a Literal as `enum` today, but OpenAPI 3.1 also lets a
+      // closed list be an anyOf/oneOf of `const` values. Such a list must not
+      // be invisible to the check.
+      const probe = structuredClone(snapshot) as Doc;
+      const item = probe.components.schemas.SecretListItem as {
+        properties: Record<string, unknown>;
+      };
+      item.properties.kindAsConst = {
+        [keyword]: STALE.enum.map((value) => ({ const: value })),
+      };
+      expect(secretKindMismatches(probe)).toEqual([
+        "components.schemas.SecretListItem.properties.kindAsConst",
+      ]);
+    },
+  );
+
   it("the recorded contract names the same kinds for a connector's authConfig as the snapshot", () => {
     const tool = RECORDED.contracts.tool as {
       variants: { connector: { authConfig: { fields: { name: string; allowed?: string[] }[] } } };
     };
     const recorded = tool.variants.connector.authConfig.fields.find((f) => f.name === "type");
-    const pinned = (
-      snapshot.components.schemas.ConnectorAuthConfig.properties?.type as { enum?: string[] }
-    ).enum;
-    expect(recorded?.allowed).toEqual(pinned);
+    expect(recorded?.allowed).toEqual(connectorKinds(snapshot));
   });
 });
 
