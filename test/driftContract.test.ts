@@ -290,14 +290,18 @@ describe("get_entity_authoring_contract reads the platform live (#95, axonity-fl
  * HERE is a partial refresh — a new kind spliced into some of the schemas that
  * carry the list and not the others, or the snapshot and the recorded contract
  * response taken from different backends. Every enum in the snapshot that
- * lists secret kinds — in a component schema or inline in an operation's
- * parameters, request body or responses — is found by content, not by a list
- * of names, so a ninth place that starts carrying it is checked too.
+ * lists secret kinds — anywhere in the document: any `components.*`, inline in
+ * an operation, under `webhooks` — is found by content, not by a list of
+ * names, so a ninth place that starts carrying it is checked too.
  */
 describe("the secret kinds are one list across the snapshot and the live contract (axonity-flow#2349)", () => {
   const MARKER = "oauth2_client_credentials";
 
-  type Doc = { paths: Record<string, unknown>; components: { schemas: Record<string, unknown> } };
+  type Doc = {
+    paths: Record<string, unknown>;
+    components: { schemas: Record<string, unknown> } & Record<string, unknown>;
+    webhooks?: Record<string, unknown>;
+  };
 
   const secretKindEnums = (doc: Doc = snapshot): { at: string; values: string[] }[] => {
     const found: { at: string; values: string[] }[] = [];
@@ -316,10 +320,12 @@ describe("the secret kinds are one list across the snapshot and the live contrac
         if (key !== "enum") walk(value, `${at}.${key}`);
       }
     };
-    // Both halves of the document: a list can sit in a component schema or
-    // inline in an operation (a parameter, a request body, a response).
-    walk(doc.components.schemas, "components.schemas");
-    walk(doc.paths, "paths");
+    // The WHOLE document, from the top: a list can sit in any of
+    // `components.*` (schemas, parameters, requestBodies, responses, headers,
+    // callbacks), inline in an operation under `paths`, or under `webhooks`.
+    // Walking the root rather than a list of those places means a place
+    // nobody listed is not a blind spot either.
+    for (const [key, value] of Object.entries(doc)) walk(value, key);
     return found;
   };
 
@@ -390,6 +396,65 @@ describe("the secret kinds are one list across the snapshot and the live contrac
     expect(secretKindMismatches(probe)).toEqual([
       expect.stringMatching(/^paths\.\/api\/v1\/secrets\.get\.parameters\[\d+\]\.schema$/),
     ]);
+  });
+
+  /**
+   * Every place OpenAPI 3.1 lets a schema sit, beyond components.schemas and
+   * an operation (nice-to-have from the delta review on #106). FastAPI does not
+   * generate these today; the check must still not go blind if it starts to.
+   * Each puts a stale list (the six kinds before the refresh-token grant) in
+   * one place, and the one comparison must name exactly that place.
+   */
+  const STALE = {
+    type: "string",
+    enum: [
+      "api_key",
+      "bearer",
+      "basic",
+      "oauth2_client_credentials",
+      "google_service_account",
+      "session_cookie",
+    ],
+  };
+  const json = (schema: unknown) => ({ content: { "application/json": { schema } } });
+  const operationWith = (schema: unknown) => ({
+    post: { requestBody: json(schema), responses: { "200": { description: "ok" } } },
+  });
+  it.each<[string, (doc: Record<string, Record<string, unknown>>) => void, RegExp]>([
+    [
+      "components.parameters",
+      (d) => (d.components.parameters = { AuthType: { in: "query", name: "authType", schema: STALE } }),
+      /^components\.parameters\.AuthType\.schema$/,
+    ],
+    [
+      "components.requestBodies",
+      (d) => (d.components.requestBodies = { SecretBody: json({ properties: { authType: STALE } }) }),
+      /^components\.requestBodies\.SecretBody\..*\.authType$/,
+    ],
+    [
+      "components.responses",
+      (d) => (d.components.responses = { SecretList: { description: "x", ...json({ items: STALE }) } }),
+      /^components\.responses\.SecretList\..*\.items$/,
+    ],
+    [
+      "components.headers",
+      (d) => (d.components.headers = { "X-Auth-Type": { schema: STALE } }),
+      /^components\.headers\.X-Auth-Type\.schema$/,
+    ],
+    [
+      "components.callbacks",
+      (d) => (d.components.callbacks = { OnRotate: { "{$request.body#/url}": operationWith(STALE) } }),
+      /^components\.callbacks\.OnRotate\..*\.requestBody\..*schema$/,
+    ],
+    [
+      "webhooks",
+      (d) => (d.webhooks = { secretRotated: operationWith({ properties: { authType: STALE } }) }),
+      /^webhooks\.secretRotated\.post\.requestBody\..*\.authType$/,
+    ],
+  ])("a stale list in %s is named", (_where, mutate, at) => {
+    const probe = structuredClone(snapshot) as unknown as Record<string, Record<string, unknown>>;
+    mutate(probe);
+    expect(secretKindMismatches(probe as unknown as Doc)).toEqual([expect.stringMatching(at)]);
   });
 
   it("the recorded contract names the same kinds for a connector's authConfig as the snapshot", () => {
