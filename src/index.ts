@@ -462,9 +462,14 @@ const ENTITIES: EntityDef[] = [
       " On an update: `clearFillingQuery: true` takes the query away and " +
       "leaves the rows that are there; `rhythm` is replaced whole when sent; " +
       "`clearRhythm: true` takes it away (the table then fills only when " +
-      "asked), which is not the same as pausing it. `clearExternal: true` " +
-      "takes a source table's place away, `clearGrain: true` takes its grain " +
-      "away and `clearTimeAxis: true` takes its time axis away. " +
+      "asked), which is not the same as pausing it. " +
+      "`clearExternal: true` takes a table's place in a data source away, " +
+      "only together with a `filledBy` other than `source` (the table is " +
+      "handed back to Flow), and that change needs it: a source table keeps " +
+      "its place. " +
+      "`clearGrain: true` takes away what one row is; it is refused on a source " +
+      "table, which must say it. " +
+      "`clearTimeAxis: true` takes the time axis away, on any table. " +
       "\n\n" +
       DATE_TABLE_NOTE +
       "\n\n`rows` AND `columns` ARE WHOLE-COLLECTION FIELDS: sending either " +

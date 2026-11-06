@@ -182,3 +182,56 @@ describe("update_data_table names every clear* field the platform takes (review 
   });
 });
 
+describe("the clear fields say where the platform takes them (review of #107)", () => {
+  const update = snapshot.components.schemas.UpdateDataTableRequest as {
+    properties?: Record<string, { description?: string }>;
+  };
+  const sentence = (text: string, needle: string): string => {
+    const all = text.split(/(?<=\.)\s+|,\s+(?=`clear)|\s+and\s+(?=`clear)/);
+    const found = all.find((x) => x.includes(needle));
+    expect(found, `a sentence with ${needle}`).toBeDefined();
+    return found!;
+  };
+
+  it("the schema requires a place and a grain on a source table", () => {
+    // source_tables.external_errors / grain_errors on axonity-flow main.
+    expect(create.properties?.external).toBeDefined();
+    expect((update.properties?.grain?.description ?? "")).toMatch(/Required when filledBy is `source`/);
+    expect(
+      (snapshot.components.schemas.CreateDataTableRequest.properties?.external as { description?: string })
+        ?.description ?? "",
+    ).toMatch(/Required when filledBy is `source`, refused otherwise/);
+  });
+
+  it("clearExternal works only together with a filler other than source", () => {
+    const d = descriptions().get("update_data_table")!;
+    const x = sentence(d, "`clearExternal: true`");
+    expect(x).toContain("`filledBy`");
+    expect(x).toMatch(/other than `source`/);
+  });
+
+  it("clearGrain is refused on a source table", () => {
+    const d = descriptions().get("update_data_table")!;
+    const x = sentence(d, "`clearGrain: true`");
+    expect(x).toMatch(/refused on a source table/);
+  });
+
+  it("clearTimeAxis works on any table", () => {
+    const d = descriptions().get("update_data_table")!;
+    const x = sentence(d, "`clearTimeAxis: true`");
+    expect(x).toMatch(/any table/);
+    expect(x).not.toMatch(/source/);
+  });
+});
+
+describe("the guide's Who fills it heading lists exactly the schema's fillers (review of #107)", () => {
+  it("names the four, and no other value", () => {
+    const start = CONVENTIONS.indexOf("**Who fills it");
+    expect(start).toBeGreaterThanOrEqual(0);
+    const end = CONVENTIONS.indexOf("\n-", start);
+    const heading = CONVENTIONS.slice(start, end);
+    const named = [...heading.matchAll(/`([a-z_]+)`/g)].map((m) => m[1]).filter((v) => v !== "filledBy");
+    expect(named.sort()).toEqual([...FILLERS].sort());
+  });
+});
+

@@ -548,6 +548,19 @@ describe("the secret kinds are one list across the snapshot and the live contrac
     ]);
   });
 
+  it("a correct const list with a null branch is not named: the null branch is no kind", () => {
+    // The other half of the case above: closedList must leave the null branch
+    // out of the values, or an optional but correct list reads as stale.
+    const probe = structuredClone(snapshot) as Doc;
+    const item = probe.components.schemas.SecretListItem as {
+      properties: Record<string, unknown>;
+    };
+    item.properties.kindOrNull = {
+      anyOf: [...secretKinds(snapshot).map((value) => ({ const: value })), { type: "null" }],
+    };
+    expect(secretKindMismatches(probe)).toEqual([]);
+  });
+
   it("the recorded contract names the same kinds for a connector's authConfig as the snapshot", () => {
     const tool = RECORDED.contracts.tool as {
       variants: { connector: { authConfig: { fields: { name: string; allowed?: string[] }[] } } };
