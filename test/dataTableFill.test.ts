@@ -266,3 +266,40 @@ describe("fillingQueryId says what the backend enforces, not what the schema tex
   );
 });
 
+describe("the defaults FILL_NOTE states are the backend's (review 8 of #107)", () => {
+  // Sources on axonity-flow main: domain/table_versioning.py
+  // default_versioning_for (only an author's table defaults to config) and
+  // domain/source_tables.py grain_errors (required for source, refused for
+  // query). The schema's descriptions say the same; they are the anchor here.
+  const describedAs = (prop: string) =>
+    (create.properties?.[prop] as { description?: string } | undefined)?.description ?? "";
+
+  it("the schema states both rules", () => {
+    expect(describedAs("versioning")).toMatch(
+      /Left out: `config` for an author's table, `live` for every other/,
+    );
+    expect(describedAs("grain")).toMatch(
+      /Required when filledBy is `source`; refused when a query fills the table/,
+    );
+  });
+
+  it.each(["create_data_table", "update_data_table"])(
+    "%s states the versioning default: config for an author's table, live otherwise",
+    (tool) => {
+      const d = descriptions().get(tool)!;
+      const line = paragraph(d, "`versioning` — ");
+      expect(line).toMatch(/Left out: `config` for an author's table, `live` otherwise\./);
+    },
+  );
+
+  it.each(["create_data_table", "update_data_table"])(
+    "%s states the grain rule: required for a source table, refused when a query fills it",
+    (tool) => {
+      const d = descriptions().get(tool)!;
+      const line = paragraph(d, "`grain` says what one row is");
+      expect(line).toMatch(/required\s+for a source table/);
+      expect(line).toMatch(/refused when a query fills the table/);
+    },
+  );
+});
+
