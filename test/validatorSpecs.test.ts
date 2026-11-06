@@ -70,11 +70,13 @@ describe("the authoring guide carries the validator contract", () => {
     expect(text).toMatch(/never looked up/i);
   });
 
-  it("says where field and slots are accepted, and where they are a 422", async () => {
-    // The trap this section exists to close: an author reads the standard call,
-    // writes `field` into an agent's permissions, and meets a strict body.
+  it("says validator specs live in the output schema only, and an agent body refuses them", async () => {
+    // axonity-flow#2176 (R5b): the schema is the gate. The agent's `permissions`
+    // bag, where specs used to sit, is gone, and the agent's create/update body
+    // is strict: a spec written there is a 422, not a gate.
     const text = await guide();
-    expect(text).toMatch(/permissions\.outputValidators`? is a STRICT body/);
+    expect(text).toMatch(/ONE place: an output_schema's `schemaBody`/);
+    expect(text).toMatch(/`outputSchemaIds`/);
     expect(text).toContain("422");
   });
 

@@ -162,11 +162,11 @@ has run cleanly once, at its current version.
 
 ## Field shape
 - All fields are camelCase JSON (e.g. \`capabilityTier\`, not \`capability_tier\`).
-  ONE documented exception: validator specs (\`permissions.outputValidators\`,
-  \`permissions.exposedValidatorTools\`) use snake_case keys (\`function\`,
+  ONE documented exception: validator specs (\`validators\` and
+  \`preflight\` in an output_schema's \`schemaBody\`) use snake_case keys (\`function\`,
   \`target\`, \`args\`, \`when_present\`, \`inputs\`, \`error_message\`,
-  \`tool_name\`, \`validator_name\`) — they are the same shape at every level and
-  are stored verbatim, so they are NOT camel-aliased. Send them in snake_case.
+  \`tool_name\`, \`validator_name\`) — they are stored verbatim, so they are
+  NOT camel-aliased. Send them in snake_case.
   What those keys MEAN, and how a validator is bound to what it judges, is the
   Validators section.
 - \`update_*\` is a partial change for agents/tools and a partial patch for
@@ -178,10 +178,10 @@ has run cleanly once, at its current version.
   undeclared OR MISSPELLED key is a 422 that names it, not a silent drop. So
   spelling matters and you get told when it is wrong — good. Other entities are
   more lenient and may drop an unknown key silently; never rely on that.
-- \`agent.tags\` is a free label for grouping and reporting. It GATES NOTHING —
-  what reaches an agent's prompt is a LINK (\`attach_policy_to_agent\`), visible
-  in a table a human can read and edit. A role-tag gate on a policy used to
-  decide that invisibly and is refused outright now: sending
+- An agent has no tags: what reaches an agent's prompt is a LINK
+  (\`attach_policy_to_agent\`), visible in a table a human can read and edit.
+  A role-tag gate on a policy used to decide that invisibly and is refused
+  outright now: sending
   \`activation.tags\` to \`create_policy\`/\`update_policy\` is a 422. The two
   surviving gates, \`activation.tools\` and \`activation.delegation\`, each say
   something a link cannot — "only on turns where this agent holds this tool",
@@ -232,7 +232,7 @@ has run cleanly once, at its current version.
 - \`delete_*\` soft-deletes: the entity disappears from \`list_*\` but is not gone.
   \`restore_*\` brings it back; \`list_deleted_*\` shows what's waiting. This
   applies uniformly to workflow, agent, tool, skill, policy, reference_doc,
-  persona, output_schema, prompt_snippet, and flow.
+  output_schema, prompt_snippet, and flow.
 - The same applies one level down, to version HISTORY:
   \`delete_*_version\` removes one entry from history (the current draft and
   published version are protected and can't be targeted this way);
@@ -321,17 +321,25 @@ made any time before you attach them.
 - Required: \`name\`. Enumerated fields, with their ONLY valid values:
   - \`capabilityTier\`: \`economy\` | \`standard\` (default) | \`smart\` | \`reasoning\`
   - \`creativityTier\`: \`low\` | \`medium\` (default) | \`high\`
-  - \`learningMode\`: \`none\` (default) | \`adaptive\` | \`strict\`
-- \`avatar\`, \`tags\` (free labels for grouping — they gate nothing; see Field
-  shape), \`canOwnProcess\` (bool; must be true for an agent to own a
-  workflow step's flow), \`episodicMemoryEnabled\` (bool).
-- \`permissions\` (object): \`planning\`, \`delegation\`, \`verboseOutput\` (bools);
-  \`outputValidators\` / \`exposedValidatorTools\` (snake_case specs — see Field
-  shape for the casing, Validators for what they say);
-  \`expectedOutputSchemaId\` (an output_schema id — MANDATORY whenever you
-  attach validators here).
+  - \`reasoningLevel\`: \`default\` (sends nothing, the model decides) | \`none\` | \`low\` | \`medium\` | \`high\` | \`extra_high\`
+  - \`delegation\`: \`off\` (default) | \`on\` (one task to one team member at a time) | \`multi\` (also one task to several at once)
+- \`persona\` (text): who the agent is, in its own words — the character text
+  every prompt of this agent opens with. It is a field of the agent and
+  publishes with it (axonity-flow#2176); there is no separate persona to
+  create, version or publish.
+- \`slug\` (its handle, set once at creation; left out: taken from the name),
+  \`avatar\`, \`conversational\` (bool: may people talk to it),
+  \`delegationBudgetEur\` (what one delegation to it may cost; empty: no
+  budget), \`frameworkToolsOff\` (framework tools taken away; \`submit_output\`
+  cannot be), \`clearance\` (what it may read; set by an administrator).
+- Output: \`outputSchemaIds\` (the output schemas it answers in — library ids
+  or names; a schema outside the list is refused) and \`defaultOutputSchemaId\`
+  (the one used when a caller names none; left out: the first). The GATES on
+  an output live in the output_schema (see Validators), not on the agent.
 - Wiring fields — see the Wiring section: \`toolIds\`, \`systemToolIds\`,
   \`delegationTargetIds\`.
+- Anything else is refused: the body is strict, so a field the platform
+  retired (axonity-flow#2176) is a 422 that names it, not a silent drop.
 - Complete check: an agent with no \`toolIds\`/\`systemToolIds\` has no tools and
   can only reason/talk. If it is meant to DO something, give it the tools.
 
@@ -368,14 +376,16 @@ made any time before you attach them.
   launchable AND has a trigger (see Triggers).
 
 ### persona
-- An agent's character — 1:1 with an agent. Created only through its agent
-  (\`create_agent_persona\`: \`name\`, \`characterText\`); then a normal entity
-  (\`read_persona\`, \`update_persona\`, delete/restore/versions).
+- Not an entity: the agent's \`persona\` field (see agent). Set it with
+  \`create_agent\` / \`update_agent\`, or \`create_agent_persona\` (agentId,
+  expectedVersion, persona); read it with \`read_agent\` or
+  \`read_agent_persona\`. Its history is the agent's versions, and it goes live
+  with \`request_publish_agent\`.
 
 ### output_schema
 - A reusable output contract, versioned and publishable. Referenced BY id from a
-  tool's validators or an agent's \`permissions.expectedOutputSchemaId\` — so
-  create it first, then point things at the id the create call returns.
+  tool's validators or an agent's \`outputSchemaIds\` — so create it first,
+  then point things at the id the create call returns.
 - \`schemaBody\` is a JSON Schema document (\`type\`, \`properties\`,
   \`required\`) PLUS one key that is not JSON Schema: \`validators\`, the gates
   run against a submitted output. This is the place a validator can be STEERED
@@ -422,9 +432,11 @@ made any time before you attach them.
 
 ## Validators — one shape, one call
 A validator is a GATE on a submitted output: it runs after an agent produces a
-result and can refuse it. Specs are written in two places and carry the same
-key names in both — \`permissions.outputValidators\` on an agent, and
-\`validators\` inside an output_schema's \`schemaBody\`. The backend's OpenAPI
+result and can refuse it. Specs are written in ONE place: an output_schema's \`schemaBody\`
+(\`validators\`, and \`preflight\` for the checks an agent may run itself
+before it submits). The agent no longer carries specs (axonity-flow#2176): it
+names the schemas it answers in with \`outputSchemaIds\`, and a spec sent on
+the agent's strict create/update body is a 422. The backend's OpenAPI
 description of \`schemaBody\` is the source for the full contract, and the
 platform's live contract (\`get_entity_authoring_contract\`, output_schema)
 wins over this section where this deploy serves it. What follows is the part
@@ -488,10 +500,7 @@ left alone: there is nothing to check against, and guessing would refuse correct
 configurations.)
 
 WHERE \`field\` AND \`slots\` ARE ACCEPTED: inside an output_schema's
-\`schemaBody\`, which is stored verbatim. An agent's
-\`permissions.outputValidators\` is a STRICT body — an undeclared key is a 422 —
-so a spec written THERE takes neither, and its validator gets the whole output
-and no slots. Steer a validator from the output_schema.
+\`schemaBody\`, which is stored verbatim — the only place a spec lives.
 
 ### The older, explicit binding
 A tool spec MAY declare \`inputs\` instead, and a spec with \`inputs\` does NOT
@@ -518,8 +527,9 @@ lives in the entity body:
   \`update_agent\`. \`toolIds\` and \`systemToolIds\` are DIFFERENT lists; a
   system-tool id does not go in \`toolIds\`.
 - agent → agent (delegation): add the callee agent's id to the caller's
-  \`delegationTargetIds\` (and set \`permissions.delegation: true\`).
-- output_schema → agent: \`permissions.expectedOutputSchemaId\` (a single id).
+  \`delegationTargetIds\` (and set \`delegation\` to \`on\` or \`multi\`).
+- output_schema → agent: \`outputSchemaIds\` (a list), with
+  \`defaultOutputSchemaId\` for the one used when a caller names none.
 - Changing any of these is read-then-write under optimistic locking: read the
   agent, edit the field — an id-array is a FULL replace, so include the ids you
   are keeping — then \`update_agent\` with \`expectedVersion\`.
@@ -593,8 +603,8 @@ doc or a step's activities — and how large each may be, is not decided here: t
 placement rules are served by the platform and appended to this guide, read live
 from this deploy each time you call it.
 
-Long-term recall for an agent is the agent's **\`episodicMemoryEnabled\`** flag
-(Memory V2, opt-in). Session/workflow memory are RUNTIME, not authored: they are
+An agent has no long-term recall of its own runs: episodic memory went with
+axonity-flow#2176. Session/workflow memory are RUNTIME, not authored: they are
 written by a run, never set here. This connector does not expose them — the
 backend serves them per run, but no tool wraps those reads yet, so do not
 promise a user you can show them.
@@ -620,9 +630,8 @@ elsewhere points at nothing. Do this instead:
 2. Create the leaf dependencies first (tools, output_schemas). Keep a map from
    each OLD id to the NEW id the create call returns.
 3. Create agents, translating every referenced id through your map:
-   old toolId → new toolId in \`toolIds\`, etc. Never send an old id. If the
-   source agent has a persona, recreate it with \`create_agent_persona\` on the
-   new agent.
+   old toolId → new toolId in \`toolIds\`, etc. Never send an old id. The
+   persona is a field of the agent: copy its \`persona\` text into the create.
 4. Create workflows; when you add agent/tool references into the document,
    translate through the map the same way.
 5. Attach skills/policies/reference-docs by the new ids, then read them back

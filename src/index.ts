@@ -407,16 +407,6 @@ const ENTITIES: EntityDef[] = [
     deleteVersionParam: "expected_version",
   },
   {
-    singular: "persona",
-    basePath: "/api/v1/personas",
-    updateMethod: "PUT",
-    label: "personas (an agent's character, 1:1 with the agent)",
-    // Created only through its agent (create_agent_persona) — there is no
-    // standalone POST /api/v1/personas.
-    creatable: false,
-    deleteVersionParam: "expected_version",
-  },
-  {
     singular: "prompt_snippet",
     basePath: "/api/v1/prompt-snippets",
     updateMethod: "PATCH",
@@ -653,7 +643,9 @@ const ENTITIES: EntityDef[] = [
 /**
  * Entities with version history. Every authored entity here exposes the
  * `/versions*` routes, `flow` included (verified against the backend:
- * `/api/v1/flows/{id}/versions…`), so all eleven get the version tools.
+ * `/api/v1/flows/{id}/versions…`), so each gets the version tools. The
+ * persona is not here: since axonity-flow#2176 it is a field of the agent and
+ * its history is the agent's.
  */
 const VERSIONED: VersionedEntity[] = [
   { singular: "workflow", basePath: "/api/v1/workflows", publishedPath: "entity" },
@@ -666,7 +658,6 @@ const VERSIONED: VersionedEntity[] = [
     basePath: "/api/v1/reference-docs",
     publishedPath: "versions",
   },
-  { singular: "persona", basePath: "/api/v1/personas", publishedPath: "versions" },
   {
     singular: "output_schema",
     basePath: "/api/v1/output-schemas",

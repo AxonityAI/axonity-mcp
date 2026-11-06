@@ -75,7 +75,7 @@ export function registerEntityContractTools(server: McpServer, client: AxonityCl
     "get_entity_authoring_contract",
     "Read this deploy's CREATE CONTRACT per entity kind from the platform " +
       "itself — tools (each type's `implementation`, connectors included), " +
-      "agents, personas, knowledge, schemas, tables, toolboxes, secrets and " +
+      "agents (their persona included), knowledge, schemas, tables, toolboxes, secrets and " +
       "starts. Answers `{ kinds, contracts, rulesVersion }`: per kind the " +
       "`create` and `update` fields (name, required, type, allowed values, " +
       "shape, and `refused` with where the value is authored instead), and " +

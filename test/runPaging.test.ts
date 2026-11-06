@@ -164,4 +164,13 @@ describe("the run lists say what kind of answer they are (#37)", () => {
     // advancing while re-reading page one.
     expect(params).not.toHaveProperty("offset");
   });
+
+  it("list_runs passes includePlatform as the route's include_platform (axonity-flow#2274)", async () => {
+    const { handlers, client } = setup();
+    await handlers.get("list_runs")!({ includePlatform: true });
+    const [, params] = client.get.mock.calls[0] as unknown as [string, Record<string, unknown>];
+    expect(params.include_platform).toBe(true);
+    const d = setup().descriptions.get("list_runs")!;
+    expect(d).toMatch(/isPlatform/);
+  });
 });

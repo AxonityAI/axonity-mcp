@@ -112,7 +112,7 @@ export const LIST_FILTERS: Record<string, ListFilter[]> = {
       query: "filled_by",
       type: "string",
       description:
-        "Only tables filled this way: author, workflow or query. A value outside the three is refused rather than silently ignored.",
+        "Only tables filled this way: author, workflow, query or source (the rows stay in a data source). A value outside the four is refused rather than silently ignored.",
     },
   ],
   "data_source": [

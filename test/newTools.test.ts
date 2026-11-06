@@ -54,7 +54,6 @@ describe("authoring guide (axonity_conventions) stays complete", () => {
       "Prompt elements & placement (Memory V2)",
       "attach_prompt_snippet_to_flow_step",
       "list_wildcard_prompts",
-      "episodicMemoryEnabled",
       "### company",
       "start_workflow_run",
       "Wiring",

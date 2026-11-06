@@ -125,7 +125,10 @@ describe("the three false instructions are gone (M2)", () => {
     const guide = await guideText();
     expect(guide).not.toMatch(/policies silently\s+skip the agent/);
     expect(guide).not.toMatch(/drives which policies apply to the agent at\s+runtime/);
-    expect(guide).toMatch(/It GATES NOTHING/);
+    // An agent has no tags at all since axonity-flow#2176; what reaches its
+    // prompt is a link.
+    expect(guide).not.toMatch(/agent\.tags/);
+    expect(guide).toMatch(/what reaches an agent's prompt is a LINK/);
     expect(guide).toMatch(/activation\.tags.*422|422.*activation\.tags/s);
   });
 });

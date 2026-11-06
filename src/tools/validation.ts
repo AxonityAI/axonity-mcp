@@ -216,7 +216,6 @@ export function registerApprovalTools(
                 "skill",
                 "policy",
                 "reference_doc",
-                "persona",
                 "output_schema",
                 "prompt_snippet",
                 "flow",
@@ -262,7 +261,7 @@ export function registerApprovalTools(
   server.tool(
     "request_publish_release",
     "Request that a WORKFLOW AND EVERYTHING IT NEEDS go live as one release — " +
-      "the agents it runs, their tools and personas, the flows it pins, and the " +
+      "the agents it runs (each with its persona), their tools, the flows it pins, and the " +
       "memory scoped to those agents. Prefer this over a request per entity: " +
       "taking a tenant live entity-by-entity means a hundred-odd separate " +
       "approvals, none of which means anything on its own, and a human asked " +

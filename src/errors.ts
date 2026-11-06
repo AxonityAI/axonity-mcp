@@ -360,9 +360,17 @@ export function errorForStatus(status: number, body?: unknown): AxonityApiError 
   }
 }
 
+/** Shared with the reactive error, so the two never disagree on the advice. */
+export const SKEW_EITHER_WAY =
+  "This connector and this backend are out of step, and nothing here says " +
+  "which way: the backend may be OLDER (it has not got the route yet: wait for " +
+  "the deploy or pin an older connector), or NEWER (it removed the route: " +
+  "update this connector). Tell your human which Axonity environment this " +
+  "token points at and which connector version runs.";
+
 /**
  * 405/404 on a route this connector version depends on — the deployed backend
- * is older than the client (#30).
+ * and the client are out of step (#30): older, or newer and the route removed.
  *
  * 0.3.4 shipped `validate_workflow`'s `workflowId` form. Against a sandbox
  * running a branch 15 commits behind, it answered a bare 405 on every attempt.
@@ -388,15 +396,21 @@ export class BackendVersionSkewError extends AxonityApiError {
       status === 404
         ? " (a 404 also means 'no such id', so check the id first)"
         : "";
-    super(
-      `The Axonity backend does not have \`${method} ${path}\`, which this ` +
-        `version of the connector needs${ambiguous}. The backend is OLDER than ` +
-        `this connector — this is a deployment mismatch, not a mistake in your ` +
-        `call.` +
-        (addedBy ? ` That route was added by ${addedBy}.` : "") +
+    // Only a route this repository records adding proves the backend is the
+    // older side; a 405 elsewhere can as well be a route the backend removed.
+    const direction = addedBy
+      ? " The backend is OLDER than this connector — this is a deployment " +
+        `mismatch, not a mistake in your call. That route was added by ${addedBy}.` +
         " Tell your human which Axonity environment this token points at, and " +
         "do not retry: the same call will keep failing until that backend is " +
-        "updated (or you pin an older connector).",
+        "updated (or you pin an older connector)."
+      : " This is a deployment mismatch, not a mistake in your call. " +
+        SKEW_EITHER_WAY +
+        " Do not retry: the same call will keep failing until they match.";
+    super(
+      `The Axonity backend does not have \`${method} ${path}\`, which this ` +
+        `version of the connector needs${ambiguous}.` +
+        direction,
       status,
       body,
       "backend_version_skew",

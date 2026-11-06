@@ -27,25 +27,79 @@ function fakeClient() {
   };
 }
 
-describe("persona tools", () => {
-  it("reads and creates agent-scoped", async () => {
+/**
+ * axonity-flow#2176 made the persona a field of the agent: `persona` (text) on
+ * create/update/read of the agent, published with it. The two agent-scoped
+ * persona tools stay as the migration path an agent already knows, and now read
+ * and write that field; there is no persona route left to call.
+ */
+describe("persona tools read and write the agent's persona field (axonity-flow#2176)", () => {
+  it("read_agent_persona reads the agent and returns its persona and version", async () => {
+    const { server, handlers } = fakeServer();
+    const client = fakeClient();
+    client.get.mockResolvedValueOnce({
+      id: "ag-1",
+      name: "Writer",
+      version: 7,
+      persona: "I write plainly.",
+    } as never);
+    registerPersonaTools(server as never, client as unknown as AxonityClient);
+
+    const result = (await handlers.get("read_agent_persona")!({ agentId: "ag-1" })) as {
+      content: { text: string }[];
+    };
+    expect(client.get).toHaveBeenCalledWith("/api/v1/agents/ag-1");
+    expect(JSON.parse(result.content[0].text)).toEqual({
+      agentId: "ag-1",
+      persona: "I write plainly.",
+      version: 7,
+    });
+  });
+
+  it("read_agent_persona says null, not undefined, for an agent without a persona", async () => {
+    const { server, handlers } = fakeServer();
+    const client = fakeClient();
+    client.get.mockResolvedValueOnce({ id: "ag-1", version: 1 } as never);
+    registerPersonaTools(server as never, client as unknown as AxonityClient);
+
+    const result = (await handlers.get("read_agent_persona")!({ agentId: "ag-1" })) as {
+      content: { text: string }[];
+    };
+    expect(JSON.parse(result.content[0].text).persona).toBeNull();
+  });
+
+  it("create_agent_persona writes the field on the agent, under optimistic locking", async () => {
     const { server, handlers } = fakeServer();
     const client = fakeClient();
     registerPersonaTools(server as never, client as unknown as AxonityClient);
 
-    await handlers.get("read_agent_persona")!({ agentId: "ag-1" });
-    expect(client.get).toHaveBeenCalledWith("/api/v1/agents/ag-1/persona");
-
-    await handlers.get("create_agent_persona")!({ agentId: "ag-1", fields: { name: "V" } });
-    expect(client.post).toHaveBeenCalledWith("/api/v1/agents/ag-1/persona", { name: "V" });
+    await handlers.get("create_agent_persona")!({
+      agentId: "ag-1",
+      expectedVersion: 7,
+      persona: "I write plainly.",
+    });
+    expect(client.put).toHaveBeenCalledWith("/api/v1/agents/ag-1", {
+      expectedVersion: 7,
+      persona: "I write plainly.",
+    });
+    expect(client.post).not.toHaveBeenCalled();
   });
 
-  it("does not register update_persona — the generic persona entity provides it", () => {
-    // Registering it here too would be a duplicate tool name.
-    const { server, handlers } = fakeServer();
-    registerPersonaTools(server as never, fakeClient() as unknown as AxonityClient);
-    expect([...handlers.keys()]).not.toContain("update_persona");
-    expect([...handlers.keys()]).not.toContain("list_personas");
+  it("create_agent_persona takes exactly agentId, expectedVersion and persona", () => {
+    // Zod drops an unknown key silently, so the old `fields: { characterText }`
+    // must not be a parameter that quietly does nothing: it is not one at all,
+    // and `persona` is required, so the old call fails instead of writing nothing.
+    const shapes = new Map<string, Record<string, { isOptional: () => boolean }>>();
+    registerPersonaTools(
+      {
+        tool: (name: string, _d: string, s: Record<string, { isOptional: () => boolean }>) =>
+          shapes.set(name, s),
+      } as never,
+      fakeClient() as unknown as AxonityClient,
+    );
+    const shape = shapes.get("create_agent_persona")!;
+    expect(Object.keys(shape).sort()).toEqual(["agentId", "expectedVersion", "persona"]);
+    for (const key of Object.keys(shape)) expect(shape[key].isOptional(), key).toBe(false);
   });
 });
 

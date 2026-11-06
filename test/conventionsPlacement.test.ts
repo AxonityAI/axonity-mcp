@@ -130,7 +130,8 @@ describe("CONVENTIONS states no placement rules of its own", () => {
     expect(CONVENTIONS).toContain("attach_prompt_snippet_to_flow_step");
     expect(CONVENTIONS).toContain("reorder_flow_step_prompts");
     expect(CONVENTIONS).toContain("list_wildcard_prompts");
-    expect(CONVENTIONS).toContain("episodicMemoryEnabled");
+    // Episodic memory went with axonity-flow#2176; the guide no longer offers it.
+    expect(CONVENTIONS).not.toContain("episodicMemoryEnabled");
   });
 
   it("states no size budget for a prompt element", () => {

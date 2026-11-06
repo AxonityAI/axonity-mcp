@@ -193,4 +193,18 @@ describe("backend/connector version skew", () => {
       .catch((e: Error) => e);
     expect(err.message).toMatch(/backend is OLDER/);
   });
+
+  it("does not blame an older backend for a 405 on a route it has no record of adding", async () => {
+    // A 405 on a path the backend mounts for another method can as well mean the
+    // backend removed this method (axonity-flow#2176 removed routes this
+    // connector still called). Without an entry in ROUTES_ADDED_IN nothing says
+    // which side moved, so the message names both and what to do for each.
+    const client = clientAnswering(405);
+    const err = (await client.post("/api/v1/agents/ag-1").catch((e: Error) => e)) as Error;
+    expect((err as { code?: string }).code).toBe("backend_version_skew");
+    expect(err.message).not.toMatch(/The backend is OLDER than this connector/);
+    expect(err.message).toMatch(/OLDER/);
+    expect(err.message).toMatch(/NEWER/);
+    expect(err.message).toMatch(/update this connector/);
+  });
 });

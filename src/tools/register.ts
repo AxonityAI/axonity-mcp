@@ -74,7 +74,7 @@ export interface EntityDef {
   guardFields?: (fields: Record<string, unknown>) => void;
   /**
    * Whether `request_publish_<entity>` is generated. Default true, and true for
-   * every current entity: all ten (flow included) are valid `entityType`s for a
+   * every current entity (flow included): each is a valid `entityType` for a
    * publish approval on the backend (`ApprovalEntityType`). Set false only for a
    * future entity that genuinely cannot be publish-approved.
    */
@@ -85,7 +85,10 @@ export interface EntityDef {
    * rather than shipping `list_policys`.
    */
   plural?: string;
-  /** Whether `create_<entity>` is generated. Default true. False for `persona`, whose create is agent-scoped (`create_agent_persona`). */
+  /**
+   * Whether `create_<entity>` is generated. Default true. False for an entity
+   * created only through a parent, which then needs its own create tool.
+   */
   creatable?: boolean;
   /**
    * Whether `read_<entity>` is generated. Default true, and true for every
@@ -100,7 +103,7 @@ export interface EntityDef {
    * an entity with no lifecycle routes. The two spellings are a real backend
    * inconsistency, not a typo: `expectedVersion` (workflow, agent, tool,
    * prompt_snippet, flow) vs `expected_version` (skill, policy, reference_doc,
-   * output_schema, persona).
+   * output_schema).
    */
   deleteVersionParam?: "expectedVersion" | "expected_version";
   /**
