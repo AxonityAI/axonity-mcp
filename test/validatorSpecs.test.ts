@@ -84,6 +84,11 @@ describe("the authoring guide carries the validator contract", () => {
     expect(text).toMatch(/output_schema's `schemaBody`/);
     expect(text).toMatch(/`contract\.output_validators`/);
     expect(text).toMatch(/`answerContract\.validators`/);
+    // Only a contract with a `schema` object counts (conversation_answer
+    // answer_contract_of); validators without one never run, and
+    // validate_workflow does not look at answerContract (review 9 of #107).
+    expect(text).toMatch(/`answerContract\.validators`, beside its `schema`/);
+    expect(text).toMatch(/without a `schema` nothing runs/);
     expect(text).toMatch(/`outputSchemaIds`/);
     expect(text).toContain("422");
   });

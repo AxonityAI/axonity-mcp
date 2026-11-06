@@ -98,7 +98,9 @@ const FILL_NOTE =
   "them: `config` (frozen into each published version: a change reaches a " +
   "run when the table is published) or `live` (a run reads them as they are " +
   "now). Only a table its author fills may choose; every other filler is " +
-  "`live`. Left out: `config` for an author's table, `live` otherwise. " +
+  "`live`. Left out on create: `config` for an author's table, `live` " +
+  "otherwise; on an update the table keeps its versioning unless `filledBy` " +
+  "changes, and then it gets the new filler's default. " +
   "\n\nWHAT A MEASURE READS: every table whose rows Flow holds, whatever " +
   "fills it — not a source table, whose rows stay in its data source. A " +
   "`config` table — an author's table by default (a plan, a target per " +

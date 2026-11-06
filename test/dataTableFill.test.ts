@@ -284,13 +284,27 @@ describe("the defaults FILL_NOTE states are the backend's (review 8 of #107)", (
   });
 
   it.each(["create_data_table", "update_data_table"])(
-    "%s states the versioning default: config for an author's table, live otherwise",
+    "%s states the versioning default on create: config for an author's table, live otherwise",
     (tool) => {
       const d = descriptions().get(tool)!;
       const line = paragraph(d, "`versioning` — ");
-      expect(line).toMatch(/Left out: `config` for an author's table, `live` otherwise\./);
+      expect(line).toMatch(/Left out on create: `config` for an author's table, `live` otherwise/);
     },
   );
+
+  it("update_data_table: left out, versioning stays, unless filledBy changes (review 9 of #107)", () => {
+    // data_table_service.update_table applies default_versioning_for only when
+    // `versioning` is not sent AND the filler changes; otherwise the table
+    // keeps what it has. The update schema says the same.
+    const updateVersioning =
+      (snapshot.components.schemas.UpdateDataTableRequest.properties?.versioning as
+        | { description?: string }
+        | undefined)?.description ?? "";
+    expect(updateVersioning).toMatch(/Left out while filledBy changes: what the new filler defaults to/);
+    const line = paragraph(descriptions().get("update_data_table")!, "`versioning` — ");
+    expect(line).toMatch(/on an update the table keeps its versioning unless `filledBy` changes/);
+    expect(line).toMatch(/then it gets the new filler's default/);
+  });
 
   it.each(["create_data_table", "update_data_table"])(
     "%s states the grain rule: required for a source table, refused when a query fills it",

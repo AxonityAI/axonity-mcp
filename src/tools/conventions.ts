@@ -445,8 +445,9 @@ Specs carry the same keys wherever they are written:
 - a workflow step's \`contract.output_validators\` — run on the step's WHOLE
   submission, so a rule about how its outputs relate has something to look at;
   \`validate_workflow\` reports a named validator tool that does not exist;
-- a conversation step's \`answerContract.validators\` — run on the answer the
-  agent hands in.
+- a conversation step's \`answerContract.validators\`, beside its \`schema\` —
+  run on the answer the agent hands in; without a \`schema\` nothing runs, and
+  \`validate_workflow\` does not report it.
 The agent itself no longer carries specs (axonity-flow#2176): it names the
 schemas it answers in with \`outputSchemaIds\`, and a spec sent on the agent's
 strict create/update body is a 422.
