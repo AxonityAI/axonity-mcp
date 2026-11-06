@@ -290,13 +290,16 @@ describe("get_entity_authoring_contract reads the platform live (#95, axonity-fl
  * HERE is a partial refresh — a new kind spliced into some of the schemas that
  * carry the list and not the others, or the snapshot and the recorded contract
  * response taken from different backends. Every enum in the snapshot that
- * lists secret kinds is found by content, not by a list of schema names, so a
- * ninth schema that starts carrying it is checked too.
+ * lists secret kinds — in a component schema or inline in an operation's
+ * parameters, request body or responses — is found by content, not by a list
+ * of names, so a ninth place that starts carrying it is checked too.
  */
 describe("the secret kinds are one list across the snapshot and the live contract (axonity-flow#2349)", () => {
   const MARKER = "oauth2_client_credentials";
 
-  const secretKindEnums = (): { at: string; values: string[] }[] => {
+  type Doc = { paths: Record<string, unknown>; components: { schemas: Record<string, unknown> } };
+
+  const secretKindEnums = (doc: Doc = snapshot): { at: string; values: string[] }[] => {
     const found: { at: string; values: string[] }[] = [];
     const walk = (node: unknown, at: string): void => {
       if (Array.isArray(node)) {
@@ -313,8 +316,22 @@ describe("the secret kinds are one list across the snapshot and the live contrac
         if (key !== "enum") walk(value, `${at}.${key}`);
       }
     };
-    walk(snapshot.components.schemas, "components.schemas");
+    // Both halves of the document: a list can sit in a component schema or
+    // inline in an operation (a parameter, a request body, a response).
+    walk(doc.components.schemas, "components.schemas");
+    walk(doc.paths, "paths");
     return found;
+  };
+
+  /** Where an enum of secret kinds differs from ConnectorAuthConfig's (minus `none`). */
+  const secretKindMismatches = (doc: Doc = snapshot): string[] => {
+    const connector = (
+      (doc.components.schemas.ConnectorAuthConfig as { properties: { type: { enum: string[] } } })
+        .properties.type.enum
+    ).filter((v) => v !== "none");
+    return secretKindEnums(doc)
+      .filter(({ values }) => JSON.stringify(values.filter((v) => v !== "none")) !== JSON.stringify(connector))
+      .map(({ at }) => at);
   };
 
   it("every schema that lists secret kinds lists the same ones, the refresh-token grant included", () => {
@@ -332,6 +349,34 @@ describe("the secret kinds are one list across the snapshot and the live contrac
     ).enum;
     expect(connector).toEqual(["none", ...secretKinds]);
     expect(secretKinds).toContain("oauth2_refresh_token");
+  });
+
+  it("finds a list of secret kinds inline in an operation too, not only in a component schema", () => {
+    // Review K1 on #106: the walker read components.schemas only, so a stale
+    // list inline in a route (here a query parameter with the six old kinds)
+    // passed. The probe, kept as a regression test.
+    const probe = structuredClone(snapshot) as Doc;
+    const op = (probe.paths["/api/v1/secrets"] as { get: { parameters?: unknown[] } }).get;
+    (op.parameters ??= []).push({
+      in: "query",
+      name: "authType",
+      required: false,
+      schema: {
+        type: "string",
+        enum: [
+          "api_key",
+          "bearer",
+          "basic",
+          "oauth2_client_credentials",
+          "google_service_account",
+          "session_cookie",
+        ],
+      },
+    });
+    expect(secretKindMismatches(snapshot)).toEqual([]);
+    expect(secretKindMismatches(probe)).toEqual([
+      expect.stringMatching(/^paths\.\/api\/v1\/secrets\.get\.parameters\[\d+\]\.schema$/),
+    ]);
   });
 
   it("the recorded contract names the same kinds for a connector's authConfig as the snapshot", () => {
