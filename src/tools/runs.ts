@@ -756,11 +756,13 @@ export function registerRunTools(server: McpServer, client: AxonityClient): void
   // A chat about a dashboard is a run of kind `conversation` with no workflow;
   // list_runs asks for kind=workflow only. Two backend routes list these chats
   // and neither does everything, so list_conversations picks one per call:
-  //   - GET /conversations?dashboardId= — one dashboard; no other filter.
+  //   - GET /conversations?dashboardId= — one dashboard, with status,
+  //     createdAfter/createdBefore and q (axonity-flow#2331); no archive filter.
   //   - GET /runs?kind=conversation — every dashboard the person can see, with
-  //     status, created_after/created_before and include_archived in the query.
-  // No route combines a dashboard with those filters, so asking for both is a
-  // local refusal rather than a quiet drop of one of them. Both routes return
+  //     status, created_after/created_before and include_archived; no text filter.
+  // What one route has and the other has not (includeArchived with a
+  // dashboard, q without one) is a local refusal rather than a quiet drop.
+  // Both routes return
   // only the token holder's own dashboard chats; the Builder chat never
   // appears (test/denyList.ts says why it stays out).
 

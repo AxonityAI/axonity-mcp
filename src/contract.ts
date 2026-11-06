@@ -1,8 +1,9 @@
 /**
  * Asking the deploy what it can do, once, at startup (axonity-mcp#48 M2).
  *
- * `src/errors.ts` already turns a 404/405 into a "backend version skew" message
- * — but only AFTER the call has failed, which means a user is mid-task on the
+ * `src/errors.ts` already turns a 405, or a 404 on a route it records adding,
+ * into a skew message (a 404 on a route with an id reads as "most likely no
+ * such id" first) — but only AFTER the call has failed, which means a user is mid-task on the
  * one call that mattered. And it decides which 404s count from `ROUTES_ADDED_IN`,
  * a list this repository keeps by hand about routes the server owns. That is the
  * shape of #32 and #44, and it has the same failure mode: a route added here
@@ -115,8 +116,8 @@ export const PROBE_VARIANTS: Record<string, unknown>[] = [
   { workflowId: undefined },
   // get_measure_formula_spec — the workspace's vocabulary only when asked.
   { includeWorkspace: true },
-  // list_conversations — one dashboard's history instead of the filtered
-  // cross-dashboard list. (start_conversation reads it too; harmless.)
+  // list_conversations — the per-dashboard route instead of the
+  // cross-dashboard one. (start_conversation reads it too; harmless.)
   { dashboardId: "x" },
 ];
 

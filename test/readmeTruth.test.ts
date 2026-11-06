@@ -86,5 +86,55 @@ describe("the README carries no claim #107 corrected", () => {
       "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen"];
     expect(match![1]).toBe(words[family.length]);
   });
+
+  // Review 13 of #107: every README sentence about a tool this PR changed.
+  it("list_conversations: one dashboard takes status, the dates and q; includeArchived is the one refusal", () => {
+    const para = README.slice(README.indexOf("**Testing the Dashboard Analyst.**"));
+    const text = para.slice(0, para.indexOf("`start_conversation`"));
+    expect(text).not.toMatch(/no\s+other filter/);
+    expect(text).not.toMatch(/No route combines a dashboard with those\s+filters/);
+    expect(text).not.toMatch(/text of its question cannot be filtered on/);
+    expect(text).toMatch(/for one dashboard \(`dashboardId`, with `status`,\s+`createdAfter`\/`createdBefore` and `q`/);
+    expect(text).toMatch(/`includeArchived` with a dashboard, and `q` without one/);
+  });
+
+  it("the read-only guardrail names the scopes the backend checks", () => {
+    expect(README).not.toMatch(/without the `write` scope is refused/);
+    expect(README).toMatch(/without the `author` scope is refused with a 403/);
+  });
+
+  it("the narrowing list is the generated list filters, tool by tool", async () => {
+    const { LIST_FILTERS } = await import("../src/generated/listFilters.js");
+    const { ENTITIES } = await import("../src/index.js");
+    const plural = new Map(ENTITIES.map((e) => [e.singular, e.plural ?? `${e.singular}s`]));
+    const block = README.slice(
+      README.indexOf("Some list routes narrow in the query"),
+      README.indexOf("That table is **generated**"),
+    );
+    const listed = new Map(
+      [...block.matchAll(/`(list_[a-z_]+)\(\{ ([^}]*) \}\)`/g)].map((m) => [
+        m[1],
+        m[2].split(",").map((a) => a.trim().replace(/\?$/, "")).sort(),
+      ]),
+    );
+    const expected = new Map(
+      Object.entries(LIST_FILTERS).map(([entity, filters]) => [
+        `list_${plural.get(entity) ?? `${entity}s`}`,
+        [...new Set(filters.map((f) => f.arg))].sort(),
+      ]),
+    );
+    expect(Object.fromEntries(listed)).toEqual(Object.fromEntries(expected));
+  });
+
+  it("the paged library lists are named where the README calls list_data_tables paged", async () => {
+    const { ENTITIES } = await import("../src/index.js");
+    const paged = ENTITIES.filter((e) => e.publishable !== false && e.listPaging)
+      .map((e) => `list_${e.plural ?? `${e.singular}s`}`)
+      .filter((t) => t !== "list_data_tables");
+    const line = README.slice(README.indexOf("- `list_data_tables` is **paged**"));
+    const sentence = line.slice(0, line.indexOf("Page one"));
+    expect(sentence).not.toMatch(/alone among the/);
+    for (const t of paged) expect(sentence, t).toContain(`\`${t}\``);
+  });
 });
 

@@ -5,7 +5,7 @@ code read (routes, schemas, services). Where the code and the epic disagree, the
 
 ## Correction — 2026-11-06 (axonity-mcp#107)
 
-Two facts below were true when written and no longer are. They are left as
+Three facts below were true when written and no longer are. They are left as
 written, because this is a record of the plan; the current behaviour is in the
 tool descriptions and the README.
 

@@ -91,10 +91,12 @@ backend applies it before the rows come back:
 `list_policies({ scope?, ownerId? })`,
 `list_reference_docs({ scope?, ownerId? })`,
 `list_prompt_snippets({ deleted? })`,
-`list_data_tables({ name?, status?, isDynamic? })`,
+`list_data_tables({ name?, status?, isDynamic?, filledBy? })`,
 `list_data_sources({ enabled? })`,
 `list_table_relationships({ tableId? })`,
-`list_applications({ name? })`.
+`list_measures({ tableId? })`,
+`list_applications({ name? })`,
+`list_queries({ dataSourceId? })`.
 
 That table is **generated** from the pinned schema's own query parameters
 (`npm run generate:filters` → `src/generated/listFilters.ts`), not hand-listed.
@@ -268,8 +270,9 @@ across these routes — the tool parameter names say which.
   author designs and maintains, and agents and decisions read. The whole
   lifecycle is the generic family above; three things are not, and each is a
   way to be quietly wrong:
-  - `list_data_tables` is **paged** (20 by default, 200 max), alone among the
-    library lists, because a tenant's reference data has no ceiling. Page one
+  - `list_data_tables` is **paged** (20 by default, 200 max), like
+    `list_measures`, `list_queries` and `list_applications`, because a tenant's
+    reference data has no ceiling. Page one
     is not the library — follow `nextCursor` while `hasMore`, or narrow with
     `name`, which is exact and unique per workspace.
   - **`rows` and `columns` are whole-collection fields.** Sending `rows`
@@ -533,12 +536,14 @@ service token) and the retired `workflow-memory` placeholder.
 **Testing the Dashboard Analyst.** A chat about a dashboard is a run of kind
 `conversation`; `list_runs` asks for workflow runs only. `list_conversations`
 lists the chats (paged, newest first, only the ones opened by the person the
-token belongs to) in one of two ways: for one dashboard (`dashboardId`, no
-other filter), or across every dashboard that person can see, filtered by
-`status`, `createdAfter`/`createdBefore` and `includeArchived` (the backend's
-`GET /runs?kind=conversation`). No route combines a dashboard with those
-filters, so the tool refuses the mix instead of dropping one. Who opened a chat
-and the text of its question cannot be filtered on at all. `start_conversation` opens a new one with an opening
+token belongs to) in one of two ways: for one dashboard (`dashboardId`, with `status`,
+`createdAfter`/`createdBefore` and `q`, text in the opening question — the
+backend's `GET /conversations`), or across every dashboard that person can see,
+filtered by `status`, `createdAfter`/`createdBefore` and `includeArchived` (the
+backend's `GET /runs?kind=conversation`). What one route has and the other has
+not is refused instead of dropped: `includeArchived` with a dashboard, and `q` without one.
+The two read a bare `createdBefore` date differently; the tool says how. Who
+opened a chat cannot be filtered on at all. `start_conversation` opens a new one with an opening
 question and, optionally, the tile it is about (`focus`) — the same request the
 dashboard's chat window sends. A follow-up is `send_run_message`. The answer and
 the tools the analyst called (`read_measure`, `show_visual`, with their
@@ -620,7 +625,8 @@ These are enforced by the backend, not merely by convention:
   live. A direct publish from a service token is refused with a 403, so there is
   no tool for it and no way around it.
 - **A read-only token is genuinely read-only for mutations.** Any write from a token
-  without the `write` scope is refused with a 403.
+  without the `author` scope is refused with a 403 (`write` is its older name;
+  a token with only `operate` may only answer, message and recover runs).
 - **The four analysis tools are the exception:** `validate_workflow({ document })`,
   `analyze_workflow_reachable_outputs`, `validate_tool_code`, and `format_tool_code`
   can be called by read-only tokens because they never mutate state;

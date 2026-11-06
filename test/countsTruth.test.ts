@@ -214,3 +214,36 @@ describe("sentences that name their members carry the right number", () => {
     expect(kinds.length).toBe(4);
   });
 });
+
+describe("review 13 of #107: the guide's paged lists, the plan's count, the generator's pointer", () => {
+  it("the guide names every paged library list where it calls list_data_tables paged", () => {
+    const paged = family.filter((e) => e.listPaging).map((e) => `list_${pluralOf(e)}`)
+      .filter((t) => t !== "list_data_tables");
+    const from = CONVENTIONS.indexOf("is PAGED**");
+    expect(from).toBeGreaterThanOrEqual(0);
+    const sentence = CONVENTIONS.slice(from, CONVENTIONS.indexOf("Page one", from));
+    expect(sentence).not.toMatch(/alone among the library lists/);
+    for (const t of paged) expect(sentence, t).toContain(t);
+  });
+
+  it("the plan's correction counts the facts it lists", () => {
+    const plan = read("../docs/epic-1-plan.md");
+    const start = plan.indexOf("## Correction — 2026-11-06");
+    const section = plan.slice(start, plan.indexOf("\n## ", start + 1));
+    const bullets = section.split("\n").filter((l) => l.startsWith("- **")).length;
+    const m = section.match(/([A-Z][a-z]+) facts below were true when written/);
+    expect(m).not.toBeNull();
+    expect(m![1].toLowerCase()).toBe(word(bullets));
+  });
+
+  it("the generated list filters point at the test that really regenerates them", () => {
+    const generated = read("../src/generated/listFilters.ts");
+    const pointed = [...generated.matchAll(/`(test\/[A-Za-z]+\.test\.ts)`/g)].map((m) => m[1]);
+    expect(pointed.length).toBeGreaterThan(0);
+    for (const file of pointed) {
+      const body = read(`../${file}`);
+      expect(body, file).toMatch(/list filters are generated, not kept/);
+    }
+  });
+});
+

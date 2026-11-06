@@ -195,7 +195,7 @@ export function render(snapshot) {
  * route declares. The two differ on most of these, and that inconsistency is
  * real — it is exactly what a caller should not have to know.
  *
- * \`test/listFilters.test.ts\` regenerates this in memory and fails if it has
+ * \`test/driftMechanism.test.ts\` regenerates this in memory and fails if it has
  * drifted from the snapshot, so a refreshed snapshot cannot leave a filter
  * unexposed in silence.
  */

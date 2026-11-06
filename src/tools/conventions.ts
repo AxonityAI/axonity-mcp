@@ -1033,8 +1033,8 @@ value across from one of the others, and do not guess. Every column needs a
 \`description\`: an agent reads it to know what the column is for, and a save
 without one is refused.
 
-**\`list_data_tables\` is PAGED**, alone among the library lists — a tenant's
-reference data has no ceiling. Page one is not the library. Follow
+**\`list_data_tables\` is PAGED**, like \`list_measures\`, \`list_queries\` and
+\`list_applications\` — a tenant's reference data has no ceiling. Page one is not the library. Follow
 \`nextCursor\` while \`hasMore\` is true, or better, narrow in the query:
 \`name\` is exact and unique per workspace, so "does one called X already
 exist" is a single call rather than a walk. The page carries \`rowCount\`, never

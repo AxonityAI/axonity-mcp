@@ -19,7 +19,8 @@ import { detachResult, guard, jsonResult } from "./result.js";
  * The persona is the agent's `persona` field (axonity-flow#2176): the
  * character text every prompt of the agent opens with, published with the
  * agent. The persona entity, its own id, versions, drafts and approvals are
- * gone, and so are the 21 routes the persona tools called.
+ * gone, and so are the persona routes the tools called (21 persona operations
+ * left the API; 19 of them had a tool here).
  *
  * These two tools stay as the migration path: an agent that knows them lands
  * on the field instead of on a 404 it would read as "no such id". Everything

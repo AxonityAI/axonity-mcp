@@ -380,8 +380,14 @@ export const SKEW_EITHER_WAY =
  *
  * A 405 is the strong signal — the path exists, the method does not, which on an
  * API this client is written against means the two are out of step. A 404 is
- * weaker (an unknown id looks the same), so it is only reported as skew for the
- * routes listed in `ROUTES_ADDED_IN`, and even then it says "if the id is right".
+ * weaker, and only reported here for the routes listed in `ROUTES_ADDED_IN`:
+ * - on a route WITHOUT an id in its path (`/workflows/operations`), a 404 can
+ *   only mean the route is missing, so the backend is older;
+ * - on a route WITH an id (`/workflows/{id}/validate`), every backend that has
+ *   the route answers 404 for an id that does not exist, so that is the likely
+ *   reading, and the older backend only the other one. The message says so,
+ *   in that order, and does not call it a deployment mismatch (review 13 of
+ *   axonity-mcp#107).
  */
 export class BackendVersionSkewError extends AxonityApiError {
   constructor(
@@ -391,11 +397,25 @@ export class BackendVersionSkewError extends AxonityApiError {
     /** What added this route on the backend, so a human can check a deploy. */
     addedBy?: string,
     body?: unknown,
+    /** The route's path carries an id: a 404 then most likely means no such id. */
+    idInPath = false,
   ) {
-    const ambiguous =
-      status === 404
-        ? " (a 404 also means 'no such id', so check the id first)"
-        : "";
+    if (status === 404 && idInPath) {
+      super(
+        `Not found (404) on \`${method} ${path}\`. Most likely there is no such id: ` +
+          "check it, or list the collection to find it — a deleted entity also " +
+          "reads as not found. Only if the id is right: this backend may be older " +
+          "than this connector and lack the route" +
+          (addedBy ? `, which was added by ${addedBy}` : "") +
+          "; then tell your human which Axonity environment this token points at.",
+        status,
+        body,
+        "not_found",
+        false,
+      );
+      this.name = "BackendVersionSkewError";
+      return;
+    }
     // Only a route this repository records adding proves the backend is the
     // older side; a 405 elsewhere can as well be a route the backend removed.
     const direction = addedBy
@@ -409,7 +429,7 @@ export class BackendVersionSkewError extends AxonityApiError {
         " Do not retry: the same call will keep failing until they match.";
     super(
       `The Axonity backend does not have \`${method} ${path}\`, which this ` +
-        `version of the connector needs${ambiguous}.` +
+        "version of the connector needs." +
         direction,
       status,
       body,
@@ -481,7 +501,10 @@ export function skewErrorFor(
     return new BackendVersionSkewError(method, path, status, known?.addedBy, body);
   }
   if (status === 404 && known) {
-    return new BackendVersionSkewError(method, path, status, known.addedBy, body);
+    // A route whose pattern matches an id segment: a 404 is most likely a
+    // wrong id, not a missing route (see BackendVersionSkewError).
+    const idInPath = known.pattern.source.includes("[^/]+");
+    return new BackendVersionSkewError(method, path, status, known.addedBy, body, idInPath);
   }
   return undefined;
 }
