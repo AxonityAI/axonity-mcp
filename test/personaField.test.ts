@@ -189,6 +189,14 @@ describe("the guide's create_agent section is the platform's CreateAgentRequest"
     expect(agentSection()).toContain("`persona`");
   });
 
+  it("says that \"\" removes a persona and null leaves it as it is", () => {
+    // agent_service.update_agent: `persona is not None` is the write guard, so
+    // null on an update changes nothing; "" is what clears it.
+    const section = agentSection();
+    expect(section).toMatch(/To remove it send `""`/);
+    expect(section).toMatch(/`null`\s+leaves it as it is/);
+  });
+
   it("quotes every value of each enumerated field, and no other", () => {
     const section = agentSection();
     for (const field of ["capabilityTier", "creativityTier", "delegation", "reasoningLevel"]) {

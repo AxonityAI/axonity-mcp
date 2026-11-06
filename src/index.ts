@@ -463,7 +463,8 @@ const ENTITIES: EntityDef[] = [
       "leaves the rows that are there; `rhythm` is replaced whole when sent; " +
       "`clearRhythm: true` takes it away (the table then fills only when " +
       "asked), which is not the same as pausing it. `clearExternal: true` " +
-      "takes a source table's place away, `clearGrain: true` its grain. " +
+      "takes a source table's place away, `clearGrain: true` takes its grain " +
+      "away and `clearTimeAxis: true` takes its time axis away. " +
       "\n\n" +
       DATE_TABLE_NOTE +
       "\n\n`rows` AND `columns` ARE WHOLE-COLLECTION FIELDS: sending either " +

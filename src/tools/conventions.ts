@@ -222,11 +222,11 @@ has run cleanly once, at its current version.
 - A LIST is not the whole list. \`list_workflow_runs\` returns a page —
   \`{ items, nextCursor, pageSize, hasMore }\`, 20 by default — so counting or
   concluding from page one while \`hasMore\` is true is how you answer confidently
-  and wrongly. Follow \`nextCursor\` until it is null. Two further traps: that
-  route lists LAUNCHES (a 4,415-item FOR EACH is ONE entry carrying
-  \`forEachProgress\`, so rows are not runs). \`list_runs\` pages the same way, by
-  \`nextCursor\` with \`hasMore\`. \`list_publish_approvals\` pages by \`offset\` and answers \`total\` and \`hasMore\`: raise
-  \`offset\` by \`limit\` until \`hasMore\` is false.
+  and wrongly. Follow \`nextCursor\` until it is null. And that route lists
+  LAUNCHES: a 4,415-item FOR EACH is ONE entry carrying \`forEachProgress\`, so
+  rows are not runs. \`list_runs\` pages the same way, by \`nextCursor\` with
+  \`hasMore\`. \`list_publish_approvals\` pages by \`offset\` and answers \`total\`
+  and \`hasMore\`: raise \`offset\` by \`limit\` until \`hasMore\` is false.
 
 ## Delete is recoverable — but not everything is
 - \`delete_*\` soft-deletes: the entity disappears from \`list_*\` but is not gone.
@@ -959,7 +959,8 @@ point and it changes without the process changing.
   editing code, reviewing it and publishing a tool. A business user maintains a
   table; nobody should need you to change a postcode.
 
-**Who fills it — \`filledBy\`, one per table** (\`author\`, \`workflow\`, \`query\` or \`source\`).
+**Who fills it — \`filledBy\`, one per table** (\`author\`, \`workflow\`,
+\`query\` or \`source\`).
 - \`author\` (the default) is reference data the AUTHOR maintains. A workflow
   reads it and cannot change it. \`allowedOperations\` must be empty: a
   permission nothing honours is refused, not stored.

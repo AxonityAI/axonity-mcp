@@ -166,3 +166,19 @@ describe("what is read live follows from versioning, not from filledBy (K1, fina
   );
 });
 
+describe("update_data_table names every clear* field the platform takes (review of #107)", () => {
+  const update = snapshot.components.schemas.UpdateDataTableRequest;
+  const clears = Object.keys(update.properties ?? {}).filter((k) => k.startsWith("clear"));
+
+  it("the schema has the clear fields this guards", () => {
+    expect(clears).toEqual(
+      expect.arrayContaining(["clearExternal", "clearGrain", "clearFillingQuery", "clearRhythm"]),
+    );
+  });
+
+  it.each(clears)("%s is named, with what it takes away", (field) => {
+    const d = descriptions().get("update_data_table")!;
+    expect(d).toMatch(new RegExp("`" + field + ": true` takes"));
+  });
+});
+

@@ -219,6 +219,16 @@ describe("the guide says how each list pages, as the route answers (K1, review o
     expect(CONVENTIONS).toMatch(/`list_runs`[^.]*`nextCursor`/);
   });
 
+  it("the paging paragraph says what follows, at the guide's width", async () => {
+    const { CONVENTIONS } = await import("../src/tools/conventions.js");
+    const start = CONVENTIONS.indexOf("- A LIST is not the whole list.");
+    expect(start).toBeGreaterThanOrEqual(0);
+    const end = CONVENTIONS.indexOf("\n\n", start);
+    const paragraph = CONVENTIONS.slice(start, end);
+    expect(paragraph).not.toMatch(/Two further traps/);
+    for (const line of paragraph.split("\n")) expect(line.length, line).toBeLessThanOrEqual(84);
+  });
+
   it("says list_publish_approvals pages by offset and answers total and hasMore", async () => {
     const { CONVENTIONS } = await import("../src/tools/conventions.js");
     const params = snapshot.paths["/api/v1/publish-approvals"].get.parameters!.map((p) => p.name);
