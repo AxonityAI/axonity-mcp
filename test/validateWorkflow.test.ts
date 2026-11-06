@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { CONVENTIONS } from "../src/tools/conventions.js";
 import { registerValidationTools } from "../src/tools/validation.js";
@@ -93,3 +93,30 @@ describe("validate_workflow describes both routes as main runs them", () => {
     expect(CONVENTIONS).not.toMatch(/These four are stateless and work with\s+read-only tokens/);
   });
 });
+
+describe("validate_workflow's refusal says the same as its description (review 11 of #107)", () => {
+  it("a call with neither or both parameters is refused without calling 'document' structural", async () => {
+    const handlers = new Map<string, (a: Record<string, unknown>) => Promise<unknown>>();
+    const client = { post: vi.fn() };
+    registerValidationTools(
+      {
+        tool: (name: string, _d: string, _s: unknown, h: (a: never) => Promise<unknown>) =>
+          handlers.set(name, h as (a: Record<string, unknown>) => Promise<unknown>),
+      } as never,
+      client as never,
+    );
+    for (const args of [{}, { workflowId: "wf-1", document: {} }]) {
+      const result = (await handlers.get("validate_workflow")!(args)) as {
+        isError?: boolean;
+        content: { text: string }[];
+      };
+      expect(result.isError).toBe(true);
+      const text = result.content[0].text;
+      expect(text).not.toMatch(/structural/i);
+      expect(text).toMatch(/against the same catalog/);
+      expect(text).toMatch(/without the checks about that workflow's own wiring/);
+    }
+    expect(client.post).not.toHaveBeenCalled();
+  });
+});
+

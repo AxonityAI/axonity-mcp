@@ -67,8 +67,9 @@ export function registerValidationTools(
         if ((workflowId === undefined) === (document === undefined)) {
           throw new Error(
             "Pass exactly one of workflowId or document. workflowId validates the " +
-              "stored workflow against the tenant catalog (the 'can this run?' " +
-              "answer); document validates an unsaved document structurally.",
+              "saved workflow against the tenant catalog (the 'can this run?' " +
+              "answer); document validates the document you pass against the same " +
+              "catalog, without the checks about that workflow's own wiring.",
           );
         }
 
