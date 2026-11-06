@@ -35,8 +35,12 @@ export function registerPersonaTools(
     "Read an agent's persona: the character text every prompt of this agent " +
       "opens with. It is the agent's `persona` field (also in `read_agent`), " +
       "returned here with the agent's `version`, which `create_agent_persona` " +
-      "and `update_agent` take as `expectedVersion`. `persona` is null when the " +
-      "agent has none.",
+      "and `update_agent` take as `expectedVersion`. `persona` is null or `\"\"` " +
+      "when the agent has none (null: never set; `\"\"`: removed). Replaces " +
+      "`read_persona`, `read_persona_published`, `read_persona_version`, " +
+      "`list_persona_versions`, `list_deleted_persona_versions`, " +
+      "`list_personas` and `list_deleted_personas`: a persona has no id, " +
+      "versions or list of its own any more.",
     { agentId: z.string().describe("The agent's id.") },
     async ({ agentId }) =>
       guard(async () => {
@@ -60,7 +64,15 @@ export function registerPersonaTools(
       "`{ persona }`) and goes live with the agent (`request_publish_agent`). " +
       "Setting it again replaces it. Read the agent first (`read_agent` or " +
       "`read_agent_persona`) for `expectedVersion`; on a 409, re-read and retry. " +
-      "There is no separate name or status: a persona is only its text.",
+      "There is no separate name or status: a persona is only its text. To " +
+      "remove it, send `\"\"`; on update_agent `null` changes nothing. Replaces " +
+      "`update_persona`, `delete_persona`, `restore_persona`, " +
+      "`discard_persona_draft`, `create_persona_major_version`, " +
+      "`ensure_persona_major_version`, `name_persona_major_version`, " +
+      "`delete_persona_version`, `restore_persona_version`, " +
+      "`restore_deleted_persona_version` and `request_publish_persona`: the " +
+      "persona's history is the agent's versions, and it goes live with " +
+      "`request_publish_agent`.",
     {
       agentId: z.string().describe("The agent's id."),
       expectedVersion: z

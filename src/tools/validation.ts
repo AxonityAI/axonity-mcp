@@ -150,7 +150,9 @@ export function registerApprovalTools(
     "list_publish_approvals",
     "List this tenant's publish approvals and their status — how you find out " +
       "whether a request_publish_* was approved or rejected. Optionally filter " +
-      "by status, and page through with limit/offset. Approving and rejecting " +
+      "by status, and page through with limit/offset: the answer carries " +
+      "`total` and `hasMore`, so raise `offset` by `limit` until `hasMore` is " +
+      "false. Approving and rejecting " +
       "are human-only actions in Axonity; no tool can do them. " +
       "\n\nReadiness is recomputed WHEN YOU READ, not frozen at request time: " +
       "`readiness` is the verdict right now, `readinessAtRequest` is what the " +

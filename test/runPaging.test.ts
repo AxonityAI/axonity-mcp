@@ -197,3 +197,45 @@ describe("the run lists say what kind of answer they are (#37)", () => {
     expect(d).toMatch(/isPlatform/);
   });
 });
+
+describe("the guide says how each list pages, as the route answers (K1, review of #107)", () => {
+  const snapshot = JSON.parse(
+    readFileSync(
+      fileURLToPath(new URL("./fixtures/openapi.snapshot.json", import.meta.url)),
+      "utf8",
+    ),
+  ) as {
+    paths: Record<string, { get: { parameters?: { name: string }[] } }>;
+    components: { schemas: Record<string, { properties?: Record<string, unknown> }> };
+  };
+
+  it("does not call list_runs an offset list that caps silently: it is a cursor page", async () => {
+    const { CONVENTIONS } = await import("../src/tools/conventions.js");
+    const params = snapshot.paths["/api/v1/runs"].get.parameters!.map((p) => p.name);
+    expect(params).toContain("cursor");
+    expect(params).not.toContain("offset");
+    expect(CONVENTIONS).not.toMatch(/offset-style lists \(`list_runs`/);
+    expect(CONVENTIONS).not.toMatch(/cap silently/);
+    expect(CONVENTIONS).toMatch(/`list_runs`[^.]*`nextCursor`/);
+  });
+
+  it("says list_publish_approvals pages by offset and answers total and hasMore", async () => {
+    const { CONVENTIONS } = await import("../src/tools/conventions.js");
+    const params = snapshot.paths["/api/v1/publish-approvals"].get.parameters!.map((p) => p.name);
+    expect(params).toEqual(expect.arrayContaining(["limit", "offset"]));
+    const answer = Object.keys(
+      snapshot.components.schemas.PublishApprovalListResponse.properties ?? {},
+    );
+    expect(answer).toEqual(expect.arrayContaining(["hasMore", "total"]));
+    expect(CONVENTIONS).toMatch(/`list_publish_approvals`[^.]*`offset`[^.]*`hasMore`/);
+    const { registerApprovalTools } = await import("../src/tools/validation.js");
+    let d = "";
+    registerApprovalTools(
+      { tool: (name: string, description: string) => (name === "list_publish_approvals" ? (d = description) : 0) } as never,
+      {} as never,
+    );
+    expect(d).toMatch(/`hasMore`/);
+    expect(d).toMatch(/`total`/);
+  });
+});
+

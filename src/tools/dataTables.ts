@@ -241,8 +241,9 @@ export function registerDataTableTools(
       "`fill.lastAt`, `fill.lastRowCount` and `fill.lastError` describe the " +
       "run. " +
       "\n\nRefused with a 422 when the table is not filled by a query " +
-      "(`filledBy` is `author` or `workflow`) — its rows come from a workflow " +
-      "or an author, and there is nothing to run.",
+      "(`filledBy` is `author`, `workflow` or `source`) — its rows come from " +
+      "an author or a workflow, or stay in their data source, and there is " +
+      "nothing to run.",
     { id: z.string().describe("The table's id.") },
     async ({ id }) =>
       guard(async () => jsonResult(await client.post(`${BASE}/${id}/refresh`))),

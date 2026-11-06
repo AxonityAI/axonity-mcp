@@ -224,9 +224,9 @@ has run cleanly once, at its current version.
   concluding from page one while \`hasMore\` is true is how you answer confidently
   and wrongly. Follow \`nextCursor\` until it is null. Two further traps: that
   route lists LAUNCHES (a 4,415-item FOR EACH is ONE entry carrying
-  \`forEachProgress\`, so rows are not runs), and the offset-style lists
-  (\`list_runs\`, \`list_publish_approvals\`) cap silently — a full page means
-  there may be more, and nothing in the response says so.
+  \`forEachProgress\`, so rows are not runs). \`list_runs\` pages the same way, by
+  \`nextCursor\` with \`hasMore\`. \`list_publish_approvals\` pages by \`offset\` and answers \`total\` and \`hasMore\`: raise
+  \`offset\` by \`limit\` until \`hasMore\` is false.
 
 ## Delete is recoverable — but not everything is
 - \`delete_*\` soft-deletes: the entity disappears from \`list_*\` but is not gone.
@@ -326,7 +326,8 @@ made any time before you attach them.
 - \`persona\` (text): who the agent is, in its own words — the character text
   every prompt of this agent opens with. It is a field of the agent and
   publishes with it (axonity-flow#2176); there is no separate persona to
-  create, version or publish.
+  create, version or publish. To remove it send \`""\`: on an update \`null\`
+  leaves it as it is.
 - \`slug\` (its handle, set once at creation; left out: taken from the name),
   \`avatar\`, \`conversational\` (bool: may people talk to it),
   \`delegationBudgetEur\` (what one delegation to it may cost; empty: no
@@ -958,13 +959,17 @@ point and it changes without the process changing.
   editing code, reviewing it and publishing a tool. A business user maintains a
   table; nobody should need you to change a postcode.
 
-**Static or dynamic — who owns the rows.**
-- \`isDynamic: false\` (the default) is reference data the AUTHOR maintains. A
-  workflow reads it and cannot change it. \`allowedOperations\` must be empty:
-  a permission nothing honours is refused, not stored.
-- \`isDynamic: true\` lets a workflow change the rows, limited to
+**Who fills it — \`filledBy\`, one per table** (\`author\`, \`workflow\`, \`query\` or \`source\`).
+- \`author\` (the default) is reference data the AUTHOR maintains. A workflow
+  reads it and cannot change it. \`allowedOperations\` must be empty: a
+  permission nothing honours is refused, not stored.
+- \`workflow\` lets a workflow change the rows, limited to
   \`allowedOperations\` — any of \`add\` / \`update\` / \`delete\`. READING IS
   NEVER LISTED there: it is what a table is for and is always allowed.
+- \`query\` fills the rows from a named query (\`fillingQueryId\`, on its
+  \`rhythm\` or with \`refresh_data_table\`).
+- \`source\` holds no rows here: they stay in a data source, and \`external\`
+  says where. \`create_data_table\` describes each filler's fields.
 - You edit rows through \`add_data_table_row\` / \`update_data_table_row\` /
   \`delete_data_table_row\` whatever the table's mode says — those grants are
   about what a RUN may do, not about authoring.

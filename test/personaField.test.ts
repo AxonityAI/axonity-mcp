@@ -140,11 +140,26 @@ describe("the persona is a field of the agent (axonity-flow#2176)", () => {
       ...RETIRED_TOOLS,
       "characterText",
     ];
+    // The repo's way to retire a tool is the successor naming it ("Replaces
+    // run_data_source_sync"), so an agent that knows the old name finds the new
+    // one. That one sentence is the only place an old name may appear.
+    const withoutPointer = (text: string) => text.replace(/Replaces [^.]*\./g, "");
     const found: string[] = [];
     for (const [where, text] of texts) {
-      for (const needle of needles) if (text.includes(needle)) found.push(`${where}: ${needle}`);
+      for (const needle of needles) {
+        if (withoutPointer(text).includes(needle)) found.push(`${where}: ${needle}`);
+      }
     }
     expect(found).toEqual([]);
+  });
+
+  it("the two persona tools name every retired persona tool they replace", () => {
+    const d = registered();
+    const pointers = ["read_agent_persona", "create_agent_persona"]
+      .map((name) => (d.get(name) ?? "").match(/Replaces [^.]*\./g)?.join(" ") ?? "")
+      .join(" ");
+    const named = new Set([...pointers.matchAll(/`([a-z_]+)`/g)].map((m) => m[1]));
+    expect(RETIRED_TOOLS.filter((t) => !named.has(t))).toEqual([]);
   });
 });
 

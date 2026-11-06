@@ -78,9 +78,26 @@ import { registerWorkflowMutations } from "./tools/workflowMutations.js";
 const FILL_NOTE =
   "WHAT FILLS IT — `filledBy`, one word: `author` (the default: reference " +
   "data its author maintains), `workflow` (a workflow writes the rows, " +
-  "limited to `allowedOperations`) or `query` (a named query fetches them). " +
+  "limited to `allowedOperations`), `query` (a named query fetches them) or " +
+  "`source` (the rows stay in a data source and this table describes them). " +
   "A table has ONE filler. `isDynamic` is no longer sent: it follows from " +
   "`filledBy` — a table filled by a query or a workflow is dynamic. " +
+  "\n\nA SOURCE TABLE (`filledBy: \"source\"`) holds no rows here. " +
+  "`external` says where it lives: `sourceId` (one of this workspace's data " +
+  "sources, list_data_sources), `container` (what that source calls the " +
+  "thing the table is in: a BigQuery dataset, a PostgreSQL schema) and " +
+  "`object` (the table's own name there, exactly as SQL names it). " +
+  "`external` is required for a source table and refused otherwise; rows, " +
+  "`allowedOperations`, `fillingQueryId`, `rhythm` and `dateTable` are " +
+  "refused on one. " +
+  "\n\n`grain` says what one row is (\"one row per order line\"): required " +
+  "for a source table, refused when a query fills the table (its query says " +
+  "it). " +
+  "\n\n`versioning` — how the rows are versioned, apart from what fills " +
+  "them: `config` (frozen into each published version: a change reaches a " +
+  "run when the table is published) or `live` (a run reads them as they are " +
+  "now). Only a table its author fills may choose; every other filler is " +
+  "`live`. Left out: `config` for an author's table, `live` otherwise. " +
   "\n\nWHAT A MEASURE READS: every table whose rows Flow holds, whatever " +
   "fills it — not a source table, whose rows stay in its data source. A " +
   "table its AUTHOR fills (a plan, a target per period, a mapping) is read " +
@@ -443,7 +460,8 @@ const ENTITIES: EntityDef[] = [
       " On an update: `clearFillingQuery: true` takes the query away and " +
       "leaves the rows that are there; `rhythm` is replaced whole when sent; " +
       "`clearRhythm: true` takes it away (the table then fills only when " +
-      "asked), which is not the same as pausing it. " +
+      "asked), which is not the same as pausing it. `clearExternal: true` " +
+      "takes a source table's place away, `clearGrain: true` its grain. " +
       "\n\n" +
       DATE_TABLE_NOTE +
       "\n\n`rows` AND `columns` ARE WHOLE-COLLECTION FIELDS: sending either " +

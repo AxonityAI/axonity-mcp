@@ -85,6 +85,21 @@ describe("persona tools read and write the agent's persona field (axonity-flow#2
     expect(client.post).not.toHaveBeenCalled();
   });
 
+  it("says how an agent without a persona reads, and how to remove one", () => {
+    // Review of #107 (nice-to-have 2): the column is nullable, so an agent
+    // never given a persona reads null, and one whose persona was cleared
+    // reads "". On an update `null` means "leave it" (agent_service), so
+    // clearing goes with "".
+    const found = new Map<string, string>();
+    registerPersonaTools(
+      { tool: (name: string, d: string) => found.set(name, d) } as never,
+      fakeClient() as unknown as AxonityClient,
+    );
+    expect(found.get("read_agent_persona")).toMatch(/null or `""`/);
+    expect(found.get("create_agent_persona")).toMatch(/send `""`/);
+    expect(found.get("create_agent_persona")).toMatch(/`null` changes nothing/);
+  });
+
   it("create_agent_persona takes exactly agentId, expectedVersion and persona", () => {
     // Zod drops an unknown key silently, so the old `fields: { characterText }`
     // must not be a parameter that quietly does nothing: it is not one at all,
