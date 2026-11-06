@@ -216,11 +216,16 @@ describe("the clear fields say where the platform takes them (review of #107)", 
     expect(x).toMatch(/refused on a source table/);
   });
 
-  it("clearTimeAxis works on any table", () => {
+  it("clearTimeAxis on the date table goes with its calendars (review 7 of #107)", () => {
+    // data_table_service.update_table runs calendar_errors whenever time_axis
+    // is in the save; a date table with calendars and no time axis is refused
+    // ("The date table needs a date on its rows", domain/measures.py). It is
+    // not "any table".
     const d = descriptions().get("update_data_table")!;
     const x = sentence(d, "`clearTimeAxis: true`");
-    expect(x).toMatch(/any table/);
-    expect(x).not.toMatch(/source/);
+    expect(x).not.toMatch(/any table/);
+    expect(x).toMatch(/date table/);
+    expect(x).toMatch(/`calendars: \[\]`/);
   });
 });
 
