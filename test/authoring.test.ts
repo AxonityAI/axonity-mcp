@@ -39,7 +39,7 @@ function setup(register: (s: never, c: never, d?: never) => void, def?: unknown)
 }
 
 describe("validation tools", () => {
-  it("documents that the 4 stateless analysis tools are safe for read-only tokens", () => {
+  it("the 4 analysis tools say whether a read-only token may call them", () => {
     const captured: Record<string, string> = {};
     const capturingServer = {
       tool: (name: string, description: string) => {
@@ -368,7 +368,7 @@ describe("tool descriptions state the contract the platform enforces", () => {
     expect(text).toMatch(/structurally\s+sound/);
   });
 
-  it("routes by workflowId to the catalog-aware route, by document to the stateless one", async () => {
+  it("routes by workflowId to the stored-workflow route, by document to the document route", async () => {
     const { handlers, client } = setup(registerValidationTools);
 
     await handlers.get("validate_workflow")!({ workflowId: "wf-1" });

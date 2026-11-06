@@ -322,22 +322,25 @@ describe("registerEntityTools — delete/restore/list-deleted/discard-draft", ()
 });
 
 describe("registerEntityTools — creatable/readable flags", () => {
-  it("omits create_<entity> when creatable is false (persona's shape)", () => {
-    const PERSONA: EntityDef = {
-      singular: "persona",
-      basePath: "/api/v1/personas",
+  it("omits create_<entity> when creatable is false (an entity created through its parent)", () => {
+    // A hypothetical entity: the persona was the real one until
+    // axonity-flow#2176 made it a field of the agent; the flag stays for the
+    // next entity with no standalone create route.
+    const CHILD: EntityDef = {
+      singular: "widget",
+      basePath: "/api/v1/widgets",
       updateMethod: "PUT",
-      label: "personas",
+      label: "widgets",
       creatable: false,
       deleteVersionParam: "expected_version",
     };
     const { server, handlers } = fakeServer();
-    registerEntityTools(server as never, fakeClient() as unknown as AxonityClient, PERSONA);
+    registerEntityTools(server as never, fakeClient() as unknown as AxonityClient, CHILD);
     const names = [...handlers.keys()];
-    expect(names).not.toContain("create_persona");
-    expect(names).toContain("list_personas");
-    expect(names).toContain("update_persona");
-    expect(names).toContain("delete_persona");
+    expect(names).not.toContain("create_widget");
+    expect(names).toContain("list_widgets");
+    expect(names).toContain("update_widget");
+    expect(names).toContain("delete_widget");
   });
 
   it("omits read_<entity>/discard_<entity>_draft when readable/hasDiscardDraft are false", () => {

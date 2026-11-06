@@ -3,6 +3,21 @@
 Status: **superseded in part.** Verified against `axonity-flow` @ `backend/src` by direct
 code read (routes, schemas, services). Where the code and the epic disagree, the code wins.
 
+## Correction — 2026-11-06 (axonity-mcp#107)
+
+Two facts below were true when written and no longer are. They are left as
+written, because this is a record of the plan; the current behaviour is in the
+tool descriptions and the README.
+
+- **The persona is no longer an entity.** axonity-flow#2176 made it the agent's
+  `persona` field and removed every `/api/v1/personas` route, including the
+  publish route cited further down. The connector's persona tools follow it
+  since #107.
+- **Workflow validation is no longer stateless.** `POST /api/v1/workflows/validate`
+  now judges a document against the tenant's catalog, as the stored route does;
+  only the checks about one workflow's own wiring need its id. The note under
+  "stateless" further down is superseded.
+
 ## Revision 3 — 2026-07-20, re-verified against axonity-flow @ `036a1e15`
 
 Comprehensive re-audit after PR #6 (issue #4's implementation) was already open, prompted

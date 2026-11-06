@@ -66,7 +66,13 @@ describe("validate_workflow describes both routes as main runs them", () => {
   it("says the document is judged against the same catalog, minus the workflow's own wiring", () => {
     const { description } = tool();
     expect(description).toMatch(/against the SAME catalog/);
-    expect(description).toMatch(/its triggers and the knowledge attached to it/);
+    // The document bullet itself must say WHICH checks fall away without the
+    // id — the workflowId bullet names the same two, so a regex that also
+    // matches there would stay green with this sentence gone (review 10).
+    const document = description.slice(description.indexOf("- document →"));
+    expect(document).toMatch(
+      /Without the workflow's id the checks about one workflow's own\s+wiring — its triggers and the knowledge attached to it — are skipped/,
+    );
   });
 
   it("says catalogChecked false means only the structure was judged", () => {

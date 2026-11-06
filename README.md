@@ -2,8 +2,9 @@
 
 A local [Model Context Protocol](https://modelcontextprotocol.io) server that lets
 an external agent (e.g. **Claude Code** on your laptop) read, draft, update, and
-recoverably delete **workflows, agents, tools, skills, policies, reference docs,
-personas, output schemas, prompt snippets and flows** in your Axonity tenant —
+recoverably delete **workflows, agents (with their persona), tools, skills,
+policies, reference docs, output schemas, prompt snippets and flows** in your
+Axonity tenant —
 the same verbs the internal Builder team has, minus direct publish.
 
 It runs on your machine and talks to Axonity **only over the public REST API**,
@@ -55,9 +56,9 @@ was kept here. A conformance test asserts their absence.
 
 ### The generic entity family
 
-Thirteen entities — **workflow, agent, tool, skill, policy, reference_doc,
-persona, output_schema, prompt_snippet, flow, data_table, measure,
-application** — share one shape,
+Twelve entities — **workflow, agent, tool, skill, policy, reference_doc,
+output_schema, prompt_snippet, flow, data_table, measure, application** —
+share one shape,
 though not every entity gets every verb (see the per-entity notes below for the
 exceptions):
 
@@ -73,8 +74,7 @@ exceptions):
 | `discard_<entity>_draft` | Reset the draft to the last published state. |
 | `request_publish_<entity>` | Ask for a draft to be published — creates a pending approval; never publishes. |
 
-Exceptions: `persona` has no `create_persona` (create only via
-`create_agent_persona`). And `list_data_tables` (like `list_measures` and
+Exception: `list_data_tables` (like `list_measures` and
 `list_applications`) answers **one page**, not the whole library — see Tables
 below.
 
@@ -121,8 +121,8 @@ Plus:
   default; pass `types` for a command's live payload schema. `rulesVersion` is
   a content hash over all seven — same hash, nothing to re-fetch.
 - `get_entity_authoring_contract` — the platform's **create contract per
-  entity kind** (tools with each type's implementation, agents, personas,
-  knowledge, schemas, tables, toolboxes, secrets, starts), read live from
+  entity kind** (tools with each type's implementation, agents with their
+  persona, knowledge, schemas, tables, toolboxes, secrets, starts), read live from
   `GET /api/v1/authoring/entity-contracts` (axonity-flow#2103):
   `{ kinds, contracts, rulesVersion }`, per kind the create/update fields and
   the `publish.rules` that stop it going live. Pass `kinds` to narrow it (sent
@@ -167,10 +167,13 @@ across these routes — the tool parameter names say which.
 
 ### Also
 
-- **Personas**: `read_agent_persona`, `create_agent_persona` — agent-scoped,
-  since a persona can only be created through its agent. Everything else about
-  a persona (list, read, update, delete/restore, versions) is the generic
-  entity family above.
+- **Personas**: since axonity-flow#2176 a persona is the agent's `persona` field
+  (the character text every prompt of the agent opens with), set with
+  `create_agent` / `update_agent` and published with the agent. There is no
+  persona entity any more: no id, versions or approvals of its own.
+  `read_agent_persona` reads the field (with the agent's `version`) and
+  `create_agent_persona` writes it (`agentId`, `expectedVersion`, `persona`);
+  `""` removes it, `null` on an update leaves it as it is.
 - **Connectors** (a tool of type `connector`): `create_connector`,
   `update_connector` — `authConfig` must be placeholders only; a human fills real
   secrets in Axonity. (`create_tool`/`update_tool` carry the same guard, so a
@@ -304,12 +307,15 @@ across these routes — the tool parameter names say which.
     `list_query_live_versions`. It carries the SQL, the source, the grain,
     its typed `parameters` and its described `returns`.
   - **There is no sync object, and no `provenance`.** A table says what fills
-    it in `filledBy` — `author`, `workflow` or `query` — and a query-filled
-    table names its query in `fillingQueryId` and when it runs in `rhythm`
-    (`{ cron, timezone, keyColumns, mode, enabled }`). Only a table filled by
-    a query or a workflow is dynamic, and only a dynamic table can be read by
-    a measure. `refresh_data_table` fills it now instead of at its next turn
-    (it does not wait for the result; read the table's `fill` afterwards).
+    it in `filledBy` — `author`, `workflow`, `query` or `source` (the rows stay
+    in a data source; `external` says where) — and a query-filled table names
+    its query in `fillingQueryId` and when it runs in `rhythm`
+    (`{ cron, timezone, keyColumns, mode, enabled }`). Whether a table is read
+    live or as published follows from its `versioning` (`live` or `config`;
+    only an author's table may choose), and a measure reads every table whose
+    rows Flow holds. `refresh_data_table` fills a query-filled table now
+    instead of at its next turn (it does not wait for the result; read the
+    table's `fill` afterwards).
   - **Concept links**: a concept's `refersTo` points at one thing;
     `link_concept`, `unlink_concept` and `list_concept_links` hang the same
     word on every column, table, measure, value or query that means it. The
@@ -430,7 +436,7 @@ across these routes — the tool parameter names say which.
 
 | Tool | What it does |
 |------|--------------|
-| `validate_workflow` | Structural + schema check of a workflow document. Stateless and read-only-token safe; does not verify referenced agents/tools exist. |
+| `validate_workflow` | Check a workflow against the tenant's catalog. By `document`: the document as it stands, saves nothing, read-only-token safe; skips only the checks about that workflow's own wiring (its triggers and attached knowledge). By `workflowId`: the saved workflow with those checks too; needs a token with the `author` scope. Read `catalogChecked`. |
 | `analyze_workflow_reachable_outputs` | What a given step can read from upstream — bind inputs to real fields instead of guessing. Stateless and read-only-token safe. |
 | `validate_tool_code` | Syntax and banned-pattern check for Python tool code. Stateless and read-only-token safe. |
 | `format_tool_code` | Format tool code with Black. Stateless and read-only-token safe. |
@@ -574,8 +580,9 @@ route; the `offset` it used to take is no longer read.
 human-only actions in Axonity.
 
 `request_publish_release({ workflowId, changeSummary? })` proposes a **release**:
-a workflow *and everything its run needs* — the agents it runs, their tools and
-personas, the flows it pins, the memory scoped to those agents — as ONE approval.
+a workflow *and everything its run needs* — the agents it runs (each with its
+persona), their tools, the flows it pins, the memory scoped to those agents —
+as ONE approval.
 Prefer it over a request per entity. Taking a tenant live entity-by-entity means
 a hundred-odd approvals, none of which means anything on its own, and a human
 asked that many times is not reviewing. `list_publish_releases` and
@@ -612,9 +619,10 @@ These are enforced by the backend, not merely by convention:
   no tool for it and no way around it.
 - **A read-only token is genuinely read-only for mutations.** Any write from a token
   without the `write` scope is refused with a 403.
-- **The four stateless analysis tools are the exception:** `validate_workflow`,
+- **The four analysis tools are the exception:** `validate_workflow({ document })`,
   `analyze_workflow_reachable_outputs`, `validate_tool_code`, and `format_tool_code`
-  can be called by read-only and write tokens because they never mutate state.
+  can be called by read-only tokens because they never mutate state;
+  `validate_workflow({ workflowId })` needs the `author` scope.
 - **The token is tenant-bound.** An agent cannot reach another tenant.
 - **Secrets never pass through the agent.** A connector's `authConfig` accepts
   placeholders only; a write carrying something that looks like a real
