@@ -5144,7 +5144,8 @@
               "basic",
               "oauth2_client_credentials",
               "google_service_account",
-              "session_cookie"
+              "session_cookie",
+              "oauth2_refresh_token"
             ],
             "title": "Type",
             "type": "string"
@@ -7049,7 +7050,8 @@
               "basic",
               "oauth2_client_credentials",
               "google_service_account",
-              "session_cookie"
+              "session_cookie",
+              "oauth2_refresh_token"
             ],
             "title": "Authtype",
             "type": "string"
@@ -7105,7 +7107,8 @@
               "basic",
               "oauth2_client_credentials",
               "google_service_account",
-              "session_cookie"
+              "session_cookie",
+              "oauth2_refresh_token"
             ],
             "title": "Authtype",
             "type": "string"
@@ -14437,7 +14440,8 @@
               "basic",
               "oauth2_client_credentials",
               "google_service_account",
-              "session_cookie"
+              "session_cookie",
+              "oauth2_refresh_token"
             ],
             "title": "Authtype",
             "type": "string"
@@ -26253,7 +26257,8 @@
               "basic",
               "oauth2_client_credentials",
               "google_service_account",
-              "session_cookie"
+              "session_cookie",
+              "oauth2_refresh_token"
             ],
             "title": "Authtype",
             "type": "string"
@@ -28669,7 +28674,8 @@
               "basic",
               "oauth2_client_credentials",
               "google_service_account",
-              "session_cookie"
+              "session_cookie",
+              "oauth2_refresh_token"
             ],
             "title": "Authtype",
             "type": "string"
@@ -36212,7 +36218,8 @@
                   "basic",
                   "oauth2_client_credentials",
                   "google_service_account",
-                  "session_cookie"
+                  "session_cookie",
+                  "oauth2_refresh_token"
                 ],
                 "type": "string"
               },
@@ -36289,7 +36296,8 @@
               "basic",
               "oauth2_client_credentials",
               "google_service_account",
-              "session_cookie"
+              "session_cookie",
+              "oauth2_refresh_token"
             ],
             "title": "Authtype",
             "type": "string"

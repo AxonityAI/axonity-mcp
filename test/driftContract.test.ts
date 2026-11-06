@@ -138,7 +138,7 @@ describe("the validator contract in the guide is the platform's (#71)", () => {
 
 /**
  * A response recorded from the REAL route on axonity-flow `main`
- * (`c9f77464`, after #2104), through the ASGI app, with
+ * (`76d04404d`, after axonity-flow#2352), through the ASGI app, with
  * `?kinds=tool,conditional_trigger`. Re-record it when the route changes.
  */
 const RECORDED = JSON.parse(
@@ -161,7 +161,7 @@ const UNKNOWN_KIND_422 = {
   retryable: false,
   message:
     "Unknown entity kind: nonsense. Known kinds: agent, application, " +
-    "conditional_trigger, data_table, measure, output_schema, persona, policy, " +
+    "conditional_trigger, data_table, measure, output_schema, policy, " +
     "prompt_snippet, query, reference_doc, secret, skill, tool, toolbox, " +
     "trigger_element.",
 };
@@ -278,6 +278,71 @@ describe("get_entity_authoring_contract reads the platform live (#95, axonity-fl
     )) as ToolResult;
     expect(result.isError).toBe(true);
     expect(result.content[0].text).not.toMatch(/NOT AVAILABLE/);
+  });
+});
+
+/**
+ * axonity-flow#2349 — one vocabulary of secret kinds.
+ *
+ * A secret's `authType` and a connector's `authConfig.type` are the same list
+ * on the platform (pinned to each other there). This connector carries no copy
+ * of it: an agent reads the kinds from the live contract. What can go wrong
+ * HERE is a partial refresh — a new kind spliced into some of the schemas that
+ * carry the list and not the others, or the snapshot and the recorded contract
+ * response taken from different backends. Every enum in the snapshot that
+ * lists secret kinds is found by content, not by a list of schema names, so a
+ * ninth schema that starts carrying it is checked too.
+ */
+describe("the secret kinds are one list across the snapshot and the live contract (axonity-flow#2349)", () => {
+  const MARKER = "oauth2_client_credentials";
+
+  const secretKindEnums = (): { at: string; values: string[] }[] => {
+    const found: { at: string; values: string[] }[] = [];
+    const walk = (node: unknown, at: string): void => {
+      if (Array.isArray(node)) {
+        node.forEach((v, i) => walk(v, `${at}[${i}]`));
+        return;
+      }
+      if (node === null || typeof node !== "object") return;
+      const record = node as Record<string, unknown>;
+      const values = record.enum;
+      if (Array.isArray(values) && values.includes(MARKER)) {
+        found.push({ at, values: values as string[] });
+      }
+      for (const [key, value] of Object.entries(record)) {
+        if (key !== "enum") walk(value, `${at}.${key}`);
+      }
+    };
+    walk(snapshot.components.schemas, "components.schemas");
+    return found;
+  };
+
+  it("every schema that lists secret kinds lists the same ones, the refresh-token grant included", () => {
+    const enums = secretKindEnums();
+    // The secret routes' requests and responses plus ConnectorAuthConfig.
+    expect(enums.length).toBeGreaterThanOrEqual(8);
+    // The platform's invariant: a connector's kinds are the secret kinds plus
+    // `none` (a connector without a secret), and nothing else.
+    const secretKinds = enums.find(({ values }) => !values.includes("none"))!.values;
+    for (const { at, values } of enums) {
+      expect(values.filter((v) => v !== "none"), at).toEqual(secretKinds);
+    }
+    const connector = (
+      snapshot.components.schemas.ConnectorAuthConfig.properties?.type as { enum?: string[] }
+    ).enum;
+    expect(connector).toEqual(["none", ...secretKinds]);
+    expect(secretKinds).toContain("oauth2_refresh_token");
+  });
+
+  it("the recorded contract names the same kinds for a connector's authConfig as the snapshot", () => {
+    const tool = RECORDED.contracts.tool as {
+      variants: { connector: { authConfig: { fields: { name: string; allowed?: string[] }[] } } };
+    };
+    const recorded = tool.variants.connector.authConfig.fields.find((f) => f.name === "type");
+    const pinned = (
+      snapshot.components.schemas.ConnectorAuthConfig.properties?.type as { enum?: string[] }
+    ).enum;
+    expect(recorded?.allowed).toEqual(pinned);
   });
 });
 
