@@ -433,7 +433,13 @@ made any time before you attach them.
 
 ## Validators — one shape, one call
 A validator is a GATE on a submitted output: it runs after an agent produces a
-result and can refuse it. Specs carry the same keys wherever they are written:
+result and can refuse it. The backend's OpenAPI description of \`schemaBody\`
+is the source for the full contract, and the platform's live contract
+(\`get_entity_authoring_contract\`, output_schema) wins over this section where
+this deploy serves it. What follows is the part you cannot author without,
+checked against the platform and SUBORDINATE to both.
+
+Specs carry the same keys wherever they are written:
 - an output_schema's \`schemaBody\` (\`validators\`, and \`preflight\` for the
   checks an agent may run itself before it submits) — the gate on one value;
 - a workflow step's \`contract.output_validators\` — run on the step's WHOLE
@@ -443,11 +449,7 @@ result and can refuse it. Specs carry the same keys wherever they are written:
   agent hands in.
 The agent itself no longer carries specs (axonity-flow#2176): it names the
 schemas it answers in with \`outputSchemaIds\`, and a spec sent on the agent's
-strict create/update body is a 422. The backend's OpenAPI
-description of \`schemaBody\` is the source for the full contract, and the
-platform's live contract (\`get_entity_authoring_contract\`, output_schema)
-wins over this section where this deploy serves it. What follows is the part
-you cannot author without, checked against the platform and SUBORDINATE to both.
+strict create/update body is a 422.
 
 - A spec names its check in ONE of two ways, and each brings its own binding:
   - \`function\` — a shipped predicate (e.g. \`validators.min_length\`), bound
