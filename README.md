@@ -56,8 +56,8 @@ was kept here. A conformance test asserts their absence.
 
 ### The generic entity family
 
-Twelve entities — **workflow, agent, tool, skill, policy, reference_doc,
-output_schema, prompt_snippet, flow, data_table, measure, application** —
+Thirteen entities — **workflow, agent, tool, skill, policy, reference_doc,
+output_schema, prompt_snippet, flow, data_table, measure, query, application** —
 share one shape,
 though not every entity gets every verb (see the per-entity notes below for the
 exceptions):

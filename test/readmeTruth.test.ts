@@ -64,5 +64,27 @@ describe("the README carries no claim #107 corrected", () => {
     expect(README).toMatch(/the agents it runs \(each with its\s+persona\), their tools, the flows it pins/);
     expect(README).not.toMatch(/their tools and\s+personas, the flows it pins/);
   });
+
+  it("the generic entity family is exactly the entities registered with drafts and publication", async () => {
+    // Derived from the registration, not kept by hand (review 11 of #107):
+    // every `request_publish_<entity>` the registrar mints, minus the three
+    // that are not an entity of the family (bulk, release, company).
+    const { registerAll } = await import("../src/index.js");
+    const names: string[] = [];
+    registerAll({ tool: (n: string) => names.push(n) } as never, {} as never);
+    const family = names
+      .filter((n) => n.startsWith("request_publish_"))
+      .map((n) => n.slice("request_publish_".length))
+      .filter((n) => !["bulk", "release", "company"].includes(n))
+      .sort();
+
+    const match = README.match(/([A-Z][a-z]+) entities — \*\*([^*]+)\*\* —/);
+    expect(match, "the README names the family").not.toBeNull();
+    const listed = match![2].split(/,\s*/).map((x) => x.trim()).sort();
+    expect(listed).toEqual(family);
+    const words = ["Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine",
+      "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen"];
+    expect(match![1]).toBe(words[family.length]);
+  });
 });
 

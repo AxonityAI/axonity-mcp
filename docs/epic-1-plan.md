@@ -17,6 +17,9 @@ tool descriptions and the README.
   now judges a document against the tenant's catalog, as the stored route does;
   only the checks about one workflow's own wiring need its id. The note under
   "stateless" further down is superseded.
+- **`list_runs` takes no `offset`.** `GET /api/v1/runs` is a cursor page
+  (`{ items, nextCursor, pageSize, hasMore }`); the `offset?` in the M7 table
+  below is no longer read.
 
 ## Revision 3 — 2026-07-20, re-verified against axonity-flow @ `036a1e15`
 

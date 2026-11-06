@@ -33,7 +33,14 @@ import { NotFoundError, AxonityApiError } from "../src/errors.js";
 import { LIST_FILTERS } from "../src/generated/listFilters.js";
 import { registerAll } from "../src/index.js";
 import { diffOperations, operationShape } from "../scripts/check-contract-drift.mjs";
-import { buildTable, render, staleNotes, toArgName, toFilterType } from "../scripts/generate-list-filters.mjs";
+import {
+  buildTable,
+  filtersFor,
+  render,
+  staleNotes,
+  toArgName,
+  toFilterType,
+} from "../scripts/generate-list-filters.mjs";
 
 const snapshot = JSON.parse(
   readFileSync(
@@ -328,6 +335,16 @@ describe("the connector asks the deploy what it can do (M2)", () => {
 // ---------------------------------------------------------------------------
 
 describe("list filters are generated, not kept (M4)", () => {
+  it("fails loudly on a list route the snapshot does not have (review 11 of #107)", () => {
+    // A route that is gone (the persona list, axonity-flow#2176) used to be
+    // skipped in silence, so a dead mapping lived on unnoticed.
+    expect(() => filtersFor(snapshot, "/api/v1/no-such-list")).toThrow(/\/api\/v1\/no-such-list/);
+  });
+
+  it("every list route it maps is in the snapshot", () => {
+    expect(() => buildTable(snapshot)).not.toThrow();
+  });
+
   it("is up to date with the pinned snapshot", () => {
     // The point of the whole story: refresh the snapshot, regenerate, and the
     // eleventh filter is exposed without anyone editing a list. This fails when
