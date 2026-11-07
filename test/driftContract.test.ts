@@ -53,9 +53,21 @@ const snapshot = JSON.parse(
 ) as {
   paths: Record<string, unknown>;
   components: {
-    schemas: Record<string, { properties?: Record<string, { description?: string }> }>;
+    schemas: Record<
+      string,
+      { properties?: Record<string, { description?: string }>; required?: string[] }
+    >;
   };
 };
+
+/**
+ * The file reference, as the backend serves it (axonity-flow#2299): the
+ * upload answer `RunInputFileResponse` is the reference a connector's file
+ * answer, a start and a sub-workflow's file parameter carry. Every field is
+ * required, so the shape the guidance names is its `required` list, in order.
+ */
+const FILE_REFERENCE = snapshot.components.schemas.RunInputFileResponse!;
+const FILE_REFERENCE_SHAPE = `{ ${FILE_REFERENCE.required!.join(", ")} }`;
 
 describe("a connector must declare its effect, and may answer with a file (#95)", () => {
   it("create_ and update_connector say effect is required to publish", () => {
@@ -75,7 +87,7 @@ describe("a connector must declare its effect, and may answer with a file (#95)"
       const d = descriptions.get(name)!;
       expect(d, name).toMatch(/"type": "file"/);
       expect(d, name).toContain("filename");
-      expect(d, name).toContain("{ fileId, filename, contentType, sizeBytes }");
+      expect(d, name).toContain(FILE_REFERENCE_SHAPE);
       expect(d, name).toMatch(/Digitize/);
       expect(d, name).toMatch(/sub-workflow/);
       expect(d, name).toContain("get_entity_authoring_contract");
@@ -85,7 +97,65 @@ describe("a connector must declare its effect, and may answer with a file (#95)"
   it("the guide's connector notes say the same", () => {
     expect(CONVENTIONS).toContain("`implementation.effect` is required to PUBLISH");
     expect(CONVENTIONS).toMatch(/"type": "file"/);
-    expect(CONVENTIONS).toContain("{ fileId, filename, contentType, sizeBytes }");
+    expect(CONVENTIONS).toContain(FILE_REFERENCE_SHAPE);
+  });
+});
+
+describe("a file reference carries the stored sha256 (axonity-flow#2299)", () => {
+  it("the reference in the snapshot has no optional field the shape would miss", () => {
+    expect(Object.keys(FILE_REFERENCE.properties!).sort()).toEqual(
+      [...FILE_REFERENCE.required!].sort(),
+    );
+    expect(FILE_REFERENCE.required).toContain("sha256");
+  });
+
+  const guidance = (): [string, string][] => {
+    const { descriptions } = all();
+    return [
+      ["axonity_conventions", CONVENTIONS],
+      ["create_connector", descriptions.get("create_connector")!],
+      ["update_connector", descriptions.get("update_connector")!],
+    ];
+  };
+
+  it("says what the hash is and what it is for", () => {
+    for (const [name, text] of guidance()) {
+      expect(text, name).toMatch(/`sha256`[^.]*SHA-256 of the bytes/);
+      expect(text, name).toMatch(/computed\s+once\s+when\s+the\s+file\s+was\s+stored/);
+      expect(text, name).toMatch(/same\s+bytes\s+have\s+the\s+same\s+value\s+under\s+any\s+name/);
+      expect(text, name).toMatch(/already\s+processed/);
+    }
+  });
+
+  it("says the stored value is the only one, and where a run gets it", () => {
+    for (const [name, text] of guidance()) {
+      // Settled from storage where a reference enters a run — a caller
+      // cannot write the hash a workflow compares.
+      expect(text, name).toMatch(/settled\s+from\s+storage/);
+      expect(text, name).toMatch(/sub-workflow\s+call/);
+      // Digitize always answers the stored value per file it read.
+      expect(text, name).toMatch(/Digitize[^.]*always\s+answers\s+the\s+stored\s+`sha256`/);
+      // A reference the run may not read keeps the caller's other fields and
+      // has no hash, and a webhook, cron or conditional start reads none.
+      expect(text, name).toMatch(/keeps\s+what\s+the\s+caller\s+wrote\s+and\s+carries\s+no\s+`sha256`/);
+      expect(text, name).toMatch(/webhook,\s+cron\s+or\s+conditional\s+start/);
+    }
+  });
+
+  it("says only a declared file parameter is settled, nothing else", () => {
+    // The backend settles the declared file parameters only
+    // (`settle_file_references` walks `_declared_file_parameters`): a
+    // reference in an `object` field or an undeclared key keeps whatever
+    // `sha256` the caller wrote, at every kind of start.
+    for (const [name, text] of guidance()) {
+      expect(text, name).toMatch(
+        /Only\s+a\s+reference\s+in\s+a\s+declared\s+file\s+parameter\s+\(`file`,\s+or\s+a\s+list\s+of\s+`file`\)\s+is\s+checked\s+against\s+storage/,
+      );
+      expect(text, name).toMatch(/anywhere\s+else[^.]*is\s+not\s+checked/);
+      expect(text, name).toMatch(/compare\s+only[^.]*declared\s+file\s+parameter[^.]*Digitize/);
+      // The old, too-broad claim is gone.
+      expect(text, name).not.toMatch(/conditional\s+start[^.]*every\s+reference/);
+    }
   });
 });
 

@@ -5819,7 +5819,7 @@
         "type": "object"
       },
       "ConnectorResponseMapping": {
-        "description": "Response mapping configuration (JMESPath or full response).\n\n``file`` keeps the answer as a file of the run (#2079): the connector\nreturns its reference, ``{fileId, filename, contentType, sizeBytes}``.\n``filename`` names it, and may use the inputs (``{{filename}}``). See\n``domain/connector_file_response``.",
+        "description": "Response mapping configuration (JMESPath or full response).\n\n``file`` keeps the answer as a file of the run (#2079): the connector\nreturns its reference, ``{fileId, filename, contentType, sizeBytes, sha256}``.\n``filename`` names it, and may use the inputs (``{{filename}}``). See\n``domain/connector_file_response``.",
         "properties": {
           "expression": {
             "default": "",
@@ -29339,7 +29339,7 @@
         "type": "object"
       },
       "RunInputFileResponse": {
-        "description": "A file a run will start with (#1824): the reference, never the bytes.\n\nThis is exactly what the start form puts into ``triggerInput`` for a file\nparameter — the run carries the reference, the bytes stay in storage for\nas long as the run lives.",
+        "description": "A file a run will start with (#1824): the reference, never the bytes.\n\nThis is exactly what the start form puts into ``triggerInput`` for a file\nparameter — the run carries the reference, the bytes stay in storage for\nas long as the run lives. ``sha256`` is the hash stored with the bytes\n(#2299): the same document uploaded twice has the same value.",
         "properties": {
           "contentType": {
             "title": "Contenttype",
@@ -29353,6 +29353,10 @@
             "title": "Filename",
             "type": "string"
           },
+          "sha256": {
+            "title": "Sha256",
+            "type": "string"
+          },
           "sizeBytes": {
             "title": "Sizebytes",
             "type": "integer"
@@ -29362,7 +29366,8 @@
           "fileId",
           "filename",
           "contentType",
-          "sizeBytes"
+          "sizeBytes",
+          "sha256"
         ],
         "title": "RunInputFileResponse",
         "type": "object"

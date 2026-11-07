@@ -11,6 +11,26 @@ diff in review.
 
 ## Provenance
 
+- **A file reference carries its stored `sha256` (axonity-flow#2299), on top
+  of the entry below:** a WHOLE dump with `dump_openapi.py` (`build_openapi()`
+  + `serialize()`) from the branch `feat/2299-file-sha256` at `dee25e40a`, not
+  merged yet — this snapshot and that PR are merged and rolled out together.
+  A dump of the same branch at `3286b387e` (no schema or route changes after
+  `dee25e40a`) is byte-identical to this file. A whole dump and not a splice, because nothing else moves: the snapshot it
+  replaces is byte-identical to a dump of axonity-flow `main` at `25667eb8d`
+  (the branch's merge-base), and the branch's dump differs from that in two
+  component schemas and no operation. `RunInputFileResponse` gains `sha256`
+  (required; its description says it is the hash stored with the bytes), and
+  `ConnectorResponseMapping`'s description names the five-field reference.
+  767 → 767 operations; `check-contract-drift.mjs --fresh <the branch's dump>`
+  exits 0; `src/generated/listFilters.ts` regenerates unchanged.
+  `test/driftContract.test.ts` derives the reference shape the guidance names
+  from `RunInputFileResponse.required`. Both dumps came from `git archive`
+  copies of the two commits, not from a working checkout. Same safety as the
+  #106 entry below (`env -i`, audit hook before any backend import refusing
+  `.env*` opens, socket connect/bind, subprocesses and shell calls;
+  `env_file = None`; `src` verified to load from the copy).
+
 - **Full refresh after axonity-flow#2176, replacing everything below:** a
   WHOLE dump with `dump_openapi.py` (`build_openapi()` + `serialize()`) from a
   clean, read-only worktree of axonity-flow `main` at `76d04404d` — not a
