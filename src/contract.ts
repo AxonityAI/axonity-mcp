@@ -1,8 +1,9 @@
 /**
  * Asking the deploy what it can do, once, at startup (axonity-mcp#48 M2).
  *
- * `src/errors.ts` already turns a 404/405 into a "backend version skew" message
- * — but only AFTER the call has failed, which means a user is mid-task on the
+ * `src/errors.ts` already turns a 405, or a 404 on a route it records adding,
+ * into a skew message (a 404 on a route with an id reads as "most likely no
+ * such id" first) — but only AFTER the call has failed, which means a user is mid-task on the
  * one call that mattered. And it decides which 404s count from `ROUTES_ADDED_IN`,
  * a list this repository keeps by hand about routes the server owns. That is the
  * shape of #32 and #44, and it has the same failure mode: a route added here
@@ -25,7 +26,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import type { AxonityClient } from "./client.js";
-import { AxonityApiError, ROUTES_ADDED_IN } from "./errors.js";
+import { AxonityApiError, ROUTES_ADDED_IN, SKEW_EITHER_WAY } from "./errors.js";
 
 /** `GET /api/v1/contract`. `routes` are "METHOD /path/{template}" strings. */
 export interface ContractResponse {
@@ -115,8 +116,8 @@ export const PROBE_VARIANTS: Record<string, unknown>[] = [
   { workflowId: undefined },
   // get_measure_formula_spec — the workspace's vocabulary only when asked.
   { includeWorkspace: true },
-  // list_conversations — one dashboard's history instead of the filtered
-  // cross-dashboard list. (start_conversation reads it too; harmless.)
+  // list_conversations — the per-dashboard route instead of the
+  // cross-dashboard one. (start_conversation reads it too; harmless.)
   { dashboardId: "x" },
 ];
 
@@ -234,10 +235,35 @@ export function missingFromContract(
  * a 404 counts.
  */
 function attribute(route: string): string {
-  const path = route.slice(route.indexOf(" ") + 1);
-  const known = ROUTES_ADDED_IN.find((entry) => entry.pattern.test(path));
-  return known ? `${route}  — added by ${known.addedBy}` : route;
+  const known = addedBy(route);
+  return known ? `${route}  — added by ${known}` : route;
 }
+
+function addedBy(route: string): string | undefined {
+  const path = route.slice(route.indexOf(" ") + 1);
+  return ROUTES_ADDED_IN.find((entry) => entry.pattern.test(path))?.addedBy;
+}
+
+/**
+ * Which side moved, as far as this build can know.
+ *
+ * A route this repository records ADDING is missing because the backend has
+ * not got it yet: the backend is older. Any other missing route says nothing
+ * about direction — the backend may also have REMOVED it, as axonity-flow#2176
+ * removed the persona routes while this connector still called them, and then
+ * "the backend is older, pin an older connector" is the wrong way round and
+ * the wrong fix. So the verdict is only as strong as the evidence.
+ */
+export function skewDirection(missing: string[]): string {
+  if (missing.length > 0 && missing.every((route) => addedBy(route))) {
+    return (
+      "The backend is OLDER than this connector. Tell your human which Axonity " +
+      "environment this token points at, or pin an older connector."
+    );
+  }
+  return SKEW_EITHER_WAY;
+}
+
 
 /** Where the "already checked this contract" marker lives, per API URL. */
 function cachePath(apiUrl: string): string {
@@ -359,9 +385,8 @@ export async function reportContractSkew(
       `connector needs.\n` +
       `  Backend: ${build} (${environment}) at ${options.apiUrl}\n` +
       missing.map((route) => `  - ${attribute(route)}`).join("\n") +
-      `\nThe backend is OLDER than this connector. Tools that use those routes ` +
-      `will fail; everything else works. Tell your human which Axonity ` +
-      `environment this token points at, or pin an older connector.`,
+      `\n${skewDirection(missing)} Tools that use those routes will fail; ` +
+      `everything else works.`,
   );
   return "missing";
 }

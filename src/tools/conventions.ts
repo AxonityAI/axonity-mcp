@@ -75,8 +75,9 @@ Read this before creating or updating anything.
 1. \`read_*\` the entity (and \`read_*_published\` if you need to see what is live).
 2. Edit the DRAFT: \`update_*\`, or workflow-edit tools for workflow structure.
 3. Validate before publish: \`validate_workflow\` / \`analyze_workflow_reachable_outputs\` / 
-   \`validate_tool_code\` / \`format_tool_code\`. These four are stateless and work with
-   read-only tokens.
+   \`validate_tool_code\` / \`format_tool_code\`. These four save nothing, and a
+   read-only token may call them — except \`validate_workflow({ workflowId })\`,
+   which needs the \`author\` scope.
 4. Re-read and verify with a saved tool command: \`execute_tool\` /
    \`execute_stored_connector\`.
 5. Fix any issues and re-read again.
@@ -162,11 +163,13 @@ has run cleanly once, at its current version.
 
 ## Field shape
 - All fields are camelCase JSON (e.g. \`capabilityTier\`, not \`capability_tier\`).
-  ONE documented exception: validator specs (\`permissions.outputValidators\`,
-  \`permissions.exposedValidatorTools\`) use snake_case keys (\`function\`,
+  ONE documented exception: validator specs — in an output_schema's
+  \`schemaBody\` (\`validators\`, \`preflight\`), a step's
+  \`contract.output_validators\` and a conversation step's
+  \`answerContract.validators\` — use snake_case keys (\`function\`,
   \`target\`, \`args\`, \`when_present\`, \`inputs\`, \`error_message\`,
-  \`tool_name\`, \`validator_name\`) — they are the same shape at every level and
-  are stored verbatim, so they are NOT camel-aliased. Send them in snake_case.
+  \`tool_name\`, \`validator_name\`) — they are stored verbatim, so they are
+  NOT camel-aliased. Send them in snake_case.
   What those keys MEAN, and how a validator is bound to what it judges, is the
   Validators section.
 - \`update_*\` is a partial change for agents/tools and a partial patch for
@@ -178,10 +181,10 @@ has run cleanly once, at its current version.
   undeclared OR MISSPELLED key is a 422 that names it, not a silent drop. So
   spelling matters and you get told when it is wrong — good. Other entities are
   more lenient and may drop an unknown key silently; never rely on that.
-- \`agent.tags\` is a free label for grouping and reporting. It GATES NOTHING —
-  what reaches an agent's prompt is a LINK (\`attach_policy_to_agent\`), visible
-  in a table a human can read and edit. A role-tag gate on a policy used to
-  decide that invisibly and is refused outright now: sending
+- An agent has no tags: what reaches an agent's prompt is a LINK
+  (\`attach_policy_to_agent\`), visible in a table a human can read and edit.
+  A role-tag gate on a policy used to decide that invisibly and is refused
+  outright now: sending
   \`activation.tags\` to \`create_policy\`/\`update_policy\` is a 422. The two
   surviving gates, \`activation.tools\` and \`activation.delegation\`, each say
   something a link cannot — "only on turns where this agent holds this tool",
@@ -222,17 +225,17 @@ has run cleanly once, at its current version.
 - A LIST is not the whole list. \`list_workflow_runs\` returns a page —
   \`{ items, nextCursor, pageSize, hasMore }\`, 20 by default — so counting or
   concluding from page one while \`hasMore\` is true is how you answer confidently
-  and wrongly. Follow \`nextCursor\` until it is null. Two further traps: that
-  route lists LAUNCHES (a 4,415-item FOR EACH is ONE entry carrying
-  \`forEachProgress\`, so rows are not runs), and the offset-style lists
-  (\`list_runs\`, \`list_publish_approvals\`) cap silently — a full page means
-  there may be more, and nothing in the response says so.
+  and wrongly. Follow \`nextCursor\` until it is null. And that route lists
+  LAUNCHES: a 4,415-item FOR EACH is ONE entry carrying \`forEachProgress\`, so
+  rows are not runs. \`list_runs\` pages the same way, by \`nextCursor\` with
+  \`hasMore\`. \`list_publish_approvals\` pages by \`offset\` and answers \`total\`
+  and \`hasMore\`: raise \`offset\` by \`limit\` until \`hasMore\` is false.
 
 ## Delete is recoverable — but not everything is
 - \`delete_*\` soft-deletes: the entity disappears from \`list_*\` but is not gone.
   \`restore_*\` brings it back; \`list_deleted_*\` shows what's waiting. This
-  applies uniformly to workflow, agent, tool, skill, policy, reference_doc,
-  persona, output_schema, prompt_snippet, and flow.
+  applies uniformly to every entity that has a \`delete_*\` and a
+  \`restore_*\` tool.
 - The same applies one level down, to version HISTORY:
   \`delete_*_version\` removes one entry from history (the current draft and
   published version are protected and can't be targeted this way);
@@ -241,8 +244,12 @@ has run cleanly once, at its current version.
   are normal, not a sign of corruption.
 - \`restore_*\` can itself 409 if a live entity now holds the same name/slot —
   the error names the conflicting one.
-- There is no "archive" state for these ten entities — delete + restore IS the
-  lifecycle. Runs are the one exception with a true archive/unarchive (see below).
+- Deleting is not archiving. Some entities also have a \`status\` that can be
+  \`archived\` — kept, not offered — set with \`update_*\`: \`agent\`, \`tool\`,
+  \`skill\`, \`policy\`, \`reference_doc\`, \`output_schema\`, \`data_table\`,
+  \`measure\` and \`application\`. The values each takes are in
+  \`get_entity_authoring_contract\`. Runs have an archive of their own
+  (\`archive_run\` / \`unarchive_run\`, see below).
 
 ## Per entity — what to create, and what "complete" means
 
@@ -321,17 +328,26 @@ made any time before you attach them.
 - Required: \`name\`. Enumerated fields, with their ONLY valid values:
   - \`capabilityTier\`: \`economy\` | \`standard\` (default) | \`smart\` | \`reasoning\`
   - \`creativityTier\`: \`low\` | \`medium\` (default) | \`high\`
-  - \`learningMode\`: \`none\` (default) | \`adaptive\` | \`strict\`
-- \`avatar\`, \`tags\` (free labels for grouping — they gate nothing; see Field
-  shape), \`canOwnProcess\` (bool; must be true for an agent to own a
-  workflow step's flow), \`episodicMemoryEnabled\` (bool).
-- \`permissions\` (object): \`planning\`, \`delegation\`, \`verboseOutput\` (bools);
-  \`outputValidators\` / \`exposedValidatorTools\` (snake_case specs — see Field
-  shape for the casing, Validators for what they say);
-  \`expectedOutputSchemaId\` (an output_schema id — MANDATORY whenever you
-  attach validators here).
+  - \`reasoningLevel\`: \`default\` (sends nothing, the model decides) | \`none\` | \`low\` | \`medium\` | \`high\` | \`extra_high\`
+  - \`delegation\`: \`off\` (default) | \`on\` (one task to one team member at a time) | \`multi\` (also one task to several at once)
+- \`persona\` (text): who the agent is, in its own words — the character text
+  every prompt of this agent opens with. It is a field of the agent and
+  publishes with it (axonity-flow#2176); there is no separate persona to
+  create, version or publish. To remove it send \`""\`: on an update \`null\`
+  leaves it as it is.
+- \`slug\` (its handle, set once at creation; left out: taken from the name),
+  \`avatar\`, \`conversational\` (bool: may people talk to it),
+  \`delegationBudgetEur\` (what one delegation to it may cost; empty: no
+  budget), \`frameworkToolsOff\` (framework tools taken away; \`submit_output\`
+  cannot be), \`clearance\` (what it may read; set by an administrator).
+- Output: \`outputSchemaIds\` (the output schemas it answers in — library ids
+  or names; a schema outside the list is refused) and \`defaultOutputSchemaId\`
+  (the one used when a caller names none; left out: the first). The GATES on
+  an output live in the output_schema (see Validators), not on the agent.
 - Wiring fields — see the Wiring section: \`toolIds\`, \`systemToolIds\`,
   \`delegationTargetIds\`.
+- Anything else is refused: the body is strict, so a field the platform
+  retired (axonity-flow#2176) is a 422 that names it, not a silent drop.
 - Complete check: an agent with no \`toolIds\`/\`systemToolIds\` has no tools and
   can only reason/talk. If it is meant to DO something, give it the tools.
 
@@ -368,14 +384,16 @@ made any time before you attach them.
   launchable AND has a trigger (see Triggers).
 
 ### persona
-- An agent's character — 1:1 with an agent. Created only through its agent
-  (\`create_agent_persona\`: \`name\`, \`characterText\`); then a normal entity
-  (\`read_persona\`, \`update_persona\`, delete/restore/versions).
+- Not an entity: the agent's \`persona\` field (see agent). Set it with
+  \`create_agent\` / \`update_agent\`, or \`create_agent_persona\` (agentId,
+  expectedVersion, persona); read it with \`read_agent\` or
+  \`read_agent_persona\`. Its history is the agent's versions, and it goes live
+  with \`request_publish_agent\`.
 
 ### output_schema
 - A reusable output contract, versioned and publishable. Referenced BY id from a
-  tool's validators or an agent's \`permissions.expectedOutputSchemaId\` — so
-  create it first, then point things at the id the create call returns.
+  tool's validators or an agent's \`outputSchemaIds\` — so create it first,
+  then point things at the id the create call returns.
 - \`schemaBody\` is a JSON Schema document (\`type\`, \`properties\`,
   \`required\`) PLUS one key that is not JSON Schema: \`validators\`, the gates
   run against a submitted output. This is the place a validator can be STEERED
@@ -422,13 +440,24 @@ made any time before you attach them.
 
 ## Validators — one shape, one call
 A validator is a GATE on a submitted output: it runs after an agent produces a
-result and can refuse it. Specs are written in two places and carry the same
-key names in both — \`permissions.outputValidators\` on an agent, and
-\`validators\` inside an output_schema's \`schemaBody\`. The backend's OpenAPI
-description of \`schemaBody\` is the source for the full contract, and the
-platform's live contract (\`get_entity_authoring_contract\`, output_schema)
-wins over this section where this deploy serves it. What follows is the part
-you cannot author without, checked against the platform and SUBORDINATE to both.
+result and can refuse it. The backend's OpenAPI description of \`schemaBody\`
+is the source for the full contract, and the platform's live contract
+(\`get_entity_authoring_contract\`, output_schema) wins over this section where
+this deploy serves it. What follows is the part you cannot author without,
+checked against the platform and SUBORDINATE to both.
+
+Specs carry the same keys wherever they are written:
+- an output_schema's \`schemaBody\` (\`validators\`, and \`preflight\` for the
+  checks an agent may run itself before it submits) — the gate on one value;
+- a workflow step's \`contract.output_validators\` — run on the step's WHOLE
+  submission, so a rule about how its outputs relate has something to look at;
+  \`validate_workflow\` reports a named validator tool that does not exist;
+- a conversation step's \`answerContract.validators\`, beside its \`schema\` —
+  run on the answer the agent hands in; without a \`schema\` nothing runs, and
+  \`validate_workflow\` does not report it.
+The agent itself no longer carries specs (axonity-flow#2176): it names the
+schemas it answers in with \`outputSchemaIds\`, and a spec sent on the agent's
+strict create/update body is a 422.
 
 - A spec names its check in ONE of two ways, and each brings its own binding:
   - \`function\` — a shipped predicate (e.g. \`validators.min_length\`), bound
@@ -487,11 +516,8 @@ unresolved values and nothing says so. (Rows whose schema declares no shape are
 left alone: there is nothing to check against, and guessing would refuse correct
 configurations.)
 
-WHERE \`field\` AND \`slots\` ARE ACCEPTED: inside an output_schema's
-\`schemaBody\`, which is stored verbatim. An agent's
-\`permissions.outputValidators\` is a STRICT body — an undeclared key is a 422 —
-so a spec written THERE takes neither, and its validator gets the whole output
-and no slots. Steer a validator from the output_schema.
+WHERE \`field\` AND \`slots\` ARE CHECKED: when you save an output_schema, in
+its \`schemaBody\`, which is stored verbatim.
 
 ### The older, explicit binding
 A tool spec MAY declare \`inputs\` instead, and a spec with \`inputs\` does NOT
@@ -518,8 +544,9 @@ lives in the entity body:
   \`update_agent\`. \`toolIds\` and \`systemToolIds\` are DIFFERENT lists; a
   system-tool id does not go in \`toolIds\`.
 - agent → agent (delegation): add the callee agent's id to the caller's
-  \`delegationTargetIds\` (and set \`permissions.delegation: true\`).
-- output_schema → agent: \`permissions.expectedOutputSchemaId\` (a single id).
+  \`delegationTargetIds\` (and set \`delegation\` to \`on\` or \`multi\`).
+- output_schema → agent: \`outputSchemaIds\` (a list), with
+  \`defaultOutputSchemaId\` for the one used when a caller names none.
 - Changing any of these is read-then-write under optimistic locking: read the
   agent, edit the field — an id-array is a FULL replace, so include the ids you
   are keeping — then \`update_agent\` with \`expectedVersion\`.
@@ -593,8 +620,8 @@ doc or a step's activities — and how large each may be, is not decided here: t
 placement rules are served by the platform and appended to this guide, read live
 from this deploy each time you call it.
 
-Long-term recall for an agent is the agent's **\`episodicMemoryEnabled\`** flag
-(Memory V2, opt-in). Session/workflow memory are RUNTIME, not authored: they are
+An agent has no long-term recall of its own runs: episodic memory went with
+axonity-flow#2176. Session/workflow memory are RUNTIME, not authored: they are
 written by a run, never set here. This connector does not expose them — the
 backend serves them per run, but no tool wraps those reads yet, so do not
 promise a user you can show them.
@@ -620,9 +647,8 @@ elsewhere points at nothing. Do this instead:
 2. Create the leaf dependencies first (tools, output_schemas). Keep a map from
    each OLD id to the NEW id the create call returns.
 3. Create agents, translating every referenced id through your map:
-   old toolId → new toolId in \`toolIds\`, etc. Never send an old id. If the
-   source agent has a persona, recreate it with \`create_agent_persona\` on the
-   new agent.
+   old toolId → new toolId in \`toolIds\`, etc. Never send an old id. The
+   persona is a field of the agent: copy its \`persona\` text into the create.
 4. Create workflows; when you add agent/tool references into the document,
    translate through the map the same way.
 5. Attach skills/policies/reference-docs by the new ids, then read them back
@@ -633,10 +659,14 @@ The connector never carries a secret across: \`authConfig\` stays placeholders i
 the new tenant too, and a human fills the real value there.
 
 ## Structural workflow edits
-- **Start by reading the spec.** \`get_workflow_authoring_spec\` returns FOUR
-  lists this deploy generates from its own registries: the mutation commands,
-  the trigger types, the step types (including the ones you may not author, with
-  the reason), and the schedule-rule shapes with a working example each. Neither
+- **Start by reading the spec.** \`get_workflow_authoring_spec\` returns the
+  lists this deploy generates from its own registries: the mutation commands
+  (\`operations\`), the trigger types (\`triggerTypes\`), the step types
+  (\`stepTypes\`, including the ones you may not author, with the reason), the
+  schedule-rule shapes with a working example each (\`scheduleRuleKinds\`), the
+  value vocabularies (\`parameterTypes\`, \`outputKinds\`, \`schemaFieldKinds\`),
+  the decision evaluators (\`decisionEvaluators\`) and the column kinds of a
+  table (\`tableColumnKinds\`). Neither
   this guide nor the tool descriptions restate any of those lists: a list kept
   in the connector is right only by maintenance, and it has been wrong twice
   already, both times in the direction that costs an agent a 422 on something it
@@ -665,7 +695,8 @@ the new tenant too, and a human fills the real value there.
   Writing \`kind\` on a trigger parameter is not a 422; it is a key nothing
   reads, so the value silently falls back to text and the workflow runs with
   the wrong thing. Check which of the three you are writing before you write it.
-- \`rulesVersion\` in that response is a content hash over all four lists. While
+- \`rulesVersion\` in that response is a content hash over the whole
+  answer. While
   it is unchanged there is nothing to re-fetch; re-read the spec when it changes,
   or when a mutation fails with a 422 suggesting your idea of a command is stale.
 - \`apply_workflow_mutations\` takes a LIST of commands and applies them in order,
@@ -751,13 +782,18 @@ a document to find out what the platform did.
   \`removedEdges\`. An edge you did not ask for is this, not corruption.
 
 ## Validating: two questions, two calls
-- \`validate_workflow({ workflowId })\` checks the STORED workflow against the
-  tenant catalog — it confirms the agents, tools and flows the steps reference
-  actually exist. This is the "can this run?" answer, and it comes back with
-  \`catalogChecked: true\`.
-- \`validate_workflow({ document })\` is stateless and read-only-token safe, but
-  without a catalog it can only judge STRUCTURE: \`launchable\` there means the
-  graph is sound, not that it will run. It says so with \`catalogChecked: false\`.
+- \`validate_workflow({ workflowId })\` checks the workflow as SAVED against the
+  tenant catalog — whether the agents, tools and flows the steps reference
+  exist and are published — plus its own wiring (its triggers and the knowledge
+  attached to it). This is the "can this run?" answer. It needs a token with
+  the \`author\` scope.
+- \`validate_workflow({ document })\` judges the document against the same
+  catalog, saves nothing, and a read-only token may call it. Without the
+  workflow's id it skips the checks about that workflow's own wiring (its
+  triggers and the knowledge attached to it), so validate by \`workflowId\` once
+  it is saved. Either call answers \`catalogChecked: false\` when the catalog
+  could not be built: then \`launchable\` means the graph is sound, not that it
+  will run.
 - Pass exactly one. Before telling a human a workflow is ready, check
   \`catalogChecked\` — a green structural verdict is the easiest thing to
   over-read.
@@ -859,8 +895,8 @@ a document to find out what the platform did.
   have. It is PAGED over the waiting RUNS, so \`items\` can be longer than
   \`pageSize\` — one run may park several steps. Follow \`nextCursor\` until it
   is null before concluding anything about how much is waiting.
-- Runs are the only thing with a real archive state — \`archive_run\` is
-  reversible, \`bulk_delete_runs\` is not.
+- A run's archive is reversible (\`archive_run\` / \`unarchive_run\`);
+  \`bulk_delete_runs\` is not.
 
 ## Subworkflows — one workflow calling another
 Both halves live in the workflow DOCUMENT, so both are ordinary
@@ -949,13 +985,18 @@ point and it changes without the process changing.
   editing code, reviewing it and publishing a tool. A business user maintains a
   table; nobody should need you to change a postcode.
 
-**Static or dynamic — who owns the rows.**
-- \`isDynamic: false\` (the default) is reference data the AUTHOR maintains. A
-  workflow reads it and cannot change it. \`allowedOperations\` must be empty:
-  a permission nothing honours is refused, not stored.
-- \`isDynamic: true\` lets a workflow change the rows, limited to
+**Who fills it — \`filledBy\`, one per table** (\`author\`, \`workflow\`,
+\`query\` or \`source\`).
+- \`author\` (the default) is reference data the AUTHOR maintains. A workflow
+  reads it and cannot change it. \`allowedOperations\` must be empty: a
+  permission nothing honours is refused, not stored.
+- \`workflow\` lets a workflow change the rows, limited to
   \`allowedOperations\` — any of \`add\` / \`update\` / \`delete\`. READING IS
   NEVER LISTED there: it is what a table is for and is always allowed.
+- \`query\` fills the rows from a named query (\`fillingQueryId\`, on its
+  \`rhythm\` or with \`refresh_data_table\`).
+- \`source\` holds no rows here: they stay in a data source, and \`external\`
+  says where. \`create_data_table\` describes each filler's fields.
 - You edit rows through \`add_data_table_row\` / \`update_data_table_row\` /
   \`delete_data_table_row\` whatever the table's mode says — those grants are
   about what a RUN may do, not about authoring.
@@ -998,8 +1039,8 @@ value across from one of the others, and do not guess. Every column needs a
 \`description\`: an agent reads it to know what the column is for, and a save
 without one is refused.
 
-**\`list_data_tables\` is PAGED**, alone among the library lists — a tenant's
-reference data has no ceiling. Page one is not the library. Follow
+**\`list_data_tables\` is PAGED**, like \`list_measures\`, \`list_queries\` and
+\`list_applications\` — a tenant's reference data has no ceiling. Page one is not the library. Follow
 \`nextCursor\` while \`hasMore\` is true, or better, narrow in the query:
 \`name\` is exact and unique per workspace, so "does one called X already
 exist" is a single call rather than a walk. The page carries \`rowCount\`, never

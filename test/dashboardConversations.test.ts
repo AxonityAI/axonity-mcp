@@ -80,15 +80,23 @@ const FOCUS = {
 };
 
 describe("list_conversations", () => {
-  it("one dashboard: the chat's own history route, with only its own query", async () => {
+  it("one dashboard: the chat's own history route, with its own filters (axonity-flow#2331)", async () => {
     const { handlers, client } = setup();
     await handlers.get("list_conversations")!({
       dashboardId: "d-1",
+      status: "idle,failed",
+      createdAfter: "2026-11-01",
+      createdBefore: "2026-11-03",
+      q: "plan",
       limit: 50,
       cursor: "MjAyNi0xMS0wM3wx",
     });
     expect(client.get).toHaveBeenCalledWith("/api/v1/conversations", {
       dashboardId: "d-1",
+      status: "idle,failed",
+      createdAfter: "2026-11-01",
+      createdBefore: "2026-11-03",
+      q: "plan",
       limit: 50,
       cursor: "MjAyNi0xMS0wM3wx",
     });
@@ -124,21 +132,27 @@ describe("list_conversations", () => {
     expect(query.kind).toBe("conversation");
   });
 
-  for (const extra of [
-    { status: "failed" },
-    { createdAfter: "2026-11-01" },
-    { createdBefore: "2026-11-01" },
-    { includeArchived: false },
-  ]) {
-    it(`refuses dashboardId with ${Object.keys(extra)[0]} instead of dropping it`, async () => {
-      const { handlers, client } = setup();
-      const result = await handlers.get("list_conversations")!({ dashboardId: "d-1", ...extra });
-      expect(result.isError).toBe(true);
-      expect(result.content[0].text).toContain(Object.keys(extra)[0]);
-      expect(result.content[0].text).toMatch(/cannot be combined with dashboardId/);
-      expect(client.get).not.toHaveBeenCalled();
+  it("refuses dashboardId with includeArchived instead of dropping it", async () => {
+    const { handlers, client } = setup();
+    const result = await handlers.get("list_conversations")!({
+      dashboardId: "d-1",
+      includeArchived: false,
     });
-  }
+    expect(result.isError).toBe(true);
+    expect(result.content[0].text).toContain("includeArchived");
+    expect(result.content[0].text).toMatch(/cannot be combined with dashboardId/);
+    expect(client.get).not.toHaveBeenCalled();
+  });
+
+  it("refuses q without dashboardId instead of dropping it", async () => {
+    // The list across dashboards has no text filter; sent there, q would be
+    // dropped and the page would look like an answer.
+    const { handlers, client } = setup();
+    const result = await handlers.get("list_conversations")!({ q: "plan" });
+    expect(result.isError).toBe(true);
+    expect(result.content[0].text).toMatch(/`q` needs dashboardId/);
+    expect(client.get).not.toHaveBeenCalled();
+  });
 
   it("uses only query parameters each route declares", async () => {
     const declared = (path: string) =>
@@ -146,7 +160,15 @@ describe("list_conversations", () => {
         .filter((p) => p.in === "query")
         .map((p) => p.name);
     const { handlers, client } = setup();
-    await handlers.get("list_conversations")!({ dashboardId: "d-1", limit: 1, cursor: "c" });
+    await handlers.get("list_conversations")!({
+      dashboardId: "d-1",
+      status: "idle",
+      createdAfter: "2026-11-01",
+      createdBefore: "2026-11-02",
+      q: "plan",
+      limit: 1,
+      cursor: "c",
+    });
     await handlers.get("list_conversations")!({
       status: "failed",
       createdAfter: "2026-11-01",
@@ -196,15 +218,15 @@ describe("list_conversations", () => {
     expect(input.safeParse({ workflowId: "w-1" }).data).not.toHaveProperty("workflowId");
   });
 
-  it("has no input for the two filters no route offers: opener and question text", () => {
+  it("has no input for the filter no route offers: who opened the chat", () => {
     // zod strips unknown keys without an error, so the description has to be
-    // the place an agent learns these do not exist.
+    // the place an agent learns it does not exist.
     const input = inputOf("list_conversations");
     const parsed = input.safeParse({ dashboardId: "d-1", createdBy: "u-1", search: "plan" });
     expect(parsed.success).toBe(true);
     expect(Object.keys(parsed.data as object)).toEqual(["dashboardId"]);
     const d = setup().descriptions.get("list_conversations")!;
-    expect(d).toMatch(/CANNOT BE FILTERED AT ALL: who opened the chat, and the text of the question/);
+    expect(d).toMatch(/CANNOT BE FILTERED AT ALL: who opened the chat/);
   });
 
   for (const [status, message] of [
@@ -225,6 +247,7 @@ describe("list_conversations", () => {
   it("says whose chats, which filters where, that it pages, and where the tile is", () => {
     const d = setup().descriptions.get("list_conversations")!;
     expect(d).toMatch(/token belongs to/);
+    expect(d).toMatch(/With `dashboardId`.*`status`, `createdAfter`\/`createdBefore` and `q`/s);
     expect(d).toMatch(/Without `dashboardId`.*`status`, `createdAfter`\/`createdBefore`/s);
     expect(d).toMatch(/refused here rather than half-applied/);
     expect(d).toMatch(/hasMore/);
@@ -233,17 +256,19 @@ describe("list_conversations", () => {
     expect(d).not.toMatch(/ONLY FILTER/);
   });
 
-  it("warns that the backend ignores an unparseable date", () => {
+  it("says how each list treats an unparseable date", () => {
     const { schemas } = setup();
     const after = schemas.get("list_conversations")!.createdAfter.description ?? "";
-    expect(after).toMatch(/IGNORED, not refused/);
+    expect(after).toMatch(/Without dashboardId.*IGNORED, not refused/s);
+    expect(after).toMatch(/With dashboardId.*422/s);
   });
 
-  it("says a bare createdBefore date excludes that day", () => {
+  it("says what a bare createdBefore date means on each list", () => {
     const { schemas } = setup();
     const before = schemas.get("list_conversations")!.createdBefore.description ?? "";
-    expect(before).toMatch(/EXCLUDES the chats of 3 November itself/);
+    expect(before).toMatch(/Without dashboardId.*EXCLUDES the chats of 3 November itself/s);
     expect(before).toMatch(/2026-11-03T23:59:59/);
+    expect(before).toMatch(/With dashboardId.*END of that day/s);
   });
 
   it("names a conversation's statuses, with idle as answered", () => {

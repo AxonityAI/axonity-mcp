@@ -11,8 +11,29 @@ diff in review.
 
 ## Provenance
 
-- **Secret kind `oauth2_refresh_token` (axonity-flow#2352, issue #2349), on
-  top of everything below:** a WHOLE dump with `dump_openapi.py`
+- **Full refresh after axonity-flow#2176, replacing everything below:** a
+  WHOLE dump with `dump_openapi.py` (`build_openapi()` + `serialize()`) from a
+  clean, read-only worktree of axonity-flow `main` at `76d04404d` — not a
+  splice. It replaces the per-schema and per-operation splices listed below
+  (all of their branches are merged on `main`). 754 → 767 operations: 34
+  added, 21 removed (the persona routes, gone with #2176), 3 with a different
+  contract (`GET /conversations` gains `status`, `createdAfter`,
+  `createdBefore`, `q`; `GET /runs` gains `include_platform`;
+  `GET /knowledge/search` answers `SearchRunStarted` and drops `as_of`).
+  Component schemas against the snapshot on `main`: 45 added, 15 removed, 68
+  changed (60 against #106's, which had already updated 8; among them
+  `CreateAgentRequest` / `UpdateAgentRequest`, which lose `learningMode`,
+  `canOwnProcess`, `episodicMemoryEnabled`, `permissions` and `tags` and gain
+  `persona`, `delegation`, `outputSchemaIds` and more). Of the 34 new
+  operations, 23 are neither covered nor excluded and are listed in
+  `OPEN_FOR_DECISION_79` (`test/completeness.test.ts`); the other 11 fall
+  under existing rules. `src/generated/listFilters.ts` was regenerated
+  (`filled_by` gains `source`). `npm run check:contract` against `76d04404d`
+  exits 0. `entity-contracts.tool-conditional_trigger.json` is the recording
+  from the same `main` (see the entry below), unchanged. Same safety as the
+  entry below.
+
+- **Secret kind `oauth2_refresh_token` (axonity-flow#2352, issue #2349), replaced by the entry above:** a WHOLE dump with `dump_openapi.py`
   (`build_openapi()` + `serialize()`) from a clean, read-only worktree of
   axonity-flow `main` at `76d04404d` (contains #2352, merged as `0fc1903cd`),
   spliced in PER SCHEMA: `ConnectorAuthConfig`, `CreateSecretRequest`,

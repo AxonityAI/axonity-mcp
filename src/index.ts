@@ -78,19 +78,42 @@ import { registerWorkflowMutations } from "./tools/workflowMutations.js";
 const FILL_NOTE =
   "WHAT FILLS IT — `filledBy`, one word: `author` (the default: reference " +
   "data its author maintains), `workflow` (a workflow writes the rows, " +
-  "limited to `allowedOperations`) or `query` (a named query fetches them). " +
+  "limited to `allowedOperations`), `query` (a named query fetches them) or " +
+  "`source` (the rows stay in a data source and this table describes them). " +
   "A table has ONE filler. `isDynamic` is no longer sent: it follows from " +
-  "`filledBy` — a table filled by a query or a workflow is dynamic. " +
+  "`versioning` (below) — a table read live is dynamic, one frozen at each " +
+  "publication is not, and a source table never is. " +
+  "\n\nA SOURCE TABLE (`filledBy: \"source\"`) holds no rows here. " +
+  "`external` says where it lives: `sourceId` (one of this workspace's data " +
+  "sources, list_data_sources), `container` (what that source calls the " +
+  "thing the table is in: a BigQuery dataset, a PostgreSQL schema) and " +
+  "`object` (the table's own name there, exactly as SQL names it). " +
+  "`external` is required for a source table and refused otherwise; rows, " +
+  "`allowedOperations`, `fillingQueryId`, `rhythm` and `dateTable` are " +
+  "refused on one. " +
+  "\n\n`grain` says what one row is (\"one row per order line\"): required " +
+  "for a source table, refused when a query fills the table (its query says " +
+  "it). " +
+  "\n\n`versioning` — how the rows are versioned, apart from what fills " +
+  "them: `config` (frozen into each published version: a change reaches a " +
+  "run when the table is published) or `live` (a run reads them as they are " +
+  "now). Only a table its author fills may choose; every other filler is " +
+  "`live`. Left out on create: `config` for an author's table, `live` " +
+  "otherwise; on an update the table keeps its versioning unless `filledBy` " +
+  "changes, and then it gets the new filler's default. " +
   "\n\nWHAT A MEASURE READS: every table whose rows Flow holds, whatever " +
   "fills it — not a source table, whose rows stay in its data source. A " +
-  "table its AUTHOR fills (a plan, a target per period, a mapping) is read " +
-  "AS PUBLISHED: a row changed in the draft counts for no number until the " +
-  "table is published again (ensure_data_table_major_version, then " +
-  "request_publish_data_table). Rows a query or a workflow fills are read " +
-  "as they are now. " +
+  "`config` table — an author's table by default (a plan, a target per " +
+  "period, a mapping) — is read AS PUBLISHED: a row changed in the draft " +
+  "counts for no number until the table is published again " +
+  "(ensure_data_table_major_version, then request_publish_data_table). A " +
+  "`live` table — every table a query or a workflow fills, and an author's " +
+  "table set to `live` — has its rows read as they are now. " +
   "\n\nFILLED BY A QUERY: `fillingQueryId` is the query (create_query, " +
-  "list_queries) — required with `filledBy: \"query\"`, refused otherwise, " +
-  "and one query fills one table. The query carries the SQL, the source " +
+  "list_queries), and one query fills one table. It is refused on a table " +
+  "another filler fills. A query table may be saved without one — unfinished, " +
+  "it fills nothing — but a `rhythm` without one is refused, and so is " +
+  "refresh_data_table. The query carries the SQL, the source " +
   "and the grain. `rhythm` says when and how it fills: " +
   "`{ cron, timezone?, keyColumns?, mode?, enabled? }` — `cron` when it " +
   "runs, read in `timezone` (default UTC; an empty cron never runs by " +
@@ -340,7 +363,7 @@ const QUERY_NOTE =
  * lifecycle via #443's unified versioning, and `data_table` (axonity-flow#1217),
  * which joins them on exactly the same shape.
  */
-const ENTITIES: EntityDef[] = [
+export const ENTITIES: EntityDef[] = [
   {
     singular: "workflow",
     basePath: "/api/v1/workflows",
@@ -355,6 +378,7 @@ const ENTITIES: EntityDef[] = [
     basePath: "/api/v1/agents",
     updateMethod: "PUT",
     label: "agents",
+    createExample: ["name", "persona"],
     deleteVersionParam: "expectedVersion",
     createNote: AGENT_CLEARANCE_NOTE,
     updateWarning: AGENT_CLEARANCE_NOTE,
@@ -383,6 +407,7 @@ const ENTITIES: EntityDef[] = [
     basePath: "/api/v1/policies",
     updateMethod: "PUT",
     label: "policies (rules and guardrails for agents)",
+    createExample: ["name", "summary"],
     plural: "policies",
     deleteVersionParam: "expected_version",
     createNote: LABEL_NOTE,
@@ -393,6 +418,7 @@ const ENTITIES: EntityDef[] = [
     basePath: "/api/v1/reference-docs",
     updateMethod: "PUT",
     label: "reference docs (background knowledge for agents)",
+    createExample: ["title", "description"],
     deleteVersionParam: "expected_version",
     createNote: LABEL_NOTE,
     updateWarning: LABEL_UPDATE_NOTE,
@@ -404,16 +430,6 @@ const ENTITIES: EntityDef[] = [
     label: "output schemas (reusable step/agent output contracts)",
     // Now fully version-controlled and in the publish-approval gateway
     // alongside the memory entities — no longer live-on-write.
-    deleteVersionParam: "expected_version",
-  },
-  {
-    singular: "persona",
-    basePath: "/api/v1/personas",
-    updateMethod: "PUT",
-    label: "personas (an agent's character, 1:1 with the agent)",
-    // Created only through its agent (create_agent_persona) — there is no
-    // standalone POST /api/v1/personas.
-    creatable: false,
     deleteVersionParam: "expected_version",
   },
   {
@@ -454,6 +470,16 @@ const ENTITIES: EntityDef[] = [
       "leaves the rows that are there; `rhythm` is replaced whole when sent; " +
       "`clearRhythm: true` takes it away (the table then fills only when " +
       "asked), which is not the same as pausing it. " +
+      "`clearExternal: true` takes a table's place in a data source away, " +
+      "only together with a `filledBy` other than `source` (the table is " +
+      "handed back to Flow), and that change needs it: a source table keeps " +
+      "its place. " +
+      "`clearGrain: true` takes away what one row is; it is refused on a source " +
+      "table, which must say it. " +
+      "`clearTimeAxis: true` takes the time axis away; on a date table that " +
+      "carries calendars only together with `calendars: []` or " +
+      "`dateTable: false` (which takes the calendars with it) in the same " +
+      "update, because a calendar needs a dated row per day. " +
       "\n\n" +
       DATE_TABLE_NOTE +
       "\n\n`rows` AND `columns` ARE WHOLE-COLLECTION FIELDS: sending either " +
@@ -599,6 +625,7 @@ const ENTITIES: EntityDef[] = [
     basePath: "/api/v1/table-relationships",
     updateMethod: "PUT",
     label: "table relationships (how two tables join, for measures across them)",
+    createExample: ["fromTableId", "fromColumn", "toTableId", "toColumn"],
     publishable: false,
     hasDiscardDraft: false,
     deleteVersionParam: "expected_version",
@@ -653,7 +680,9 @@ const ENTITIES: EntityDef[] = [
 /**
  * Entities with version history. Every authored entity here exposes the
  * `/versions*` routes, `flow` included (verified against the backend:
- * `/api/v1/flows/{id}/versions…`), so all eleven get the version tools.
+ * `/api/v1/flows/{id}/versions…`), so each gets the version tools. The
+ * persona is not here: since axonity-flow#2176 it is a field of the agent and
+ * its history is the agent's.
  */
 const VERSIONED: VersionedEntity[] = [
   { singular: "workflow", basePath: "/api/v1/workflows", publishedPath: "entity" },
@@ -666,7 +695,6 @@ const VERSIONED: VersionedEntity[] = [
     basePath: "/api/v1/reference-docs",
     publishedPath: "versions",
   },
-  { singular: "persona", basePath: "/api/v1/personas", publishedPath: "versions" },
   {
     singular: "output_schema",
     basePath: "/api/v1/output-schemas",

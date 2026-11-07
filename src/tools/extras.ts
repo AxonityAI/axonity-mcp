@@ -1,11 +1,9 @@
 /**
- * Secondary MCP tools: the agent-scoped persona create/read (personas
- * themselves are a full generic entity — see index.ts — but creation and the
- * by-agent read have no equivalent generic route), connectors (a tool
- * subtype), attaching memory to a target, and a few standalone one-offs.
+ * Secondary MCP tools: an agent's persona, connectors (a tool subtype),
+ * attaching memory to a target, and a few standalone one-offs.
  *
  * These use routes with shapes that don't fit the generic entity registrar:
- * a persona is created only through its agent, connectors are a tool with
+ * the persona is a field of its agent, connectors are a tool with
  * `type: "connector"` and MUST NOT carry real credentials, and attach/detach
  * is a path-only link.
  */
@@ -17,41 +15,80 @@ import type { AxonityClient } from "../client.js";
 import { assertPlaceholderCredentials } from "./credentials.js";
 import { detachResult, guard, jsonResult } from "./result.js";
 
+/**
+ * The persona is the agent's `persona` field (axonity-flow#2176): the
+ * character text every prompt of the agent opens with, published with the
+ * agent. The persona entity, its own id, versions, drafts and approvals are
+ * gone, and so are the persona routes the tools called (21 persona operations
+ * left the API; 19 of them had a tool here).
+ *
+ * These two tools stay as the migration path: an agent that knows them lands
+ * on the field instead of on a 404 it would read as "no such id". Everything
+ * else about a persona is the agent's: its history is the agent's versions,
+ * it goes live with `request_publish_agent`.
+ */
 export function registerPersonaTools(
   server: McpServer,
   client: AxonityClient,
 ): void {
   server.tool(
     "read_agent_persona",
-    "Read an agent's persona (voice/character). A persona is 1:1 with an agent — " +
-      "there is no standalone persona list.",
+    "Read an agent's persona: the character text every prompt of this agent " +
+      "opens with. It is the agent's `persona` field (also in `read_agent`), " +
+      "returned here with the agent's `version`, which `create_agent_persona` " +
+      "and `update_agent` take as `expectedVersion`. `persona` is null or `\"\"` " +
+      "when the agent has none (null: never set; `\"\"`: removed). Replaces " +
+      "`read_persona`, `read_persona_published`, `read_persona_version`, " +
+      "`list_persona_versions`, `list_deleted_persona_versions`, " +
+      "`list_personas` and `list_deleted_personas`: a persona has no id, " +
+      "versions or list of its own any more.",
     { agentId: z.string().describe("The agent's id.") },
     async ({ agentId }) =>
-      guard(async () =>
-        jsonResult(await client.get(`/api/v1/agents/${agentId}/persona`)),
-      ),
+      guard(async () => {
+        const agent = (await client.get(`/api/v1/agents/${agentId}`)) as {
+          persona?: string | null;
+          version?: number;
+        };
+        return jsonResult({
+          agentId,
+          persona: agent.persona ?? null,
+          version: agent.version,
+        });
+      }),
   );
 
   server.tool(
     "create_agent_persona",
-    "Create an agent's persona. Pass name, characterText and optional status.",
+    "Set an agent's persona: who the agent is, in its own words — the " +
+      "character text every prompt of this agent opens with. It writes the " +
+      "agent's `persona` field on its draft (the same as `update_agent` with " +
+      "`{ persona }`) and goes live with the agent (`request_publish_agent`). " +
+      "Setting it again replaces it. Read the agent first (`read_agent` or " +
+      "`read_agent_persona`) for `expectedVersion`; on a 409, re-read and retry. " +
+      "There is no separate name or status: a persona is only its text. To " +
+      "remove it, send `\"\"`; on update_agent `null` changes nothing. Replaces " +
+      "`update_persona`, `delete_persona`, `restore_persona`, " +
+      "`discard_persona_draft`, `create_persona_major_version`, " +
+      "`ensure_persona_major_version`, `name_persona_major_version`, " +
+      "`delete_persona_version`, `restore_persona_version`, " +
+      "`restore_deleted_persona_version` and `request_publish_persona`: the " +
+      "persona's history is the agent's versions, and it goes live with " +
+      "`request_publish_agent`.",
     {
       agentId: z.string().describe("The agent's id."),
-      fields: z
-        .record(z.unknown())
-        .describe('Persona fields, e.g. { "name": "…", "characterText": "…" }.'),
+      expectedVersion: z
+        .number()
+        .int()
+        .describe("The agent's current `version`, from read_agent or read_agent_persona."),
+      persona: z.string().describe("The character text, as the agent should read it."),
     },
-    async ({ agentId, fields }) =>
+    async ({ agentId, expectedVersion, persona }) =>
       guard(async () =>
-        jsonResult(await client.post(`/api/v1/agents/${agentId}/persona`, fields)),
+        jsonResult(
+          await client.put(`/api/v1/agents/${agentId}`, { expectedVersion, persona }),
+        ),
       ),
   );
-
-  // Reading/updating a persona by its OWN id (list_personas, read_persona,
-  // update_persona, delete_persona, restore_persona, …) is generated generically
-  // from the "persona" EntityDef in index.ts — identical PUT semantics to what
-  // used to be hand-written here. Only the agent-scoped create/read above are
-  // bespoke, because personas have no standalone create route.
 }
 
 /**

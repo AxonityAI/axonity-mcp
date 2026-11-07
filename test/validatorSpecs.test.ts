@@ -70,11 +70,26 @@ describe("the authoring guide carries the validator contract", () => {
     expect(text).toMatch(/never looked up/i);
   });
 
-  it("says where field and slots are accepted, and where they are a 422", async () => {
-    // The trap this section exists to close: an author reads the standard call,
-    // writes `field` into an agent's permissions, and meets a strict body.
+  it("names every place a spec lives, and says the agent body refuses one", async () => {
+    // axonity-flow#2176 (R5b) took the agent's `permissions` bag away, and the
+    // agent's create/update body is strict: a spec written there is a 422. But
+    // the schema is not the ONLY place (review 8 of #107): a workflow step
+    // declares specs on its whole submission (`contract.output_validators`,
+    // execution/framework/step_output_contracts.py step_validators_of, run by
+    // agent_executor and checked by validate_workflow), and a conversation
+    // step on its answer (`answerContract.validators`, domain/conversation_answer.py).
     const text = await guide();
-    expect(text).toMatch(/permissions\.outputValidators`? is a STRICT body/);
+    expect(text).not.toMatch(/ONE place/);
+    expect(text).not.toMatch(/the only place a spec lives/);
+    expect(text).toMatch(/output_schema's `schemaBody`/);
+    expect(text).toMatch(/`contract\.output_validators`/);
+    expect(text).toMatch(/`answerContract\.validators`/);
+    // Only a contract with a `schema` object counts (conversation_answer
+    // answer_contract_of); validators without one never run, and
+    // validate_workflow does not look at answerContract (review 9 of #107).
+    expect(text).toMatch(/`answerContract\.validators`, beside its `schema`/);
+    expect(text).toMatch(/without a `schema` nothing runs/);
+    expect(text).toMatch(/`outputSchemaIds`/);
     expect(text).toContain("422");
   });
 

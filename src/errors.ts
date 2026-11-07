@@ -360,9 +360,17 @@ export function errorForStatus(status: number, body?: unknown): AxonityApiError 
   }
 }
 
+/** Shared with the reactive error, so the two never disagree on the advice. */
+export const SKEW_EITHER_WAY =
+  "This connector and this backend are out of step, and nothing here says " +
+  "which way: the backend may be OLDER (it has not got the route yet: wait for " +
+  "the deploy or pin an older connector), or NEWER (it removed the route: " +
+  "update this connector). Tell your human which Axonity environment this " +
+  "token points at and which connector version runs.";
+
 /**
  * 405/404 on a route this connector version depends on — the deployed backend
- * is older than the client (#30).
+ * and the client are out of step (#30): older, or newer and the route removed.
  *
  * 0.3.4 shipped `validate_workflow`'s `workflowId` form. Against a sandbox
  * running a branch 15 commits behind, it answered a bare 405 on every attempt.
@@ -372,8 +380,14 @@ export function errorForStatus(status: number, body?: unknown): AxonityApiError 
  *
  * A 405 is the strong signal — the path exists, the method does not, which on an
  * API this client is written against means the two are out of step. A 404 is
- * weaker (an unknown id looks the same), so it is only reported as skew for the
- * routes listed in `ROUTES_ADDED_IN`, and even then it says "if the id is right".
+ * weaker, and only reported here for the routes listed in `ROUTES_ADDED_IN`:
+ * - on a route WITHOUT an id in its path (`/workflows/operations`), a 404 can
+ *   only mean the route is missing, so the backend is older;
+ * - on a route WITH an id (`/workflows/{id}/validate`), every backend that has
+ *   the route answers 404 for an id that does not exist, so that is the likely
+ *   reading, and the older backend only the other one. The message says so,
+ *   in that order, and does not call it a deployment mismatch (review 13 of
+ *   axonity-mcp#107).
  */
 export class BackendVersionSkewError extends AxonityApiError {
   constructor(
@@ -383,20 +397,40 @@ export class BackendVersionSkewError extends AxonityApiError {
     /** What added this route on the backend, so a human can check a deploy. */
     addedBy?: string,
     body?: unknown,
+    /** The route's path carries an id: a 404 then most likely means no such id. */
+    idInPath = false,
   ) {
-    const ambiguous =
-      status === 404
-        ? " (a 404 also means 'no such id', so check the id first)"
-        : "";
-    super(
-      `The Axonity backend does not have \`${method} ${path}\`, which this ` +
-        `version of the connector needs${ambiguous}. The backend is OLDER than ` +
-        `this connector — this is a deployment mismatch, not a mistake in your ` +
-        `call.` +
-        (addedBy ? ` That route was added by ${addedBy}.` : "") +
+    if (status === 404 && idInPath) {
+      super(
+        `Not found (404) on \`${method} ${path}\`. Most likely there is no such id: ` +
+          "check it, or list the collection to find it — a deleted entity also " +
+          "reads as not found. Only if the id is right: this backend may be older " +
+          "than this connector and lack the route" +
+          (addedBy ? `, which was added by ${addedBy}` : "") +
+          "; then tell your human which Axonity environment this token points at.",
+        status,
+        body,
+        "not_found",
+        false,
+      );
+      this.name = "BackendVersionSkewError";
+      return;
+    }
+    // Only a route this repository records adding proves the backend is the
+    // older side; a 405 elsewhere can as well be a route the backend removed.
+    const direction = addedBy
+      ? " The backend is OLDER than this connector — this is a deployment " +
+        `mismatch, not a mistake in your call. That route was added by ${addedBy}.` +
         " Tell your human which Axonity environment this token points at, and " +
         "do not retry: the same call will keep failing until that backend is " +
-        "updated (or you pin an older connector).",
+        "updated (or you pin an older connector)."
+      : " This is a deployment mismatch, not a mistake in your call. " +
+        SKEW_EITHER_WAY +
+        " Do not retry: the same call will keep failing until they match.";
+    super(
+      `The Axonity backend does not have \`${method} ${path}\`, which this ` +
+        "version of the connector needs." +
+        direction,
       status,
       body,
       "backend_version_skew",
@@ -467,7 +501,10 @@ export function skewErrorFor(
     return new BackendVersionSkewError(method, path, status, known?.addedBy, body);
   }
   if (status === 404 && known) {
-    return new BackendVersionSkewError(method, path, status, known.addedBy, body);
+    // A route whose pattern matches an id segment: a 404 is most likely a
+    // wrong id, not a missing route (see BackendVersionSkewError).
+    const idInPath = known.pattern.source.includes("[^/]+");
+    return new BackendVersionSkewError(method, path, status, known.addedBy, body, idInPath);
   }
   return undefined;
 }

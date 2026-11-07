@@ -2,8 +2,9 @@
 
 A local [Model Context Protocol](https://modelcontextprotocol.io) server that lets
 an external agent (e.g. **Claude Code** on your laptop) read, draft, update, and
-recoverably delete **workflows, agents, tools, skills, policies, reference docs,
-personas, output schemas, prompt snippets and flows** in your Axonity tenant —
+recoverably delete **workflows, agents (with their persona), tools, skills,
+policies, reference docs, output schemas, prompt snippets and flows** in your
+Axonity tenant —
 the same verbs the internal Builder team has, minus direct publish.
 
 It runs on your machine and talks to Axonity **only over the public REST API**,
@@ -56,8 +57,8 @@ was kept here. A conformance test asserts their absence.
 ### The generic entity family
 
 Thirteen entities — **workflow, agent, tool, skill, policy, reference_doc,
-persona, output_schema, prompt_snippet, flow, data_table, measure,
-application** — share one shape,
+output_schema, prompt_snippet, flow, data_table, measure, query, application** —
+share one shape,
 though not every entity gets every verb (see the per-entity notes below for the
 exceptions):
 
@@ -73,8 +74,7 @@ exceptions):
 | `discard_<entity>_draft` | Reset the draft to the last published state. |
 | `request_publish_<entity>` | Ask for a draft to be published — creates a pending approval; never publishes. |
 
-Exceptions: `persona` has no `create_persona` (create only via
-`create_agent_persona`). And `list_data_tables` (like `list_measures` and
+Exception: `list_data_tables` (like `list_measures`, `list_queries` and
 `list_applications`) answers **one page**, not the whole library — see Tables
 below.
 
@@ -91,10 +91,12 @@ backend applies it before the rows come back:
 `list_policies({ scope?, ownerId? })`,
 `list_reference_docs({ scope?, ownerId? })`,
 `list_prompt_snippets({ deleted? })`,
-`list_data_tables({ name?, status?, isDynamic? })`,
+`list_data_tables({ name?, status?, isDynamic?, filledBy? })`,
 `list_data_sources({ enabled? })`,
 `list_table_relationships({ tableId? })`,
-`list_applications({ name? })`.
+`list_measures({ tableId? })`,
+`list_applications({ name? })`,
+`list_queries({ dataSourceId? })`.
 
 That table is **generated** from the pinned schema's own query parameters
 (`npm run generate:filters` → `src/generated/listFilters.ts`), not hand-listed.
@@ -113,16 +115,20 @@ Plus:
   are not interchangeable** — `parameterTypes` (a trigger parameter's or
   workflow constant's `type`), `outputKinds` (a step output's or input's
   `kind` — narrower, *different key*) and `schemaFieldKinds` (inside a field's
-  `schema`, which wins where present). Getting that last group wrong is silent:
+  `schema`, which wins where present), plus `decisionEvaluators` (what a
+  decision may branch with) and `tableColumnKinds` (a table column's kind).
+  Getting the three value vocabularies wrong is silent:
   a `kind` written on a trigger parameter is not a 422, it is a key nothing
   reads, so the value falls back to text. Every list is generated from the
   registry that *enforces* it, so the connector states none of them and a new
   value is discoverable without a release here. `operations` is an index by
   default; pass `types` for a command's live payload schema. `rulesVersion` is
-  a content hash over all seven — same hash, nothing to re-fetch.
+  a content hash over all of them — same hash, nothing to re-fetch.
 - `get_entity_authoring_contract` — the platform's **create contract per
-  entity kind** (tools with each type's implementation, agents, personas,
-  knowledge, schemas, tables, toolboxes, secrets, starts), read live from
+  entity kind** (`tool` with each type's implementation, `agent` with its
+  persona, `application`, `measure`, `query`, `data_table`, `output_schema`,
+  `policy`, `skill`, `reference_doc`, `prompt_snippet`, `toolbox`, `secret`,
+  `conditional_trigger`, `trigger_element`), read live from
   `GET /api/v1/authoring/entity-contracts` (axonity-flow#2103):
   `{ kinds, contracts, rulesVersion }`, per kind the create/update fields and
   the `publish.rules` that stop it going live. Pass `kinds` to narrow it (sent
@@ -167,10 +173,13 @@ across these routes — the tool parameter names say which.
 
 ### Also
 
-- **Personas**: `read_agent_persona`, `create_agent_persona` — agent-scoped,
-  since a persona can only be created through its agent. Everything else about
-  a persona (list, read, update, delete/restore, versions) is the generic
-  entity family above.
+- **Personas**: since axonity-flow#2176 a persona is the agent's `persona` field
+  (the character text every prompt of the agent opens with), set with
+  `create_agent` / `update_agent` and published with the agent. There is no
+  persona entity any more: no id, versions or approvals of its own.
+  `read_agent_persona` reads the field (with the agent's `version`) and
+  `create_agent_persona` writes it (`agentId`, `expectedVersion`, `persona`);
+  `""` removes it, `null` on an update leaves it as it is.
 - **Connectors** (a tool of type `connector`): `create_connector`,
   `update_connector` — `authConfig` must be placeholders only; a human fills real
   secrets in Axonity. (`create_tool`/`update_tool` carry the same guard, so a
@@ -263,8 +272,9 @@ across these routes — the tool parameter names say which.
   author designs and maintains, and agents and decisions read. The whole
   lifecycle is the generic family above; three things are not, and each is a
   way to be quietly wrong:
-  - `list_data_tables` is **paged** (20 by default, 200 max), alone among the
-    library lists, because a tenant's reference data has no ceiling. Page one
+  - `list_data_tables` is **paged** (20 by default, 200 max), like
+    `list_measures`, `list_queries` and `list_applications`, because a tenant's
+    reference data has no ceiling. Page one
     is not the library — follow `nextCursor` while `hasMore`, or narrow with
     `name`, which is exact and unique per workspace.
   - **`rows` and `columns` are whole-collection fields.** Sending `rows`
@@ -304,12 +314,15 @@ across these routes — the tool parameter names say which.
     `list_query_live_versions`. It carries the SQL, the source, the grain,
     its typed `parameters` and its described `returns`.
   - **There is no sync object, and no `provenance`.** A table says what fills
-    it in `filledBy` — `author`, `workflow` or `query` — and a query-filled
-    table names its query in `fillingQueryId` and when it runs in `rhythm`
-    (`{ cron, timezone, keyColumns, mode, enabled }`). Only a table filled by
-    a query or a workflow is dynamic, and only a dynamic table can be read by
-    a measure. `refresh_data_table` fills it now instead of at its next turn
-    (it does not wait for the result; read the table's `fill` afterwards).
+    it in `filledBy` — `author`, `workflow`, `query` or `source` (the rows stay
+    in a data source; `external` says where) — and a query-filled table names
+    its query in `fillingQueryId` and when it runs in `rhythm`
+    (`{ cron, timezone, keyColumns, mode, enabled }`). Whether a table is read
+    live or as published follows from its `versioning` (`live` or `config`;
+    only an author's table may choose), and a measure reads every table whose
+    rows Flow holds. `refresh_data_table` fills a query-filled table now
+    instead of at its next turn (it does not wait for the result; read the
+    table's `fill` afterwards).
   - **Concept links**: a concept's `refersTo` points at one thing;
     `link_concept`, `unlink_concept` and `list_concept_links` hang the same
     word on every column, table, measure, value or query that means it. The
@@ -430,7 +443,7 @@ across these routes — the tool parameter names say which.
 
 | Tool | What it does |
 |------|--------------|
-| `validate_workflow` | Structural + schema check of a workflow document. Stateless and read-only-token safe; does not verify referenced agents/tools exist. |
+| `validate_workflow` | Check a workflow against the tenant's catalog. By `document`: the document as it stands, saves nothing, read-only-token safe; skips only the checks about that workflow's own wiring (its triggers and attached knowledge). By `workflowId`: the saved workflow with those checks too; needs a token with the `author` scope. Read `catalogChecked`. |
 | `analyze_workflow_reachable_outputs` | What a given step can read from upstream — bind inputs to real fields instead of guessing. Stateless and read-only-token safe. |
 | `validate_tool_code` | Syntax and banned-pattern check for Python tool code. Stateless and read-only-token safe. |
 | `format_tool_code` | Format tool code with Black. Stateless and read-only-token safe. |
@@ -525,12 +538,14 @@ service token) and the retired `workflow-memory` placeholder.
 **Testing the Dashboard Analyst.** A chat about a dashboard is a run of kind
 `conversation`; `list_runs` asks for workflow runs only. `list_conversations`
 lists the chats (paged, newest first, only the ones opened by the person the
-token belongs to) in one of two ways: for one dashboard (`dashboardId`, no
-other filter), or across every dashboard that person can see, filtered by
-`status`, `createdAfter`/`createdBefore` and `includeArchived` (the backend's
-`GET /runs?kind=conversation`). No route combines a dashboard with those
-filters, so the tool refuses the mix instead of dropping one. Who opened a chat
-and the text of its question cannot be filtered on at all. `start_conversation` opens a new one with an opening
+token belongs to) in one of two ways: for one dashboard (`dashboardId`, with `status`,
+`createdAfter`/`createdBefore` and `q`, text in the opening question — the
+backend's `GET /conversations`), or across every dashboard that person can see,
+filtered by `status`, `createdAfter`/`createdBefore` and `includeArchived` (the
+backend's `GET /runs?kind=conversation`). What one route has and the other has
+not is refused instead of dropped: `includeArchived` with a dashboard, and `q` without one.
+The two read a bare `createdBefore` date differently; the tool says how. Who
+opened a chat cannot be filtered on at all. `start_conversation` opens a new one with an opening
 question and, optionally, the tile it is about (`focus`) — the same request the
 dashboard's chat window sends. A follow-up is `send_run_message`. The answer and
 the tools the analyst called (`read_measure`, `show_visual`, with their
@@ -574,8 +589,9 @@ route; the `offset` it used to take is no longer read.
 human-only actions in Axonity.
 
 `request_publish_release({ workflowId, changeSummary? })` proposes a **release**:
-a workflow *and everything its run needs* — the agents it runs, their tools and
-personas, the flows it pins, the memory scoped to those agents — as ONE approval.
+a workflow *and everything its run needs* — the agents it runs (each with its
+persona), their tools, the flows it pins, the memory scoped to those agents —
+as ONE approval.
 Prefer it over a request per entity. Taking a tenant live entity-by-entity means
 a hundred-odd approvals, none of which means anything on its own, and a human
 asked that many times is not reviewing. `list_publish_releases` and
@@ -611,10 +627,12 @@ These are enforced by the backend, not merely by convention:
   live. A direct publish from a service token is refused with a 403, so there is
   no tool for it and no way around it.
 - **A read-only token is genuinely read-only for mutations.** Any write from a token
-  without the `write` scope is refused with a 403.
-- **The four stateless analysis tools are the exception:** `validate_workflow`,
+  without the `author` scope is refused with a 403 (`write` is its older name;
+  a token with only `operate` may only answer, message and recover runs).
+- **The four analysis tools are the exception:** `validate_workflow({ document })`,
   `analyze_workflow_reachable_outputs`, `validate_tool_code`, and `format_tool_code`
-  can be called by read-only and write tokens because they never mutate state.
+  can be called by read-only tokens because they never mutate state;
+  `validate_workflow({ workflowId })` needs the `author` scope.
 - **The token is tenant-bound.** An agent cannot reach another tenant.
 - **Secrets never pass through the agent.** A connector's `authConfig` accepts
   placeholders only; a write carrying something that looks like a real

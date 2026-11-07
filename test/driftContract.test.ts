@@ -305,18 +305,22 @@ describe("the secret kinds are one list across the snapshot and the live contrac
 
   /**
    * A closed list of values, in either spelling OpenAPI 3.1 allows: `enum`, or
-   * an `anyOf`/`oneOf` whose every branch is a `const`.
+   * an `anyOf`/`oneOf` whose every branch is a `const` — or `{ type: "null" }`,
+   * which is how an optional field (`Literal[...] | None`) can come out.
    */
   const closedList = (record: Record<string, unknown>): string[] | undefined => {
     if (Array.isArray(record.enum)) return record.enum as string[];
+    const isConst = (b: unknown) => b !== null && typeof b === "object" && "const" in b;
+    const isNull = (b: unknown) =>
+      b !== null && typeof b === "object" && (b as { type?: unknown }).type === "null";
     for (const keyword of ["anyOf", "oneOf"]) {
       const branches = record[keyword];
       if (
         Array.isArray(branches) &&
-        branches.length > 0 &&
-        branches.every((b) => b !== null && typeof b === "object" && "const" in b)
+        branches.some(isConst) &&
+        branches.every((b) => isConst(b) || isNull(b))
       ) {
-        return branches.map((b) => (b as { const: string }).const);
+        return branches.filter(isConst).map((b) => (b as { const: string }).const);
       }
     }
     return undefined;
@@ -348,9 +352,13 @@ describe("the secret kinds are one list across the snapshot and the live contrac
 
   const CONNECTOR_KINDS_AT = "components.schemas.ConnectorAuthConfig.properties.type";
 
+  /** The connector's kinds, in whichever spelling the list is written. */
   const connectorKinds = (doc: Doc): string[] =>
-    (doc.components.schemas.ConnectorAuthConfig as { properties: { type: { enum: string[] } } })
-      .properties.type.enum;
+    closedList(
+      (doc.components.schemas.ConnectorAuthConfig as {
+        properties: { type: Record<string, unknown> };
+      }).properties.type,
+    ) ?? [];
 
   /** The secret kinds: a connector's kinds without `none`. */
   const secretKinds = (doc: Doc = snapshot): string[] =>
@@ -477,6 +485,8 @@ describe("the secret kinds are one list across the snapshot and the live contrac
   it.each<[string, (kinds: string[]) => string[]]>([
     ["`none` moved to the end", (kinds) => [...kinds.filter((k) => k !== "none"), "none"]],
     ["`none` missing", (kinds) => kinds.filter((k) => k !== "none")],
+    // Pins the length half of the shape check: `none` first is not enough.
+    ["`none` twice", (kinds) => [...kinds, "none"]],
   ])("a connector list with %s is named, and only it", (_what, reshape) => {
     // The connector's own shape is its own branch of the comparison: every
     // other list compares to it with `none` taken out, so only this branch
@@ -507,6 +517,49 @@ describe("the secret kinds are one list across the snapshot and the live contrac
       ]);
     },
   );
+
+  it.each(["anyOf", "oneOf"])(
+    "a connector list written as %s of const values reads as its enum did",
+    (keyword) => {
+      // connectorKinds reads through closedList, so the connector's own list
+      // may take either spelling without a TypeError or a false mismatch.
+      const probe = structuredClone(snapshot) as Doc;
+      const props = (
+        probe.components.schemas.ConnectorAuthConfig as { properties: Record<string, unknown> }
+      ).properties;
+      const kinds = connectorKinds(snapshot);
+      props.type = { [keyword]: kinds.map((value) => ({ const: value })) };
+      expect(connectorKinds(probe)).toEqual(kinds);
+      expect(secretKindMismatches(probe)).toEqual([]);
+    },
+  );
+
+  it("a stale const list with a null branch (an optional field) is found too", () => {
+    // `Literal[...] | None` can come out as anyOf: [{const}, …, {type: "null"}].
+    const probe = structuredClone(snapshot) as Doc;
+    const item = probe.components.schemas.SecretListItem as {
+      properties: Record<string, unknown>;
+    };
+    item.properties.kindOrNull = {
+      anyOf: [...STALE.enum.map((value) => ({ const: value })), { type: "null" }],
+    };
+    expect(secretKindMismatches(probe)).toEqual([
+      "components.schemas.SecretListItem.properties.kindOrNull",
+    ]);
+  });
+
+  it("a correct const list with a null branch is not named: the null branch is no kind", () => {
+    // The other half of the case above: closedList must leave the null branch
+    // out of the values, or an optional but correct list reads as stale.
+    const probe = structuredClone(snapshot) as Doc;
+    const item = probe.components.schemas.SecretListItem as {
+      properties: Record<string, unknown>;
+    };
+    item.properties.kindOrNull = {
+      anyOf: [...secretKinds(snapshot).map((value) => ({ const: value })), { type: "null" }],
+    };
+    expect(secretKindMismatches(probe)).toEqual([]);
+  });
 
   it("the recorded contract names the same kinds for a connector's authConfig as the snapshot", () => {
     const tool = RECORDED.contracts.tool as {

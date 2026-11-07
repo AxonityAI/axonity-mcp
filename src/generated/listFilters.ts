@@ -11,7 +11,7 @@
  * route declares. The two differ on most of these, and that inconsistency is
  * real — it is exactly what a caller should not have to know.
  *
- * `test/listFilters.test.ts` regenerates this in memory and fails if it has
+ * `test/driftMechanism.test.ts` regenerates this in memory and fails if it has
  * drifted from the snapshot, so a refreshed snapshot cannot leave a filter
  * unexposed in silence.
  */
@@ -112,7 +112,7 @@ export const LIST_FILTERS: Record<string, ListFilter[]> = {
       query: "filled_by",
       type: "string",
       description:
-        "Only tables filled this way: author, workflow or query. A value outside the three is refused rather than silently ignored.",
+        "Only tables filled this way: author, workflow, query or source (the rows stay in a data source). A value outside the four is refused rather than silently ignored.",
     },
   ],
   "data_source": [

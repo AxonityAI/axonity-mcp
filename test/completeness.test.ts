@@ -117,15 +117,30 @@ function isExcluded(operation: string): boolean {
  * reason is written for any of them, and the test below holds the list EXACT —
  * a new undecided route still turns the build red, and so does deciding one
  * of these without taking it off this list. It can only shrink.
+ *
+ * The full refresh after axonity-flow#2176 (`main` at `76d04404d`) added 23
+ * more the same way: of the 34 operations it brought in, these are the ones no
+ * tool covers and no rule excludes. Undecided here too, for #79.
  */
 const OPEN_FOR_DECISION_79: readonly string[] = [
   "DELETE /api/v1/audiences/{audience_id}",
   "DELETE /api/v1/data-tables/{table_id}/rows/{row_id}",
   "DELETE /api/v1/roles/{role_id}",
+  "GET /api/v1/agents/activity",
+  "GET /api/v1/agents/framework-tools",
+  "GET /api/v1/agents/{agent_id}/activity",
   "GET /api/v1/authoring/prompt-variables",
   "GET /api/v1/automatic-agents",
+  "GET /api/v1/briefs",
+  "GET /api/v1/briefs/me",
+  "GET /api/v1/briefs/{brief_id}",
   "GET /api/v1/conditional-trigger-checks",
   "GET /api/v1/conditional-triggers/{trigger_id}/checks",
+  "GET /api/v1/consultant/settings",
+  "GET /api/v1/data-sources/{source_id}/changes",
+  "GET /api/v1/data-tables/{table_id}/rows/count",
+  "GET /api/v1/findings",
+  "GET /api/v1/findings/{finding_id}",
   "GET /api/v1/invoices",
   "GET /api/v1/invoices/{invoice_id}",
   "GET /api/v1/knowledge/settings",
@@ -134,8 +149,11 @@ const OPEN_FOR_DECISION_79: readonly string[] = [
   "GET /api/v1/publish-approvals/pending-count",
   "GET /api/v1/runs/{run_id}/action-verdicts",
   "GET /api/v1/runs/{run_id}/application-actions",
+  "GET /api/v1/runs/{run_id}/trace/export",
+  "GET /api/v1/screen-state/{screen}",
   "GET /api/v1/secrets/transfer",
   "GET /api/v1/system-tools/functions",
+  "GET /api/v1/tenant-settings/system-agent-models",
   "GET /api/v1/usage/days",
   "GET /api/v1/usage/runs",
   "GET /api/v1/usage/series",
@@ -148,15 +166,24 @@ const OPEN_FOR_DECISION_79: readonly string[] = [
   "PATCH /api/v1/knowledge/source-types/{key}",
   "PATCH /api/v1/knowledge/sources/{source_id}",
   "POST /api/v1/action-verdicts/{verdict_id}/mark",
+  "POST /api/v1/agents/{agent_id}/copy",
   "POST /api/v1/audiences",
+  "POST /api/v1/data-sources/{source_id}/explore",
+  "POST /api/v1/data-tables/{table_id}/rows/clear",
+  "POST /api/v1/data-tables/{table_id}/rows/delete",
+  "POST /api/v1/findings/{finding_id}/handled",
   "POST /api/v1/invoices/generate",
   "POST /api/v1/knowledge/source-types",
   "POST /api/v1/roles",
   "POST /api/v1/run-input-files",
   "POST /api/v1/webhook-triggers/{webhook_id}/reveal",
   "PUT /api/v1/audiences/{audience_id}",
+  "PUT /api/v1/briefs/profiles",
+  "PUT /api/v1/briefs/recipients",
+  "PUT /api/v1/consultant/settings",
   "PUT /api/v1/knowledge/settings",
   "PUT /api/v1/roles/{role_id}",
+  "PUT /api/v1/screen-state/{screen}",
 ];
 
 describe("the route surface is fully decided (#59)", () => {

@@ -45,7 +45,6 @@ const LIST_ROUTES = {
   policy: "/api/v1/policies",
   reference_doc: "/api/v1/reference-docs",
   output_schema: "/api/v1/output-schemas",
-  persona: "/api/v1/personas",
   prompt_snippet: "/api/v1/prompt-snippets",
   flow: "/api/v1/flows",
   data_table: "/api/v1/data-tables",
@@ -115,10 +114,22 @@ export function toFilterType(schema) {
   return "string";
 }
 
-/** The filters one list route accepts, in schema order. */
+/**
+ * The filters one list route accepts, in schema order.
+ *
+ * A route the snapshot does not have is an error, not "no filters": it means
+ * the mapping above names a list the backend no longer serves (the persona
+ * list outlived axonity-flow#2176 here by being skipped in silence), or the
+ * snapshot is stale. Either way someone has to look.
+ */
 export function filtersFor(snapshot, route) {
   const operation = snapshot.paths?.[route]?.get;
-  if (!operation) return [];
+  if (!operation) {
+    throw new Error(
+      `generate-list-filters: GET ${route} is not in the snapshot. Remove it ` +
+        "from LIST_ROUTES if the backend dropped it, or refresh the snapshot.",
+    );
+  }
   return (operation.parameters ?? [])
     .filter((p) => p.in === "query" && !NOT_FILTERS.has(p.name))
     .map((p) => ({
@@ -184,7 +195,7 @@ export function render(snapshot) {
  * route declares. The two differ on most of these, and that inconsistency is
  * real — it is exactly what a caller should not have to know.
  *
- * \`test/listFilters.test.ts\` regenerates this in memory and fails if it has
+ * \`test/driftMechanism.test.ts\` regenerates this in memory and fails if it has
  * drifted from the snapshot, so a refreshed snapshot cannot leave a filter
  * unexposed in silence.
  */

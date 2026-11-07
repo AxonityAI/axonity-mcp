@@ -110,7 +110,15 @@ describe("MCP route surface conforms to the backend OpenAPI snapshot", () => {
       "reasoning",
     ]);
     expect(enumOf("CreateAgentRequest", "creativityTier")).toEqual(["low", "medium", "high"]);
-    expect(enumOf("CreateAgentRequest", "learningMode")).toEqual(["none", "adaptive", "strict"]);
+    expect(enumOf("CreateAgentRequest", "delegation")).toEqual(["off", "on", "multi"]);
+    expect(enumOf("CreateAgentRequest", "reasoningLevel")).toEqual([
+      "default",
+      "none",
+      "low",
+      "medium",
+      "high",
+      "extra_high",
+    ]);
     expect(enumOf("CreateToolRequest", "type")).toEqual([
       "function",
       "connector",

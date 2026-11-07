@@ -49,7 +49,7 @@ export interface VersionedEntity {
   /**
    * Where the published snapshot lives.
    * `"entity"` → `/{id}/published` (workflow, agent, tool)
-   * `"versions"` → `/{id}/versions/published` (skill, policy, reference_doc, persona)
+   * `"versions"` → `/{id}/versions/published` (skill, policy, reference_doc)
    */
   publishedPath: "entity" | "versions";
 }

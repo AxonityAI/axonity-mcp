@@ -33,7 +33,14 @@ import { NotFoundError, AxonityApiError } from "../src/errors.js";
 import { LIST_FILTERS } from "../src/generated/listFilters.js";
 import { registerAll } from "../src/index.js";
 import { diffOperations, operationShape } from "../scripts/check-contract-drift.mjs";
-import { buildTable, render, staleNotes, toArgName, toFilterType } from "../scripts/generate-list-filters.mjs";
+import {
+  buildTable,
+  filtersFor,
+  render,
+  staleNotes,
+  toArgName,
+  toFilterType,
+} from "../scripts/generate-list-filters.mjs";
 
 const snapshot = JSON.parse(
   readFileSync(
@@ -209,6 +216,38 @@ describe("the connector asks the deploy what it can do (M2)", () => {
     expect(message).toMatch(/OLDER than this connector/);
   });
 
+  it("does not call the backend older when a missing route is one it may have removed", async () => {
+    // axonity-flow#2176 removed the persona routes. A connector that still
+    // called them was told "The backend is OLDER than this connector" — the
+    // wrong way round, and the wrong fix (wait for a deploy, pin an older
+    // connector). A route this repository has no record of adding says nothing
+    // about which side moved, so the message names both.
+    const readAgent = /^GET \/api\/v1\/agents\/[^/]+$/;
+    const all = await everyRouteThisBuildNeeds();
+    expect(all.some((route) => readAgent.test(route))).toBe(true);
+    const routes = all.filter((route) => !readAgent.test(route));
+    const log = vi.fn();
+
+    const result = await reportContractSkew(
+      contractClient({
+        buildVersion: "new9999",
+        environment: "staging",
+        contractHash: "h3",
+        routes,
+      }),
+      (server, client) => registerAll(server as never, client),
+      { apiUrl: "https://api.test", log, ignoreCache: true },
+    );
+
+    expect(result).toBe("missing");
+    const message = log.mock.calls[0][0] as string;
+    expect(message).toMatch(/GET \/api\/v1\/agents\/[^/\s]+\s/);
+    expect(message).not.toMatch(/The backend is OLDER than this connector\./);
+    expect(message).toMatch(/OLDER/);
+    expect(message).toMatch(/NEWER/);
+    expect(message).toMatch(/update this connector/);
+  });
+
   it("degrades silently on a backend too old to serve /contract", async () => {
     // The route landed in axonity-flow#806. An older backend 404s, and that is
     // not a problem to announce — it is the situation `BackendVersionSkewError`
@@ -296,6 +335,16 @@ describe("the connector asks the deploy what it can do (M2)", () => {
 // ---------------------------------------------------------------------------
 
 describe("list filters are generated, not kept (M4)", () => {
+  it("fails loudly on a list route the snapshot does not have (review 11 of #107)", () => {
+    // A route that is gone (the persona list, axonity-flow#2176) used to be
+    // skipped in silence, so a dead mapping lived on unnoticed.
+    expect(() => filtersFor(snapshot, "/api/v1/no-such-list")).toThrow(/\/api\/v1\/no-such-list/);
+  });
+
+  it("every list route it maps is in the snapshot", () => {
+    expect(() => buildTable(snapshot)).not.toThrow();
+  });
+
   it("is up to date with the pinned snapshot", () => {
     // The point of the whole story: refresh the snapshot, regenerate, and the
     // eleventh filter is exposed without anyone editing a list. This fails when
