@@ -11,6 +11,41 @@ diff in review.
 
 ## Provenance
 
+- **Secret kind `oauth2_refresh_token` (axonity-flow#2352, issue #2349), on
+  top of everything below:** a WHOLE dump with `dump_openapi.py`
+  (`build_openapi()` + `serialize()`) from a clean, read-only worktree of
+  axonity-flow `main` at `76d04404d` (contains #2352, merged as `0fc1903cd`),
+  spliced in PER SCHEMA: `ConnectorAuthConfig`, `CreateSecretRequest`,
+  `CreateSecretResponse`, `GetSecretResponse`, `RevealSecretResponse`,
+  `SecretListItem`, `UpdateSecretRequest` and `UpdateSecretResponse`. In each
+  the only difference is `oauth2_refresh_token` appended to the secret-kind
+  enum (`type` / `authType`). No operation changed for #2352.
+  `entity-contracts.tool-conditional_trigger.json` was re-recorded whole from
+  the route on the same `main` (`?kinds=tool,conditional_trigger`, through the
+  ASGI app, auth dependency overridden; serialized with sorted keys like the
+  file it replaces). Besides the new kind under a connector's `authConfig`,
+  the recording carries what `main` serves today: `persona` is no longer a
+  kind, three tool publish rules are enforced at `readiness` instead of
+  `publish` plus a new `no_draft` rule, the executor variant's commands are
+  `web_navigate`/`web_snapshot` (were `web_open`/`web_read_text`/`web_close`),
+  and four more builtin validators are allowed.
+  `test/driftContract.test.ts` pins that every secret-kind enum in this file
+  is one list (a connector's kinds = the secret kinds plus `none`) and that
+  the recording and this file agree on it.
+  Left out on purpose, and still reported by `npm run check:contract` against
+  `76d04404d`: 34 operations on `main` and not here, 21 `persona` operations
+  here and gone from `main` (axonity-flow#2176 made the persona a field of
+  the agent), 3 operations with a different contract (`GET /conversations`,
+  `GET /knowledge/search`, `GET /runs`), and the other component-schema
+  differences. Taking those in removes routes the persona tools still call;
+  that is a decision for its own change, not this one.
+  Safety: the backend's existing `venv/bin/python -B` under `env -i`, with an
+  audit hook installed before any backend import that refuses opens of
+  `.env*` paths, socket connect/bind, subprocesses and shell calls;
+  `Settings.model_config["env_file"] = None` and `get_settings.cache_clear()`
+  before the app is imported; `src` verified to load from the worktree. No
+  database, tenant, network, dotenv or credential loading.
+
 - **Completed week periods (#2330), on top of 1c/KPI below:**
   axonity-flow `499bb42353e36d0d089af455fcff9c05bbc2abf3`, from
   `backend/src/schemas/measure_query.py` (`PeriodPreset`) and

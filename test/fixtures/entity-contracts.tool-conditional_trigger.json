@@ -143,7 +143,7 @@
       }
     },
     "tool": {
-      "contractVersion": "08015d999e67",
+      "contractVersion": "827cb59a312e",
       "create": {
         "fields": [
           {
@@ -308,7 +308,7 @@
               ]
             },
             "code": "connector_effect_missing",
-            "enforcedAt": "publish",
+            "enforcedAt": "readiness",
             "field": "implementation.effect",
             "message": "Cannot publish connector: Set the connector's side effects (read-only or performs actions) before publishing."
           },
@@ -331,9 +331,23 @@
               ]
             },
             "code": "evaluator_branch_choice_missing",
-            "enforcedAt": "publish",
+            "enforcedAt": "readiness",
             "field": "implementation",
             "message": "Cannot publish evaluator: it does not declare a branch choice. An evaluator must declare an implementation: either a `run` function that returns a branch id, or a builtin reference to a house evaluator."
+          },
+          {
+            "appliesTo": {
+              "type": [
+                "connector",
+                "evaluator",
+                "executor",
+                "function",
+                "validator"
+              ]
+            },
+            "code": "no_draft",
+            "enforcedAt": "readiness",
+            "message": "There are no unpublished changes to publish."
           },
           {
             "appliesTo": {
@@ -356,7 +370,7 @@
               ]
             },
             "code": "validator_verdict_missing",
-            "enforcedAt": "publish",
+            "enforcedAt": "readiness",
             "field": "implementation",
             "message": "Cannot publish validator: it does not declare a strict pass/fail verdict. A validator must declare an implementation: either a `run` function that returns a pass/fail verdict, or a builtin reference to a house validator."
           }
@@ -551,7 +565,8 @@
                   "basic",
                   "oauth2_client_credentials",
                   "google_service_account",
-                  "session_cookie"
+                  "session_cookie",
+                  "oauth2_refresh_token"
                 ],
                 "default": "none",
                 "name": "type",
@@ -1207,9 +1222,8 @@
             "desktop_wait_for",
             "files_list",
             "files_read_text",
-            "web_close",
-            "web_open",
-            "web_read_text"
+            "web_navigate",
+            "web_snapshot"
           ],
           "maxTimeoutSeconds": 120
         },
@@ -1295,6 +1309,7 @@
           "builtin": {
             "allowed": [
               "validators.abs_min",
+              "validators.answer_is_brief",
               "validators.array_item_values_in_input_tokens",
               "validators.array_items_field_in_set",
               "validators.array_items_field_numeric_min_when",
@@ -1307,12 +1322,15 @@
               "validators.array_items_slot_no_control_chars",
               "validators.both_or_neither",
               "validators.differs",
+              "validators.figures_were_read",
               "validators.has_keys",
+              "validators.identifiers_were_read",
               "validators.in_range",
               "validators.is_numeric",
               "validators.is_present",
               "validators.matches_pattern",
               "validators.matches_template",
+              "validators.measures_were_read",
               "validators.min_length",
               "validators.min_length_when",
               "validators.no_control_chars",
@@ -1408,7 +1426,6 @@
     "data_table",
     "measure",
     "output_schema",
-    "persona",
     "policy",
     "prompt_snippet",
     "query",
@@ -1419,5 +1436,5 @@
     "toolbox",
     "trigger_element"
   ],
-  "rulesVersion": "435a453e5452"
+  "rulesVersion": "b73eceb50b6f"
 }
