@@ -133,12 +133,28 @@ describe("a file reference carries the stored sha256 (axonity-flow#2299)", () =>
       // cannot write the hash a workflow compares.
       expect(text, name).toMatch(/settled\s+from\s+storage/);
       expect(text, name).toMatch(/sub-workflow\s+call/);
-      // Digitize answers the same stored value per file it read.
-      expect(text, name).toMatch(/Digitize[^.]*same\s+`sha256`/);
-      // A reference the run may not read has none, and a webhook, cron or
-      // conditional start reads none.
-      expect(text, name).toMatch(/no\s+`sha256`/);
+      // Digitize always answers the stored value per file it read.
+      expect(text, name).toMatch(/Digitize[^.]*always\s+answers\s+the\s+stored\s+`sha256`/);
+      // A reference the run may not read keeps the caller's other fields and
+      // has no hash, and a webhook, cron or conditional start reads none.
+      expect(text, name).toMatch(/keeps\s+what\s+the\s+caller\s+wrote\s+and\s+carries\s+no\s+`sha256`/);
       expect(text, name).toMatch(/webhook,\s+cron\s+or\s+conditional\s+start/);
+    }
+  });
+
+  it("says only a declared file parameter is settled, nothing else", () => {
+    // The backend settles the declared file parameters only
+    // (`settle_file_references` walks `_declared_file_parameters`): a
+    // reference in an `object` field or an undeclared key keeps whatever
+    // `sha256` the caller wrote, at every kind of start.
+    for (const [name, text] of guidance()) {
+      expect(text, name).toMatch(
+        /Only\s+a\s+reference\s+in\s+a\s+declared\s+file\s+parameter\s+\(`file`,\s+or\s+a\s+list\s+of\s+`file`\)\s+is\s+checked\s+against\s+storage/,
+      );
+      expect(text, name).toMatch(/anywhere\s+else[^.]*is\s+not\s+checked/);
+      expect(text, name).toMatch(/compare\s+only[^.]*declared\s+file\s+parameter[^.]*Digitize/);
+      // The old, too-broad claim is gone.
+      expect(text, name).not.toMatch(/conditional\s+start[^.]*every\s+reference/);
     }
   });
 });

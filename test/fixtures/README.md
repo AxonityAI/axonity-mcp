@@ -15,7 +15,8 @@ diff in review.
   of the entry below:** a WHOLE dump with `dump_openapi.py` (`build_openapi()`
   + `serialize()`) from the branch `feat/2299-file-sha256` at `dee25e40a`, not
   merged yet — this snapshot and that PR are merged and rolled out together.
-  A whole dump and not a splice, because nothing else moves: the snapshot it
+  A dump of the same branch at `3286b387e` (no schema or route changes after
+  `dee25e40a`) is byte-identical to this file. A whole dump and not a splice, because nothing else moves: the snapshot it
   replaces is byte-identical to a dump of axonity-flow `main` at `25667eb8d`
   (the branch's merge-base), and the branch's dump differs from that in two
   component schemas and no operation. `RunInputFileResponse` gains `sha256`

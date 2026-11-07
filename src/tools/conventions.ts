@@ -310,14 +310,19 @@ made any time before you attach them.
       computed once when the file was stored. The same bytes have the same
       value under any name, so compare it to recognise a file that was already
       processed (deciding that is the workflow's logic, not the platform's).
-      The stored value is the only one: where a reference enters a run — a
-      manual, API or MCP start, a sub-workflow call — its \`filename\`,
-      \`contentType\`, \`sizeBytes\` and \`sha256\` are settled from storage,
-      whatever the caller wrote, and Digitize documents answers the same
-      \`sha256\` per file it read. A reference to a file the run may not read
-      carries no \`sha256\`; at a webhook, cron or conditional start that is
-      every reference, since such a start links no file. Compare the value on
-      the reference or on Digitize's entry, never a hash an agent wrote out.
+      Only a reference in a declared file parameter (\`file\`, or a list of
+      \`file\`) is checked against storage. Where one enters a run — a
+      manual, API or MCP start, a sub-workflow call (with its copy under
+      \`item\` in the child) — its \`filename\`, \`contentType\`,
+      \`sizeBytes\` and \`sha256\` are settled from storage, whatever the
+      caller wrote. A reference to a file the run may not read keeps what the
+      caller wrote and carries no \`sha256\`; at a webhook, cron or
+      conditional start that holds for each of them, since such a start links
+      no file. A reference anywhere else (an \`object\` field, an undeclared
+      key) is not checked and keeps any \`sha256\` the caller wrote. Digitize
+      documents always answers the stored \`sha256\` per file it read. So
+      compare only the value on a declared file parameter or on Digitize's
+      entry, never one in another field or one an agent wrote out.
   - **executor** — runs a command on a registered executor (a program on
     the customer's side). The save refuses a tool that names no executor or a
     command that executor does not know; \`list_executors\` and

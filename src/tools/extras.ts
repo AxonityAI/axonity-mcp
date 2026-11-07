@@ -144,12 +144,16 @@ const CONNECTOR_EFFECT_AND_FILE =
   "Digitize documents reads it and a sub-workflow's file parameter takes it. " +
   "`sha256` is the hex SHA-256 of the bytes, computed once when the file was " +
   "stored; the same bytes have the same value under any name, so compare it " +
-  "to recognise a file that was already processed. The stored value is the " +
-  "only one: where a reference enters a run (a manual, API or MCP start, a " +
-  "sub-workflow call) its fields are settled from storage, and Digitize " +
-  "documents answers the same `sha256` per file it read. A reference to a " +
-  "file the run may not read carries no `sha256` — at a webhook, cron or " +
-  "conditional start, every reference. " +
+  "to recognise a file that was already processed. Only a reference in a " +
+  "declared file parameter (`file`, or a list of `file`) is checked against " +
+  "storage: where one enters a run (a manual, API or MCP start, a " +
+  "sub-workflow call) its fields are settled from storage. A reference to a " +
+  "file the run may not read keeps what the caller wrote and carries no " +
+  "`sha256` — at a webhook, cron or conditional start, each of them. A " +
+  "reference anywhere else (an `object` field, an undeclared key) is not " +
+  "checked and keeps any `sha256` the caller wrote. Digitize documents " +
+  "always answers the stored `sha256` per file it read. So compare only the " +
+  "value on a declared file parameter or on Digitize's entry. " +
   "`filename` is optional and may use the inputs (`{{name}}`); without it the " +
   "far end's `Content-Disposition` name is used, else `document`. A file " +
   "answer takes no `responseTransform`. Outside a run (e.g. " +
