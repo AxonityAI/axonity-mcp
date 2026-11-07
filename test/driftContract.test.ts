@@ -208,7 +208,7 @@ describe("the validator contract in the guide is the platform's (#71)", () => {
 
 /**
  * A response recorded from the REAL route on axonity-flow `main`
- * (`76d04404d`, after axonity-flow#2352), through the ASGI app, with
+ * (`8fa04373f`, after axonity-flow#2356), through the ASGI app, with
  * `?kinds=tool,conditional_trigger`. Re-record it when the route changes.
  */
 const RECORDED = JSON.parse(

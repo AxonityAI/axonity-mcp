@@ -4200,7 +4200,7 @@
           },
           "refersTo": {
             "default": "",
-            "description": "What in the model this is about, in one of four forms: `measure:active_clients`, `table:orders_monthly`, `column:orders_monthly.country`, `value:orders_monthly.status=lost`. It must exist. Empty for a word that is not in the model yet.",
+            "description": "What in the model this is about, in one of these forms: measure:active_clients, table:orders_monthly, column:orders_monthly.country, value:orders_monthly.status=lost, query:revenue_per_country, query:revenue_per_country.revenue. It must exist. Empty for a word that is not in the model yet.",
             "maxLength": 300,
             "title": "Refersto",
             "type": "string"
@@ -4264,7 +4264,7 @@
             "type": "string"
           },
           "refersTo": {
-            "description": "What in the model this is about, in one of four forms: `measure:active_clients`, `table:orders_monthly`, `column:orders_monthly.country`, `value:orders_monthly.status=lost`. It must exist. Empty for a word that is not in the model yet.",
+            "description": "What in the model this is about, in one of these forms: measure:active_clients, table:orders_monthly, column:orders_monthly.country, value:orders_monthly.status=lost, query:revenue_per_country, query:revenue_per_country.revenue. It must exist. Empty for a word that is not in the model yet.",
             "maxLength": 300,
             "title": "Refersto",
             "type": "string"
@@ -4313,7 +4313,7 @@
             "type": "string"
           },
           "refersTo": {
-            "description": "What in the model it is about, in one of the four forms a concept's own reference uses.",
+            "description": "What in the model it is about, in one of the forms a concept's own reference uses: measure:active_clients, table:orders_monthly, column:orders_monthly.country, value:orders_monthly.status=lost, query:revenue_per_country, query:revenue_per_country.revenue.",
             "title": "Refersto",
             "type": "string"
           }
@@ -4357,6 +4357,7 @@
             "type": "string"
           },
           "refersTo": {
+            "description": "What in the model the word is hung on, in one of these forms: measure:active_clients, table:orders_monthly, column:orders_monthly.country, value:orders_monthly.status=lost, query:revenue_per_country, query:revenue_per_country.revenue.",
             "maxLength": 400,
             "minLength": 1,
             "title": "Refersto",
@@ -4437,6 +4438,7 @@
                 "type": "null"
               }
             ],
+            "description": "What in the model this is about, in one of these forms: measure:active_clients, table:orders_monthly, column:orders_monthly.country, value:orders_monthly.status=lost, query:revenue_per_country, query:revenue_per_country.revenue. It must exist. Empty for a word that is not in the model yet.",
             "title": "Refersto"
           },
           "scope": {
@@ -27509,7 +27511,7 @@
         "type": "object"
       },
       "ReleaseApprovalSummary": {
-        "description": "One row of the release queue — the counts, never the closure.\n\nDeliberately WITHOUT ``members``. A release's closure grows with what the\ntenant has authored (Talentus: 162 entities), so embedding it once per row\nwould make the queue's response grow with the tenant — the nested\nunbounded collection B-NB8 exists to keep off the wire. The members are\nwhat the approver reads to decide, and deciding happens on one release:\n``GET /publish-approvals/release/{id}`` carries them.\n\nThe verdict here is the one RECORDED when the release was requested, and\n``readiness_as_of`` says when that was. Recomputing it would mean walking\na full closure per row on every poll of the queue. The two moments that\nmust be true now — showing the decision and taking it — are the detail\nroute and ``approve``, both of which recompute (#793).",
+        "description": "One row of the release queue — the counts, never the closure.\n\nDeliberately WITHOUT ``members``. A release's closure grows with what the\ntenant has authored (a client's workspace: 162 entities), so embedding it once per row\nwould make the queue's response grow with the tenant — the nested\nunbounded collection B-NB8 exists to keep off the wire. The members are\nwhat the approver reads to decide, and deciding happens on one release:\n``GET /publish-approvals/release/{id}`` carries them.\n\nThe verdict here is the one RECORDED when the release was requested, and\n``readiness_as_of`` says when that was. Recomputing it would mean walking\na full closure per row on every poll of the queue. The two moments that\nmust be true now — showing the decision and taking it — are the detail\nroute and ``approve``, both of which recompute (#793).",
         "properties": {
           "blockerCount": {
             "default": 0,
@@ -37856,7 +37858,10 @@
           "status": {
             "anyOf": [
               {
-                "maxLength": 32,
+                "enum": [
+                  "active",
+                  "archived"
+                ],
                 "type": "string"
               },
               {
@@ -38712,13 +38717,17 @@
           "status": {
             "anyOf": [
               {
-                "maxLength": 32,
+                "enum": [
+                  "active",
+                  "archived"
+                ],
                 "type": "string"
               },
               {
                 "type": "null"
               }
             ],
+            "description": "Whether this query is in use. `active` or `archived`; an archived query keeps its definition and is not offered.",
             "title": "Status"
           }
         },
@@ -40423,7 +40432,7 @@
         "type": "object"
       },
       "ValidateDocumentResponse": {
-        "description": "Response from workflow validation.\n\n``catalog_checked`` says whether the CROSS-ENTITY checks ran — whether\nthe agents, tools and flows the steps reference were confirmed to\nexist. The stateless document-in route has no tenant catalog, so it\nanswers ``False`` there: its ``launchable`` speaks about structure\nonly and must not be read as \"this can run\" (#770). Validating a\nstored workflow by id answers ``True``.",
+        "description": "Response from workflow validation.\n\n``catalog_checked`` says whether the CROSS-ENTITY checks ran — whether\nthe agents, tools and flows the steps reference were confirmed to\nexist. Both routes, the document being edited and the stored workflow\nby id, validate against the caller's own catalog and answer ``True``.\nIt is ``False`` only when that catalog could not be built (its\nrepositories are not wired): ``launchable`` then speaks about structure\nonly and must not be read as \"this can run\" (#770).",
         "properties": {
           "catalogChecked": {
             "default": false,
@@ -47997,7 +48006,7 @@
     },
     "/api/v1/authoring/entity-contracts": {
       "get": {
-        "description": "What each kind of entity takes, and what stops it from going live (#2103).\n\nThe single source an authoring client reads for tools (connectors and\ntheir implementation included), agents, personas, knowledge, schemas,\ntables, toolboxes, secrets and starts — the counterpart of\n``GET /workflows/operations`` for everything that is not a workflow\ndocument. Generated from the schemas and checks that enforce it\n(:mod:`src.services.entity_contracts`), so it cannot fall behind them the\nway the MCP's prose did.\n\nNo DB and no tenant data: it describes the DEPLOY, so a service token is\nenough (``get_auth_context`` admits them). Built once per process.",
+        "description": "What each kind of entity takes, and what stops it from going live (#2103).\n\nThe single source an authoring client reads for tools (connectors and\ntheir implementation included), agents (their persona included: it is a\nfield of the agent, #2176), knowledge, schemas, tables, toolboxes,\nsecrets and starts — the counterpart of\n``GET /workflows/operations`` for everything that is not a workflow\ndocument. Generated from the schemas and checks that enforce it\n(:mod:`src.services.entity_contracts`), so it cannot fall behind them the\nway the MCP's prose did.\n\nNo DB and no tenant data: it describes the DEPLOY, so a service token is\nenough (``get_auth_context`` admits them). Built once per process.",
         "operationId": "read_entity_contracts_api_v1_authoring_entity_contracts_get",
         "parameters": [
           {

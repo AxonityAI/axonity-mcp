@@ -11,8 +11,33 @@ diff in review.
 
 ## Provenance
 
-- **A file reference carries its stored `sha256` (axonity-flow#2299), on top
-  of the entry below:** a WHOLE dump with `dump_openapi.py` (`build_openapi()`
+- **Refresh after axonity-flow#2356, replacing the entry below:** a WHOLE
+  dump with `dump_openapi.py` (`build_openapi()` + `serialize()`) from a
+  clean, read-only worktree of axonity-flow `main` at `8fa04373f`, which
+  contains #2356 (`301fef22a`) and #2361 (the #2299 change the entry below
+  took in from its branch). 767 → 767 operations; no operation's contract
+  changed. What moved, all inside component schemas and one route
+  description:
+  - `UpdateMeasureRequest.status` and `UpdateQueryRequest.status`: a free
+    string becomes the enum `active | archived` (and the query's field gains
+    a description). So `query` joins the entities whose status can be
+    `archived`; the guide's delete section names it, derived in
+    `test/countsTruth.test.ts`.
+  - `ConceptCreate`, `ConceptItem`, `ConceptLinkItem`, `ConceptLinkWrite`
+    and `ConceptUpdate`: `refersTo` now lists every form, `query:` among
+    them, where it said "one of four forms".
+  - Descriptions that named a client or a stale behaviour, now neutral or
+    current: `ReleaseApprovalSummary` ("a client's workspace"),
+    `ValidateDocumentResponse` (both validation routes use the catalog) and
+    `GET /api/v1/authoring/entity-contracts` (the persona is a field of the
+    agent).
+  `entity-contracts.tool-conditional_trigger.json` was re-recorded from the
+  same `main`; only `rulesVersion` changed. `src/generated/listFilters.ts`
+  regenerates unchanged. `check-contract-drift.mjs --fresh` exits 0. Same
+  safety as the #106 entry (`env -i`, audit hook, `env_file = None`, `src`
+  loaded from the worktree). No client name is left in the snapshot.
+
+- **A file reference carries its stored `sha256` (axonity-flow#2299), replaced by the entry above:** a WHOLE dump with `dump_openapi.py` (`build_openapi()`
   + `serialize()`) from the branch `feat/2299-file-sha256` at `dee25e40a`, not
   merged yet — this snapshot and that PR are merged and rolled out together.
   A dump of the same branch at `3286b387e` (no schema or route changes after
