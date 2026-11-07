@@ -299,12 +299,25 @@ made any time before you attach them.
       so the human approving is not the first to find out.
     - **An answer that is a file**: \`responseMapping: { "type": "file",
       "filename": "{{filename}}" }\` keeps the bytes as a file of the run and
-      returns its reference \`{ fileId, filename, contentType, sizeBytes }\` —
-      the shape an upload has, so Digitize documents reads it and a
-      sub-workflow's file parameter takes it. \`filename\` is optional (the
-      far end's \`Content-Disposition\` name, else \`document\`) and may use
-      the inputs. No \`responseTransform\` with a file answer. Outside a run
+      returns its reference
+      \`{ fileId, filename, contentType, sizeBytes, sha256 }\` — the shape an
+      upload has, so Digitize documents reads it and a sub-workflow's file
+      parameter takes it. \`filename\` is optional (the far end's
+      \`Content-Disposition\` name, else \`document\`) and may use the inputs.
+      No \`responseTransform\` with a file answer. Outside a run
       (\`execute_stored_connector\`) nothing is stored: you see name and size.
+    - **\`sha256\` in a file reference** is the hex SHA-256 of the bytes,
+      computed once when the file was stored. The same bytes have the same
+      value under any name, so compare it to recognise a file that was already
+      processed (deciding that is the workflow's logic, not the platform's).
+      The stored value is the only one: where a reference enters a run — a
+      manual, API or MCP start, a sub-workflow call — its \`filename\`,
+      \`contentType\`, \`sizeBytes\` and \`sha256\` are settled from storage,
+      whatever the caller wrote, and Digitize documents answers the same
+      \`sha256\` per file it read. A reference to a file the run may not read
+      carries no \`sha256\`; at a webhook, cron or conditional start that is
+      every reference, since such a start links no file. Compare the value on
+      the reference or on Digitize's entry, never a hash an agent wrote out.
   - **executor** — runs a command on a registered executor (a program on
     the customer's side). The save refuses a tool that names no executor or a
     command that executor does not know; \`list_executors\` and

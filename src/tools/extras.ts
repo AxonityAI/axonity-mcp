@@ -122,6 +122,11 @@ const CONNECTOR_SHAPE =
  * file of the run, not parsed. Without this sentence the only mappings an agent
  * knew were the parsing ones.
  *
+ * `sha256` in the reference (axonity-flow#2299): the hash stored with the
+ * bytes, settled from storage where a reference enters a run, so a workflow
+ * can recognise a file it already processed. Which value counts is said here
+ * because a caller-written hash would silently skip a new document.
+ *
  * Kept short on purpose: the platform's live contract
  * (`get_entity_authoring_contract`, axonity-flow#2103) is the authority, and
  * this is guidance until every deploy serves it.
@@ -135,8 +140,16 @@ const CONNECTOR_EFFECT_AND_FILE =
   "\n\nAN ANSWER THAT IS A FILE — `implementation.responseMapping: " +
   '{ "type": "file", "filename": "{{filename}}" }`. The bytes are kept as a ' +
   "file of the run and the connector returns its reference, `{ fileId, " +
-  "filename, contentType, sizeBytes }` — the shape an upload has, so Digitize " +
-  "documents reads it and a sub-workflow's file parameter takes it. " +
+  "filename, contentType, sizeBytes, sha256 }` — the shape an upload has, so " +
+  "Digitize documents reads it and a sub-workflow's file parameter takes it. " +
+  "`sha256` is the hex SHA-256 of the bytes, computed once when the file was " +
+  "stored; the same bytes have the same value under any name, so compare it " +
+  "to recognise a file that was already processed. The stored value is the " +
+  "only one: where a reference enters a run (a manual, API or MCP start, a " +
+  "sub-workflow call) its fields are settled from storage, and Digitize " +
+  "documents answers the same `sha256` per file it read. A reference to a " +
+  "file the run may not read carries no `sha256` — at a webhook, cron or " +
+  "conditional start, every reference. " +
   "`filename` is optional and may use the inputs (`{{name}}`); without it the " +
   "far end's `Content-Disposition` name is used, else `document`. A file " +
   "answer takes no `responseTransform`. Outside a run (e.g. " +
