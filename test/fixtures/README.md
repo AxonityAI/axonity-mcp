@@ -24,8 +24,13 @@ diff in review.
     `AgentPublishReleaseResponse`, `PendingWorkflowResponse` and
     `WorkflowOwnershipPreview`, and `KnowledgeChangeItem` (#2385). The three reads are
     in `OPEN_FOR_DECISION_79` (`test/completeness.test.ts`). `publish-release`
-    publishes, so `test/denyList.ts` forbids it, and `test/exclusions.test.ts`
-    now holds every publish route of the snapshot to the deny list.
+    publishes, so `test/denyList.ts` forbids it. `test/exclusions.test.ts`
+    now holds every write of the snapshot whose name says it publishes to the
+    deny list, spelled any way: each path segment and operationId lowercased
+    to letters only; a segment is caught when it contains `publish` or
+    `release` or is `golive`, an operationId when it contains any of the
+    three. The three that only ASK for an approval are named with their
+    reason in `NOT_PUBLISHING`.
   - Changed: `POST /publish-approvals/release` and
     `GET /publish-approvals/release/{release_id}` say they answer with the
     caller's clearance (#2386); `request_publish_release` and

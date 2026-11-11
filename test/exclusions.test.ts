@@ -206,30 +206,117 @@ describe("registered surface stays inside its authority boundary", () => {
     // its parts at once and no approval row, and the single rule above did not
     // see it. Derived from the pinned snapshot, so the next spelling turns the
     // build red here rather than slipping past the boundary.
-    const snapshot = JSON.parse(
-      readFileSync(
-        fileURLToPath(new URL("./fixtures/openapi.snapshot.json", import.meta.url)),
-        "utf8",
-      ),
-    ) as { paths: Record<string, Record<string, unknown>> };
-    const publishing = Object.entries(snapshot.paths).flatMap(([path, ops]) =>
-      Object.keys(ops)
-        .map((m) => m.toUpperCase())
-        .filter((m) => WRITE_METHODS.includes(m))
-        .filter(() =>
-          path
-            .split("/")
-            .some((seg) => /^(un)?publish(-|$)/.test(seg) && seg !== "publish-approvals"),
-        )
-        .map((m) => `${m} ${path}`),
-    );
-    expect(publishing).toContain("POST /api/v1/agents/{agent_id}/publish-release");
-    const allowed = publishing.filter((op) => {
-      const space = op.indexOf(" ");
-      return !forbids(op.slice(0, space), op.slice(space + 1));
-    });
-    expect(allowed, "a publish route the deny list does not cover").toEqual([]);
+    const snapshot = pinnedSnapshot();
+    expect(publishingWrites(snapshot)).toContain("POST /api/v1/agents/{agent_id}/publish-release");
+    expect(uncoveredPublishing(snapshot), "a publish route the deny list does not cover").toEqual([]);
     // Reading what a publish WOULD do is not publishing.
     expect(forbids("GET", "/api/v1/agents/a-1/publish-overview")).toBe(false);
   });
+
+  it.each([
+    "publish_release",
+    "publishrelease",
+    "PublishRelease",
+    "force-publish",
+    "go-live",
+    "release",
+  ])("a write route spelled %s, planted in a copy of the snapshot, is caught", (spelling) => {
+    const copy = pinnedSnapshot();
+    const path = `/api/v1/agents/{agent_id}/${spelling}`;
+    copy.paths[path] = { post: { operationId: "planted_operation" } };
+    expect(uncoveredPublishing(copy)).toEqual([`POST ${path}`]);
+  });
+
+  it("a write whose operationId says it goes live, under any path, is caught", () => {
+    const copy = pinnedSnapshot();
+    copy.paths["/api/v1/agents/{agent_id}/ship"] = { post: { operationId: "goLive_agent" } };
+    expect(uncoveredPublishing(copy)).toEqual(["POST /api/v1/agents/{agent_id}/ship"]);
+  });
+
+  it("every route said not to publish is caught, allowed, and still in the snapshot", () => {
+    // Exact both ways: an entry may only hold a route the check catches and
+    // the deny list allows, or it would hide a decision already made.
+    const caught = new Set(publishingWrites(pinnedSnapshot()));
+    const stale = Object.keys(NOT_PUBLISHING).filter(
+      (op) => !caught.has(op) || forbidsOperation(op),
+    );
+    expect(stale, "take these off NOT_PUBLISHING").toEqual([]);
+  });
 });
+
+/** The pinned snapshot, parsed afresh: a caller may plant routes in its copy. */
+function pinnedSnapshot(): Snapshot {
+  return JSON.parse(
+    readFileSync(
+      fileURLToPath(new URL("./fixtures/openapi.snapshot.json", import.meta.url)),
+      "utf8",
+    ),
+  ) as Snapshot;
+}
+
+interface Snapshot {
+  paths: Record<string, Record<string, { operationId?: string }>>;
+}
+
+/**
+ * Spelled any way: lowercase, letters only — the way axonity-flow matches
+ * `secretId`. So `publish_release`, `PublishRelease` and `publish-release` are
+ * one word, and so are `go-live` and `golive`.
+ */
+const letters = (name: string) => name.toLowerCase().replace(/[^a-z]/g, "");
+
+/** Does a normalised name say it publishes? */
+const saysPublish = (name: string) => name.includes("publish") || name.includes("release");
+
+/**
+ * Every write operation of `snapshot` whose name says it publishes: a path
+ * segment (not a `{parameter}`) that contains `publish` or `release` or is
+ * `golive`, or an operationId that contains any of the three. Wider on
+ * purpose: a route caught here that does NOT publish is named in
+ * NOT_PUBLISHING with its reason, never filtered out by the pattern.
+ */
+function publishingWrites(snapshot: Snapshot): string[] {
+  return Object.entries(snapshot.paths).flatMap(([path, ops]) =>
+    Object.entries(ops)
+      .filter(([m]) => WRITE_METHODS.includes(m.toUpperCase()))
+      .filter(([, op]) => {
+        const segments = path
+          .split("/")
+          .filter((seg) => seg !== "" && !seg.startsWith("{"))
+          .map(letters);
+        const operationId = letters(op.operationId ?? "");
+        return (
+          segments.some((seg) => saysPublish(seg) || seg === "golive") ||
+          saysPublish(operationId) ||
+          operationId.includes("golive")
+        );
+      })
+      .map(([m]) => `${m.toUpperCase()} ${path}`),
+  );
+}
+
+/**
+ * Writes whose name says publish or release and that do NOT make anything
+ * live, each with the reason. Exact both ways (see the test): a route that
+ * leaves the snapshot, or that the deny list starts to forbid, must leave too.
+ */
+const NOT_PUBLISHING: Record<string, string> = {
+  "POST /api/v1/publish-approvals":
+    "request_publish_* — creates ONE pending approval a human decides; publishes nothing",
+  "POST /api/v1/publish-approvals/bulk":
+    "request_publish_bulk — asking in bulk is still asking; deciding in bulk is forbidden",
+  "POST /api/v1/publish-approvals/release":
+    "request_publish_release — proposes a release; approving it is forbidden above",
+};
+
+/** The publishing writes the deny list does not forbid. */
+function uncoveredPublishing(snapshot: Snapshot): string[] {
+  return publishingWrites(snapshot).filter(
+    (op) => !forbidsOperation(op) && !(op in NOT_PUBLISHING),
+  );
+}
+
+function forbidsOperation(op: string): boolean {
+  const space = op.indexOf(" ");
+  return forbids(op.slice(0, space), op.slice(space + 1));
+}
