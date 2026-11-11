@@ -36,6 +36,11 @@ export const FORBIDDEN: Rule[] = [
   // limitation. Making a draft live is where an agent's work starts affecting
   // real runs, and somebody accountable says when that happens.
   { label: "direct publish/unpublish", path: /\/(publish|unpublish)$/ },
+  // The same act under another name: `POST /agents/{id}/publish-release`
+  // (axonity-flow#2382) publishes an agent and the parts it needs at once,
+  // with no approval row — "a person only", and `forbid_service_token` on the
+  // backend. The rule above ends at `/publish`, so it needs its own.
+  { label: "publish an agent with its parts", path: /\/publish-release$/ },
   // The same decision from the other side of the queue. An agent that could
   // approve would be approving its OWN request in almost every case, which
   // turns the gateway into a formality — the connector may ASK (POST

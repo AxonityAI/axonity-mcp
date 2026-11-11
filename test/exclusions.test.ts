@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+
 import { describe, expect, it, vi } from "vitest";
 
 import type { AxonityClient } from "../src/client.js";
@@ -196,5 +199,37 @@ describe("registered surface stays inside its authority boundary", () => {
 
     // The deploy-time secret surface stays closed to reads as well.
     expect(forbids("GET", "/api/v1/config/secrets")).toBe(true);
+  });
+  it("every publish route in the snapshot is forbidden, whatever it is called (poison check)", () => {
+    // `/publish` and `/unpublish` were the only spellings once. axonity-flow#2382
+    // added `POST /agents/{id}/publish-release`, which publishes an agent with
+    // its parts at once and no approval row, and the single rule above did not
+    // see it. Derived from the pinned snapshot, so the next spelling turns the
+    // build red here rather than slipping past the boundary.
+    const snapshot = JSON.parse(
+      readFileSync(
+        fileURLToPath(new URL("./fixtures/openapi.snapshot.json", import.meta.url)),
+        "utf8",
+      ),
+    ) as { paths: Record<string, Record<string, unknown>> };
+    const publishing = Object.entries(snapshot.paths).flatMap(([path, ops]) =>
+      Object.keys(ops)
+        .map((m) => m.toUpperCase())
+        .filter((m) => WRITE_METHODS.includes(m))
+        .filter(() =>
+          path
+            .split("/")
+            .some((seg) => /^(un)?publish(-|$)/.test(seg) && seg !== "publish-approvals"),
+        )
+        .map((m) => `${m} ${path}`),
+    );
+    expect(publishing).toContain("POST /api/v1/agents/{agent_id}/publish-release");
+    const allowed = publishing.filter((op) => {
+      const space = op.indexOf(" ");
+      return !forbids(op.slice(0, space), op.slice(space + 1));
+    });
+    expect(allowed, "a publish route the deny list does not cover").toEqual([]);
+    // Reading what a publish WOULD do is not publishing.
+    expect(forbids("GET", "/api/v1/agents/a-1/publish-overview")).toBe(false);
   });
 });

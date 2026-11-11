@@ -289,6 +289,11 @@ export function registerApprovalTools(
       "`blockers` that NAME the member in the way. If it is not ready, fix the " +
       "member the blocker names and request again — nothing was recorded as " +
       "approved. " +
+      "\n\nThe answer is read with your token's clearance: a member above it is " +
+      "left out, with the blockers that name it, and a blocker that names " +
+      "something you may not read shows only its code. `ready` and the counts " +
+      "stay the whole release's — so `ready: false` with no blocker you can see " +
+      "means the part in the way is one you may not read. " +
       "\n\nA tenant-wide policy or reference doc is deliberately NOT in a " +
       "release: it applies to every agent regardless of this workflow, so it is " +
       "part of the environment and is published on its own. " +
@@ -363,6 +368,10 @@ export function registerApprovalTools(
       "its readiness RECOMPUTED as you read — so a blocker you saw when you " +
       "requested it may already be gone. This is how you follow up on a " +
       "request_publish_release rather than re-listing the queue. " +
+      "\n\nRead with your token's clearance: a member above it is left out, with " +
+      "the blockers that name it, and so is a skill, policy or reference doc " +
+      "joining or leaving an agent. `ready` and the counts stay the whole " +
+      "release's. " +
       "\n\nApproving publishes every member in dependency order, all-or-nothing, " +
       "and only a human can do it in Axonity.",
     {

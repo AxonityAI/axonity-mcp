@@ -771,6 +771,22 @@
             "title": "Owned",
             "type": "array"
           },
+          "pendingLeaving": {
+            "description": "Published workflows it owns now whose draft names someone else or nobody: it leaves them at their next publish.",
+            "items": {
+              "$ref": "#/components/schemas/PendingWorkflowResponse"
+            },
+            "title": "Pendingleaving",
+            "type": "array"
+          },
+          "pendingOwned": {
+            "description": "Published workflows whose draft names this agent the owner and whose published version does not: it takes them at their next publish (decision 24).",
+            "items": {
+              "$ref": "#/components/schemas/PendingWorkflowResponse"
+            },
+            "title": "Pendingowned",
+            "type": "array"
+          },
           "recent": {
             "description": "Its latest runs, whenever they were — only on one agent's read.",
             "items": {
@@ -901,6 +917,18 @@
             ],
             "description": "What one delegation to this agent may cost, in euro. When a delegation has spent it before handing in, it stops and the agent that delegated gets what it had. Empty: no budget. Publishes with the agent.",
             "title": "Delegationbudgeteur"
+          },
+          "draftMajorVersion": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Major version of the working draft, or null when there is none. With a published version beside it, the draft is ahead of what runs read.",
+            "title": "Draftmajorversion"
           },
           "frameworkToolsOff": {
             "description": "The framework tools taken away from this agent (catalogue: GET /api/v1/agents/framework-tools). Empty: it has all of them. 'submit_output' cannot be taken away.",
@@ -1068,6 +1096,144 @@
           "policies"
         ],
         "title": "AgentPoliciesResponse",
+        "type": "object"
+      },
+      "AgentPublishOverview": {
+        "description": "What publishing one agent would put live — read only, nothing written.\n\nThe same verdict a release carries, for a release rooted at an agent: the\nagent and what it needs, in publish order. ``ready`` is false while any\nmember that must publish is not ready; the blockers name the member.",
+        "properties": {
+          "blockers": {
+            "items": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "title": "Blockers",
+            "type": "array"
+          },
+          "changedCount": {
+            "default": 0,
+            "title": "Changedcount",
+            "type": "integer"
+          },
+          "computedAt": {
+            "title": "Computedat",
+            "type": "string"
+          },
+          "members": {
+            "items": {
+              "$ref": "#/components/schemas/ReleaseMemberItem"
+            },
+            "title": "Members",
+            "type": "array"
+          },
+          "ready": {
+            "title": "Ready",
+            "type": "boolean"
+          },
+          "totalCount": {
+            "default": 0,
+            "title": "Totalcount",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "ready",
+          "computedAt"
+        ],
+        "title": "AgentPublishOverview",
+        "type": "object"
+      },
+      "AgentPublishPart": {
+        "additionalProperties": false,
+        "description": "One part that goes live next to the agent.",
+        "properties": {
+          "entityId": {
+            "format": "uuid",
+            "title": "Entityid",
+            "type": "string"
+          },
+          "entityType": {
+            "enum": [
+              "flow",
+              "workflow",
+              "agent",
+              "tool",
+              "skill",
+              "policy",
+              "reference_doc",
+              "prompt_snippet",
+              "output_schema",
+              "data_table",
+              "application",
+              "measure",
+              "query",
+              "company"
+            ],
+            "title": "Entitytype",
+            "type": "string"
+          }
+        },
+        "required": [
+          "entityType",
+          "entityId"
+        ],
+        "title": "AgentPublishPart",
+        "type": "object"
+      },
+      "AgentPublishReleaseRequest": {
+        "additionalProperties": false,
+        "description": "POST /agents/{id}/publish-release — the agent and the chosen parts.\n\n``parts`` names what goes live NEXT TO the agent: a changed part that is\nleft out keeps its live version. A part that was never published has no\nlive version to keep, so it must be named — leaving one out is refused.\nStrict: a key the route does not read is a 422, never silently dropped.",
+        "properties": {
+          "parts": {
+            "description": "The parts that go live with the agent, by kind and id.",
+            "items": {
+              "$ref": "#/components/schemas/AgentPublishPart"
+            },
+            "maxItems": 200,
+            "title": "Parts",
+            "type": "array"
+          },
+          "versionName": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Versionname"
+          }
+        },
+        "title": "AgentPublishReleaseRequest",
+        "type": "object"
+      },
+      "AgentPublishReleaseResponse": {
+        "description": "What went live, in the order it went live.",
+        "properties": {
+          "agentVersion": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agentversion"
+          },
+          "published": {
+            "items": {
+              "$ref": "#/components/schemas/ReleasePublishedMember"
+            },
+            "title": "Published",
+            "type": "array"
+          }
+        },
+        "title": "AgentPublishReleaseResponse",
         "type": "object"
       },
       "AgentReferenceDocsResponse": {
@@ -14139,6 +14305,19 @@
       "FindingItem": {
         "description": "One thing the nightly check found about one measure in one closed period.",
         "properties": {
+          "analysis": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The Consultant's investigation of this movement, when the reader may read everything it read: {board {movement, toExplain, partitions, links, scan, questions, advice, stoppedBecause}, claims {resultId: claim as code read it}, runId, analysedAt}. A link is a hypothesis between two KPIs, or an event and a KPI; a supported link is a probable driver; advice follows a supported or plausible link.",
+            "title": "Analysis"
+          },
           "causes": {
             "description": "What moved with it underneath, from the measure tree: [{measure, label, via (formula | influence), effect, signal, value, change}].",
             "items": {
@@ -16849,6 +17028,39 @@
           }
         },
         "title": "JudgementBody",
+        "type": "object"
+      },
+      "KnowledgeChangeItem": {
+        "description": "A skill, policy or reference doc that joins or leaves an agent on Publish.\n\nSaid on the agent's own member (round 4): an item that leaves is no\nmember of the release, so this is where the approver sees it go.",
+        "properties": {
+          "change": {
+            "enum": [
+              "added",
+              "removed"
+            ],
+            "title": "Change",
+            "type": "string"
+          },
+          "entityId": {
+            "title": "Entityid",
+            "type": "string"
+          },
+          "entityType": {
+            "title": "Entitytype",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "entityType",
+          "entityId",
+          "name",
+          "change"
+        ],
+        "title": "KnowledgeChangeItem",
         "type": "object"
       },
       "KnowledgeItem": {
@@ -23812,6 +24024,37 @@
         "title": "PendingApprovalCount",
         "type": "object"
       },
+      "PendingWorkflowResponse": {
+        "description": "A published workflow whose owner changes at its next publish (W4/W5).",
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "otherOwnerId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The other side: in pendingOwned the live owner it comes from, in pendingLeaving the agent it goes to; null for nobody.",
+            "title": "Otherownerid"
+          },
+          "workflowId": {
+            "title": "Workflowid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "workflowId",
+          "name"
+        ],
+        "title": "PendingWorkflowResponse",
+        "type": "object"
+      },
       "PersonRef": {
         "description": "A colleague, as a list names them.",
         "properties": {
@@ -27665,6 +27908,28 @@
       "ReleaseMemberItem": {
         "description": "One entity in a release, plus what this release would do to it.",
         "properties": {
+          "alsoUsedBy": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Alsousedby"
+          },
+          "archived": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Archived"
+          },
           "blockers": {
             "items": {
               "additionalProperties": {
@@ -27682,6 +27947,17 @@
             "title": "Changedfields",
             "type": "array"
           },
+          "draftVersion": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draftversion"
+          },
           "entityId": {
             "title": "Entityid",
             "type": "string"
@@ -27689,6 +27965,31 @@
           "entityType": {
             "title": "Entitytype",
             "type": "string"
+          },
+          "knowledgeChanges": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/KnowledgeChangeItem"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Knowledgechanges"
+          },
+          "liveVersion": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Liveversion"
           },
           "name": {
             "title": "Name",
@@ -42223,6 +42524,99 @@
         "title": "WorkflowOperationsResponse",
         "type": "object"
       },
+      "WorkflowOwnershipPreview": {
+        "description": "What moving a workflow to another agent changes, before it is moved (W4).\n\nThe direction of the move (from whom, to whom) and whether a change\nalready waits in the draft; no count of steps (Jonathan, 7 Nov 2026). The\nmove lands in the draft and goes live with it at the next publish\n(decision 24). The current owner is the LIVE one (``workflows.live_agent_id``).",
+        "properties": {
+          "currentOwnerId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Id of the agent that owns it live today; null when nobody does.",
+            "title": "Currentownerid"
+          },
+          "currentOwnerName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Name of the agent that owns it live today; null when nobody does.",
+            "title": "Currentownername"
+          },
+          "hasPendingChange": {
+            "default": false,
+            "description": "The draft already names another owner than the live one: attaching replaces that waiting change.",
+            "title": "Haspendingchange",
+            "type": "boolean"
+          },
+          "isNoop": {
+            "default": false,
+            "description": "True when the agent owns it live and the draft names it too: nothing would change.",
+            "title": "Isnoop",
+            "type": "boolean"
+          },
+          "newOwnerId": {
+            "description": "Id of the agent that would own it after the move.",
+            "title": "Newownerid",
+            "type": "string"
+          },
+          "newOwnerName": {
+            "description": "Name of the agent that would own it after the move.",
+            "title": "Newownername",
+            "type": "string"
+          },
+          "pendingOwnerId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The owner the draft names while a change waits; null: nobody.",
+            "title": "Pendingownerid"
+          },
+          "pendingOwnerName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Name of that owner; null when the change is to nobody.",
+            "title": "Pendingownername"
+          },
+          "workflowId": {
+            "description": "Id of the workflow being moved.",
+            "title": "Workflowid",
+            "type": "string"
+          },
+          "workflowName": {
+            "description": "Name of the workflow being moved.",
+            "title": "Workflowname",
+            "type": "string"
+          }
+        },
+        "required": [
+          "workflowId",
+          "workflowName",
+          "newOwnerId",
+          "newOwnerName"
+        ],
+        "title": "WorkflowOwnershipPreview",
+        "type": "object"
+      },
       "WorkflowPromptStacksResponse": {
         "description": "Resolved prompt stacks for every flow step reachable from a workflow.",
         "properties": {
@@ -44177,6 +44571,114 @@
         ]
       }
     },
+    "/api/v1/agents/{agent_id}/publish-overview": {
+      "get": {
+        "description": "What publishing this agent would put live — nothing is written.\n\nThe agent plus what it needs, each Changed, Never published or unchanged,\nwith the readiness sentences of the platform.",
+        "operationId": "get_agent_publish_overview_api_v1_agents__agent_id__publish_overview_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentPublishOverview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Agent Publish Overview",
+        "tags": [
+          "agents"
+        ]
+      }
+    },
+    "/api/v1/agents/{agent_id}/publish-release": {
+      "post": {
+        "description": "Publish the agent and the chosen parts at once — all of it or none of it.\n\nA person only, like the agent's own Publish: no approval row. The parts\ngo live in dependency order with the agent, each re-checked now and\naudited on its own; one that is not ready refuses the whole publish\n(422, with the platform's sentences). The request's one transaction\n(``DB_SESSION``) rolls back everything if a publish fails halfway.",
+        "operationId": "publish_agent_release_api_v1_agents__agent_id__publish_release_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentPublishReleaseRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentPublishReleaseResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Publish Agent Release",
+        "tags": [
+          "agents"
+        ]
+      }
+    },
     "/api/v1/agents/{agent_id}/published": {
       "get": {
         "description": "Get the currently published agent version info + document.",
@@ -44461,6 +44963,164 @@
         "summary": "Restore Agent",
         "tags": [
           "agents"
+        ]
+      }
+    },
+    "/api/v1/agents/{agent_id}/runs": {
+      "get": {
+        "description": "One page of the LAUNCHES of every workflow of one agent, newest first (K22).\n\nIts workflows: the ones it owns and the ones a step names it in. The\nruns panel of the agent page reads this, with the same filters as a\nworkflow's own panel (``GET /workflows/{id}/runs``) plus ``workflow_id``\nto narrow to one of them. Same launch rule, same keyset cursor, same\nrow. An agent of another workspace is a 404. The run history's rule\nholds here too (#2274): a Search knowledge run is never listed, the\nplatform's labelled work only with ``include_platform``.",
+        "operationId": "list_agent_runs_api_v1_agents__agent_id__runs_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Only this one of the agent's workflows. Omit for all of them.",
+            "in": "query",
+            "name": "workflow_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only this one of the agent's workflows. Omit for all of them.",
+              "title": "Workflow Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "archived_only",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Archived Only",
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "Restrict to these run statuses. Repeat the parameter for a union (?status=pending&status=running). Omit for every status.",
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "enum": [
+                      "pending",
+                      "running",
+                      "waiting",
+                      "input_required",
+                      "idle",
+                      "completed",
+                      "failed",
+                      "cancelled",
+                      "expired"
+                    ],
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Restrict to these run statuses. Repeat the parameter for a union (?status=pending&status=running). Omit for every status.",
+              "title": "Status"
+            }
+          },
+          {
+            "description": "Also the platform's own work (Maintain knowledge, Learn from a run), labelled isPlatform — as GET /runs. A search is never listed.",
+            "in": "query",
+            "name": "include_platform",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "Also the platform's own work (Maintain knowledge, Learn from a run), labelled isPlatform — as GET /runs. A search is never listed.",
+              "title": "Include Platform",
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "Page size (max 200).",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Page size (max 200).",
+              "title": "Limit"
+            }
+          },
+          {
+            "description": "Opaque continuation cursor from a previous response's nextCursor. Omit for the first page.",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Opaque continuation cursor from a previous response's nextCursor. Omit for the first page.",
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_RunSummary_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Agent Runs",
+        "tags": [
+          "runs"
         ]
       }
     },
@@ -68830,7 +69490,7 @@
         ]
       },
       "post": {
-        "description": "Request a release of a workflow and its closure. Never publishes.\n\nComputes the closure, diffs each member against what is live, and returns\none approval whose readiness aggregates the members — ready only if every\nmember that must publish is ready.",
+        "description": "Request a release of a workflow and its closure. Never publishes.\n\nComputes the closure, diffs each member against what is live, and returns\none approval whose readiness aggregates the members — ready only if every\nmember that must publish is ready. The answer names only what the caller\nmay read; the release recorded is the whole of it.",
         "operationId": "request_release_api_v1_publish_approvals_release_post",
         "requestBody": {
           "content": {
@@ -68877,7 +69537,7 @@
     },
     "/api/v1/publish-approvals/release/{release_id}": {
       "get": {
-        "description": "Get one release, its readiness recomputed as of now (#793).",
+        "description": "Get one release, its readiness recomputed as of now (#793).\n\nRead with the caller's clearance: a part or a knowledge item above it is\nleft out, not named. An administrator reads everything.",
         "operationId": "get_release_api_v1_publish_approvals_release__release_id__get",
         "parameters": [
           {
@@ -74322,7 +74982,10 @@
             "name": "screen",
             "required": true,
             "schema": {
-              "const": "agent-detail",
+              "enum": [
+                "agent-detail",
+                "agents"
+              ],
               "title": "Screen",
               "type": "string"
             }
@@ -74369,7 +75032,10 @@
             "name": "screen",
             "required": true,
             "schema": {
-              "const": "agent-detail",
+              "enum": [
+                "agent-detail",
+                "agents"
+              ],
               "title": "Screen",
               "type": "string"
             }
@@ -82102,6 +82768,67 @@
           }
         ],
         "summary": "Mutate Workflow",
+        "tags": [
+          "workflows"
+        ]
+      }
+    },
+    "/api/v1/workflows/{workflow_id}/ownership-preview": {
+      "get": {
+        "description": "What moving this workflow to ``agentId`` changes, before it is moved (W4).\n\nRead-only: the move is ``PATCH /workflows/{id}`` with ``orchestratorAgentId``.",
+        "operationId": "preview_workflow_ownership_api_v1_workflows__workflow_id__ownership_preview_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workflow_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workflow Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The agent that would own this workflow after the move.",
+            "in": "query",
+            "name": "agentId",
+            "required": true,
+            "schema": {
+              "description": "The agent that would own this workflow after the move.",
+              "format": "uuid",
+              "title": "Agentid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowOwnershipPreview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Preview Workflow Ownership",
         "tags": [
           "workflows"
         ]

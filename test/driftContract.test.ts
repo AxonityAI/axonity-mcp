@@ -208,7 +208,7 @@ describe("the validator contract in the guide is the platform's (#71)", () => {
 
 /**
  * A response recorded from the REAL route on axonity-flow `main`
- * (`8fa04373f`, after axonity-flow#2356), through the ASGI app, with
+ * (`68ef764b9`), through the ASGI app, with
  * `?kinds=tool,conditional_trigger`. Re-record it when the route changes.
  */
 const RECORDED = JSON.parse(
@@ -710,5 +710,27 @@ describe("a workflow write ends with the platform's catalog-checked verdict (#65
     expect(summary.version).toBe(2);
     expect(summary.validation.catalogChecked).toBe(false);
     expect(summary.validation.note).toMatch(/Do not retry the write/);
+  });
+});
+
+describe("a release reads with the caller's clearance (axonity-flow#2386)", () => {
+  // Both release routes answer with what the CALLER may read: a member above
+  // the token's clearance is left out, with the blockers that name it, while
+  // `ready` and the counts stay the whole release's. An agent told that the
+  // blockers name the member in the way would read `ready: false` with no
+  // blocker as a contradiction. The routes' own descriptions carry the rule,
+  // so the tool text is held to them.
+  const paths = snapshot.paths as Record<string, Record<string, { description?: string }>>;
+  const cases = [
+    ["request_publish_release", paths["/api/v1/publish-approvals/release"]?.post],
+    ["get_publish_release", paths["/api/v1/publish-approvals/release/{release_id}"]?.get],
+  ] as const;
+
+  it.each(cases)("%s says what is left out and what stays whole", (name, operation) => {
+    expect(operation?.description ?? "").toMatch(/may read|clearance/);
+    const text = all().descriptions.get(name) ?? "";
+    expect(text).toMatch(/clearance/);
+    expect(text).toMatch(/left out/);
+    expect(text).toMatch(/`ready` and the counts/);
   });
 });
