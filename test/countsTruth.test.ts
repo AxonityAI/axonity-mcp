@@ -48,6 +48,28 @@ function tools() {
   return { descriptions, shapes };
 }
 
+/** Does a schema the operation answers with (followed through `$ref`s) have `field`? */
+function rowsCarry(operation: unknown, field: string): boolean {
+  const schemas = snapshot.components.schemas as Record<string, unknown>;
+  const seen = new Set<string>();
+  const walk = (node: unknown): boolean => {
+    if (Array.isArray(node)) return node.some(walk);
+    if (!node || typeof node !== "object") return false;
+    const o = node as Record<string, unknown>;
+    if (typeof o.$ref === "string") {
+      const name = o.$ref.split("/").pop()!;
+      if (seen.has(name)) return false;
+      seen.add(name);
+      const target = schemas[name] as { properties?: Record<string, unknown> } | undefined;
+      if (target?.properties && field in target.properties) return true;
+      return walk(target);
+    }
+    return Object.values(o).some(walk);
+  };
+  const responses = (operation as { responses?: Record<string, unknown> } | undefined)?.responses;
+  return walk(responses?.["200"]);
+}
+
 const pluralOf = (e: { singular: string; plural?: string }) => e.plural ?? `${e.singular}s`;
 const family = ENTITIES.filter((e) => e.publishable !== false);
 const withoutDrafts = ENTITIES.filter((e) => e.publishable === false);
@@ -146,11 +168,21 @@ describe("sentences that name their members carry the right number", () => {
   });
 
   it("the three agent read-backs are the agent link routes that take a workflow", () => {
+    // A read-back is a LINK route: with `workflow_id` it answers the composed
+    // view, and every row says why it is there (`linkSource`). Taking a
+    // `workflow_id` alone is not enough: the agent's runs panel
+    // (`GET /agents/{id}/runs`, axonity-flow#2363) narrows by it too.
     const readBacks = Object.entries(snapshot.paths).filter(
       ([path, ops]) =>
         path.startsWith("/api/v1/agents/{agent_id}/") &&
-        (ops.get?.parameters ?? []).some((p) => p.in === "query" && p.name === "workflow_id"),
+        (ops.get?.parameters ?? []).some((p) => p.in === "query" && p.name === "workflow_id") &&
+        rowsCarry(ops.get, "linkSource"),
     );
+    expect(readBacks.map(([path]) => path).sort()).toEqual([
+      "/api/v1/agents/{agent_id}/policies",
+      "/api/v1/agents/{agent_id}/reference-docs",
+      "/api/v1/agents/{agent_id}/skills-v2",
+    ]);
     expect(word(readBacks.length)).toBe("three");
     expect(README).toMatch(/The three agent read-backs take an/);
     expect(CONVENTIONS).toMatch(/The three agent read-backs also take/);

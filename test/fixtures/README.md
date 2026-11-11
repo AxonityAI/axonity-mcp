@@ -11,8 +11,75 @@ diff in review.
 
 ## Provenance
 
-- **A file reference carries its stored `sha256` (axonity-flow#2299), on top
-  of the entry below:** a WHOLE dump with `dump_openapi.py` (`build_openapi()`
+- **Refresh from `main` at `68ef764b9`, replacing the entry below:** a WHOLE
+  dump with `dump_openapi.py` (`build_openapi()` + `serialize()`) from a
+  clean, read-only worktree of axonity-flow `main` at `68ef764b9`. 767 → 771
+  operations: 4 added, none removed, 4 with a different contract; 7 component
+  schemas added, none removed, 4 changed.
+  - Added: `GET /agents/{agent_id}/runs` and
+    `GET /workflows/{workflow_id}/ownership-preview` (axonity-flow#2363),
+    `GET /agents/{agent_id}/publish-overview` and
+    `POST /agents/{agent_id}/publish-release` (#2382), with the schemas
+    `AgentPublishOverview`, `AgentPublishPart`, `AgentPublishReleaseRequest`,
+    `AgentPublishReleaseResponse`, `PendingWorkflowResponse` and
+    `WorkflowOwnershipPreview`, and `KnowledgeChangeItem` (#2385). The three reads are
+    in `OPEN_FOR_DECISION_79` (`test/completeness.test.ts`). `publish-release`
+    publishes, so `test/denyList.ts` forbids it. `test/exclusions.test.ts`
+    now holds every write of the snapshot whose name says it publishes to the
+    deny list, spelled any way: each path segment (with any `{parameter}`
+    cut out) and operationId lowercased to letters only; a segment is caught
+    when it contains `publish` or `release` or is `golive`, an operationId
+    when it contains any of the three. A synonym such as `deploy` is not
+    caught; the deny list's own rules hold those. The three that only ASK for an approval are named with their
+    reason in `NOT_PUBLISHING`.
+  - Changed: `POST /publish-approvals/release` and
+    `GET /publish-approvals/release/{release_id}` say they answer with the
+    caller's clearance (#2386); `request_publish_release` and
+    `get_publish_release` say so too, held in `test/driftContract.test.ts`.
+    `GET` and `PUT /screen-state/{screen}`: `screen` becomes the enum
+    `agent-detail | agents` (#2363).
+  - Changed schemas: `ReleaseMemberItem` gains `alsoUsedBy`, `archived`,
+    `draftVersion`, `liveVersion` (#2382) and `knowledgeChanges` (#2385);
+    `AgentListItem` gains `draftMajorVersion` and `AgentActivityResponse`
+    gains `pendingOwned` and `pendingLeaving` (both #2363); `FindingItem` gains
+    `analysis` (#2374).
+  - `GET /agents/{agent_id}/runs` takes a `workflow_id` filter, so the
+    derivation of "the three agent read-backs" in `test/countsTruth.test.ts`
+    now also asks that the rows carry `linkSource`.
+  `entity-contracts.tool-conditional_trigger.json` was re-recorded from the
+  same `main`: the builtin validators gain six (#2374), and `contractVersion`
+  of `tool` and `rulesVersion` move with them. `src/generated/listFilters.ts`
+  regenerates unchanged. `check-contract-drift.mjs --fresh` exits 0. Same
+  safety as the #106 entry (`env -i`, audit hook, `env_file = None`, `src`
+  loaded from the worktree). No client name is in the snapshot.
+
+- **Refresh after axonity-flow#2356, replaced by the entry above:** a WHOLE
+  dump with `dump_openapi.py` (`build_openapi()` + `serialize()`) from a
+  clean, read-only worktree of axonity-flow `main` at `8fa04373f`, which
+  contains #2356 (`301fef22a`) and #2361 (the #2299 change the entry below
+  took in from its branch). 767 → 767 operations; no operation's contract
+  changed. What moved, all inside component schemas and one route
+  description:
+  - `UpdateMeasureRequest.status` and `UpdateQueryRequest.status`: a free
+    string becomes the enum `active | archived` (and the query's field gains
+    a description). So `query` joins the entities whose status can be
+    `archived`; the guide's delete section names it, derived in
+    `test/countsTruth.test.ts`.
+  - `ConceptCreate`, `ConceptItem`, `ConceptLinkItem`, `ConceptLinkWrite`
+    and `ConceptUpdate`: `refersTo` now lists every form, `query:` among
+    them, where it said "one of four forms".
+  - Descriptions that named a client or a stale behaviour, now neutral or
+    current: `ReleaseApprovalSummary` ("a client's workspace"),
+    `ValidateDocumentResponse` (both validation routes use the catalog) and
+    `GET /api/v1/authoring/entity-contracts` (the persona is a field of the
+    agent).
+  `entity-contracts.tool-conditional_trigger.json` was re-recorded from the
+  same `main`; only `rulesVersion` changed. `src/generated/listFilters.ts`
+  regenerates unchanged. `check-contract-drift.mjs --fresh` exits 0. Same
+  safety as the #106 entry (`env -i`, audit hook, `env_file = None`, `src`
+  loaded from the worktree). No client name is left in the snapshot.
+
+- **A file reference carries its stored `sha256` (axonity-flow#2299), replaced by the entry above:** a WHOLE dump with `dump_openapi.py` (`build_openapi()`
   + `serialize()`) from the branch `feat/2299-file-sha256` at `dee25e40a`, not
   merged yet — this snapshot and that PR are merged and rolled out together.
   A dump of the same branch at `3286b387e` (no schema or route changes after

@@ -121,6 +121,12 @@ function isExcluded(operation: string): boolean {
  * The full refresh after axonity-flow#2176 (`main` at `76d04404d`) added 23
  * more the same way: of the 34 operations it brought in, these are the ones no
  * tool covers and no rule excludes. Undecided here too, for #79.
+ *
+ * The refresh from `main` at `68ef764b9` added three more: an agent's runs
+ * panel (axonity-flow#2363), its publish overview (#2382) and the preview of a
+ * workflow's owner move (#2363). The fourth operation it brought,
+ * `POST /agents/{id}/publish-release`, is excluded in `denyList.ts`: it
+ * publishes.
  */
 const OPEN_FOR_DECISION_79: readonly string[] = [
   "DELETE /api/v1/audiences/{audience_id}",
@@ -129,6 +135,8 @@ const OPEN_FOR_DECISION_79: readonly string[] = [
   "GET /api/v1/agents/activity",
   "GET /api/v1/agents/framework-tools",
   "GET /api/v1/agents/{agent_id}/activity",
+  "GET /api/v1/agents/{agent_id}/publish-overview",
+  "GET /api/v1/agents/{agent_id}/runs",
   "GET /api/v1/authoring/prompt-variables",
   "GET /api/v1/automatic-agents",
   "GET /api/v1/briefs",
@@ -161,6 +169,7 @@ const OPEN_FOR_DECISION_79: readonly string[] = [
   "GET /api/v1/webhook-triggers/environment",
   "GET /api/v1/workflows/{workflow_id}/action-verdicts",
   "GET /api/v1/workflows/{workflow_id}/action-verdicts/counts",
+  "GET /api/v1/workflows/{workflow_id}/ownership-preview",
   "PATCH /api/v1/automatic-agents/{agent_id}",
   "PATCH /api/v1/data-tables/{table_id}/rows/{row_id}",
   "PATCH /api/v1/knowledge/source-types/{key}",

@@ -143,7 +143,7 @@
       }
     },
     "tool": {
-      "contractVersion": "827cb59a312e",
+      "contractVersion": "01aceb97eb9c",
       "create": {
         "fields": [
           {
@@ -1309,6 +1309,7 @@
           "builtin": {
             "allowed": [
               "validators.abs_min",
+              "validators.advice_follows_its_link",
               "validators.answer_is_brief",
               "validators.array_item_values_in_input_tokens",
               "validators.array_items_field_in_set",
@@ -1320,21 +1321,26 @@
               "validators.array_items_slot_differs",
               "validators.array_items_slot_min_length",
               "validators.array_items_slot_no_control_chars",
+              "validators.board_uses_its_fixed_words",
               "validators.both_or_neither",
               "validators.differs",
+              "validators.evidence_was_tested",
               "validators.figures_were_read",
               "validators.has_keys",
               "validators.identifiers_were_read",
               "validators.in_range",
               "validators.is_numeric",
               "validators.is_present",
+              "validators.links_hold_to_their_tests",
               "validators.matches_pattern",
               "validators.matches_template",
               "validators.measures_were_read",
               "validators.min_length",
               "validators.min_length_when",
               "validators.no_control_chars",
+              "validators.no_figures_outside_placeholders",
               "validators.one_of",
+              "validators.partition_closes",
               "validators.slots_must_exist_in_session_memory"
             ],
             "field": "implementation.builtin"
@@ -1436,5 +1442,5 @@
     "toolbox",
     "trigger_element"
   ],
-  "rulesVersion": "b73eceb50b6f"
+  "rulesVersion": "ee97725f0aa6"
 }

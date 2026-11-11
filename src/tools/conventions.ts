@@ -247,7 +247,7 @@ has run cleanly once, at its current version.
 - Deleting is not archiving. Some entities also have a \`status\` that can be
   \`archived\` — kept, not offered — set with \`update_*\`: \`agent\`, \`tool\`,
   \`skill\`, \`policy\`, \`reference_doc\`, \`output_schema\`, \`data_table\`,
-  \`measure\` and \`application\`. The values each takes are in
+  \`measure\`, \`query\` and \`application\`. The values each takes are in
   \`get_entity_authoring_contract\`. Runs have an archive of their own
   (\`archive_run\` / \`unarchive_run\`, see below).
 
