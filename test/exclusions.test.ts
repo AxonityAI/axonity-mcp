@@ -200,12 +200,14 @@ describe("registered surface stays inside its authority boundary", () => {
     // The deploy-time secret surface stays closed to reads as well.
     expect(forbids("GET", "/api/v1/config/secrets")).toBe(true);
   });
-  it("every publish route in the snapshot is forbidden, whatever it is called (poison check)", () => {
+  it("every write named publish, release or go-live in the snapshot is forbidden, however spelled (poison check)", () => {
     // `/publish` and `/unpublish` were the only spellings once. axonity-flow#2382
     // added `POST /agents/{id}/publish-release`, which publishes an agent with
     // its parts at once and no approval row, and the single rule above did not
-    // see it. Derived from the pinned snapshot, so the next spelling turns the
-    // build red here rather than slipping past the boundary.
+    // see it. Derived from the pinned snapshot, so a new spelling of publish,
+    // release or go-live (case, `-`, `_`, run together) turns the build red
+    // here. A synonym (`deploy`, `make-live`) is NOT caught by this check: the
+    // deny list's own rules have to hold those.
     const snapshot = pinnedSnapshot();
     expect(publishingWrites(snapshot)).toContain("POST /api/v1/agents/{agent_id}/publish-release");
     expect(uncoveredPublishing(snapshot), "a publish route the deny list does not cover").toEqual([]);
@@ -226,6 +228,16 @@ describe("registered surface stays inside its authority boundary", () => {
     copy.paths[path] = { post: { operationId: "planted_operation" } };
     expect(uncoveredPublishing(copy)).toEqual([`POST ${path}`]);
   });
+
+  it.each(["{agent_id}:publish", "{agent_id}publish"])(
+    "a segment that carries a parameter, %s, is read past the parameter",
+    (segment) => {
+      const copy = pinnedSnapshot();
+      const path = `/api/v1/agents/${segment}`;
+      copy.paths[path] = { post: { operationId: "planted_operation" } };
+      expect(uncoveredPublishing(copy)).toEqual([`POST ${path}`]);
+    },
+  );
 
   it("a write whose operationId says it goes live, under any path, is caught", () => {
     const copy = pinnedSnapshot();
@@ -270,7 +282,7 @@ const saysPublish = (name: string) => name.includes("publish") || name.includes(
 
 /**
  * Every write operation of `snapshot` whose name says it publishes: a path
- * segment (not a `{parameter}`) that contains `publish` or `release` or is
+ * segment (with any `{parameter}` cut out) that contains `publish` or `release` or is
  * `golive`, or an operationId that contains any of the three. Wider on
  * purpose: a route caught here that does NOT publish is named in
  * NOT_PUBLISHING with its reason, never filtered out by the pattern.
@@ -280,10 +292,12 @@ function publishingWrites(snapshot: Snapshot): string[] {
     Object.entries(ops)
       .filter(([m]) => WRITE_METHODS.includes(m.toUpperCase()))
       .filter(([, op]) => {
+        // A `{parameter}` is cut out, not the segment it sits in: what is left
+        // of `{agent_id}:publish` is still a word to read.
         const segments = path
           .split("/")
-          .filter((seg) => seg !== "" && !seg.startsWith("{"))
-          .map(letters);
+          .map((seg) => letters(seg.replace(/\{[^}]*\}/g, "")))
+          .filter((seg) => seg !== "");
         const operationId = letters(op.operationId ?? "");
         return (
           segments.some((seg) => saysPublish(seg) || seg === "golive") ||
