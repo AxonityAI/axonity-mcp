@@ -215,7 +215,7 @@ has run cleanly once, at its current version.
     the author owns that value and it is overwritten anyway.
   - **A run can park instead of finishing.** A step that asks a question waits
     for an answer, so "it never came back" usually means "it is waiting on you".
-    \`read_run_waiting_on\` says what for; \`answer_run_question\` (or
+    \`list_todo_steps\` lists the step it waits on; \`answer_run_question\` (or
     \`send_run_message\` on a conversation run) resumes it. Answer your own test
     runs; on a run a human is depending on, the answer is theirs to give.
   - A FOR EACH launch is not one result. \`read_run_items_summary\` is the
@@ -918,11 +918,12 @@ a document to find out what the platform did.
   \`agentId\` for one agent's items; without it the list shows every item.
   \`groupKey\` is equal for questions with the same workflow, step and text, so
   they can be shown once; each is still answered on its own run.
-- It is PAGED over the waiting RUNS, so \`items\` can be longer than
-  \`pageSize\` — one run may park several steps — or, without \`agentId\`,
-  shorter. Follow \`nextCursor\` until it is null before concluding anything
-  about how much is waiting. \`read_run_waiting_on\` is a different read: the
-  pending wake-tasks of one run you already have.
+- \`list_todo_steps\` is PAGED over the waiting RUNS, so \`items\` can be
+  longer than \`pageSize\` — one run may park several steps — or shorter.
+  Follow \`nextCursor\` until it is null before concluding anything about how
+  much is waiting. \`read_run_waiting_on\` is a different read: the pending
+  wake-tasks of one run (an answer on its way, a timer, a callback, a batch);
+  an open question has none.
 - A run's archive is reversible (\`archive_run\` / \`unarchive_run\`);
   \`bulk_delete_runs\` is not.
 

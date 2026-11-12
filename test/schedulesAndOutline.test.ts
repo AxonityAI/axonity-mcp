@@ -367,3 +367,73 @@ describe("the guide says both, where an agent will meet them", () => {
     expect(text).toContain("scheduleRuleKinds");
   });
 });
+
+/**
+ * Review of 4347f84 (must): `GET /runs/{id}/waiting-on` lists a run's PENDING
+ * WAKE-TASKS. A step that waits on a person — an open question, a plan, a
+ * manual or decision step — has none: the `user_answer` task is planted only
+ * once a person answers (axonity-flow `RunService.plant_ask_user_wake_task`).
+ * The kinds that do sit there are time, user_answer, user_message, callback
+ * and batch_complete (`wake_task_describer.py`). So no description may send an
+ * agent there to find an open question or the step to complete.
+ */
+describe("read_run_waiting_on is where a run's wake-tasks are, not its open questions", () => {
+  it("read_run_waiting_on names what a wake-task is, and where the person-steps are", () => {
+    const d = setup().descriptions.get("read_run_waiting_on")!;
+    expect(d).not.toMatch(/a question asked of a person/);
+    expect(d).toMatch(/on its way/);
+    expect(d).toMatch(/timer/);
+    expect(d).toMatch(/callback/);
+    expect(d).toMatch(/batch/);
+    expect(d).toMatch(/list_todo_steps/);
+  });
+
+  it("list_todo_steps describes those wake-tasks the same way", () => {
+    const d = setup().descriptions.get("list_todo_steps")!;
+    expect(d).not.toMatch(/\(a question, a timer, a callback\)/);
+    expect(d).toMatch(/read_run_waiting_on[^.]*on its way/);
+  });
+
+  it("the tools that unpark a step find it in list_todo_steps or read_run, not in the wake-tasks", () => {
+    const { descriptions, schemas } = setup();
+    for (const tool of ["start_workflow_run", "answer_run_question", "complete_run_step"]) {
+      const d = descriptions.get(tool)!;
+      expect(d, tool).not.toMatch(/read_run_waiting_on says what it is parked on/);
+      expect(d, tool).not.toMatch(/Find the parked step with read_run_waiting_on/);
+      expect(d, tool).toMatch(/list_todo_steps/);
+    }
+    for (const tool of ["answer_run_question", "complete_run_step"]) {
+      const stepId = schemas.get(tool)!.stepId as z.ZodTypeAny;
+      expect(stepId.description, tool).not.toMatch(/read_run_waiting_on/);
+      expect(stepId.description, tool).toMatch(/list_todo_steps/);
+    }
+  });
+
+  it("the guide's 'a run can park' bullet points at list_todo_steps", async () => {
+    const { CONVENTIONS } = await import("../src/tools/conventions.js");
+    const start = CONVENTIONS.indexOf("**A run can park instead of finishing.**");
+    expect(start).toBeGreaterThanOrEqual(0);
+    const bullet = CONVENTIONS.slice(start, CONVENTIONS.indexOf("\n  - ", start));
+    expect(bullet).not.toMatch(/`read_run_waiting_on` says what for/);
+    expect(bullet).toMatch(/list_todo_steps/);
+  });
+});
+
+describe("whose an item is, as the SQL decides it (review of 4347f84)", () => {
+  it("the budget item is the budget_pause flag, not a date", () => {
+    const d = setup().descriptions.get("list_todo_steps")!;
+    expect(d).not.toMatch(/before 11 Nov/);
+    expect(d).toContain("`budget_pause`");
+  });
+
+  it("a manual step is nobody's when the workflow has no live owner, not only when deleted", () => {
+    const d = setup().descriptions.get("list_todo_steps")!;
+    expect(d).toMatch(/no live owner/);
+  });
+
+  it("the guide's paging bullet names its tool and does not promise a full page", async () => {
+    const { CONVENTIONS } = await import("../src/tools/conventions.js");
+    expect(CONVENTIONS).not.toMatch(/\n- It is PAGED over the waiting RUNS/);
+    expect(CONVENTIONS).not.toMatch(/or, without `agentId`,\s+shorter/);
+  });
+});

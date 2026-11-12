@@ -59,8 +59,9 @@ export function registerRunTools(server: McpServer, client: AxonityClient): void
       "triggerId that does not exist is a 422 listing the ones that do, never a " +
       "quiet fallback to a different start. " +
       "\n\nA run may PARK on a step that asks a question instead of finishing. " +
-      "read_run_waiting_on says what it is parked on; answer_run_question and " +
-      "send_run_message are how it moves again. " +
+      "list_todo_steps lists the step it waits on (each item carries its runId " +
+      "and stepId); answer_run_question and send_run_message are how it moves " +
+      "again. " +
       "\n\nA chat with the Dashboard Analyst is not a workflow run: start one " +
       "with start_conversation.",
     {
@@ -337,9 +338,10 @@ export function registerRunTools(server: McpServer, client: AxonityClient): void
       "A question or a plan belongs to the agent that asked (the agent of the " +
       "step's latest orchestrator call; with none on record, the workflow's " +
       "owner). A manual step or a decision belongs to the workflow's owner " +
-      "(none when the workflow is deleted). None for the budget question the " +
-      "platform itself asked of a run paused before 11 Nov 2026, and for every " +
-      "step of a run the run history hides (a hidden platform workflow). Pass " +
+      "(none when the workflow has no live owner or is deleted). None for the " +
+      "budget question the platform itself asked under the old budget rule " +
+      "(marked `budget_pause` in the question's state), and for every step of " +
+      "a run the run history hides (a hidden platform workflow). Pass " +
       "`agentId` for that agent's items only — the items its \"Needs you\" " +
       "counts; an agent of another workspace has none. Without it the list " +
       "shows every item, those on no agent included. " +
@@ -361,7 +363,8 @@ export function registerRunTools(server: McpServer, client: AxonityClient): void
       "pageSize, even empty, while hasMore is true; with agentId only the runs " +
       "holding an item of that agent are walked. " +
       "\n\nread_run_waiting_on is a different read: the pending wake-tasks of " +
-      "one run you already have (a question, a timer, a callback).",
+      "one run you already have (an answer or a chat message on its way, a " +
+      "timer, a callback, a batch). An open question has no wake-task.",
     {
       limit: z
         .number()
@@ -583,11 +586,16 @@ export function registerRunTools(server: McpServer, client: AxonityClient): void
     "read_run_waiting_on",
     "Why a run is PARKED. A run in `waiting` or `input_required` is not stuck " +
       "and not slow — it is holding for something, and this lists every pending " +
-      "wake-task targeting it: a question asked of a person, a timer, a callback " +
-      "that has not arrived. Read this before concluding a test run failed. " +
+      "wake-task targeting it: an answer or a chat message on its way, a timer, " +
+      "a callback or a batch that has not completed. Read this before concluding " +
+      "a test run failed. " +
+      "\n\nA step that waits on a PERSON — an open question, a plan, a manual or " +
+      "a decision step — has NO wake-task and is not here: a question's wake-task " +
+      "is planted only once someone answers it. Those steps are on " +
+      "list_todo_steps (with their runId and stepId), and in read_run as a step " +
+      "whose status is `waiting_for_input`. " +
       "\n\nAn EMPTY list is a real answer, not an error: the run may have every " +
-      "wake already resolved and be about to resume. " +
-      "\n\nWhen the answer is a question, answer_run_question is what unparks it.",
+      "wake already resolved and be about to resume, or it waits on a person.",
     {
       runId: z.string().describe("The run's id."),
       limit: z.number().int().optional().describe("How many to return. Default 50."),
@@ -694,14 +702,14 @@ export function registerRunTools(server: McpServer, client: AxonityClient): void
     "Answer an `ask_user` step a run is parked on, so the run resumes. This is " +
       "what makes \"start a run and see what it does\" finishable: without it a " +
       "workflow that asks anything waits forever and a test never returns a " +
-      "verdict. Find the parked step with read_run_waiting_on or read_run. " +
+      "verdict. Find the parked step with list_todo_steps or read_run. " +
       "\n\nThe answer is recorded as the ANSWER A PERSON WOULD HAVE GIVEN and " +
       "the run proceeds on it. On a run a human is depending on, that is their " +
       "decision to make, not yours — answer your own test runs, and ask before " +
       "answering someone else's. Returns the run's updated detail.",
     {
       runId: z.string().describe("The run's id."),
-      stepId: z.string().describe("The suspended step's id, from read_run_waiting_on."),
+      stepId: z.string().describe("The suspended step's id, from list_todo_steps or read_run."),
       answer: z.string().describe("The answer text the step is waiting for."),
     },
     async ({ runId, stepId, answer }) =>
@@ -726,13 +734,13 @@ export function registerRunTools(server: McpServer, client: AxonityClient): void
       "it. Only do this when a person has told you the work is done, or on a " +
       "test run of your own where nothing real depended on the step. Never to " +
       "get a stuck run moving. " +
-      "\n\nFind the parked step with read_run_waiting_on. Returns the run's " +
+      "\n\nFind the parked step with list_todo_steps or read_run. Returns the run's " +
       "updated detail. Deciding a PLAN APPROVAL is a different thing again and " +
       "is deliberately not available here — that step exists to get a human's " +
       "review, and an agent approving it would often be approving its own plan.",
     {
       runId: z.string().describe("The run's id."),
-      stepId: z.string().describe("The parked step's id, from read_run_waiting_on."),
+      stepId: z.string().describe("The parked step's id, from list_todo_steps or read_run."),
       selectedBranch: z
         .string()
         .optional()
