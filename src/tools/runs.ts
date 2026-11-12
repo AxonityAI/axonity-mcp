@@ -321,9 +321,33 @@ export function registerRunTools(server: McpServer, client: AxonityClient): void
 
   server.tool(
     "list_todo_steps",
-    "The steps across the TENANT that are waiting on a human — every parked " +
-      "run, whatever it is parked on. This is the list you read to answer 'is " +
-      "anything stuck on me?' without knowing which run to look at. " +
+    "The steps across the TENANT that are waiting on a person — one item per " +
+      "step. This is the list you read to answer 'is anything stuck on me?' " +
+      "without knowing which run to look at. " +
+      "\n\nWHAT IS AN ITEM: a step of a run that is `waiting` or " +
+      "`input_required`, not archived and not a conversation, that waits for " +
+      "one of four things (`todoType`): `ask_user` — an agent asked a question " +
+      "that is not answered; `plan_approval` — a plan waits for a decision; " +
+      "`manual_step` or `decision` — the step type says a person does it. NOT " +
+      "items: a debug pause (`phase_control`) or any other step without one of " +
+      "those reasons, and a question already answered whose run has not " +
+      "resumed yet (the answer is on its way). A conversation waits for its " +
+      "person in the chat, not here. " +
+      "\n\nWHOSE IT IS: each item belongs to one agent or to none (`agentId`). " +
+      "A question or a plan belongs to the agent that asked (the agent of the " +
+      "step's latest orchestrator call; with none on record, the workflow's " +
+      "owner). A manual step or a decision belongs to the workflow's owner " +
+      "(none when the workflow is deleted). None for the budget question the " +
+      "platform itself asked of a run paused before 11 Nov 2026, and for every " +
+      "step of a run the run history hides (a hidden platform workflow). Pass " +
+      "`agentId` for that agent's items only — the items its \"Needs you\" " +
+      "counts; an agent of another workspace has none. Without it the list " +
+      "shows every item, those on no agent included. " +
+      "\n\nEach item also carries `askedAt` (when the agent asked; null for an " +
+      "item that is not a question) and `groupKey`: equal for literally equal " +
+      "questions — same workflow, same step, question text equal character " +
+      "for character — so they can be shown once. Each is still answered on " +
+      "its own run. Null for an item without a question. " +
       "\n\nTHE RESPONSE IS ONE PAGE, NOT THE FULL LIST: " +
       "{ items, nextCursor, pageSize, hasMore }. While hasMore is true you have " +
       "NOT seen every waiting step — pass the response's nextCursor back as " +
@@ -332,9 +356,12 @@ export function registerRunTools(server: McpServer, client: AxonityClient): void
       "one run can carry several waiting steps, so `items` may be LONGER than " +
       "pageSize. That is not a bug and not an overflow — pageSize bounds what " +
       "was read, not what came back. A fan-out can park thousands of items on " +
-      "one manual step at once, which is why this list is paged at all. " +
-      "\n\nread_run_waiting_on answers the same question for a run you already " +
-      "have in your hand.",
+      "one manual step at once, which is why this list is paged at all. Without " +
+      "agentId a run read may hold no item, so a page can also be shorter than " +
+      "pageSize, even empty, while hasMore is true; with agentId only the runs " +
+      "holding an item of that agent are walked. " +
+      "\n\nread_run_waiting_on is a different read: the pending wake-tasks of " +
+      "one run you already have (a question, a timer, a callback).",
     {
       limit: z
         .number()
@@ -348,9 +375,18 @@ export function registerRunTools(server: McpServer, client: AxonityClient): void
           "Opaque continuation cursor from the previous response's nextCursor. " +
             "Omit for the first page. Do not parse or construct one.",
         ),
+      agentId: z
+        .string()
+        .optional()
+        .describe(
+          "An agent's id (a UUID): only the items that belong to that agent. " +
+            "Omit for every item in the tenant.",
+        ),
     },
-    async ({ limit, cursor }) =>
-      guard(async () => jsonResult(await client.get("/api/v1/runs/todo", { limit, cursor }))),
+    async ({ limit, cursor, agentId }) =>
+      guard(async () =>
+        jsonResult(await client.get("/api/v1/runs/todo", { limit, cursor, agentId })),
+      ),
   );
 
   server.tool(

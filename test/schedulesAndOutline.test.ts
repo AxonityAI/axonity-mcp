@@ -1,4 +1,8 @@
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+
 import { describe, expect, it, vi } from "vitest";
+import { z } from "zod";
 
 import type { AxonityClient } from "../src/client.js";
 import { registerConventions } from "../src/tools/conventions.js";
@@ -30,6 +34,7 @@ interface ToolResult {
 function setup(response: unknown = { ok: true }) {
   const handlers = new Map<string, Handler>();
   const descriptions = new Map<string, string>();
+  const schemas = new Map<string, z.ZodRawShape>();
   const client = {
     get: vi.fn(async () => response),
     post: vi.fn(async () => response),
@@ -41,16 +46,17 @@ function setup(response: unknown = { ok: true }) {
     tool: (
       name: string,
       description: string,
-      _s: unknown,
+      shape: z.ZodRawShape,
       handler: (a: never) => Promise<ToolResult>,
     ) => {
       handlers.set(name, handler as Handler);
       descriptions.set(name, description);
+      schemas.set(name, shape);
     },
   };
   registerTriggerTools(server as never, client as unknown as AxonityClient);
   registerRunTools(server as never, client as unknown as AxonityClient);
-  return { handlers, descriptions, client };
+  return { handlers, descriptions, client, schemas };
 }
 
 function body(r: ToolResult): Record<string, unknown> {
@@ -243,6 +249,106 @@ describe("what a run left behind, and what is waiting on a human", () => {
     const { handlers } = setup(page);
     const result = await handlers.get("list_todo_steps")!({});
     expect(body(result)).toEqual(page);
+  });
+});
+
+/**
+ * `GET /runs/todo?agentId=` (axonity-flow, `waiting_on_a_person`, 11 Nov 2026)
+ * answers only the items of one agent. The parameter has to ARRIVE: Zod drops
+ * a key the tool does not declare without a word, and a handler that forgot to
+ * forward it would answer the whole tenant's list as if it were one agent's.
+ */
+describe("list_todo_steps narrows to one agent with agentId", () => {
+  const snapshot = JSON.parse(
+    readFileSync(
+      fileURLToPath(new URL("./fixtures/openapi.snapshot.json", import.meta.url)),
+      "utf8",
+    ),
+  ) as {
+    paths: Record<
+      string,
+      { get: { parameters?: { name: string; in: string; schema?: unknown }[] } }
+    >;
+    components: { schemas: Record<string, { properties?: Record<string, unknown> }> };
+  };
+
+  it("declares agentId, so Zod keeps it", () => {
+    const input = z.object(setup().schemas.get("list_todo_steps")!);
+    const parsed = input.parse({ agentId: "a-1" }) as Record<string, unknown>;
+    expect(parsed.agentId).toBe("a-1");
+    expect(input.safeParse({}).success).toBe(true);
+  });
+
+  it("forwards agentId under the route's own name", async () => {
+    const { handlers, client } = setup();
+    await handlers.get("list_todo_steps")!({ agentId: "a-1", limit: 20, cursor: "c" });
+    expect(client.get).toHaveBeenCalledWith("/api/v1/runs/todo", {
+      limit: 20,
+      cursor: "c",
+      agentId: "a-1",
+    });
+  });
+
+  it("sends no agentId when none is given, so the list is the whole tenant's", async () => {
+    const { handlers, client } = setup();
+    await handlers.get("list_todo_steps")!({});
+    const [, params] = client.get.mock.calls[0] as unknown as [string, Record<string, unknown>];
+    expect(params.agentId).toBeUndefined();
+  });
+
+  it("the name it sends is a query parameter of the route, a uuid", () => {
+    const param = snapshot.paths["/api/v1/runs/todo"].get.parameters!.find(
+      (p) => p.name === "agentId",
+    );
+    expect(param?.in).toBe("query");
+    expect(JSON.stringify(param?.schema)).toContain('"format":"uuid"');
+  });
+
+  it("names the three fields each item carries, as the item schema has them", () => {
+    const fields = Object.keys(snapshot.components.schemas.TodoItem.properties ?? {});
+    expect(fields).toEqual(expect.arrayContaining(["agentId", "askedAt", "groupKey"]));
+    const d = setup().descriptions.get("list_todo_steps")!;
+    for (const f of ["agentId", "askedAt", "groupKey"]) expect(d, f).toContain(`\`${f}\``);
+  });
+
+  it("says what is an item, what is not, and whose it is", () => {
+    const d = setup().descriptions.get("list_todo_steps")!;
+    // The four kinds (`todoType`).
+    for (const kind of ["ask_user", "plan_approval", "manual_step", "decision"]) {
+      expect(d, kind).toContain(kind);
+    }
+    // What waits but is not an item.
+    expect(d).toMatch(/archived/);
+    expect(d).toMatch(/phase_control/);
+    expect(d).toMatch(/already answered/);
+    // Whose it is.
+    expect(d).toMatch(/agent that asked/);
+    expect(d).toMatch(/workflow's owner/);
+    expect(d).toMatch(/budget question/);
+    // It is NOT "every parked run, whatever it is parked on".
+    expect(d).not.toMatch(/whatever it is parked on/);
+  });
+
+  it("does not call read_run_waiting_on the same question: that is a run's wake-tasks", () => {
+    const d = setup().descriptions.get("list_todo_steps")!;
+    expect(d).not.toMatch(/same question/);
+    expect(d).toMatch(/read_run_waiting_on[^.]*wake-task/);
+  });
+
+  it("the guide says the same, at the guide's width", async () => {
+    const { CONVENTIONS } = await import("../src/tools/conventions.js");
+    const start = CONVENTIONS.indexOf("- **`list_todo_steps`**");
+    expect(start).toBeGreaterThanOrEqual(0);
+    // The two bullets on the to-do list, up to the next subject (archiving).
+    const paragraph = CONVENTIONS.slice(start, CONVENTIONS.indexOf("- A run's archive", start));
+    expect(paragraph).toContain("`agentId`");
+    expect(paragraph).toContain("`groupKey`");
+    expect(paragraph).toMatch(/agent\s+that asked/);
+    expect(paragraph).toMatch(/workflow's\s+owner/);
+    expect(paragraph).toMatch(/phase_control/);
+    expect(paragraph).not.toMatch(/same question/);
+    expect(paragraph).toMatch(/nextCursor/);
+    for (const line of paragraph.split("\n")) expect(line.length, line).toBeLessThanOrEqual(84);
   });
 });
 

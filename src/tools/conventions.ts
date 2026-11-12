@@ -908,11 +908,21 @@ a document to find out what the platform did.
   \`read_run_session_memory_file\` opens one. When the trace shows a decision but
   not what it was reading, this is usually where the reason is. Workflow-bound
   reference material is NOT here — that lives in \`reference_docs\`.
-- **\`list_todo_steps\`** is every step in the tenant waiting on a human, across
-  all runs; \`read_run_waiting_on\` is the same question for one run you already
-  have. It is PAGED over the waiting RUNS, so \`items\` can be longer than
-  \`pageSize\` — one run may park several steps. Follow \`nextCursor\` until it
-  is null before concluding anything about how much is waiting.
+- **\`list_todo_steps\`** is every step in the tenant waiting on a person, across
+  all runs: an unanswered question (\`ask_user\`), a plan awaiting approval, a
+  manual step or a decision step. Not on it: archived runs, conversations, a
+  debug pause (\`phase_control\`) and a question already answered. Each item
+  belongs to one agent or none (\`agentId\`): a question or a plan to the agent
+  that asked, a manual or decision step to the workflow's owner, none for the
+  platform's old budget question and for hidden platform workflows. Pass
+  \`agentId\` for one agent's items; without it the list shows every item.
+  \`groupKey\` is equal for questions with the same workflow, step and text, so
+  they can be shown once; each is still answered on its own run.
+- It is PAGED over the waiting RUNS, so \`items\` can be longer than
+  \`pageSize\` — one run may park several steps — or, without \`agentId\`,
+  shorter. Follow \`nextCursor\` until it is null before concluding anything
+  about how much is waiting. \`read_run_waiting_on\` is a different read: the
+  pending wake-tasks of one run you already have.
 - A run's archive is reversible (\`archive_run\` / \`unarchive_run\`);
   \`bulk_delete_runs\` is not.
 

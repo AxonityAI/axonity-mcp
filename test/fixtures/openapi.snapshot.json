@@ -35649,6 +35649,28 @@
       "TodoItem": {
         "description": "A step needing user input — displayed in the TO-DO panel.",
         "properties": {
+          "agentId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agentid"
+          },
+          "askedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Askedat"
+          },
           "branchOptions": {
             "anyOf": [
               {
@@ -35698,6 +35720,17 @@
               }
             ],
             "title": "Createdat"
+          },
+          "groupKey": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Groupkey"
           },
           "question": {
             "anyOf": [
@@ -73109,7 +73142,7 @@
     },
     "/api/v1/runs/todo": {
       "get": {
-        "description": "One page of the steps waiting on a human (epic #811 S5).\n\nPaged over the waiting RUNS, not over the to-do items: the cursor\nnames a position in ``(created_at, id)``, which is a run's\ncoordinates. One waiting run can carry several waiting steps, so\n``items`` may outnumber ``pageSize`` — ``pageSize`` bounds what was\nread, which is what keeps the response bounded.\n\nA fan-out can park thousands of items on a manual step at once, and\nnothing bounds how long they wait, so this list needs its\ncontinuation marker as much as the run list does.",
+        "description": "One page of the steps waiting on a human (epic #811 S5).\n\nPaged over the waiting RUNS, not over the to-do items: the cursor\nnames a position in ``(created_at, id)``, which is a run's\ncoordinates. One waiting run can carry several waiting steps, so\n``items`` may outnumber ``pageSize`` — ``pageSize`` bounds what was\nread, which is what keeps the response bounded.\n\nA fan-out can park thousands of items on a manual step at once, and\nnothing bounds how long they wait, so this list needs its\ncontinuation marker as much as the run list does.\n\nWith ``agentId``: the items of one agent (``waiting_on_a_person``), its\nruns paged the same way — what the agent's page lists, and as many as\nits \"Needs you\" says.",
         "operationId": "list_todo_items_api_v1_runs_todo_get",
         "parameters": [
           {
@@ -73146,6 +73179,25 @@
               ],
               "description": "Opaque continuation cursor from a previous response's nextCursor. Omit for the first page.",
               "title": "Cursor"
+            }
+          },
+          {
+            "description": "Only what waits on a person for this agent: the questions it asked and the steps of its workflows a person does — the items its \"Needs you\" counts.",
+            "in": "query",
+            "name": "agentId",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only what waits on a person for this agent: the questions it asked and the steps of its workflows a person does — the items its \"Needs you\" counts.",
+              "title": "Agentid"
             }
           }
         ],
