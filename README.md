@@ -524,8 +524,12 @@ you want: `read_run_value` for one large step value (by the digest in
 the id in `agentInvocations`). Reading a whole run to find one message is the
 habit these replace.
 
-**A run can park rather than finish.** `list_todo_steps` lists the step it
-waits on; `answer_run_question` answers an `ask_user` step and
+**A run can park rather than finish.** Where you see it depends on what it
+waits on: `list_todo_steps` has every step that waits on a person (a question, a
+plan, a manual or decision step); `read_run_waiting_on` has a timer and an
+answer or callback result on its way; a FOR EACH batch is on
+`read_run_for_each_progress`; a conversation run waits in its chat.
+`answer_run_question` answers an `ask_user` step and
 `send_run_message` sends a turn to a conversation run. Both record the input as
 a person's, so use them on runs you started. Deciding a **plan approval** and
 restarting a stuck run are deliberately absent — the first is the human review
@@ -562,8 +566,9 @@ agent that asked, a manual or decision step to the workflow's owner — and
 the waiting **runs**, so `items` can be longer than `pageSize` — one run may
 park several steps — or shorter. Follow `nextCursor` to the end before
 concluding anything about how much is waiting. `read_run_waiting_on` is a
-different read: a run's pending wake-tasks (an answer on its way, a timer, a
-callback, a batch), where an open question never appears.
+different read: a run's pending wake-tasks (a timer; an answer or a callback's
+result on its way), where an open question, a FOR EACH batch and a callback
+still running never appear.
 
 **What an agent wrote to itself.** `list_run_session_memory` lists the files an
 agent left during a run (metadata only, up to 200 per run) and

@@ -153,6 +153,9 @@ describe("the README says what list_todo_steps and read_run_waiting_on are", () 
     const paragraph = README.slice(start, README.indexOf("\n\n", start));
     expect(paragraph).toContain("`agentId`");
     expect(paragraph).toMatch(/wake-tasks/);
+    // A FOR EACH batch plants no wake-task (review r2 of 554ca16).
+    expect(paragraph).not.toMatch(/a callback, a batch\)/);
+    expect(paragraph).toMatch(/callback's\s+result/);
   });
 
   it("finds a parked step on the to-do list, not among the wake-tasks", () => {
@@ -161,5 +164,9 @@ describe("the README says what list_todo_steps and read_run_waiting_on are", () 
     const paragraph = README.slice(start, README.indexOf("\n\n", start));
     expect(paragraph).not.toMatch(/`read_run_waiting_on` says what it is\s+waiting for/);
     expect(paragraph).toMatch(/`list_todo_steps`/);
+    // The to-do list holds only what waits on a person, not a conversation.
+    expect(paragraph).not.toMatch(/`list_todo_steps` lists the step it\s+waits on;/);
+    expect(paragraph).toMatch(/`list_todo_steps`[^;]*person/);
+    expect(paragraph).toMatch(/`read_run_waiting_on`/);
   });
 });

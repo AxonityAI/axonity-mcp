@@ -373,9 +373,15 @@ describe("the guide says both, where an agent will meet them", () => {
  * WAKE-TASKS. A step that waits on a person — an open question, a plan, a
  * manual or decision step — has none: the `user_answer` task is planted only
  * once a person answers (axonity-flow `RunService.plant_ask_user_wake_task`).
- * The kinds that do sit there are time, user_answer, user_message, callback
- * and batch_complete (`wake_task_describer.py`). So no description may send an
- * agent there to find an open question or the step to complete.
+ * The rows that do sit there (`resume_run_id` = the run, `pending`) are a
+ * timer (`wait_here`), an answer or a chat message on its way
+ * (`user_answer` / `user_message`), and a callback whose work has FINISHED
+ * (`_plant_callback_wake_if_needed`, on mark_succeeded / failed / dead-letter).
+ * A FOR EACH batch plants no row at all — the parent waits on a marker in
+ * `step_states` (SUSPEND-RESUME-DESIGN §5/§12, `schemas/task_queue.py`
+ * WAKE_EVENT_KINDS) — and a callback still running has none yet (review r2 of
+ * 554ca16). So no description may send an agent there to find an open
+ * question, a batch or running work, nor read an empty list as "a person".
  */
 describe("read_run_waiting_on is where a run's wake-tasks are, not its open questions", () => {
   it("read_run_waiting_on names what a wake-task is, and where the person-steps are", () => {
@@ -383,15 +389,31 @@ describe("read_run_waiting_on is where a run's wake-tasks are, not its open ques
     expect(d).not.toMatch(/a question asked of a person/);
     expect(d).toMatch(/on its way/);
     expect(d).toMatch(/timer/);
-    expect(d).toMatch(/callback/);
-    expect(d).toMatch(/batch/);
+    expect(d).toMatch(/callback's result on its way/);
     expect(d).toMatch(/list_todo_steps/);
+    // Not a wake-task: a batch, a callback that has not completed.
+    expect(d).not.toMatch(/a callback or a batch/);
+    expect(d).not.toMatch(/has not completed/);
+    expect(d).toMatch(/FOR EACH[^.]*no wake-task/);
+    expect(d).toMatch(/read_run_for_each_progress/);
+    expect(d).toMatch(/list_run_tasks/);
+    // In read_run, waitReason singles out the person-wait, not the status.
+    expect(d).toMatch(/`waitReason`/);
+  });
+
+  it("an empty list covers every wait without a wake-task, not only a person", () => {
+    const d = setup().descriptions.get("read_run_waiting_on")!;
+    const empty = d.slice(d.indexOf("An EMPTY list"));
+    expect(empty).toMatch(/person/);
+    expect(empty).toMatch(/batch/);
+    expect(empty).toMatch(/callback still running/);
   });
 
   it("list_todo_steps describes those wake-tasks the same way", () => {
     const d = setup().descriptions.get("list_todo_steps")!;
     expect(d).not.toMatch(/\(a question, a timer, a callback\)/);
     expect(d).toMatch(/read_run_waiting_on[^.]*on its way/);
+    expect(d).not.toMatch(/a callback, a batch\)/);
   });
 
   it("the tools that unpark a step find it in list_todo_steps or read_run, not in the wake-tasks", () => {
@@ -416,6 +438,20 @@ describe("read_run_waiting_on is where a run's wake-tasks are, not its open ques
     const bullet = CONVENTIONS.slice(start, CONVENTIONS.indexOf("\n  - ", start));
     expect(bullet).not.toMatch(/`read_run_waiting_on` says what for/);
     expect(bullet).toMatch(/list_todo_steps/);
+    // Only a step that waits on a PERSON is there; a conversation waits in its chat.
+    expect(bullet).not.toMatch(/`list_todo_steps` lists the step it waits on;/);
+    expect(bullet).toMatch(/`list_todo_steps`[^;]*person/);
+    expect(bullet).toMatch(/`read_run_waiting_on`/);
+  });
+
+  it("the guide's paging bullet lists the wake-tasks there are, and no batch", async () => {
+    const { CONVENTIONS } = await import("../src/tools/conventions.js");
+    const start = CONVENTIONS.indexOf("- `list_todo_steps` is PAGED");
+    expect(start).toBeGreaterThanOrEqual(0);
+    const bullet = CONVENTIONS.slice(start, CONVENTIONS.indexOf("\n- ", start + 1));
+    expect(bullet).not.toMatch(/a callback, a batch\)/);
+    expect(bullet).toMatch(/callback's result/);
+    for (const line of bullet.split("\n")) expect(line.length, line).toBeLessThanOrEqual(84);
   });
 });
 

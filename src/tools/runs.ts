@@ -363,8 +363,8 @@ export function registerRunTools(server: McpServer, client: AxonityClient): void
       "pageSize, even empty, while hasMore is true; with agentId only the runs " +
       "holding an item of that agent are walked. " +
       "\n\nread_run_waiting_on is a different read: the pending wake-tasks of " +
-      "one run you already have (an answer or a chat message on its way, a " +
-      "timer, a callback, a batch). An open question has no wake-task.",
+      "one run you already have (a timer; an answer, a chat message or a " +
+      "callback's result on its way). An open question has no wake-task.",
     {
       limit: z
         .number()
@@ -586,16 +586,21 @@ export function registerRunTools(server: McpServer, client: AxonityClient): void
     "read_run_waiting_on",
     "Why a run is PARKED. A run in `waiting` or `input_required` is not stuck " +
       "and not slow — it is holding for something, and this lists every pending " +
-      "wake-task targeting it: an answer or a chat message on its way, a timer, " +
-      "a callback or a batch that has not completed. Read this before concluding " +
-      "a test run failed. " +
+      "wake-task targeting it: a timer, or an answer, a chat message or a " +
+      "callback's result on its way (a callback row appears only once the work " +
+      "behind it has finished). Read this before concluding a test run failed. " +
       "\n\nA step that waits on a PERSON — an open question, a plan, a manual or " +
       "a decision step — has NO wake-task and is not here: a question's wake-task " +
       "is planted only once someone answers it. Those steps are on " +
       "list_todo_steps (with their runId and stepId), and in read_run as a step " +
-      "whose status is `waiting_for_input`. " +
+      "whose status is `waiting_for_input` and whose `waitReason` says why. " +
+      "\n\nA run waiting on a FOR EACH batch, or on a callback whose work is " +
+      "still running, has no wake-task here either: the batch waits as a marker " +
+      "on its step (watch it with read_run_for_each_progress), and the running " +
+      "work is a task in list_run_tasks. " +
       "\n\nAn EMPTY list is a real answer, not an error: the run may have every " +
-      "wake already resolved and be about to resume, or it waits on a person.",
+      "wake already resolved and be about to resume, or it waits on something " +
+      "with no wake-task — a person, a FOR EACH batch, a callback still running.",
     {
       runId: z.string().describe("The run's id."),
       limit: z.number().int().optional().describe("How many to return. Default 50."),
