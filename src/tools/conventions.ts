@@ -968,6 +968,18 @@ Both halves live in the workflow DOCUMENT, so both are ordinary
   target and see the interface you are binding to, where the validator only
   tells you afterwards that the one you picked was wrong.
 
+## Modules and settings
+
+Use \`list_modules\` to discover modules in this workspace, then
+\`read_module_settings_schema\` for a module's live field contract and
+\`read_module_settings\` for its workspace values and revisions. Use
+\`update_module_settings\` for the intended changes and read back the result.
+These tools are generic: take field rules from the live schema, not from a
+module-specific recipe. Their descriptions define paging and change operations.
+Workspace setting saves take effect immediately and have no publication gate.
+They do not switch modules on or off or select installation, role or personal
+settings. The backend checks the token's authority and the field's permissions.
+
 ## Secrets
 - Never handle a real credential. A connector's \`authConfig\` takes placeholders
   only ("{{ MY_SECRET }}" or ""); a human fills the real value in Axonity. This

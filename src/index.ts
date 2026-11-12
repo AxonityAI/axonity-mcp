@@ -52,6 +52,7 @@ import { registerComponentTools } from "./tools/components.js";
 import { registerConceptTools } from "./tools/concepts.js";
 import { registerMeasureInfluenceTools } from "./tools/measureInfluences.js";
 import { registerKnowledgeGraphTools } from "./tools/knowledgeGraph.js";
+import { registerModuleTools } from "./tools/modules.js";
 import { registerOperationsTools } from "./tools/operations.js";
 import { registerPromptPlacementTools } from "./tools/promptPlacement.js";
 import { registerQueryTools } from "./tools/queries.js";
@@ -762,6 +763,7 @@ export function registerAll(server: ServerLike, client: AxonityClient): void {
   registerSubworkflowTools(server as McpServer, client);
   registerToolboxTools(server as McpServer, client);
   registerOperationsTools(server as McpServer, client);
+  registerModuleTools(server as McpServer, client);
   registerDataTableTools(server as McpServer, client);
   registerDataSourceTools(server as McpServer, client);
   registerMeasureTools(server as McpServer, client);

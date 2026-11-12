@@ -153,7 +153,6 @@ const OPEN_FOR_DECISION_79: readonly string[] = [
   "GET /api/v1/invoices/{invoice_id}",
   "GET /api/v1/knowledge/settings",
   "GET /api/v1/knowledge/source-types",
-  "GET /api/v1/modules",
   "GET /api/v1/publish-approvals/pending-count",
   "GET /api/v1/runs/{run_id}/action-verdicts",
   "GET /api/v1/runs/{run_id}/application-actions",

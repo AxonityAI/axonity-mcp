@@ -74,6 +74,7 @@ export const PROBE_ARGS: Record<string, unknown> = {
   toolboxId: "x", toolIds: ["t-1"], authConfig: null, description: "x",
   digest: "d", invocationId: "x", itemCap: 50, enabled: true, rules: [{}],
   fileId: "x",
+  changes: [{ key: "example", operation: "set", value: null, expectedRevision: null }],
 };
 
 /**
