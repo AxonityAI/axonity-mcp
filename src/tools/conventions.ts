@@ -215,9 +215,13 @@ has run cleanly once, at its current version.
     the author owns that value and it is overwritten anyway.
   - **A run can park instead of finishing.** A step that asks a question waits
     for an answer, so "it never came back" usually means "it is waiting on you".
-    \`read_run_waiting_on\` says what for; \`answer_run_question\` (or
-    \`send_run_message\` on a conversation run) resumes it. Answer your own test
-    runs; on a run a human is depending on, the answer is theirs to give.
+    \`list_todo_steps\` has every step that waits on a person (a question, a
+    plan, a manual or decision step); \`read_run_waiting_on\` has a timer and an
+    answer or callback result on its way; a FOR EACH batch is on
+    \`read_run_for_each_progress\`; a conversation run waits in its chat.
+    \`answer_run_question\` (or \`send_run_message\` on a conversation run)
+    resumes it. Answer your own test runs; on a run a human is depending on, the
+    answer is theirs to give.
   - A FOR EACH launch is not one result. \`read_run_items_summary\` is the
     roll-up ("4,415 processed · 12 failed") and \`list_run_items\` the rows —
     with \`outcome: "failed"\`, because the failures are scattered and filtering
@@ -908,11 +912,22 @@ a document to find out what the platform did.
   \`read_run_session_memory_file\` opens one. When the trace shows a decision but
   not what it was reading, this is usually where the reason is. Workflow-bound
   reference material is NOT here — that lives in \`reference_docs\`.
-- **\`list_todo_steps\`** is every step in the tenant waiting on a human, across
-  all runs; \`read_run_waiting_on\` is the same question for one run you already
-  have. It is PAGED over the waiting RUNS, so \`items\` can be longer than
-  \`pageSize\` — one run may park several steps. Follow \`nextCursor\` until it
-  is null before concluding anything about how much is waiting.
+- **\`list_todo_steps\`** is every step in the tenant waiting on a person, across
+  all runs: an unanswered question (\`ask_user\`), a plan awaiting approval, a
+  manual step or a decision step. Not on it: archived runs, conversations, a
+  debug pause (\`phase_control\`) and a question already answered. Each item
+  belongs to one agent or none (\`agentId\`): a question or a plan to the agent
+  that asked, a manual or decision step to the workflow's owner, none for the
+  platform's old budget question and for hidden platform workflows. Pass
+  \`agentId\` for one agent's items; without it the list shows every item.
+  \`groupKey\` is equal for questions with the same workflow, step and text, so
+  they can be shown once; each is still answered on its own run.
+- \`list_todo_steps\` is PAGED over the waiting RUNS, so \`items\` can be
+  longer than \`pageSize\` — one run may park several steps — or shorter.
+  Follow \`nextCursor\` until it is null before concluding anything about how
+  much is waiting. \`read_run_waiting_on\` is a different read: the pending
+  wake-tasks of one run (a timer; an answer or a callback's result on its way);
+  an open question, a FOR EACH batch and a callback still running have none.
 - A run's archive is reversible (\`archive_run\` / \`unarchive_run\`);
   \`bulk_delete_runs\` is not.
 
