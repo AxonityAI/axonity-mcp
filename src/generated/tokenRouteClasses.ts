@@ -766,6 +766,7 @@ export const TOKEN_ROUTE_CLASSES: Readonly<Record<string, TokenRoute>> = {
   "POST /api/v1/workflows/{workflow_id}/webhook-triggers": { class: "dicht", why: "webhook triggers" },
   "POST /mcp": { class: "dicht", why: "no authentication of its own: a token never reaches the gate" },
   "PUT /api/v1/agents/{agent_id}": { class: "configuratie" },
+  "PUT /api/v1/agents/{agent_id}/team": { class: "configuratie" },
   "PUT /api/v1/applications/{application_id}": { class: "configuratie" },
   "PUT /api/v1/applications/{application_id}/executors": { class: "dicht", why: "application executors and knowledge" },
   "PUT /api/v1/audiences/{audience_id}": { class: "dicht", why: "administration settings" },
