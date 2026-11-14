@@ -9,7 +9,13 @@ the same verbs the internal Builder team has, minus direct publish.
 
 It runs on your machine and talks to Axonity **only over the public REST API**,
 authenticated with a per-tenant **service token**. The backend re-enforces
-tenant + scope on every call, so the connector is not a trust boundary.
+tenant + scope on every call, so the connector is not a trust boundary for what
+it may do in Axonity. One thing only the connector decides: which **local file**
+leaves your machine. `upload_run_input_file` with `path` reads any file the user
+running the connector may read, following symlinks, with no folder it is limited
+to, and the platform cannot tell what the file is. Use it with a connector
+running locally for someone who trusts it, and check the path before you approve
+the call — your MCP client's approval of each call is the guard.
 
 ## Setup
 
@@ -41,7 +47,7 @@ tenant + scope on every call, so the connector is not a trust boundary.
 
 ## Tools
 
-477 tools total. `axonity_conventions` (read this first) covers the authoring
+474 tools total. `axonity_conventions` (read this first) covers the authoring
 rules — drafts vs live, optimistic locking, per-entity fields, delete/restore,
 and how to tell a retryable error from one that will never succeed.
 `axonity_semantic_conventions` is its counterpart for one job only: building a
@@ -497,7 +503,7 @@ rule); `"agent"` makes the beat a run whose first step asks an agent.
 ### Runs — evaluating what you built
 
 `start_workflow_run` (test a workflow you built — it runs the **published**
-workflow and really executes), `cancel_run`, `delete_run`, `list_runs`,
+workflow and really executes), `upload_run_input_file`, `cancel_run`, `delete_run`, `list_runs`,
 `list_workflow_runs`, `read_run`, `read_run_trace`, `read_run_cost`,
 `read_runs_summary`, `archive_run` / `unarchive_run`, `bulk_archive_runs` /
 `bulk_delete_runs`. There is no findings endpoint — evaluation means reading a
@@ -509,6 +515,17 @@ own parameters. Pass the one you mean to `start_workflow_run` as `triggerId`;
 omitting it fires the first, which on a workflow with a button *and* a schedule
 is an arbitrary choice. A parameter marked `pinned` is one the **author** owns:
 it is overwritten on every run, so a caller must not send it.
+
+**A start that takes a file.** `upload_run_input_file` stores a file the way the
+start form in Axonity does (`POST /api/v1/run-input-files`) and answers its
+reference, `{ fileId, filename, contentType, sizeBytes, sha256 }`. Put that
+reference in `triggerInput` under a parameter the start declares as a `file`,
+or in a list under one declared as a list of `file`. Give the file as `path`
+(an absolute path on the machine the connector runs on; the bytes never pass
+through the conversation) or as `contentBase64` (when the file is not on that
+machine). One upload serves one run, and only a start by hand
+(`start_workflow_run` or Run in Axonity) takes it. An upload no run takes within
+24 hours is deleted; a file a run took is kept as long as that run exists.
 
 **`read_run` omits the workflow snapshot by default.** It is immutable, it is
 never the answer to a question about the run, and it measured 81% of one real
