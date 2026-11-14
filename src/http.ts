@@ -35,6 +35,7 @@
  */
 
 import { AsyncLocalStorage } from "node:async_hooks";
+import { createHash } from "node:crypto";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 
@@ -71,32 +72,59 @@ export interface HostedServerOptions extends HttpConfig {
   log?: (message: string) => void;
 }
 
+/** The limits the gate applies: the part of `HttpConfig` that is about load. */
+type HostedLimits = Pick<
+  HttpConfig,
+  "maxInFlight" | "maxQueued" | "maxInFlightPerToken" | "maxQueuedPerToken" | "maxLargeBodies"
+>;
+
 export interface HostedServer {
   server: Server;
   port: number;
+  /** Tokens that hold a place or have a caller waiting now (0 when idle). */
+  tokensTracked: () => number;
   close: () => Promise<void>;
 }
 
 /** A waiting room with a fixed number of seats. */
-class Gate {
+class Seats {
   private inFlight = 0;
-  private readonly waiting: (() => void)[] = [];
+  private readonly waiting: ((leave: () => void) => void)[] = [];
 
   constructor(
     private readonly seats: number,
     private readonly room: number,
   ) {}
 
-  /** A release function once seated, or `undefined` when the room is full. */
-  async enter(): Promise<(() => void) | undefined> {
+  get idle(): boolean {
+    return this.inFlight === 0 && this.waiting.length === 0;
+  }
+
+  /**
+   * A release function once seated; `"full"` when there is no seat and no room
+   * to wait; `"gone"` when `gone` fires while waiting — a caller that hung up
+   * leaves the queue at once, it does not keep its place until a seat is free.
+   */
+  async enter(gone: AbortSignal): Promise<(() => void) | "full" | "gone"> {
+    if (gone.aborted) return "gone";
     if (this.inFlight < this.seats) {
       this.inFlight += 1;
       return this.leaver();
     }
-    if (this.waiting.length >= this.room) return undefined;
-    await new Promise<void>((resolve) => this.waiting.push(resolve));
-    // The seat was handed over by the one who left; the count did not drop.
-    return this.leaver();
+    if (this.waiting.length >= this.room) return "full";
+    return new Promise((resolve) => {
+      const grant = (leave: () => void) => {
+        gone.removeEventListener("abort", giveUp);
+        resolve(leave);
+      };
+      const giveUp = () => {
+        const at = this.waiting.indexOf(grant);
+        if (at >= 0) this.waiting.splice(at, 1);
+        resolve("gone");
+      };
+      this.waiting.push(grant);
+      gone.addEventListener("abort", giveUp, { once: true });
+    });
   }
 
   private leaver(): () => void {
@@ -105,9 +133,74 @@ class Gate {
       if (left) return;
       left = true;
       const next = this.waiting.shift();
-      if (next) next();
+      // The seat is handed over to the one next in line; the count did not drop.
+      if (next) next(this.leaver());
       else this.inFlight -= 1;
     };
+  }
+}
+
+type Admission =
+  | { kind: "seat"; leave: () => void }
+  | { kind: "token_busy" }
+  | { kind: "busy" }
+  | { kind: "gone" };
+
+/**
+ * Where a request waits, in this order: the places of its own token (so one
+ * token cannot fill what everybody shares), then — for a big body — the big-body
+ * places (so the bodies held in memory at once are few), then the seats. A
+ * request waiting in an earlier room holds nothing in a later one, and nobody
+ * waits for something while holding what the one they wait for needs.
+ */
+class Gate {
+  private readonly tokens = new Map<string, Seats>();
+  private readonly large: Seats;
+  private readonly seats: Seats;
+
+  constructor(private readonly limits: HostedLimits) {
+    this.seats = new Seats(limits.maxInFlight, limits.maxQueued);
+    this.large = new Seats(limits.maxLargeBodies, limits.maxQueued);
+  }
+
+  /** How many tokens have a place or a waiting caller right now. */
+  get tokensTracked(): number {
+    return this.tokens.size;
+  }
+
+  async enter(token: string, large: boolean, gone: AbortSignal): Promise<Admission> {
+    // A hash, so the token itself is not what the map is keyed by.
+    const key = createHash("sha256").update(token).digest("hex");
+    let mine = this.tokens.get(key);
+    if (!mine) {
+      mine = new Seats(this.limits.maxInFlightPerToken, this.limits.maxQueuedPerToken);
+      this.tokens.set(key, mine);
+    }
+    const own = mine;
+    const tidy = () => {
+      if (own.idle && this.tokens.get(key) === own) this.tokens.delete(key);
+    };
+
+    const held: (() => void)[] = [];
+    let left = false;
+    const leaveAll = () => {
+      if (left) return;
+      left = true;
+      while (held.length) held.pop()!();
+      tidy();
+    };
+    const rooms: [Seats, "token_busy" | "busy"][] = [[own, "token_busy"]];
+    if (large) rooms.push([this.large, "busy"]);
+    rooms.push([this.seats, "busy"]);
+    for (const [room, refusal] of rooms) {
+      const got = await room.enter(gone);
+      if (typeof got !== "function") {
+        leaveAll();
+        return got === "gone" ? { kind: "gone" } : { kind: refusal };
+      }
+      held.push(got);
+    }
+    return { kind: "seat", leave: leaveAll };
   }
 }
 
@@ -207,7 +300,7 @@ export async function startHostedServer(options: HostedServerOptions): Promise<H
       return work;
     }) as RegisteredTool["handler"],
   }));
-  const gate = new Gate(options.maxInFlight, options.maxQueued);
+  const gate = new Gate(options);
 
   const handle = async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
     const path = (req.url ?? "").split("?")[0];
@@ -231,27 +324,47 @@ export async function startHostedServer(options: HostedServerOptions): Promise<H
     }
     const token = bearer[1];
 
-    // The seat. A caller that hangs up while it waits gives up its place:
-    // nobody is left to answer. One that hangs up once seated keeps it until
-    // the tool calls it started are done — the SDK does not finish a request
-    // whose connection is gone, so waiting for that would hold the seat for
-    // ever, and giving it back at once would let work pile up past the
-    // ceiling by connecting and hanging up (review of the hosted mode, S-1).
+    // A body that is too large is refused before it waits for anything; one
+    // that is large, or does not say its size, takes a big-body place first.
+    const declared = Number(req.headers["content-length"]);
+    if (Number.isFinite(declared) && declared > options.maxBodyBytes) {
+      send(res, 413, rpcError(-32000, "Request body too large."));
+      return;
+    }
+    const large = !Number.isFinite(declared) || declared > options.largeBodyBytes;
+
+    // The seat. A caller that hangs up while it waits gives up its place
+    // (`hungUp` ends the wait in whichever room it is in): nobody is left to
+    // answer. One that hangs up once seated keeps it until the tool calls it
+    // started are done — the SDK does not finish a request whose connection
+    // is gone, so waiting for that would hold the seat for ever, and giving it
+    // back at once would let work pile up past the ceiling by connecting and
+    // hanging up (review of the hosted mode, S-1).
     const context = { token, work: new Set<Promise<unknown>>() };
+    const hungUp = new AbortController();
     let gone = false;
     let leave: (() => void) | undefined;
     res.once("close", () => {
       gone = true;
+      hungUp.abort();
       const seated = leave;
       if (seated) void Promise.allSettled([...context.work]).then(seated);
     });
-    leave = await gate.enter();
-    if (!leave) {
+    const admission = await gate.enter(token, large, hungUp.signal);
+    if (admission.kind === "gone") return;
+    if (admission.kind === "token_busy") {
+      send(res, 429, rpcError(-32000, "Too many calls from this token at once. Try again in a moment."), {
+        "Retry-After": "1",
+      });
+      return;
+    }
+    if (admission.kind === "busy") {
       send(res, 503, rpcError(-32000, "The connector is busy. Try again in a moment."), {
         "Retry-After": "1",
       });
       return;
     }
+    leave = admission.leave;
     if (gone) {
       leave();
       return;
@@ -313,6 +426,7 @@ export async function startHostedServer(options: HostedServerOptions): Promise<H
   return {
     server,
     port,
+    tokensTracked: () => gate.tokensTracked,
     close: () =>
       new Promise<void>((resolve) => {
         server.close(() => resolve());

@@ -24,6 +24,10 @@ describe("loadHttpConfig", () => {
       port: 8765,
       maxInFlight: 4,
       maxQueued: 32,
+      maxInFlightPerToken: 2,
+      maxQueuedPerToken: 4,
+      maxLargeBodies: 1,
+      largeBodyBytes: 1024 * 1024,
       maxBodyBytes: 25 * 1024 * 1024,
       apiTimeoutMs: 300_000,
     });
@@ -41,6 +45,20 @@ describe("loadHttpConfig", () => {
     expect(() => loadHttpConfig({ ...base, AXONITY_MCP_API_TIMEOUT_MS: "2147483648" })).toThrow(
       /AXONITY_MCP_API_TIMEOUT_MS must be at most 2147483647/,
     );
+  });
+
+  it("reads the per-token and big-body limits, each a whole number of at least 1", () => {
+    const got = loadHttpConfig({
+      ...base,
+      AXONITY_MCP_MAX_IN_FLIGHT_PER_TOKEN: "3",
+      AXONITY_MCP_MAX_QUEUED_PER_TOKEN: "7",
+      AXONITY_MCP_MAX_LARGE_BODIES: "2",
+      AXONITY_MCP_LARGE_BODY_BYTES: "2048",
+    });
+    expect([got.maxInFlightPerToken, got.maxQueuedPerToken, got.maxLargeBodies, got.largeBodyBytes]).toEqual([
+      3, 7, 2, 2048,
+    ]);
+    expect(() => loadHttpConfig({ ...base, AXONITY_MCP_MAX_LARGE_BODIES: "0" })).toThrow(/at least 1/);
   });
 
   it("has no default API and needs a port", () => {

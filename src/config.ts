@@ -74,6 +74,21 @@ export interface HttpConfig {
   maxInFlight: number;
   /** Requests that may wait; one more is answered 503. */
   maxQueued: number;
+  /**
+   * What ONE token may have at once, so one token cannot fill the places
+   * everybody shares: this many seated…
+   */
+  maxInFlightPerToken: number;
+  /** …and this many waiting; one more of that token is answered 429. */
+  maxQueuedPerToken: number;
+  /**
+   * A body over `largeBodyBytes` (or one that does not say its size) takes one
+   * of this many places before it is read: the memory a body takes is about
+   * three times its size, so this is what makes the memory ceiling real.
+   */
+  maxLargeBodies: number;
+  /** The size over which a body is large, in bytes. */
+  largeBodyBytes: number;
   /** The largest request body read, in bytes; a larger one is answered 413. */
   maxBodyBytes: number;
   /** The longest one API call may take, in milliseconds. */
@@ -126,6 +141,10 @@ export function loadHttpConfig(env: NodeJS.ProcessEnv = process.env): HttpConfig
     port,
     maxInFlight: positiveInt(env, "AXONITY_MCP_MAX_IN_FLIGHT", 4),
     maxQueued: positiveInt(env, "AXONITY_MCP_MAX_QUEUED", 32),
+    maxInFlightPerToken: positiveInt(env, "AXONITY_MCP_MAX_IN_FLIGHT_PER_TOKEN", 2),
+    maxQueuedPerToken: positiveInt(env, "AXONITY_MCP_MAX_QUEUED_PER_TOKEN", 4),
+    maxLargeBodies: positiveInt(env, "AXONITY_MCP_MAX_LARGE_BODIES", 1),
+    largeBodyBytes: positiveInt(env, "AXONITY_MCP_LARGE_BODY_BYTES", 1024 * 1024),
     maxBodyBytes: positiveInt(env, "AXONITY_MCP_MAX_BODY_BYTES", 25 * 1024 * 1024),
     apiTimeoutMs: atMost(
       positiveInt(env, "AXONITY_MCP_API_TIMEOUT_MS", 300_000),

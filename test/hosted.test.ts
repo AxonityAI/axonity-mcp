@@ -57,6 +57,7 @@ afterAll(async () => {
 });
 
 const running: HostedServer[] = [];
+let lastStarted: HostedServer;
 afterEach(async () => {
   while (running.length) await running.pop()!.close();
   seen = [];
@@ -67,13 +68,27 @@ afterEach(async () => {
 });
 
 async function start(
-  overrides: Partial<{ maxInFlight: number; maxQueued: number; maxBodyBytes: number; apiTimeoutMs: number }> = {},
+  overrides: Partial<{
+    maxInFlight: number;
+    maxQueued: number;
+    maxInFlightPerToken: number;
+    maxQueuedPerToken: number;
+    maxLargeBodies: number;
+    largeBodyBytes: number;
+    maxBodyBytes: number;
+    apiTimeoutMs: number;
+  }> = {},
 ) {
   const hosted = await startHostedServer({
     apiUrl,
     port: 0,
     maxInFlight: 4,
     maxQueued: 64,
+    // Out of the way unless a test is about them.
+    maxInFlightPerToken: 100,
+    maxQueuedPerToken: 100,
+    maxLargeBodies: 100,
+    largeBodyBytes: 512 * 1024,
     maxBodyBytes: 1024 * 1024,
     apiTimeoutMs: 10_000,
     ...overrides,
@@ -82,6 +97,7 @@ async function start(
     log: () => {},
   });
   running.push(hosted);
+  lastStarted = hosted;
   return `http://127.0.0.1:${hosted.port}`;
 }
 
@@ -304,6 +320,205 @@ describe("the hosted connector has a ceiling", () => {
       const res = await post(base, call("list_workflows", {}, i + 1), bearer("axp_seq"));
       expect(res.status).toBe(200);
     }
+  });
+});
+
+const until = async (ok: () => boolean) => {
+  for (let i = 0; i < 300 && !ok(); i++) await new Promise((r) => setTimeout(r, 10));
+};
+
+describe("one token cannot fill the connector for everybody else (review S1)", () => {
+  it("A holds its calls open; B, with another token, is still served (the reviewer's probe)", async () => {
+    let release!: () => void;
+    held = new Promise<void>((r) => (release = r));
+    // The defaults of the connector: 4 seats, 32 waiting; per token 2 seats and 4 waiting.
+    const base = await start({
+      maxInFlight: 4,
+      maxQueued: 32,
+      maxInFlightPerToken: 2,
+      maxQueuedPerToken: 4,
+    });
+    const a = Array.from({ length: 36 }, (_, i) => post(base, call("list_workflows", {}, i + 1), bearer("axp_personA")));
+    const aStatuses: number[] = [];
+    a.forEach((p) => void p.then((r) => aStatuses.push(r.status)));
+    await until(() => inFlight === 2);
+    // 36 − (2 seated + 4 waiting) are turned away at once.
+    await until(() => aStatuses.length === 30);
+    expect(aStatuses.every((s) => s === 429)).toBe(true);
+    const b = post(base, call("list_workflows", {}, 1), bearer("axp_personB"));
+    await until(() => inFlight === 3);
+    expect(inFlight).toBe(3); // B reached the API while A is holding its places
+    release();
+    expect((await b).status).toBe(200);
+    const answers = await Promise.all(a);
+    expect(answers.filter((r) => r.status === 200)).toHaveLength(6);
+    expect(maxInFlight).toBeLessThanOrEqual(3); // A never held more than its two
+    expect(answers.find((r) => r.status === 429)!.headers.get("retry-after")).toBe("1");
+  });
+
+  it("the limit is per token, not per connection or per caller: a token's places come back", async () => {
+    const base = await start({ maxInFlightPerToken: 1, maxQueuedPerToken: 0 });
+    for (let i = 0; i < 4; i++) {
+      expect((await post(base, call("list_workflows", {}, i + 1), bearer("axp_one"))).status).toBe(200);
+    }
+  });
+
+  it("a token with nothing left in the room leaves no trace (its entry is dropped)", async () => {
+    // 200 different tokens, one call each: the connector does not keep 200 entries.
+    const base = await start({ maxInFlightPerToken: 1, maxQueuedPerToken: 1 });
+    for (let i = 0; i < 200; i++) await post(base, call("list_workflows", {}, i + 1), bearer(`axp_t${i}`));
+    expect(lastStarted.tokensTracked()).toBe(0);
+  });
+});
+
+describe("a caller that hangs up while it waits leaves the queue (review K6)", () => {
+  async function hangUpWhileWaiting(base: string, token: string, count: number) {
+    const controllers: AbortController[] = [];
+    const settled: Promise<unknown>[] = [];
+    for (let i = 0; i < count; i++) {
+      const controller = new AbortController();
+      controllers.push(controller);
+      settled.push(
+        fetch(`${base}/mcp`, {
+          method: "POST",
+          headers: { ...HEADERS, ...bearer(`${token}${i}`) },
+          body: JSON.stringify(call("list_workflows", {}, i + 1)),
+          signal: controller.signal,
+        }).catch(() => undefined),
+      );
+    }
+    await new Promise((r) => setTimeout(r, 100));
+    controllers.forEach((c) => c.abort());
+    await Promise.all(settled);
+    await new Promise((r) => setTimeout(r, 100));
+  }
+
+  it("the global queue: two that hung up do not keep its two places", async () => {
+    let release!: () => void;
+    held = new Promise<void>((r) => (release = r));
+    const base = await start({ maxInFlight: 1, maxQueued: 2 });
+    const first = post(base, call("list_workflows", {}, 1), bearer("axp_seated"));
+    await until(() => inFlight === 1);
+    await hangUpWhileWaiting(base, "axp_gone", 2);
+    // The queue is empty again: two new callers wait, rather than being turned away.
+    const next = [
+      post(base, call("list_workflows", {}, 2), bearer("axp_n1")),
+      post(base, call("list_workflows", {}, 3), bearer("axp_n2")),
+    ];
+    await new Promise((r) => setTimeout(r, 100));
+    release();
+    expect((await first).status).toBe(200);
+    expect((await Promise.all(next)).map((r) => r.status)).toEqual([200, 200]);
+  });
+
+  it("a token's own queue: one that hung up does not keep its place", async () => {
+    let release!: () => void;
+    held = new Promise<void>((r) => (release = r));
+    const base = await start({ maxInFlightPerToken: 1, maxQueuedPerToken: 1 });
+    const first = post(base, call("list_workflows", {}, 1), bearer("axp_same"));
+    await until(() => inFlight === 1);
+    const controller = new AbortController();
+    const hung = fetch(`${base}/mcp`, {
+      method: "POST",
+      headers: { ...HEADERS, ...bearer("axp_same") },
+      body: JSON.stringify(call("list_workflows", {}, 2)),
+      signal: controller.signal,
+    }).catch(() => undefined);
+    await new Promise((r) => setTimeout(r, 100));
+    controller.abort();
+    await hung;
+    await new Promise((r) => setTimeout(r, 100));
+    const next = post(base, call("list_workflows", {}, 3), bearer("axp_same"));
+    await new Promise((r) => setTimeout(r, 100));
+    release();
+    expect((await first).status).toBe(200);
+    expect((await next).status).toBe(200);
+  });
+});
+
+describe("a big body is one at a time, so the memory ceiling is real (review S2)", () => {
+  const padded = (bytes: number, id = 1) =>
+    JSON.stringify(call("list_workflows", { padding: "x".repeat(bytes) }, id));
+  const small = { largeBodyBytes: 2_000, maxBodyBytes: 50_000, maxLargeBodies: 1 };
+
+  it("two big bodies at once are served one after the other; a small call is not held behind them", async () => {
+    let release!: () => void;
+    held = new Promise<void>((r) => (release = r));
+    const base = await start(small);
+    const big = [
+      post(base, padded(10_000, 1), bearer("axp_big1")),
+      post(base, padded(10_000, 2), bearer("axp_big2")),
+    ];
+    await until(() => inFlight === 1);
+    await new Promise((r) => setTimeout(r, 150));
+    expect(inFlight).toBe(1); // the second big body has not been read, let alone sent on
+    const little = post(base, call("list_workflows", {}, 3), bearer("axp_little"));
+    await until(() => inFlight === 2);
+    expect(inFlight).toBe(2);
+    release();
+    expect((await Promise.all([...big, little])).map((r) => r.status)).toEqual([200, 200, 200]);
+    expect(maxInFlight).toBe(2);
+  });
+
+  it("a body over the limit is 413 at once, even with the big-body place taken", async () => {
+    let release!: () => void;
+    held = new Promise<void>((r) => (release = r));
+    const base = await start(small);
+    const first = post(base, padded(10_000), bearer("axp_big1"));
+    await until(() => inFlight === 1);
+    const tooBig = await post(base, padded(60_000), bearer("axp_big2"));
+    expect(tooBig.status).toBe(413);
+    release();
+    expect((await first).status).toBe(200);
+  });
+
+  it("a body that does not say its size is counted as big", async () => {
+    let release!: () => void;
+    held = new Promise<void>((r) => (release = r));
+    const base = await start(small);
+    const chunked = (id: number, token: string) =>
+      fetch(`${base}/mcp`, {
+        method: "POST",
+        headers: { ...HEADERS, ...bearer(token) },
+        body: new ReadableStream({
+          start(controller) {
+            controller.enqueue(new TextEncoder().encode(JSON.stringify(call("list_workflows", {}, id))));
+            controller.close();
+          },
+        }),
+        // @ts-expect-error — Node's fetch needs it for a stream body
+        duplex: "half",
+      }).then((r) => r.status);
+    const both = [chunked(1, "axp_c1"), chunked(2, "axp_c2")];
+    await until(() => inFlight === 1);
+    await new Promise((r) => setTimeout(r, 150));
+    expect(inFlight).toBe(1);
+    release();
+    expect(await Promise.all(both)).toEqual([200, 200]);
+  });
+
+  it("a big body whose caller hangs up while it waits for its place gives the place up", async () => {
+    let release!: () => void;
+    held = new Promise<void>((r) => (release = r));
+    const base = await start({ ...small, maxQueued: 1 });
+    const first = post(base, padded(10_000), bearer("axp_big1"));
+    await until(() => inFlight === 1);
+    const controller = new AbortController();
+    const hung = fetch(`${base}/mcp`, {
+      method: "POST",
+      headers: { ...HEADERS, ...bearer("axp_big2") },
+      body: padded(10_000, 2),
+      signal: controller.signal,
+    }).catch(() => undefined);
+    await new Promise((r) => setTimeout(r, 100));
+    controller.abort();
+    await hung;
+    await new Promise((r) => setTimeout(r, 100));
+    const next = post(base, padded(10_000, 3), bearer("axp_big3"));
+    await new Promise((r) => setTimeout(r, 100));
+    release();
+    expect((await first).status).toBe(200);
+    expect((await next).status).toBe(200);
   });
 });
 
