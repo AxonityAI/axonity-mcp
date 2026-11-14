@@ -91,6 +91,13 @@ export interface HttpConfig {
   largeBodyBytes: number;
   /** The largest request body read, in bytes; a larger one is answered 413. */
   maxBodyBytes: number;
+  /**
+   * The most JSON structure a message may hold: `{`, `[` and `,` outside
+   * strings, which is every object, array, item and member. The heap hangs on
+   * what a parse builds, not on the bytes: a message over this is answered 400
+   * before it is parsed. A file sent as base64 is one string and has none.
+   */
+  maxStructure: number;
   /** The longest one API call may take, in milliseconds. */
   apiTimeoutMs: number;
 }
@@ -146,6 +153,7 @@ export function loadHttpConfig(env: NodeJS.ProcessEnv = process.env): HttpConfig
     maxLargeBodies: positiveInt(env, "AXONITY_MCP_MAX_LARGE_BODIES", 1),
     largeBodyBytes: positiveInt(env, "AXONITY_MCP_LARGE_BODY_BYTES", 1024 * 1024),
     maxBodyBytes: positiveInt(env, "AXONITY_MCP_MAX_BODY_BYTES", 25 * 1024 * 1024),
+    maxStructure: positiveInt(env, "AXONITY_MCP_MAX_STRUCTURE", 50_000),
     apiTimeoutMs: atMost(
       positiveInt(env, "AXONITY_MCP_API_TIMEOUT_MS", 300_000),
       MAX_TIMER_MS,

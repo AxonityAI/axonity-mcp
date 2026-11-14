@@ -681,9 +681,25 @@ What differs in hosted mode:
   work is done, also when the caller hangs up, and every API call ends after
   `AXONITY_MCP_API_TIMEOUT_MS` (default 300000). A body over
   `AXONITY_MCP_MAX_BODY_BYTES` (default 25 MB) is answered 413 before it waits
-  for anything. Measured (macOS RSS, Node 22, 473 tools, the V8 limits Axonity
-  starts it with): about 85–95 MB at rest, 209–292 MB with fifty requests at
-  once, 234–267 MB with twelve 23 MiB bodies at once; not measured on Linux.
+  for anything.
+- **A message is bounded by what it holds, not only by its size.** The heap
+  hangs on what a parse builds: 10 MB of `{},` is 3.3 million objects and ended
+  the process (V8 heap limit), where a 10 MB base64 file is one string. The
+  structure marks `{`, `[` and `,` outside strings (every object, array item and
+  member) are counted as the body arrives; a message with more than
+  `AXONITY_MCP_MAX_STRUCTURE` (default 50000) is answered 400 before it is
+  parsed, with the limit in the error. A file sent as base64 has none. Measured
+  with the real process and the V8 limits Axonity starts it with, four messages
+  at once, each at the limit, through `apply_workflow_mutations` (a list of
+  objects, the most expensive shape found): the process lives at 50000 and at
+  100000 (slowly: 8–10 s) and ended at 200000; so the default is at least twice
+  below the edge for that tool. Not every tool was measured (3 of 473), and a
+  tool with a still more expensive schema may sit closer to it.
+- Measured (macOS RSS, Node 22, 473 tools, the V8 limits Axonity starts it
+  with): about 85–95 MB at rest; 209–292 MB with fifty requests at once (five
+  times over, measured before the structure limit and not repeated after it); four
+  24 MB bodies at once 247 MB with the big-body place and 369–407 MB without it,
+  which is why it stays. Not measured on Linux.
 - It listens on `127.0.0.1:AXONITY_MCP_PORT` only and calls `AXONITY_API_URL`,
   which has no default in this mode.
 

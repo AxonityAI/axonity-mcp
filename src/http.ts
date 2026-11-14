@@ -39,11 +39,23 @@
  *   hangs up — work that goes on after a disconnect still holds it — and every
  *   API call has a time limit (`apiTimeoutMs`), so no seat is held for ever.
  *
+ * - A MESSAGE IS BOUNDED BY WHAT IT HOLDS, not only by its size. The heap
+ *   hangs on what a parse builds: 10 MB of `{},` is 3.3 million objects and
+ *   ended the process (V8 heap limit), where a 10 MB base64 file is one string.
+ *   The structure marks `{`, `[` and `,` outside strings are counted as the body
+ *   arrives (`StructureCounter`); over `maxStructure` it is answered 400 before it
+ *   is parsed. The default (50000) is at least twice below where four such
+ *   messages at once ended the process, measured through the most expensive tool
+ *   shape found (a list of objects): see the README.
+ *
  * WHAT WAS MEASURED (the hosted process itself, started as Axonity starts it,
  * with the V8 limits `--max-old-space-size=160 --max-semi-space-size=4`, against
  * a fake API; Node 22 on macOS, so this is macOS RSS read with `ps` every 50 ms,
  * not Linux and not the 2 GB sandbox; 473 tools). At rest about 85–95 MB. With
- * 50 requests at once, five times over: peak 209–292 MB (one run in twelve died: V8 heap limit, see the PR). With 12 bodies of 23
+ * 50 requests at once, five times over: peak 209–292 MB (before the structure
+ * limit; one run in twelve died of the V8 heap limit then, which was not
+ * reproduced in later runs and is not explained: dense JSON is a cause that
+ * was found, and is closed above). With 12 bodies of 23
  * MiB at once from different tokens: peak 234–267 MB, where the version before
  * the large-body place peaked at 375–384 MB (6 bodies: 241–262 against 338–349).
  * Not measured: Linux, the memory of the Axonity process that forwards a body
@@ -236,16 +248,62 @@ function rpcError(code: number, message: string): unknown {
   return { jsonrpc: "2.0", error: { code, message }, id: null };
 }
 
-class BodyTooLarge extends Error {}
+/**
+ * Counts the JSON structure marks `{`, `[` and `,` outside strings, a chunk at
+ * a time (the state carries over, so where the body is cut does not matter).
+ *
+ * Every value a parse makes (an object, an array, an item, a member) is
+ * opened by one of these marks, so the count bounds what `JSON.parse` and the
+ * schemas behind it will build, whatever the body's size: 10 MB of `{},` is
+ * 3.3 million objects, and that — not the 10 MB — ended the process. A string
+ * is not structure (a 20 MB base64 file is one value), so it does not count,
+ * and for a valid body this count is exact; an invalid one fails to parse at
+ * the first fault, before anything past it is built.
+ */
+export class StructureCounter {
+  private count = 0;
+  private inString = false;
+  private escaped = false;
 
-async function readBody(req: IncomingMessage, limit: number): Promise<Buffer> {
+  /** Add a chunk; the count so far. */
+  add(chunk: Uint8Array): number {
+    let count = this.count;
+    let inString = this.inString;
+    let escaped = this.escaped;
+    for (let i = 0; i < chunk.length; i++) {
+      const byte = chunk[i];
+      if (inString) {
+        if (escaped) escaped = false;
+        else if (byte === 0x5c) escaped = true;
+        else if (byte === 0x22) inString = false;
+      } else if (byte === 0x22) {
+        inString = true;
+      } else if (byte === 0x7b || byte === 0x5b || byte === 0x2c) {
+        count += 1;
+      }
+    }
+    this.count = count;
+    this.inString = inString;
+    this.escaped = escaped;
+    return count;
+  }
+}
+
+class BodyTooLarge extends Error {}
+class BodyTooComplex extends Error {}
+
+async function readBody(req: IncomingMessage, limit: number, maxStructure: number): Promise<Buffer> {
   const declared = Number(req.headers["content-length"]);
   if (Number.isFinite(declared) && declared > limit) throw new BodyTooLarge();
   const chunks: Buffer[] = [];
+  const counter = new StructureCounter();
   let size = 0;
   for await (const chunk of req) {
     size += (chunk as Buffer).length;
     if (size > limit) throw new BodyTooLarge();
+    // Counted as it arrives: a body that holds too much is refused after the
+    // chunk that crosses the line, not after the whole of it has been read.
+    if (counter.add(chunk as Buffer) > maxStructure) throw new BodyTooComplex();
     chunks.push(chunk as Buffer);
   }
   return Buffer.concat(chunks);
@@ -388,7 +446,7 @@ export async function startHostedServer(options: HostedServerOptions): Promise<H
     try {
       let body: unknown;
       try {
-        const raw = await readBody(req, options.maxBodyBytes);
+        const raw = await readBody(req, options.maxBodyBytes, options.maxStructure);
         body = JSON.parse(raw.toString("utf8"));
         if (Array.isArray(body)) {
           send(res, 400, rpcError(-32600, "Invalid Request: send one message per POST, not a batch."));
@@ -397,6 +455,17 @@ export async function startHostedServer(options: HostedServerOptions): Promise<H
       } catch (error) {
         if (error instanceof BodyTooLarge) {
           send(res, 413, rpcError(-32000, "Request body too large."));
+        } else if (error instanceof BodyTooComplex) {
+          send(
+            res,
+            400,
+            rpcError(
+              -32600,
+              `Invalid Request: the message holds more than ${options.maxStructure} objects, ` +
+                "array items and members (the connector's limit). Send less in one call, " +
+                "for example fewer rows or steps.",
+            ),
+          );
         } else {
           send(res, 400, rpcError(-32700, "Parse error: the body is not JSON."));
         }

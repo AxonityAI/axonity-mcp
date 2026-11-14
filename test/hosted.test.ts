@@ -1,5 +1,5 @@
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { createServer, type IncomingMessage, type Server } from "node:http";
+import { createServer, request as httpRequest, type IncomingMessage, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -7,7 +7,7 @@ import { join } from "node:path";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import type { AxonityClient } from "../src/client.js";
-import { type HostedServer, startHostedServer } from "../src/http.js";
+import { type HostedServer, StructureCounter, startHostedServer } from "../src/http.js";
 import { SERVER_INFO, registerHosted } from "../src/index.js";
 import { recordTools } from "../src/routeClasses.js";
 import { HOSTED_PATH_REFUSAL } from "../src/tools/runInputFiles.js";
@@ -76,6 +76,7 @@ async function start(
     maxLargeBodies: number;
     largeBodyBytes: number;
     maxBodyBytes: number;
+    maxStructure: number;
     apiTimeoutMs: number;
   }> = {},
 ) {
@@ -90,6 +91,8 @@ async function start(
     maxLargeBodies: 100,
     largeBodyBytes: 512 * 1024,
     maxBodyBytes: 1024 * 1024,
+    // Out of the way unless a test is about it.
+    maxStructure: 100_000,
     apiTimeoutMs: 10_000,
     ...overrides,
     serverInfo: SERVER_INFO,
@@ -245,6 +248,111 @@ describe("the hosted connector refuses what is not a personal token's MCP reques
     const res = await post(base, "{not json", bearer("axp_one"));
     expect(res.status).toBe(400);
     expect(res.json!.error.code).toBe(-32700);
+  });
+});
+
+describe("a message is refused by what it holds, not only by its size (review M1)", () => {
+  // The heap hangs on the parse, not on the byte: 10 MB of `{},` is 3.3 million
+  // objects and ended the process (V8 heap limit) while a 10 MB base64 file is
+  // one string. The structure marks outside strings are counted as the body is
+  // read, so what would be parsed is bounded before it is.
+  const dense = (objects: number) => `[${"{},".repeat(objects)}0]`;
+
+  it("a dense body is 400 and nothing reaches the API; the next call is served", async () => {
+    const base = await start({ maxBodyBytes: 25 * 1024 * 1024, maxStructure: 1000 });
+    const res = await post(base, call("list_workflows", { x: JSON.parse(dense(3000)) }), bearer("axp_dense"));
+    expect(res.status).toBe(400);
+    expect(res.json!.error.code).toBe(-32600);
+    expect(res.json!.error.message).toMatch(/1000/);
+    expect(seen).toEqual([]);
+    const next = await post(base, call("list_workflows"), bearer("axp_dense"));
+    expect(next.status).toBe(200);
+  });
+
+  it("a body is refused as soon as it holds too much: the rest is not waited for", async () => {
+    const base = await start({ maxBodyBytes: 25 * 1024 * 1024, maxStructure: 1000 });
+    let timer: NodeJS.Timeout | undefined;
+    const answered = await new Promise<number>((resolve, reject) => {
+      const url = new URL(`${base}/mcp`);
+      const req = httpRequest(
+        { host: url.hostname, port: url.port, path: url.pathname, method: "POST", headers: { ...HEADERS, ...bearer("axp_slow") } },
+        (res) => {
+          res.resume();
+          resolve(res.statusCode ?? 0);
+          req.destroy();
+        },
+      );
+      req.on("error", () => {});
+      timer = setTimeout(() => reject(new Error("no answer before the body ended")), 5000);
+      // A chunked body that never ends: the answer has to come without it.
+      req.write(`{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"list_workflows","arguments":{"x":[${"{},".repeat(2000)}`);
+    });
+    clearTimeout(timer);
+    expect(answered).toBe(400);
+    expect(seen).toEqual([]);
+  });
+
+  it("a message at the limit is served and one mark more is refused; strings do not count", async () => {
+    const limit = 400;
+    const base = await start({ maxStructure: limit });
+    const marks = (message: unknown) => {
+      const counter = new StructureCounter();
+      return counter.add(Buffer.from(JSON.stringify(message)));
+    };
+    const withItems = (n: number) => call("list_workflows", { x: Array.from({ length: n }, () => 0) });
+    // Each item adds one mark (its comma): find the message that is exactly at the limit.
+    const exact = limit - marks(withItems(0)) + 1;
+    expect(marks(withItems(exact))).toBe(limit);
+    expect((await post(base, withItems(exact), bearer("axp_edge"))).status).toBe(200);
+    expect((await post(base, withItems(exact + 1), bearer("axp_edge"))).status).toBe(400);
+    // Eighty thousand commas and braces inside one string are text, not structure.
+    const text = ",{[".repeat(30_000);
+    expect((await post(base, call("list_workflows", { x: text }), bearer("axp_edge"))).status).toBe(200);
+  });
+
+  it("a large base64 file (no structure) is still served up to the body limit", async () => {
+    const base = await start({ maxStructure: 1000, maxBodyBytes: 8 * 1024 * 1024, largeBodyBytes: 1024 * 1024 });
+    const file = Buffer.alloc(5 * 1024 * 1024, 7).toString("base64");
+    const res = await post(
+      base,
+      call("upload_run_input_file", { contentBase64: file, filename: "big.bin", contentType: "application/octet-stream" }),
+      bearer("axp_file"),
+    );
+    expect(res.status).toBe(200);
+    expect(seen.length).toBe(1);
+  });
+});
+
+describe("StructureCounter counts { [ and , outside strings", () => {
+  const count = (text: string) => new StructureCounter().add(Buffer.from(text));
+
+  it("counts objects, arrays and separators", () => {
+    expect(count("{}")).toBe(1);
+    expect(count("[1,2,3]")).toBe(3);
+    expect(count('{"a":[1,{"b":null}],"c":2}')).toBe(5);
+    expect(count("")).toBe(0);
+  });
+
+  it("ignores everything inside a string, escaped quotes and escaped backslashes included", () => {
+    // JSON text ["a\\",{}]: the string is a, then a backslash; it ends at its quote, so `[`, the comma and the brace count.
+    expect(count('["a\\\\",{}]')).toBe(3);
+    // JSON text ["a\",{}"]: the quote is escaped, so `,{}` is still text and only `[` counts.
+    expect(count('["a\\",{}"]')).toBe(1);
+  });
+
+  it("gives the same count however the body is cut into chunks (state carries over)", () => {
+    const body = Buffer.from('{"k":"va\"l,{[ue","list":[1,2,{"x":"\\"},[],[3]],"n":null}');
+    const whole = new StructureCounter().add(body);
+    for (let cut = 1; cut < body.length; cut++) {
+      const counter = new StructureCounter();
+      counter.add(body.subarray(0, cut));
+      expect(counter.add(body.subarray(cut)), `cut at ${cut}`).toBe(whole);
+    }
+    // And byte by byte.
+    const bytes = new StructureCounter();
+    let last = 0;
+    for (const byte of body) last = bytes.add(Buffer.from([byte]));
+    expect(last).toBe(whole);
   });
 });
 

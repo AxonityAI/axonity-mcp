@@ -29,6 +29,7 @@ describe("loadHttpConfig", () => {
       maxLargeBodies: 1,
       largeBodyBytes: 1024 * 1024,
       maxBodyBytes: 25 * 1024 * 1024,
+      maxStructure: 50_000,
       apiTimeoutMs: 300_000,
     });
   });
