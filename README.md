@@ -8,23 +8,34 @@ Axonity tenant —
 the same verbs the internal Builder team has, minus direct publish.
 
 It runs on your machine and talks to Axonity **only over the public REST API**,
-authenticated with a per-tenant **service token**. The backend re-enforces
-tenant + scope on every call, so the connector is not a trust boundary.
+authenticated with a token for one workspace. The backend re-enforces
+tenant + scope on every call, so the connector is not a trust boundary for what
+it may do in Axonity. One thing only the connector decides: which **local file**
+leaves your machine. `upload_run_input_file` with `path` and `start_workflow_run`
+with `triggerInputPath` read any file the user running the connector may read,
+following symlinks, with no folder they are limited to, and the platform cannot
+tell what the file is. Use them with a connector running locally for someone who
+trusts it, and check the path before you approve the call — your MCP client's
+approval of each call is the guard.
 
 ## Setup
 
-1. **Mint a service token** in Axonity → **Settings → API tokens**. Copy it once
-   (it starts with `axs_`); you won't see it again. Use a **read-only** token if
-   you only want the agent to read — it is genuinely enforced, any write from it
-   is refused with a 403. Every token expires (you choose 7, 15, 30, 60 or 90
-   days at mint time; there is no "never"), and there is no way for the agent to
-   check remaining lifetime in advance — an expired token fails exactly like a
-   revoked one, so mint a fresh one when that happens.
+1. **Have a token.** The connector sends whatever `AXONITY_TOKEN` holds as a
+   bearer, and the platform decides what it may do:
+   - a **personal token** (`axp_…`) acts as you, within the limits it was made
+     with (see *Hosted by Axonity* below for what that means per tool);
+   - an existing **service token** (`axs_…`) keeps working until it expires or
+     is revoked, but no new ones are made.
+
+   Every token expires, and there is no way for the agent to check the
+   remaining lifetime in advance: an expired token fails exactly like a revoked
+   one, so get a fresh one when that happens. Copy a token once; you will not
+   see it again.
 2. **Add the connector to Claude Code:**
 
    ```bash
    claude mcp add axonity \
-     --env AXONITY_TOKEN=axs_your_token_here \
+     --env AXONITY_TOKEN=your_token_here \
      --env AXONITY_API_URL=https://app.axonity.ai \
      -- npx -y @axonity-ai/mcp
    ```
@@ -41,7 +52,7 @@ tenant + scope on every call, so the connector is not a trust boundary.
 
 ## Tools
 
-476 tools total. `axonity_conventions` (read this first) covers the authoring
+474 tools total. `axonity_conventions` (read this first) covers the authoring
 rules — drafts vs live, optimistic locking, per-entity fields, delete/restore,
 and how to tell a retryable error from one that will never succeed.
 `axonity_semantic_conventions` is its counterpart for one job only: building a
@@ -180,6 +191,11 @@ across these routes — the tool parameter names say which.
   `read_agent_persona` reads the field (with the agent's `version`) and
   `create_agent_persona` writes it (`agentId`, `expectedVersion`, `persona`);
   `""` removes it, `null` on an update leaves it as it is.
+- **An agent's team**: one capability of the company model (`capabilityId`,
+  a key of `document.capabilities` in `read_company`). `create_agent` takes
+  it; on an existing agent `set_agent_team` (`agentId`, `capabilityId`, null
+  for none) changes it — `update_agent` refuses it. It is on the agent's
+  record, not in a version: it holds at once, with no publish.
 - **Connectors** (a tool of type `connector`): `create_connector`,
   `update_connector` — `authConfig` must be placeholders only; a human fills real
   secrets in Axonity. (`create_tool`/`update_tool` carry the same guard, so a
@@ -492,7 +508,7 @@ rule); `"agent"` makes the beat a run whose first step asks an agent.
 ### Runs — evaluating what you built
 
 `start_workflow_run` (test a workflow you built — it runs the **published**
-workflow and really executes), `cancel_run`, `delete_run`, `list_runs`,
+workflow and really executes), `upload_run_input_file`, `cancel_run`, `delete_run`, `list_runs`,
 `list_workflow_runs`, `read_run`, `read_run_trace`, `read_run_cost`,
 `read_runs_summary`, `archive_run` / `unarchive_run`, `bulk_archive_runs` /
 `bulk_delete_runs`. There is no findings endpoint — evaluation means reading a
@@ -504,6 +520,25 @@ own parameters. Pass the one you mean to `start_workflow_run` as `triggerId`;
 omitting it fires the first, which on a workflow with a button *and* a schedule
 is an arbitrary choice. A parameter marked `pinned` is one the **author** owns:
 it is overwritten on every run, so a caller must not send it.
+
+**A start input too large to write out.** Give `start_workflow_run` a
+`triggerInputPath` instead of `triggerInput`: an absolute path to a JSON file on
+the machine the connector runs on, holding the start input as one JSON object.
+The connector reads it and sends that object as `triggerInput`, unchanged, so
+its content never passes through the conversation. At most one of the two. A
+file that is not UTF-8 JSON holding one object is refused in words, without
+quoting the file.
+
+**A start that takes a file.** `upload_run_input_file` stores a file the way the
+start form in Axonity does (`POST /api/v1/run-input-files`) and answers its
+reference, `{ fileId, filename, contentType, sizeBytes, sha256 }`. Put that
+reference in `triggerInput` under a parameter the start declares as a `file`,
+or in a list under one declared as a list of `file`. Give the file as `path`
+(an absolute path on the machine the connector runs on; the bytes never pass
+through the conversation) or as `contentBase64` (when the file is not on that
+machine). One upload serves one run, and only a start by hand
+(`start_workflow_run` or Run in Axonity) takes it. An upload no run takes within
+24 hours is deleted; a file a run took is kept as long as that run exists.
 
 **`read_run` omits the workflow snapshot by default.** It is immutable, it is
 never the answer to a question about the run, and it measured 81% of one real
@@ -524,8 +559,12 @@ you want: `read_run_value` for one large step value (by the digest in
 the id in `agentInvocations`). Reading a whole run to find one message is the
 habit these replace.
 
-**A run can park rather than finish.** `read_run_waiting_on` says what it is
-waiting for; `answer_run_question` answers an `ask_user` step and
+**A run can park rather than finish.** Where you see it depends on what it
+waits on: `list_todo_steps` has every step that waits on a person (a question, a
+plan, a manual or decision step); `read_run_waiting_on` has a timer and an
+answer or callback result on its way; a FOR EACH batch is on
+`read_run_for_each_progress`; a conversation run waits in its chat.
+`answer_run_question` answers an `ask_user` step and
 `send_run_message` sends a turn to a conversation run. Both record the input as
 a person's, so use them on runs you started. Deciding a **plan approval** and
 restarting a stuck run are deliberately absent — the first is the human review
@@ -554,10 +593,17 @@ arguments) are in the transcript: `read_run`, then
 token with the `author` scope, a follow-up the `operate` scope. The Builder chat
 and its files stay out of reach.
 
-**`list_todo_steps`** is the same question across the whole tenant: every step
-waiting on a human, in any run. It is paged over the waiting **runs**, so
-`items` can be longer than `pageSize` — one run may park several steps. Follow
-`nextCursor` to the end before concluding anything about how much is waiting.
+**`list_todo_steps`** is every step in the tenant waiting on a person: an
+unanswered question, a plan awaiting approval, a manual step or a decision step.
+Each item belongs to one agent or none (`agentId`) — a question or plan to the
+agent that asked, a manual or decision step to the workflow's owner — and
+`agentId` on the call narrows the list to that agent's items. It is paged over
+the waiting **runs**, so `items` can be longer than `pageSize` — one run may
+park several steps — or shorter. Follow `nextCursor` to the end before
+concluding anything about how much is waiting. `read_run_waiting_on` is a
+different read: a run's pending wake-tasks (a timer; an answer or a callback's
+result on its way), where an open question, a FOR EACH batch and a callback
+still running never appear.
 
 **What an agent wrote to itself.** `list_run_session_memory` lists the files an
 agent left during a run (metadata only, up to 200 per run) and
@@ -605,6 +651,51 @@ live calling a tool that did not. The response carries the bundle's verdict —
 ride along), `members` with why each is there, and `blockers` that name the
 member in the way. Requesting is ours; deciding stays human, like everywhere
 else here.
+
+## Hosted by Axonity (HTTP mode)
+
+The same tools also run inside Axonity, behind its own `/mcp` endpoint, for a
+person who connects with a **personal token** (`axp_…`) instead of running the
+connector locally. Axonity starts this package with
+`AXONITY_MCP_TRANSPORT=http`; you do not run that mode yourself. The local
+connector above (stdio, a service token) is unchanged and is still the default.
+
+What differs in hosted mode:
+
+- **One token per request.** The process holds no token of its own
+  (`AXONITY_TOKEN` set is refused at startup). Each request brings its caller's
+  personal token as a bearer, and the API is called with that token only. A
+  request without an `axp_` bearer is answered 401.
+- **Each tool says what a personal token needs, before the call.** A personal
+  token reads what its person reads; actions need "Run actions" on the token,
+  drafts and publication requests need "Build drafts and request publication",
+  and every other route is closed to it. Axonity decides that per route and
+  enforces it on every call; the hosted tool texts are worded from the same
+  table (`src/generated/tokenRouteClasses.ts`, pinned from
+  `backend/scripts/dump_token_route_classes.py` in axonity-flow). A tool on a
+  closed route keeps its name and says why it is closed.
+- **No local files.** `upload_run_input_file` takes `contentBase64` only, and
+  `start_workflow_run` takes `triggerInput` only: the process runs on the
+  Axonity server, so a `path` or `triggerInputPath` would name a file there, and
+  it is refused before anything is read.
+- **Stateless, with a ceiling.** Every message is its own POST (no sessions; GET
+  and DELETE on `/mcp` are 405; a batch is answered 400). At most
+  `AXONITY_MCP_MAX_IN_FLIGHT` requests (default 4) run at once,
+  `AXONITY_MCP_MAX_QUEUED` (default 32) wait, and one more is answered 503. A
+  request keeps its place until its work is done, also when its caller hangs
+  up, and every API call ends after `AXONITY_MCP_API_TIMEOUT_MS` (default
+  300000). A body over `AXONITY_MCP_MAX_BODY_BYTES` (default 25 MB) is answered
+  413.
+- It listens on `127.0.0.1:AXONITY_MCP_PORT` only and calls `AXONITY_API_URL`,
+  which has no default in this mode.
+
+Refresh the route table after the backend changes it:
+
+```bash
+node scripts/generate-token-route-classes.mjs --flow ../axonity-flow
+```
+
+A test fails when a tool calls a route the pinned table does not know.
 
 ## What this is for — and what it is not
 

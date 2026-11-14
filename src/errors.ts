@@ -217,16 +217,16 @@ export class NotFoundError extends AxonityApiError {
   }
 }
 
-/** 401 — the service token is missing, unknown, expired, or revoked. */
+/** 401 — the token is missing, unknown, expired, or revoked. */
 export class AuthError extends AxonityApiError {
   constructor(body?: unknown) {
     const env = asEnvelope(body);
     super(
       withDetail(
-        "Authentication failed (401): the service token is missing, invalid, expired, " +
+        "Authentication failed (401): the token is missing, invalid, expired, " +
           "or revoked. The backend deliberately returns the same message for all four " +
           "causes, so do not guess which one it is and do not retry — tell your human " +
-          "the token is dead and a new one must be minted in Axonity → Settings → API tokens.",
+          "the token is dead and they need a new one from Axonity.",
         body,
       ),
       401,

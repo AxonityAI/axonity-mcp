@@ -32,6 +32,16 @@
  *   - `POST /runs/{id}/steps/{id}/plan-approval` is NOT, and
  *     `POST /runs/{id}/restart` cannot be. Both are recorded, with the reason,
  *     in `test/exclusions.test.ts` — as a decision rather than an omission.
+ *
+ * A START INPUT CAN COME FROM A FILE. A start input of hundreds of KB (a few
+ * hundred rows and a report) is more than a model can write out inline. So
+ * `triggerInputPath` names a JSON file on the connector's machine
+ * and the tool sends its object as `triggerInput`, unchanged — the same trust
+ * model as `upload_run_input_file`'s `path`, through the same reader, refused
+ * the same way on the hosted connector. It checks only what it alone can know:
+ * that the file is UTF-8 JSON holding one object, which is what the platform's
+ * `TriggerRunRequest.triggerInput` takes. No size limit of its own: the
+ * platform's body-size guard is the limit.
  */
 
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -39,12 +49,119 @@ import { z } from "zod";
 
 import type { AxonityClient } from "../client.js";
 import { guard, jsonResult } from "./result.js";
+import { readLocalFile } from "./runInputFiles.js";
 
 const CONFIRM = z
   .literal(true)
   .describe("Must be true. Destructive and irreversible — ask your human first.");
 
-export function registerRunTools(server: McpServer, client: AxonityClient): void {
+/** Why a hosted connector refuses `triggerInputPath`, before it reads anything. */
+export const HOSTED_TRIGGER_INPUT_PATH_REFUSAL =
+  "`triggerInputPath` is not available on the connector Axonity hosts: it runs " +
+  "on the Axonity server, so a path would name a file there, not on your " +
+  "machine. Send the start input itself as `triggerInput`.";
+
+/** How a local file's refusals name `triggerInputPath`, and what to send instead. */
+const TRIGGER_INPUT_PATH_WORDS = {
+  param: "triggerInputPath",
+  elsewhere: "send the start input itself as `triggerInput` instead",
+};
+
+/** What a JSON value is, in words, without any of its content. */
+function kindOf(value: unknown): string {
+  if (value === null) return "null";
+  if (Array.isArray(value)) return "an array";
+  return `a ${typeof value}`;
+}
+
+/**
+ * Where the JSON broke, as a line and column — and never the parser's own
+ * message, which quotes the file ("Unexpected token 's', "{"a": secret…" is
+ * not valid JSON"). The path may name any file the connector's user can read;
+ * a refusal must not carry its content into the conversation.
+ */
+function whereBroken(text: string, err: unknown): string {
+  const at = /at position (\d+)/.exec((err as Error).message ?? "");
+  if (!at) return "";
+  const position = Number(at[1]);
+  const before = text.slice(0, position);
+  const line = before.split("\n").length;
+  const column = position - before.lastIndexOf("\n");
+  return ` at line ${line}, column ${column}`;
+}
+
+/** The JSON object in the file at `path` on this machine, or a refusal that says why not. */
+export async function readTriggerInputFile(path: string): Promise<Record<string, unknown>> {
+  const bytes = await readLocalFile(path, TRIGGER_INPUT_PATH_WORDS);
+  let text: string;
+  try {
+    // `fatal`: a byte that is not UTF-8 is refused, not silently replaced by
+    // U+FFFD — which would send different text than the file holds. A leading
+    // byte order mark is skipped.
+    text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+  } catch {
+    throw new Error(
+      `"${path}" is not UTF-8 text. \`triggerInputPath\` names a JSON file, ` +
+        "saved as UTF-8.",
+    );
+  }
+  if (text.trim() === "") {
+    throw new Error(
+      `"${path}" is empty. \`triggerInputPath\` names a file holding the start ` +
+        "input as one JSON object.",
+    );
+  }
+  let value: unknown;
+  try {
+    value = JSON.parse(text);
+  } catch (err) {
+    throw new Error(
+      `"${path}" is not valid JSON${whereBroken(text, err)}. ` +
+        "`triggerInputPath` names a file holding the start input as one JSON " +
+        "object.",
+    );
+  }
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error(
+      `"${path}" holds ${kindOf(value)}, not a JSON object. The start input is ` +
+        "one object keyed by each parameter's `name`: " +
+        '{ "<name>": <value>, ... }.',
+    );
+  }
+  return value as Record<string, unknown>;
+}
+
+/** How a local connector takes a start input too large to write out: a file. */
+const LOCAL_TRIGGER_INPUT_FILE =
+  "\n\nA START INPUT TOO LARGE TO WRITE OUT can come from a file: " +
+  "`triggerInputPath`, an absolute path to a JSON file on the machine this " +
+  "connector runs on, holding the one JSON object you would otherwise send as " +
+  "triggerInput. The tool reads it and sends that object as triggerInput, " +
+  "unchanged; its content never passes through the conversation. Give at most " +
+  "one of `triggerInput` or `triggerInputPath`. If the connector runs " +
+  "somewhere else than you, the path is read THERE, and a file it cannot find " +
+  "is reported, never guessed. It reads any file the user running this " +
+  "connector may read, following symlinks, from any folder: check the path " +
+  "before a call is approved — the MCP client's approval of each call is the " +
+  "guard.";
+
+/**
+ * How the HOSTED connector takes the start input: inline only. It runs on the
+ * Axonity server, so a path would name a file there — the server's own files,
+ * never the caller's — and `triggerInputPath` is refused before anything is
+ * read.
+ */
+const HOSTED_TRIGGER_INPUT_FILE =
+  "\n\nGive the start input as triggerInput. `triggerInputPath` is refused: " +
+  "this connector runs on the Axonity server, so a path would name a file " +
+  "there, not on your machine.";
+
+export function registerRunTools(
+  server: McpServer,
+  client: AxonityClient,
+  options: { hosted?: boolean } = {},
+): void {
+  const hosted = options.hosted === true;
   server.tool(
     "start_workflow_run",
     "Start a real run of a workflow — the way to TEST a workflow you just " +
@@ -58,9 +175,14 @@ export function registerRunTools(server: McpServer, client: AxonityClient): void
       "PLUS whatever that start declares on top in its own `parameters` — a " +
       "triggerId that does not exist is a 422 listing the ones that do, never a " +
       "quiet fallback to a different start. " +
+      "\n\nA start with a FILE parameter takes the reference " +
+      "upload_run_input_file returns: upload each file first, then put the " +
+      "reference in triggerInput under that parameter. " +
+      (hosted ? HOSTED_TRIGGER_INPUT_FILE : LOCAL_TRIGGER_INPUT_FILE) +
       "\n\nA run may PARK on a step that asks a question instead of finishing. " +
-      "read_run_waiting_on says what it is parked on; answer_run_question and " +
-      "send_run_message are how it moves again. " +
+      "list_todo_steps lists the step it waits on (each item carries its runId " +
+      "and stepId); answer_run_question and send_run_message are how it moves " +
+      "again. " +
       "\n\nA chat with the Dashboard Analyst is not a workflow run: start one " +
       "with start_conversation.",
     {
@@ -81,23 +203,55 @@ export function registerRunTools(server: McpServer, client: AxonityClient): void
           "Input payload for the start you are firing, keyed by each " +
             "parameter's `name`. Omit for none. Do NOT send a parameter marked " +
             "`pinned` — the author owns that value and it is overwritten on " +
-            "every run regardless of what you send.",
+            "every run regardless of what you send." +
+            (hosted
+              ? ""
+              : " At most one of `triggerInput` or `triggerInputPath`; for an " +
+                "input too large to write out, use `triggerInputPath`."),
+        ),
+      triggerInputPath: z
+        .string()
+        .optional()
+        .describe(
+          hosted
+            ? "Not available on the connector Axonity hosts: it would name a " +
+                "file on the Axonity server. Always refused; send `triggerInput`."
+            : "Absolute path to a JSON file on the machine this connector runs " +
+                "on, holding the start input as one JSON object; it is sent as " +
+                "`triggerInput`, so the same keys and rules apply. At most one " +
+                "of `triggerInput` or `triggerInputPath`.",
         ),
       manualPhases: z
         .boolean()
         .optional()
         .describe("Run with manual phase gating. Defaults to false."),
     },
-    async ({ workflowId, triggerId, triggerInput, manualPhases }) =>
-      guard(async () =>
-        jsonResult(
+    async ({ workflowId, triggerId, triggerInput, triggerInputPath, manualPhases }) =>
+      guard(async () => {
+        // Before anything else, and whatever else was sent: nothing on the
+        // server's disk is read for a caller of the hosted connector.
+        if (hosted && triggerInputPath !== undefined) {
+          throw new Error(HOSTED_TRIGGER_INPUT_PATH_REFUSAL);
+        }
+        if (triggerInput !== undefined && triggerInputPath !== undefined) {
+          throw new Error(
+            "Give at most one of `triggerInput` or `triggerInputPath`: the " +
+              "input itself, or the path of a JSON file on the machine this " +
+              "connector runs on that holds it.",
+          );
+        }
+        const input =
+          triggerInputPath !== undefined
+            ? await readTriggerInputFile(triggerInputPath)
+            : triggerInput;
+        return jsonResult(
           await client.post(`/api/v1/workflows/${workflowId}/runs`, {
             ...(triggerId ? { triggerId } : {}),
-            ...(triggerInput ? { triggerInput } : {}),
+            ...(input ? { triggerInput: input } : {}),
             ...(manualPhases === undefined ? {} : { manualPhases }),
           }),
-        ),
-      ),
+        );
+      }),
   );
 
   server.tool(
@@ -321,9 +475,34 @@ export function registerRunTools(server: McpServer, client: AxonityClient): void
 
   server.tool(
     "list_todo_steps",
-    "The steps across the TENANT that are waiting on a human — every parked " +
-      "run, whatever it is parked on. This is the list you read to answer 'is " +
-      "anything stuck on me?' without knowing which run to look at. " +
+    "The steps across the TENANT that are waiting on a person — one item per " +
+      "step. This is the list you read to answer 'is anything stuck on me?' " +
+      "without knowing which run to look at. " +
+      "\n\nWHAT IS AN ITEM: a step of a run that is `waiting` or " +
+      "`input_required`, not archived and not a conversation, that waits for " +
+      "one of four things (`todoType`): `ask_user` — an agent asked a question " +
+      "that is not answered; `plan_approval` — a plan waits for a decision; " +
+      "`manual_step` or `decision` — the step type says a person does it. NOT " +
+      "items: a debug pause (`phase_control`) or any other step without one of " +
+      "those reasons, and a question already answered whose run has not " +
+      "resumed yet (the answer is on its way). A conversation waits for its " +
+      "person in the chat, not here. " +
+      "\n\nWHOSE IT IS: each item belongs to one agent or to none (`agentId`). " +
+      "A question or a plan belongs to the agent that asked (the agent of the " +
+      "step's latest orchestrator call; with none on record, the workflow's " +
+      "owner). A manual step or a decision belongs to the workflow's owner " +
+      "(none when the workflow has no live owner or is deleted). None for the " +
+      "budget question the platform itself asked under the old budget rule " +
+      "(marked `budget_pause` in the question's state), and for every step of " +
+      "a run the run history hides (a hidden platform workflow). Pass " +
+      "`agentId` for that agent's items only — the items its \"Needs you\" " +
+      "counts; an agent of another workspace has none. Without it the list " +
+      "shows every item, those on no agent included. " +
+      "\n\nEach item also carries `askedAt` (when the agent asked; null for an " +
+      "item that is not a question) and `groupKey`: equal for literally equal " +
+      "questions — same workflow, same step, question text equal character " +
+      "for character — so they can be shown once. Each is still answered on " +
+      "its own run. Null for an item without a question. " +
       "\n\nTHE RESPONSE IS ONE PAGE, NOT THE FULL LIST: " +
       "{ items, nextCursor, pageSize, hasMore }. While hasMore is true you have " +
       "NOT seen every waiting step — pass the response's nextCursor back as " +
@@ -332,9 +511,13 @@ export function registerRunTools(server: McpServer, client: AxonityClient): void
       "one run can carry several waiting steps, so `items` may be LONGER than " +
       "pageSize. That is not a bug and not an overflow — pageSize bounds what " +
       "was read, not what came back. A fan-out can park thousands of items on " +
-      "one manual step at once, which is why this list is paged at all. " +
-      "\n\nread_run_waiting_on answers the same question for a run you already " +
-      "have in your hand.",
+      "one manual step at once, which is why this list is paged at all. Without " +
+      "agentId a run read may hold no item, so a page can also be shorter than " +
+      "pageSize, even empty, while hasMore is true; with agentId only the runs " +
+      "holding an item of that agent are walked. " +
+      "\n\nread_run_waiting_on is a different read: the pending wake-tasks of " +
+      "one run you already have (a timer; an answer, a chat message or a " +
+      "callback's result on its way). An open question has no wake-task.",
     {
       limit: z
         .number()
@@ -348,9 +531,18 @@ export function registerRunTools(server: McpServer, client: AxonityClient): void
           "Opaque continuation cursor from the previous response's nextCursor. " +
             "Omit for the first page. Do not parse or construct one.",
         ),
+      agentId: z
+        .string()
+        .optional()
+        .describe(
+          "An agent's id (a UUID): only the items that belong to that agent. " +
+            "Omit for every item in the tenant.",
+        ),
     },
-    async ({ limit, cursor }) =>
-      guard(async () => jsonResult(await client.get("/api/v1/runs/todo", { limit, cursor }))),
+    async ({ limit, cursor, agentId }) =>
+      guard(async () =>
+        jsonResult(await client.get("/api/v1/runs/todo", { limit, cursor, agentId })),
+      ),
   );
 
   server.tool(
@@ -547,11 +739,21 @@ export function registerRunTools(server: McpServer, client: AxonityClient): void
     "read_run_waiting_on",
     "Why a run is PARKED. A run in `waiting` or `input_required` is not stuck " +
       "and not slow — it is holding for something, and this lists every pending " +
-      "wake-task targeting it: a question asked of a person, a timer, a callback " +
-      "that has not arrived. Read this before concluding a test run failed. " +
+      "wake-task targeting it: a timer, or an answer, a chat message or a " +
+      "callback's result on its way (a callback row appears only once the work " +
+      "behind it has finished). Read this before concluding a test run failed. " +
+      "\n\nA step that waits on a PERSON — an open question, a plan, a manual or " +
+      "a decision step — has NO wake-task and is not here: a question's wake-task " +
+      "is planted only once someone answers it. Those steps are on " +
+      "list_todo_steps (with their runId and stepId), and in read_run as a step " +
+      "whose status is `waiting_for_input` and whose `waitReason` says why. " +
+      "\n\nA run waiting on a FOR EACH batch, or on a callback whose work is " +
+      "still running, has no wake-task here either: the batch waits as a marker " +
+      "on its step (watch it with read_run_for_each_progress), and the running " +
+      "work is a task in list_run_tasks. " +
       "\n\nAn EMPTY list is a real answer, not an error: the run may have every " +
-      "wake already resolved and be about to resume. " +
-      "\n\nWhen the answer is a question, answer_run_question is what unparks it.",
+      "wake already resolved and be about to resume, or it waits on something " +
+      "with no wake-task — a person, a FOR EACH batch, a callback still running.",
     {
       runId: z.string().describe("The run's id."),
       limit: z.number().int().optional().describe("How many to return. Default 50."),
@@ -658,14 +860,14 @@ export function registerRunTools(server: McpServer, client: AxonityClient): void
     "Answer an `ask_user` step a run is parked on, so the run resumes. This is " +
       "what makes \"start a run and see what it does\" finishable: without it a " +
       "workflow that asks anything waits forever and a test never returns a " +
-      "verdict. Find the parked step with read_run_waiting_on or read_run. " +
+      "verdict. Find the parked step with list_todo_steps or read_run. " +
       "\n\nThe answer is recorded as the ANSWER A PERSON WOULD HAVE GIVEN and " +
       "the run proceeds on it. On a run a human is depending on, that is their " +
       "decision to make, not yours — answer your own test runs, and ask before " +
       "answering someone else's. Returns the run's updated detail.",
     {
       runId: z.string().describe("The run's id."),
-      stepId: z.string().describe("The suspended step's id, from read_run_waiting_on."),
+      stepId: z.string().describe("The suspended step's id, from list_todo_steps or read_run."),
       answer: z.string().describe("The answer text the step is waiting for."),
     },
     async ({ runId, stepId, answer }) =>
@@ -690,13 +892,13 @@ export function registerRunTools(server: McpServer, client: AxonityClient): void
       "it. Only do this when a person has told you the work is done, or on a " +
       "test run of your own where nothing real depended on the step. Never to " +
       "get a stuck run moving. " +
-      "\n\nFind the parked step with read_run_waiting_on. Returns the run's " +
+      "\n\nFind the parked step with list_todo_steps or read_run. Returns the run's " +
       "updated detail. Deciding a PLAN APPROVAL is a different thing again and " +
       "is deliberately not available here — that step exists to get a human's " +
       "review, and an agent approving it would often be approving its own plan.",
     {
       runId: z.string().describe("The run's id."),
-      stepId: z.string().describe("The parked step's id, from read_run_waiting_on."),
+      stepId: z.string().describe("The parked step's id, from list_todo_steps or read_run."),
       selectedBranch: z
         .string()
         .optional()

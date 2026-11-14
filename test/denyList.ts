@@ -120,6 +120,11 @@ export const FORBIDDEN: Rule[] = [
   // `delete_secret` out (#39).
   { label: "run workflow-memory (retired placeholder)", path: /\/runs\/[^/]+\/workflow-memory$/ },
   { label: "service tokens", path: /\/service-tokens(\/|$)/ },
+  // A token never manages tokens: the backend's own route table closes every
+  // `/me/tokens` route to a token (`# a token never manages tokens` in
+  // `token_route_classes.py`), so a tool here would only be refused. Letting a
+  // token mint, list or revoke tokens would also let it widen its own reach.
+  { label: "personal tokens (a token never manages tokens)", path: /\/api\/v1\/me\/tokens(\/|$)/ },
   { label: "deployment", path: /\/deployment(\/|$)/ },
   // `/config/secrets` lives behind this rule and stays closed to every verb —
   // it is the deploy-time surface, not the tenant's secret catalogue.

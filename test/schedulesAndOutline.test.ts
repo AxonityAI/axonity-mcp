@@ -1,4 +1,8 @@
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+
 import { describe, expect, it, vi } from "vitest";
+import { z } from "zod";
 
 import type { AxonityClient } from "../src/client.js";
 import { registerConventions } from "../src/tools/conventions.js";
@@ -30,6 +34,7 @@ interface ToolResult {
 function setup(response: unknown = { ok: true }) {
   const handlers = new Map<string, Handler>();
   const descriptions = new Map<string, string>();
+  const schemas = new Map<string, z.ZodRawShape>();
   const client = {
     get: vi.fn(async () => response),
     post: vi.fn(async () => response),
@@ -41,16 +46,17 @@ function setup(response: unknown = { ok: true }) {
     tool: (
       name: string,
       description: string,
-      _s: unknown,
+      shape: z.ZodRawShape,
       handler: (a: never) => Promise<ToolResult>,
     ) => {
       handlers.set(name, handler as Handler);
       descriptions.set(name, description);
+      schemas.set(name, shape);
     },
   };
   registerTriggerTools(server as never, client as unknown as AxonityClient);
   registerRunTools(server as never, client as unknown as AxonityClient);
-  return { handlers, descriptions, client };
+  return { handlers, descriptions, client, schemas };
 }
 
 function body(r: ToolResult): Record<string, unknown> {
@@ -246,6 +252,106 @@ describe("what a run left behind, and what is waiting on a human", () => {
   });
 });
 
+/**
+ * `GET /runs/todo?agentId=` (axonity-flow, `waiting_on_a_person`, 11 Nov 2026)
+ * answers only the items of one agent. The parameter has to ARRIVE: Zod drops
+ * a key the tool does not declare without a word, and a handler that forgot to
+ * forward it would answer the whole tenant's list as if it were one agent's.
+ */
+describe("list_todo_steps narrows to one agent with agentId", () => {
+  const snapshot = JSON.parse(
+    readFileSync(
+      fileURLToPath(new URL("./fixtures/openapi.snapshot.json", import.meta.url)),
+      "utf8",
+    ),
+  ) as {
+    paths: Record<
+      string,
+      { get: { parameters?: { name: string; in: string; schema?: unknown }[] } }
+    >;
+    components: { schemas: Record<string, { properties?: Record<string, unknown> }> };
+  };
+
+  it("declares agentId, so Zod keeps it", () => {
+    const input = z.object(setup().schemas.get("list_todo_steps")!);
+    const parsed = input.parse({ agentId: "a-1" }) as Record<string, unknown>;
+    expect(parsed.agentId).toBe("a-1");
+    expect(input.safeParse({}).success).toBe(true);
+  });
+
+  it("forwards agentId under the route's own name", async () => {
+    const { handlers, client } = setup();
+    await handlers.get("list_todo_steps")!({ agentId: "a-1", limit: 20, cursor: "c" });
+    expect(client.get).toHaveBeenCalledWith("/api/v1/runs/todo", {
+      limit: 20,
+      cursor: "c",
+      agentId: "a-1",
+    });
+  });
+
+  it("sends no agentId when none is given, so the list is the whole tenant's", async () => {
+    const { handlers, client } = setup();
+    await handlers.get("list_todo_steps")!({});
+    const [, params] = client.get.mock.calls[0] as unknown as [string, Record<string, unknown>];
+    expect(params.agentId).toBeUndefined();
+  });
+
+  it("the name it sends is a query parameter of the route, a uuid", () => {
+    const param = snapshot.paths["/api/v1/runs/todo"].get.parameters!.find(
+      (p) => p.name === "agentId",
+    );
+    expect(param?.in).toBe("query");
+    expect(JSON.stringify(param?.schema)).toContain('"format":"uuid"');
+  });
+
+  it("names the three fields each item carries, as the item schema has them", () => {
+    const fields = Object.keys(snapshot.components.schemas.TodoItem.properties ?? {});
+    expect(fields).toEqual(expect.arrayContaining(["agentId", "askedAt", "groupKey"]));
+    const d = setup().descriptions.get("list_todo_steps")!;
+    for (const f of ["agentId", "askedAt", "groupKey"]) expect(d, f).toContain(`\`${f}\``);
+  });
+
+  it("says what is an item, what is not, and whose it is", () => {
+    const d = setup().descriptions.get("list_todo_steps")!;
+    // The four kinds (`todoType`).
+    for (const kind of ["ask_user", "plan_approval", "manual_step", "decision"]) {
+      expect(d, kind).toContain(kind);
+    }
+    // What waits but is not an item.
+    expect(d).toMatch(/archived/);
+    expect(d).toMatch(/phase_control/);
+    expect(d).toMatch(/already answered/);
+    // Whose it is.
+    expect(d).toMatch(/agent that asked/);
+    expect(d).toMatch(/workflow's owner/);
+    expect(d).toMatch(/budget question/);
+    // It is NOT "every parked run, whatever it is parked on".
+    expect(d).not.toMatch(/whatever it is parked on/);
+  });
+
+  it("does not call read_run_waiting_on the same question: that is a run's wake-tasks", () => {
+    const d = setup().descriptions.get("list_todo_steps")!;
+    expect(d).not.toMatch(/same question/);
+    expect(d).toMatch(/read_run_waiting_on[^.]*wake-task/);
+  });
+
+  it("the guide says the same, at the guide's width", async () => {
+    const { CONVENTIONS } = await import("../src/tools/conventions.js");
+    const start = CONVENTIONS.indexOf("- **`list_todo_steps`**");
+    expect(start).toBeGreaterThanOrEqual(0);
+    // The two bullets on the to-do list, up to the next subject (archiving).
+    const paragraph = CONVENTIONS.slice(start, CONVENTIONS.indexOf("- A run's archive", start));
+    expect(paragraph).toContain("`agentId`");
+    expect(paragraph).toContain("`groupKey`");
+    expect(paragraph).toMatch(/agent\s+that asked/);
+    expect(paragraph).toMatch(/workflow's\s+owner/);
+    expect(paragraph).toMatch(/phase_control/);
+    expect(paragraph).not.toMatch(/same question/);
+    expect(paragraph).toMatch(/nextCursor/);
+    for (const line of paragraph.split("\n")) expect(line.length, line).toBeLessThanOrEqual(84);
+  });
+});
+
 describe("the guide says both, where an agent will meet them", () => {
   it("tells an agent to start from the outline and to disarm rather than delete", async () => {
     const handlers = new Map<string, Handler>();
@@ -259,5 +365,111 @@ describe("the guide says both, where an agent will meet them", () => {
     expect(text).toContain("set_cron_schedule_enabled");
     expect(text).toContain("run_cron_schedule_now");
     expect(text).toContain("scheduleRuleKinds");
+  });
+});
+
+/**
+ * Review of 4347f84 (must): `GET /runs/{id}/waiting-on` lists a run's PENDING
+ * WAKE-TASKS. A step that waits on a person — an open question, a plan, a
+ * manual or decision step — has none: the `user_answer` task is planted only
+ * once a person answers (axonity-flow `RunService.plant_ask_user_wake_task`).
+ * The rows that do sit there (`resume_run_id` = the run, `pending`) are a
+ * timer (`wait_here`), an answer or a chat message on its way
+ * (`user_answer` / `user_message`), and a callback whose work has FINISHED
+ * (`_plant_callback_wake_if_needed`, on mark_succeeded / failed / dead-letter).
+ * A FOR EACH batch plants no row at all — the parent waits on a marker in
+ * `step_states` (SUSPEND-RESUME-DESIGN §5/§12, `schemas/task_queue.py`
+ * WAKE_EVENT_KINDS) — and a callback still running has none yet (review r2 of
+ * 554ca16). So no description may send an agent there to find an open
+ * question, a batch or running work, nor read an empty list as "a person".
+ */
+describe("read_run_waiting_on is where a run's wake-tasks are, not its open questions", () => {
+  it("read_run_waiting_on names what a wake-task is, and where the person-steps are", () => {
+    const d = setup().descriptions.get("read_run_waiting_on")!;
+    expect(d).not.toMatch(/a question asked of a person/);
+    expect(d).toMatch(/on its way/);
+    expect(d).toMatch(/timer/);
+    expect(d).toMatch(/callback's result on its way/);
+    expect(d).toMatch(/list_todo_steps/);
+    // Not a wake-task: a batch, a callback that has not completed.
+    expect(d).not.toMatch(/a callback or a batch/);
+    expect(d).not.toMatch(/has not completed/);
+    expect(d).toMatch(/FOR EACH[^.]*no wake-task/);
+    expect(d).toMatch(/read_run_for_each_progress/);
+    expect(d).toMatch(/list_run_tasks/);
+    // In read_run, waitReason singles out the person-wait, not the status.
+    expect(d).toMatch(/`waitReason`/);
+  });
+
+  it("an empty list covers every wait without a wake-task, not only a person", () => {
+    const d = setup().descriptions.get("read_run_waiting_on")!;
+    const empty = d.slice(d.indexOf("An EMPTY list"));
+    expect(empty).toMatch(/person/);
+    expect(empty).toMatch(/batch/);
+    expect(empty).toMatch(/callback still running/);
+  });
+
+  it("list_todo_steps describes those wake-tasks the same way", () => {
+    const d = setup().descriptions.get("list_todo_steps")!;
+    expect(d).not.toMatch(/\(a question, a timer, a callback\)/);
+    expect(d).toMatch(/read_run_waiting_on[^.]*on its way/);
+    expect(d).not.toMatch(/a callback, a batch\)/);
+  });
+
+  it("the tools that unpark a step find it in list_todo_steps or read_run, not in the wake-tasks", () => {
+    const { descriptions, schemas } = setup();
+    for (const tool of ["start_workflow_run", "answer_run_question", "complete_run_step"]) {
+      const d = descriptions.get(tool)!;
+      expect(d, tool).not.toMatch(/read_run_waiting_on says what it is parked on/);
+      expect(d, tool).not.toMatch(/Find the parked step with read_run_waiting_on/);
+      expect(d, tool).toMatch(/list_todo_steps/);
+    }
+    for (const tool of ["answer_run_question", "complete_run_step"]) {
+      const stepId = schemas.get(tool)!.stepId as z.ZodTypeAny;
+      expect(stepId.description, tool).not.toMatch(/read_run_waiting_on/);
+      expect(stepId.description, tool).toMatch(/list_todo_steps/);
+    }
+  });
+
+  it("the guide's 'a run can park' bullet points at list_todo_steps", async () => {
+    const { CONVENTIONS } = await import("../src/tools/conventions.js");
+    const start = CONVENTIONS.indexOf("**A run can park instead of finishing.**");
+    expect(start).toBeGreaterThanOrEqual(0);
+    const bullet = CONVENTIONS.slice(start, CONVENTIONS.indexOf("\n  - ", start));
+    expect(bullet).not.toMatch(/`read_run_waiting_on` says what for/);
+    expect(bullet).toMatch(/list_todo_steps/);
+    // Only a step that waits on a PERSON is there; a conversation waits in its chat.
+    expect(bullet).not.toMatch(/`list_todo_steps` lists the step it waits on;/);
+    expect(bullet).toMatch(/`list_todo_steps`[^;]*person/);
+    expect(bullet).toMatch(/`read_run_waiting_on`/);
+  });
+
+  it("the guide's paging bullet lists the wake-tasks there are, and no batch", async () => {
+    const { CONVENTIONS } = await import("../src/tools/conventions.js");
+    const start = CONVENTIONS.indexOf("- `list_todo_steps` is PAGED");
+    expect(start).toBeGreaterThanOrEqual(0);
+    const bullet = CONVENTIONS.slice(start, CONVENTIONS.indexOf("\n- ", start + 1));
+    expect(bullet).not.toMatch(/a callback, a batch\)/);
+    expect(bullet).toMatch(/callback's result/);
+    for (const line of bullet.split("\n")) expect(line.length, line).toBeLessThanOrEqual(84);
+  });
+});
+
+describe("whose an item is, as the SQL decides it (review of 4347f84)", () => {
+  it("the budget item is the budget_pause flag, not a date", () => {
+    const d = setup().descriptions.get("list_todo_steps")!;
+    expect(d).not.toMatch(/before 11 Nov/);
+    expect(d).toContain("`budget_pause`");
+  });
+
+  it("a manual step is nobody's when the workflow has no live owner, not only when deleted", () => {
+    const d = setup().descriptions.get("list_todo_steps")!;
+    expect(d).toMatch(/no live owner/);
+  });
+
+  it("the guide's paging bullet names its tool and does not promise a full page", async () => {
+    const { CONVENTIONS } = await import("../src/tools/conventions.js");
+    expect(CONVENTIONS).not.toMatch(/\n- It is PAGED over the waiting RUNS/);
+    expect(CONVENTIONS).not.toMatch(/or, without `agentId`,\s+shorter/);
   });
 });

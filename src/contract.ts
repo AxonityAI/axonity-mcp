@@ -75,6 +75,9 @@ export const PROBE_ARGS: Record<string, unknown> = {
   digest: "d", invocationId: "x", itemCap: 50, enabled: true, rules: [{}],
   fileId: "x",
   changes: [{ key: "example", operation: "set", value: null, expectedRevision: null }],
+  // upload_run_input_file: the bytes as base64, never a `path` — the replay
+  // runs at startup and must not read the disk.
+  contentBase64: "eA==", filename: "x", contentType: "text/plain",
 };
 
 /**

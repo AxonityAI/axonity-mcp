@@ -7,7 +7,14 @@ import { z } from "zod";
 import type { AxonityClient } from "../src/client.js";
 import { collectCalledRoutes } from "../src/contract.js";
 import { errorForStatus } from "../src/errors.js";
-import { buildServer, registerAll } from "../src/index.js";
+import { TOKEN_ROUTE_CLASSES } from "../src/generated/tokenRouteClasses.js";
+import { buildServer, registerAll, registerHosted } from "../src/index.js";
+import {
+  BUILD_DRAFTS,
+  forPersonalTokens,
+  recordTools,
+  routesPerTool,
+} from "../src/routeClasses.js";
 import { CONVENTIONS } from "../src/tools/conventions.js";
 import { FORBIDDEN, forbids } from "./denyList.js";
 
@@ -312,5 +319,71 @@ describe("personal module settings boundary", () => {
     ["GET", "/api/v1/me/settings/sample/extra"],
   ])("does not broaden the boundary to %s %s", (method, path) => {
     expect(forbids(method, path)).toBe(false);
+  });
+});
+
+
+// B84 (axonity-flow#1826): a personal token of an administrator writes workspace
+// settings with its person's rights; a service token needs the author scope;
+// installation, role and personal settings stay with a person in the browser.
+describe("who may write module settings, and where the tools stop", () => {
+  const write = () => registered().tool("update_module_settings").description;
+
+  it("names both token kinds that may write the workspace level", () => {
+    expect(write()).toMatch(/service token with the author scope/i);
+    expect(write()).toMatch(/personal token/i);
+    expect(write()).toMatch(/owner is an administrator/i);
+    expect(write()).toMatch(/with that person's rights/i);
+  });
+
+  it("says installation, role and personal settings are never written through a token", () => {
+    expect(write()).toMatch(/installation, role and personal settings/i);
+    expect(write()).toMatch(/person in Axonity/i);
+  });
+
+  it("the conventions repeat both token kinds, without a second rule set", () => {
+    const section = CONVENTIONS.split("## Modules and settings")[1].split("\n## ")[0];
+    expect(section).toMatch(/personal token/i);
+    expect(section).toMatch(/author scope/i);
+  });
+
+  async function hostedDescriptions() {
+    const tools = recordTools(registerHosted, {} as AxonityClient);
+    const routes = await routesPerTool(registerHosted);
+    return new Map(
+      forPersonalTokens(tools, routes, TOKEN_ROUTE_CLASSES).map((t) => [t.name, t.description]),
+    );
+  }
+
+  it("the hosted wording never calls the three reads closed to a personal token", async () => {
+    const hosted = await hostedDescriptions();
+    for (const name of ["list_modules", "read_module_settings_schema", "read_module_settings"]) {
+      expect(hosted.get(name), name).not.toMatch(/^WITH A PERSONAL TOKEN|^NOT AVAILABLE/);
+    }
+  });
+
+  it.each([
+    "GET /api/v1/me/settings/{module_id}",
+    "PATCH /api/v1/me/settings/{module_id}",
+    "GET /api/v1/modules/{module_id}/settings/resolved",
+    "GET /modules/{module_id}/settings",
+    "PATCH /modules/{module_id}/settings",
+    "PUT /api/v1/platform/modules/{module_id}/emergency-stop",
+  ])("the backend's table keeps %s closed to every token (personal, installation)", (key) => {
+    expect(TOKEN_ROUTE_CLASSES[key]?.class, key).toBe("dicht");
+  });
+
+  // B84: the backend's table must let a personal token write the workspace level
+  // (with its owner's rights). The pinned table is the backend's; this goes green
+  // when the fixture is re-recorded from a backend that implements B84, and says
+  // so in the tool's hosted wording instead of "NOT AVAILABLE WITH A PERSONAL TOKEN".
+  it("B84: the backend's table does not close the workspace write to a personal token", async () => {
+    const row = TOKEN_ROUTE_CLASSES["PATCH /api/v1/modules/{module_id}/settings"];
+    expect(row?.class).not.toBe("dicht");
+    const hosted = await hostedDescriptions();
+    expect(hosted.get("update_module_settings")).not.toMatch(/^NOT AVAILABLE/);
+    if (row?.class === "configuratie") {
+      expect(hosted.get("update_module_settings")).toContain(`'${BUILD_DRAFTS}' switched on`);
+    }
   });
 });

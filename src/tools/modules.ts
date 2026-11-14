@@ -115,8 +115,12 @@ export function registerModuleTools(server: McpServer, client: AxonityClient): v
       "override and own lock; follow_deploy uses the server's latest deployed value " +
       "and preserves the own lock. The backend validates field rights, levels, locks " +
       "and revisions, rejects duplicate keys, and derives actor and provenance from " +
-      "the authenticated request. An author-scoped token can write permitted workspace " +
-      "fields, including admin-classified fields; it cannot select another context. " +
+      "the authenticated request. Who may write: a service token with the author scope, " +
+      "or a personal token whose owner is an administrator of this workspace; a personal " +
+      "token writes with that person's rights and the save is recorded under that person. " +
+      "Either can write permitted workspace fields, including admin-classified fields. " +
+      "Only the workspace level is written here: installation, role and personal settings " +
+      "are changed by a person in Axonity in the browser, never through a token. " +
       "A stale revision is refused: reread settings before deciding what to save. " +
       SETTINGS_RESPONSE,
     {

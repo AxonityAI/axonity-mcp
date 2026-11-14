@@ -855,6 +855,18 @@
             ],
             "title": "Avatar"
           },
+          "capabilityId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The agent's team: the id of one capability of this workspace's company model (GET /api/v1/company, document.capabilities). Null: no team. Not part of a version: a change holds at once.",
+            "title": "Capabilityid"
+          },
           "capabilityTier": {
             "enum": [
               "economy",
@@ -1298,6 +1310,32 @@
           "skills"
         ],
         "title": "AgentSkillsResponse",
+        "type": "object"
+      },
+      "AgentTeamResponse": {
+        "description": "The agent's team after ``PUT /api/v1/agents/{id}/team``.",
+        "properties": {
+          "capabilityId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The agent's team: the id of one capability of this workspace's company model (GET /api/v1/company, document.capabilities). Null: no team. Not part of a version: a change holds at once.",
+            "title": "Capabilityid"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "AgentTeamResponse",
         "type": "object"
       },
       "AgentTemplateListItem": {
@@ -2184,6 +2222,20 @@
           "id": {
             "title": "Id",
             "type": "string"
+          },
+          "via": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Via"
           }
         },
         "required": [
@@ -2853,7 +2905,8 @@
         "type": "object"
       },
       "BriefProfile": {
-        "description": "One row of the profiles table: what one role in the company wants in its brief.",
+        "additionalProperties": false,
+        "description": "What one role in the company wants in its brief: that role's Briefing settings.",
         "properties": {
           "assignment": {
             "anyOf": [
@@ -2956,134 +3009,18 @@
         "type": "object"
       },
       "BriefRecipient": {
-        "description": "One row of the recipients table: who receives the brief, and when.",
+        "additionalProperties": false,
+        "description": "One row of the recipients table: who receives the brief, and whether by itself.\n\nWhat their brief holds and when it comes are their Briefing settings\n(#1826 R1 G), set by the recipient themself.",
         "properties": {
-          "assignment": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Their own assignment; replaces the profile's.",
-            "title": "Assignment"
-          },
-          "at": {
-            "anyOf": [
-              {
-                "maxLength": 5,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "At"
-          },
-          "day": {
-            "anyOf": [
-              {
-                "maxLength": 16,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Day"
-          },
-          "depth": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "headlines, standard or full.",
-            "title": "Depth"
-          },
-          "language": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "A language code, such as nl.",
-            "title": "Language"
-          },
-          "mail": {
-            "default": false,
-            "title": "Mail",
-            "type": "boolean"
-          },
-          "mailbox": {
-            "anyOf": [
-              {
-                "maxLength": 320,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Mailbox"
-          },
           "on": {
             "default": false,
             "title": "On",
             "type": "boolean"
           },
-          "profile": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "The brief profile this recipient follows, by its name.",
-            "title": "Profile"
-          },
-          "questions": {
-            "description": "Their own questions; come after the profile's.",
-            "items": {
-              "type": "string"
-            },
-            "title": "Questions",
-            "type": "array"
-          },
           "recipient": {
             "maxLength": 320,
             "title": "Recipient",
             "type": "string"
-          },
-          "timezone": {
-            "anyOf": [
-              {
-                "maxLength": 64,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Timezone"
-          },
-          "topics": {
-            "description": "Measure names; each with everything under it. Empty: the profile's.",
-            "items": {
-              "type": "string"
-            },
-            "title": "Topics",
-            "type": "array"
           }
         },
         "required": [
@@ -6330,6 +6267,19 @@
             "description": "Avatar identifier or URL for the agent.",
             "title": "Avatar"
           },
+          "capabilityId": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The agent's team: the id of one capability of this workspace's company model (GET /api/v1/company, document.capabilities). Null: no team. Not part of a version: a change holds at once. Left out: no team.",
+            "title": "Capabilityid"
+          },
           "capabilityTier": {
             "default": "standard",
             "description": "Model capability tier: economy, standard, smart, or reasoning.",
@@ -7491,6 +7441,157 @@
         "title": "CreateOutputSchemaRequest",
         "type": "object"
       },
+      "CreatePersonalTokenRequest": {
+        "description": "POST /api/v1/me/tokens — make a token for myself.",
+        "properties": {
+          "expiresInDays": {
+            "enum": [
+              7,
+              15,
+              30,
+              60,
+              90
+            ],
+            "title": "Expiresindays",
+            "type": "integer"
+          },
+          "name": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "restriction": {
+            "$ref": "#/components/schemas/TokenRestrictionSchema"
+          }
+        },
+        "required": [
+          "name",
+          "expiresInDays"
+        ],
+        "title": "CreatePersonalTokenRequest",
+        "type": "object"
+      },
+      "CreatePersonalTokenResponse": {
+        "description": "Response after making a token — the ONLY place the plaintext appears.",
+        "properties": {
+          "clientId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clientid"
+          },
+          "createdAt": {
+            "title": "Createdat",
+            "type": "string"
+          },
+          "environment": {
+            "title": "Environment",
+            "type": "string"
+          },
+          "expiresAt": {
+            "title": "Expiresat",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "personal",
+              "oauth"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "lastUsedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lastusedat"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "restriction": {
+            "$ref": "#/components/schemas/TokenRestrictionSchema"
+          },
+          "revokedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revokedat"
+          },
+          "revokedReason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "owner",
+                  "membership_suspended",
+                  "membership_removed",
+                  "workspace_closed",
+                  "support_ended",
+                  "password_changed",
+                  "oauth_code_replay"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revokedreason"
+          },
+          "status": {
+            "enum": [
+              "active",
+              "expired",
+              "revoked"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "token": {
+            "title": "Token",
+            "type": "string"
+          },
+          "tokenPrefix": {
+            "title": "Tokenprefix",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "kind",
+          "tokenPrefix",
+          "restriction",
+          "createdAt",
+          "expiresAt",
+          "status",
+          "token",
+          "environment"
+        ],
+        "title": "CreatePersonalTokenResponse",
+        "type": "object"
+      },
       "CreatePolicyRequest": {
         "description": "POST /api/v1/policies — create a policy.",
         "properties": {
@@ -8100,115 +8201,6 @@
           "version"
         ],
         "title": "CreateSecretResponse",
-        "type": "object"
-      },
-      "CreateServiceTokenRequest": {
-        "description": "POST /api/v1/service-tokens — mint a new token.",
-        "properties": {
-          "clearance": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/ClearanceSchema"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "expiresInDays": {
-            "enum": [
-              7,
-              15,
-              30,
-              60,
-              90
-            ],
-            "title": "Expiresindays",
-            "type": "integer"
-          },
-          "name": {
-            "maxLength": 255,
-            "minLength": 1,
-            "title": "Name",
-            "type": "string"
-          },
-          "scopes": {
-            "items": {
-              "enum": [
-                "read",
-                "author",
-                "operate",
-                "write"
-              ],
-              "type": "string"
-            },
-            "maxItems": 8,
-            "title": "Scopes",
-            "type": "array"
-          }
-        },
-        "required": [
-          "name",
-          "expiresInDays"
-        ],
-        "title": "CreateServiceTokenRequest",
-        "type": "object"
-      },
-      "CreateServiceTokenResponse": {
-        "description": "Response after minting — the ONLY place the plaintext token appears.",
-        "properties": {
-          "clearance": {
-            "$ref": "#/components/schemas/ClearanceSchema"
-          },
-          "createdAt": {
-            "title": "Createdat",
-            "type": "string"
-          },
-          "expiresAt": {
-            "title": "Expiresat",
-            "type": "string"
-          },
-          "id": {
-            "title": "Id",
-            "type": "string"
-          },
-          "name": {
-            "title": "Name",
-            "type": "string"
-          },
-          "scopes": {
-            "items": {
-              "enum": [
-                "read",
-                "author",
-                "operate",
-                "write",
-                "execute"
-              ],
-              "type": "string"
-            },
-            "title": "Scopes",
-            "type": "array"
-          },
-          "token": {
-            "title": "Token",
-            "type": "string"
-          },
-          "tokenPrefix": {
-            "title": "Tokenprefix",
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "name",
-          "scopes",
-          "token",
-          "tokenPrefix",
-          "createdAt",
-          "expiresAt"
-        ],
-        "title": "CreateServiceTokenResponse",
         "type": "object"
       },
       "CreateSideBranchRequest": {
@@ -9686,6 +9678,7 @@
         "type": "object"
       },
       "DataTableResponse": {
+        "additionalProperties": false,
         "description": "One table — the shape a detail read returns.\n\nCarries NO rows (#1785): a table has no row limit, so inline rows would\ngrow the response with whatever the table holds. ``rowCount`` says how\nmany there are; ``GET /data-tables/{id}/rows`` serves them a page at a\ntime.",
         "properties": {
           "allowedOperations": {
@@ -10127,7 +10120,7 @@
         "type": "object"
       },
       "DataTableSummary": {
-        "description": "One table WITHOUT its rows — the shape a library page returns.\n\n``rowCount`` stands in for the rows themselves. A page of tables that\nembedded every row would grow with what the authors typed, which is\nthe response-size failure #875 fixed by projection; the rows are one\n``GET /data-tables/{id}`` away.",
+        "additionalProperties": false,
         "properties": {
           "allowedOperations": {
             "default": [],
@@ -11742,6 +11735,32 @@
           }
         },
         "title": "DismissBulkResult",
+        "type": "object"
+      },
+      "DismissServiceTokenResponse": {
+        "description": "Response after tidying one dead token off the list.",
+        "properties": {
+          "success": {
+            "default": true,
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "title": "DismissServiceTokenResponse",
+        "type": "object"
+      },
+      "DismissServiceTokensResponse": {
+        "description": "Response after tidying every dead token off the list.",
+        "properties": {
+          "dismissed": {
+            "title": "Dismissed",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "dismissed"
+        ],
+        "title": "DismissServiceTokensResponse",
         "type": "object"
       },
       "DismissWakeTaskResponse": {
@@ -13545,6 +13564,35 @@
           "tokenPrefix": {
             "title": "Tokenprefix",
             "type": "string"
+          },
+          "tokenRevokedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tokenrevokedat"
+          },
+          "tokenRevokedReason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "admin",
+                  "membership_suspended",
+                  "membership_removed",
+                  "workspace_closed",
+                  "support_ended"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tokenrevokedreason"
           }
         },
         "required": [
@@ -15840,6 +15888,18 @@
               }
             ],
             "title": "Avatar"
+          },
+          "capabilityId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The agent's team: the id of one capability of this workspace's company model (GET /api/v1/company, document.capabilities). Null: no team. Not part of a version: a change holds at once.",
+            "title": "Capabilityid"
           },
           "capabilityTier": {
             "enum": [
@@ -22094,7 +22154,7 @@
         "type": "object"
       },
       "MyBrief": {
-        "description": "When YOUR brief comes, as the published recipients table says (C1).\n\n``listed`` is false when the table has no published row for you; the\nother fields are then empty. The schedule and the brief's settings are\nresolved (C2): your row's field where you have one, else your\nprofile's. ``table_id`` is where an administrator\nchanges it — the recipients table, or none before there is one.",
+        "description": "When YOUR brief comes, and what it follows (C1, #1826 R1 G).\n\n``listed`` is false when the published recipients table has no row for\nyou; the other fields are then empty. The schedule and the brief's\nsettings are your Briefing settings: your own, over your roles', over\nthe workspace's. ``table_id`` is where an administrator changes who\nreceives it — the recipients table, or none before there is one.",
         "properties": {
           "assignment": {
             "anyOf": [
@@ -22105,7 +22165,7 @@
                 "type": "null"
               }
             ],
-            "description": "Your assignment for the brief: yours, else your profile's.",
+            "description": "Your assignment for the brief: yours, else your roles', else the workspace's.",
             "title": "Assignment"
           },
           "at": {
@@ -22147,7 +22207,7 @@
                 "type": "null"
               }
             ],
-            "description": "Yours, else your profile's.",
+            "description": "Yours, else your roles', else the workspace's.",
             "title": "Language"
           },
           "listed": {
@@ -22167,20 +22227,8 @@
             "title": "On",
             "type": "boolean"
           },
-          "profile": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "The brief profile you follow, when it is published.",
-            "title": "Profile"
-          },
           "questions": {
-            "description": "Your profile's questions, then your own.",
+            "description": "Your questions: yours, else your roles' together, else the workspace's.",
             "items": {
               "type": "string"
             },
@@ -22212,7 +22260,7 @@
             "title": "Timezone"
           },
           "topics": {
-            "description": "Your topics: yours, else your profile's.",
+            "description": "Your topics: yours, else your roles' together, else the workspace's.",
             "items": {
               "type": "string"
             },
@@ -23225,7 +23273,7 @@
         "type": "object"
       },
       "OwnerSchema": {
-        "description": "Workflow owner.",
+        "description": "A person responsible for the workflow.",
         "properties": {
           "avatar": {
             "anyOf": [
@@ -24976,6 +25024,116 @@
         "title": "PersonRef",
         "type": "object"
       },
+      "PersonalTokenItem": {
+        "description": "A token in the list — metadata only, never the secret.",
+        "properties": {
+          "clientId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clientid"
+          },
+          "createdAt": {
+            "title": "Createdat",
+            "type": "string"
+          },
+          "expiresAt": {
+            "title": "Expiresat",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "personal",
+              "oauth"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "lastUsedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lastusedat"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "restriction": {
+            "$ref": "#/components/schemas/TokenRestrictionSchema"
+          },
+          "revokedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revokedat"
+          },
+          "revokedReason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "owner",
+                  "membership_suspended",
+                  "membership_removed",
+                  "workspace_closed",
+                  "support_ended",
+                  "password_changed",
+                  "oauth_code_replay"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revokedreason"
+          },
+          "status": {
+            "enum": [
+              "active",
+              "expired",
+              "revoked"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "tokenPrefix": {
+            "title": "Tokenprefix",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "kind",
+          "tokenPrefix",
+          "restriction",
+          "createdAt",
+          "expiresAt",
+          "status"
+        ],
+        "title": "PersonalTokenItem",
+        "type": "object"
+      },
       "PlanAftercareItemSchema": {
         "description": "One line under \"Wat er daarna nog wacht\" — what the deploy leaves behind.\n\nField for field the frontend's ``DeployAftercareItem``\n(``frontend/src/lib/components/deployment/tabs/DeployTab.svelte``), which is\nwhy ``actionLabel`` is the camelCase of ``action_label`` and nothing else is\nrenamed. ``kind`` is the badge word the operator reads: ``blocking`` →\n\"blokt\" (and the button is refused), ``off`` → \"uit\", ``staying`` →\n\"blijft\", ``new`` → \"nieuw\".",
         "properties": {
@@ -26668,6 +26826,20 @@
             ],
             "title": "Requestedbykind",
             "type": "string"
+          },
+          "requestedVia": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requestedvia"
           },
           "status": {
             "enum": [
@@ -28618,6 +28790,20 @@
             "title": "Requestedbykind",
             "type": "string"
           },
+          "requestedVia": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requestedvia"
+          },
           "status": {
             "enum": [
               "pending",
@@ -28719,6 +28905,20 @@
           "requestedByKind": {
             "title": "Requestedbykind",
             "type": "string"
+          },
+          "requestedVia": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requestedvia"
           },
           "status": {
             "enum": [
@@ -28997,6 +29197,20 @@
           "task"
         ],
         "title": "ReleaseResult",
+        "type": "object"
+      },
+      "RemoveExpiredResponse": {
+        "description": "How many dead (expired or revoked) tokens were removed from the list.",
+        "properties": {
+          "removed": {
+            "title": "Removed",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "removed"
+        ],
+        "title": "RemoveExpiredResponse",
         "type": "object"
       },
       "RenameVersionRequest": {
@@ -33137,6 +33351,17 @@
             ],
             "title": "Createdbyname"
           },
+          "dismissedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dismissedat"
+          },
           "expiresAt": {
             "title": "Expiresat",
             "type": "string"
@@ -33175,6 +33400,24 @@
               }
             ],
             "title": "Revokedat"
+          },
+          "revokedReason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "admin",
+                  "membership_suspended",
+                  "membership_removed",
+                  "workspace_closed",
+                  "support_ended"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revokedreason"
           },
           "scopes": {
             "items": {
@@ -33398,6 +33641,30 @@
           "role"
         ],
         "title": "SessionResponse",
+        "type": "object"
+      },
+      "SetAgentTeamRequest": {
+        "additionalProperties": false,
+        "description": "PUT /api/v1/agents/{id}/team — put the agent in a team, or take it out.\n\nIts own door, apart from the agent update: the team belongs to the row,\nnot to a version (ENTITY-LIFECYCLE-CONTRACT.md §4.8), so it takes no\n``expectedVersion``, mints no draft and holds at once — for a platform\nagent too, whose versioned fields are locked.",
+        "properties": {
+          "capabilityId": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The agent's team: the id of one capability of this workspace's company model (GET /api/v1/company, document.capabilities). Null: no team. Not part of a version: a change holds at once.",
+            "title": "Capabilityid"
+          }
+        },
+        "required": [
+          "capabilityId"
+        ],
+        "title": "SetAgentTeamRequest",
         "type": "object"
       },
       "SetApplicationExecutorsRequest": {
@@ -35226,6 +35493,23 @@
             ],
             "title": "Tokenusage"
           },
+          "unresolvedInputs": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "$ref": "#/components/schemas/RunValueMarkerSchema"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unresolvedinputs"
+          },
           "waitReason": {
             "anyOf": [
               {
@@ -35720,7 +36004,7 @@
           },
           "kind": {
             "default": "text",
-            "description": "The type of value a cell holds: text, long-text, number, yes-no, date, datetime, time, email, url, choice, multi-choice, object or list. A file is not a cell value and is refused.",
+            "description": "The type of value a cell holds: text, long-text, number, yes-no, date, datetime, time, email, url, choice, multi-choice, object, list or reference. A reference cell holds the id of the entity `to` names. A file is not a cell value and is refused.",
             "maxLength": 32,
             "title": "Kind",
             "type": "string"
@@ -35756,6 +36040,19 @@
             "description": "Whether every row must carry a value for this column.",
             "title": "Required",
             "type": "boolean"
+          },
+          "to": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What a reference column points at: `workflow`. Required for a reference column and refused on any other. Each cell then holds a workflow's id, or is empty. Where the rows travel in a config export, a cell is written as that workflow's slug and a deploy turns it back into the id the target environment has for it.",
+            "title": "To"
           },
           "unique": {
             "default": false,
@@ -36985,6 +37282,18 @@
         "title": "TodoItem",
         "type": "object"
       },
+      "TokenActionResponse": {
+        "description": "Response after revoking or deleting one token.",
+        "properties": {
+          "success": {
+            "default": true,
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "title": "TokenActionResponse",
+        "type": "object"
+      },
       "TokenIssuedResponse": {
         "description": "One-time token disclosure response from create + rotate.",
         "properties": {
@@ -37001,6 +37310,33 @@
           "plaintextToken"
         ],
         "title": "TokenIssuedResponse",
+        "type": "object"
+      },
+      "TokenRestrictionSchema": {
+        "description": "What the owner leaves out. Reading is always on, and everything starts on.\n\n``change`` is \"build drafts and request publication\", ``actions`` is \"run\nactions\", ``clearance`` narrows what the token reads of knowledge and\ntables (``null``: as much as the person reads).",
+        "properties": {
+          "actions": {
+            "default": true,
+            "title": "Actions",
+            "type": "boolean"
+          },
+          "change": {
+            "default": true,
+            "title": "Change",
+            "type": "boolean"
+          },
+          "clearance": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ClearanceSchema"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "TokenRestrictionSchema",
         "type": "object"
       },
       "ToolCodeBody": {
@@ -38411,6 +38747,18 @@
             ],
             "title": "Avatar"
           },
+          "capabilityId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The agent's team: the id of one capability of this workspace's company model (GET /api/v1/company, document.capabilities). Null: no team. Not part of a version: a change holds at once.",
+            "title": "Capabilityid"
+          },
           "capabilityTier": {
             "enum": [
               "economy",
@@ -38878,7 +39226,6 @@
       },
       "UpdateDataTableRequest": {
         "additionalProperties": false,
-        "description": "A partial edit. Only the keys actually sent are applied.",
         "properties": {
           "allowedOperations": {
             "anyOf": [
@@ -43711,7 +44058,7 @@
             "type": "array"
           },
           "tableColumnKinds": {
-            "description": "What a table column may hold, in its `kind` field. A fourth vocabulary beside the three above, with its own spellings (`yes-no`, `long-text`, `multi-choice`) — and `file` is deliberately absent, because a file is storage with a lifecycle rather than a cell value.",
+            "description": "What a table column may hold, in its `kind` field. A fourth vocabulary beside the three above, with its own spellings (`yes-no`, `long-text`, `multi-choice`) — and `file` is deliberately absent, because a file is storage with a lifecycle rather than a cell value. `reference` is in no other vocabulary: its cell holds a workflow's id, and the column says so with `to: workflow`.",
             "items": {
               "type": "string"
             },
@@ -46527,6 +46874,65 @@
         "summary": "Link Skill To Agent",
         "tags": [
           "skills"
+        ]
+      }
+    },
+    "/api/v1/agents/{agent_id}/team": {
+      "put": {
+        "description": "Put the agent in a team — a capability of the company model — or take it out.\n\nHolds at once: the team belongs to the agent's record, not to a version\n(ENTITY-LIFECYCLE-CONTRACT.md §4.8), so there is no ``expectedVersion``\nand no draft. A platform agent gets one the same way.",
+        "operationId": "set_agent_team_api_v1_agents__agent_id__team_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetAgentTeamRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentTeamResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Set Agent Team",
+        "tags": [
+          "agents"
         ]
       }
     },
@@ -50194,7 +50600,7 @@
     },
     "/api/v1/briefs/me": {
       "get": {
-        "description": "When your brief comes: your row of the published recipients table.",
+        "description": "When your brief comes: your published row and your Briefing settings.",
         "operationId": "my_brief_api_v1_briefs_me_get",
         "responses": {
           "200": {
@@ -50221,7 +50627,7 @@
     },
     "/api/v1/briefs/profiles": {
       "put": {
-        "description": "Write one profile into the draft; publish it through the table's gate.",
+        "description": "Set the Briefing settings of the role this profile names, directly and audited.",
         "operationId": "write_brief_profile_api_v1_briefs_profiles_put",
         "requestBody": {
           "content": {
@@ -63444,6 +63850,207 @@
         "summary": "Patch Personal Settings",
         "tags": [
           "module settings"
+        ]
+      }
+    },
+    "/api/v1/me/tokens": {
+      "get": {
+        "description": "The caller's own tokens, newest first — metadata only, never the secret.",
+        "operationId": "list_my_tokens_api_v1_me_tokens_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PersonalTokenItem"
+                  },
+                  "title": "Response List My Tokens Api V1 Me Tokens Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List My Tokens",
+        "tags": [
+          "me"
+        ]
+      },
+      "post": {
+        "description": "Make a token for the caller. The plaintext secret is returned ONCE, here only.",
+        "operationId": "create_my_token_api_v1_me_tokens_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePersonalTokenRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatePersonalTokenResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create My Token",
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/api/v1/me/tokens/remove-expired": {
+      "post": {
+        "description": "Remove the caller's expired and revoked tokens from the list.",
+        "operationId": "remove_my_expired_tokens_api_v1_me_tokens_remove_expired_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RemoveExpiredResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Remove My Expired Tokens",
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/api/v1/me/tokens/{token_id}": {
+      "delete": {
+        "description": "Remove one dead (expired or revoked) token from the list.",
+        "operationId": "delete_my_token_api_v1_me_tokens__token_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Token Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenActionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete My Token",
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/api/v1/me/tokens/{token_id}/revoke": {
+      "post": {
+        "description": "Revoke one of the caller's tokens so it no longer authenticates.",
+        "operationId": "revoke_my_token_api_v1_me_tokens__token_id__revoke_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Token Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenActionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Revoke My Token",
+        "tags": [
+          "me"
         ]
       }
     },
@@ -77373,8 +77980,20 @@
     },
     "/api/v1/service-tokens": {
       "get": {
-        "description": "List the tenant's service tokens (metadata only — never the secret).",
+        "description": "List the tenant's service tokens (metadata only — never the secret).\n\nA token an administrator tidied away is left out unless ``includeDismissed=true``.",
         "operationId": "list_service_tokens_api_v1_service_tokens_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "includeDismissed",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Includedismissed",
+              "type": "boolean"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -77385,41 +78004,6 @@
                   },
                   "title": "Response List Service Tokens Api V1 Service Tokens Get",
                   "type": "array"
-                }
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "List Service Tokens",
-        "tags": [
-          "service-tokens"
-        ]
-      },
-      "post": {
-        "description": "Mint a new token. The plaintext secret is returned ONCE, here only.",
-        "operationId": "create_service_token_api_v1_service_tokens_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateServiceTokenRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CreateServiceTokenResponse"
                 }
               }
             },
@@ -77441,7 +78025,106 @@
             "HTTPBearer": []
           }
         ],
+        "summary": "List Service Tokens",
+        "tags": [
+          "service-tokens"
+        ]
+      },
+      "post": {
+        "description": "Gone: service tokens are no longer made here. A person uses a personal token.\n\nNot a 403 and not a 404: the door is spent, and no body can change the answer (so the body is\nnot even read). An administrator is still told first — a member gets the usual 403.",
+        "operationId": "create_service_token_api_v1_service_tokens_post",
+        "responses": {
+          "410": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Create Service Token",
+        "tags": [
+          "service-tokens"
+        ]
+      }
+    },
+    "/api/v1/service-tokens/dismiss-expired": {
+      "post": {
+        "description": "Tidy every expired or revoked token of the workspace off the list.",
+        "operationId": "dismiss_expired_service_tokens_api_v1_service_tokens_dismiss_expired_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DismissServiceTokensResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Dismiss Expired Service Tokens",
+        "tags": [
+          "service-tokens"
+        ]
+      }
+    },
+    "/api/v1/service-tokens/{token_id}/dismiss": {
+      "post": {
+        "description": "Tidy one dead (expired or revoked) token off the list. A live token must be revoked first.",
+        "operationId": "dismiss_service_token_api_v1_service_tokens__token_id__dismiss_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Token Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DismissServiceTokenResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Dismiss Service Token",
         "tags": [
           "service-tokens"
         ]

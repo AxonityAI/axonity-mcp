@@ -138,3 +138,35 @@ describe("the README carries no claim #107 corrected", () => {
   });
 });
 
+
+/**
+ * Review of 4347f84: the README says of the to-do list and the wake-tasks what
+ * the tools now say — list_todo_steps is not "the same question" as
+ * read_run_waiting_on, it takes `agentId`, and an open question is found on
+ * the to-do list, not among a run's wake-tasks.
+ */
+describe("the README says what list_todo_steps and read_run_waiting_on are", () => {
+  it("does not call list_todo_steps the same question, and names agentId", () => {
+    expect(README).not.toMatch(/`list_todo_steps`\*\* is the same question/);
+    const start = README.indexOf("**`list_todo_steps`**");
+    expect(start).toBeGreaterThanOrEqual(0);
+    const paragraph = README.slice(start, README.indexOf("\n\n", start));
+    expect(paragraph).toContain("`agentId`");
+    expect(paragraph).toMatch(/wake-tasks/);
+    // A FOR EACH batch plants no wake-task (review r2 of 554ca16).
+    expect(paragraph).not.toMatch(/a callback, a batch\)/);
+    expect(paragraph).toMatch(/callback's\s+result/);
+  });
+
+  it("finds a parked step on the to-do list, not among the wake-tasks", () => {
+    const start = README.indexOf("**A run can park rather than finish.**");
+    expect(start).toBeGreaterThanOrEqual(0);
+    const paragraph = README.slice(start, README.indexOf("\n\n", start));
+    expect(paragraph).not.toMatch(/`read_run_waiting_on` says what it is\s+waiting for/);
+    expect(paragraph).toMatch(/`list_todo_steps`/);
+    // The to-do list holds only what waits on a person, not a conversation.
+    expect(paragraph).not.toMatch(/`list_todo_steps` lists the step it\s+waits on;/);
+    expect(paragraph).toMatch(/`list_todo_steps`[^;]*person/);
+    expect(paragraph).toMatch(/`read_run_waiting_on`/);
+  });
+});

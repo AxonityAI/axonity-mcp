@@ -152,14 +152,13 @@ has run cleanly once, at its current version.
 - A 403 on any write means the token is read-only, or (for a direct publish
   attempt, which no tool makes) that publishing must go through
   \`request_publish_*\`. Either way: stop, don't retry, tell your human.
-- A 401 means the service token is dead — missing, wrong, expired, or revoked.
+- A 401 means the token is dead — missing, wrong, expired, or revoked.
   **The backend deliberately returns the identical message for all four
   causes** so it doesn't leak which applies; you have no way to tell them
   apart and no way to check a token's remaining lifetime in advance (every
-  token now expires — 7, 15, 30, 60 or 90 days, chosen when it was minted;
-  there is no "never"). On any 401: stop, do not retry, and tell your human
-  plainly that the configured token is no longer valid and a new one must be
-  minted from Axonity → Settings → API tokens. Do not guess or imply the cause.
+  token expires; there is no "never"). On any 401: stop, do not retry, and
+  tell your human plainly that the configured token is no longer valid and
+  they need a new one from Axonity. Do not guess or imply the cause.
 
 ## Field shape
 - All fields are camelCase JSON (e.g. \`capabilityTier\`, not \`capability_tier\`).
@@ -213,11 +212,19 @@ has run cleanly once, at its current version.
     workflow can have several starts, each with different fields, and omitting
     it fires whichever comes first. Never send a parameter marked \`pinned\` —
     the author owns that value and it is overwritten anyway.
+  - A start with a file parameter (\`file\`, or a list of \`file\`) takes the
+    reference \`upload_run_input_file\` returns — upload each file, then put
+    the reference under that parameter in \`triggerInput\`. That tool says
+    what it accepts and how long a file is kept.
   - **A run can park instead of finishing.** A step that asks a question waits
     for an answer, so "it never came back" usually means "it is waiting on you".
-    \`read_run_waiting_on\` says what for; \`answer_run_question\` (or
-    \`send_run_message\` on a conversation run) resumes it. Answer your own test
-    runs; on a run a human is depending on, the answer is theirs to give.
+    \`list_todo_steps\` has every step that waits on a person (a question, a
+    plan, a manual or decision step); \`read_run_waiting_on\` has a timer and an
+    answer or callback result on its way; a FOR EACH batch is on
+    \`read_run_for_each_progress\`; a conversation run waits in its chat.
+    \`answer_run_question\` (or \`send_run_message\` on a conversation run)
+    resumes it. Answer your own test runs; on a run a human is depending on, the
+    answer is theirs to give.
   - A FOR EACH launch is not one result. \`read_run_items_summary\` is the
     roll-up ("4,415 processed · 12 failed") and \`list_run_items\` the rows —
     with \`outcome: "failed"\`, because the failures are scattered and filtering
@@ -364,6 +371,11 @@ made any time before you attach them.
   an output live in the output_schema (see Validators), not on the agent.
 - Wiring fields — see the Wiring section: \`toolIds\`, \`systemToolIds\`,
   \`delegationTargetIds\`.
+- \`capabilityId\` (its team): one capability of the company model — a key of
+  \`document.capabilities\` in \`read_company\`; left out, no team. Taken by
+  \`create_agent\`; on an existing agent change it with \`set_agent_team\`
+  (null takes it out), never with \`update_agent\`, which refuses it. It is
+  on the agent's record, not in a version: it holds at once, with no publish.
 - Anything else is refused: the body is strict, so a field the platform
   retired (axonity-flow#2176) is a 422 that names it, not a silent drop.
 - Complete check: an agent with no \`toolIds\`/\`systemToolIds\` has no tools and
@@ -908,11 +920,22 @@ a document to find out what the platform did.
   \`read_run_session_memory_file\` opens one. When the trace shows a decision but
   not what it was reading, this is usually where the reason is. Workflow-bound
   reference material is NOT here — that lives in \`reference_docs\`.
-- **\`list_todo_steps\`** is every step in the tenant waiting on a human, across
-  all runs; \`read_run_waiting_on\` is the same question for one run you already
-  have. It is PAGED over the waiting RUNS, so \`items\` can be longer than
-  \`pageSize\` — one run may park several steps. Follow \`nextCursor\` until it
-  is null before concluding anything about how much is waiting.
+- **\`list_todo_steps\`** is every step in the tenant waiting on a person, across
+  all runs: an unanswered question (\`ask_user\`), a plan awaiting approval, a
+  manual step or a decision step. Not on it: archived runs, conversations, a
+  debug pause (\`phase_control\`) and a question already answered. Each item
+  belongs to one agent or none (\`agentId\`): a question or a plan to the agent
+  that asked, a manual or decision step to the workflow's owner, none for the
+  platform's old budget question and for hidden platform workflows. Pass
+  \`agentId\` for one agent's items; without it the list shows every item.
+  \`groupKey\` is equal for questions with the same workflow, step and text, so
+  they can be shown once; each is still answered on its own run.
+- \`list_todo_steps\` is PAGED over the waiting RUNS, so \`items\` can be
+  longer than \`pageSize\` — one run may park several steps — or shorter.
+  Follow \`nextCursor\` until it is null before concluding anything about how
+  much is waiting. \`read_run_waiting_on\` is a different read: the pending
+  wake-tasks of one run (a timer; an answer or a callback's result on its way);
+  an open question, a FOR EACH batch and a callback still running have none.
 - A run's archive is reversible (\`archive_run\` / \`unarchive_run\`);
   \`bulk_delete_runs\` is not.
 
@@ -978,7 +1001,9 @@ These tools are generic: take field rules from the live schema, not from a
 module-specific recipe. Their descriptions define paging and change operations.
 Workspace setting saves take effect immediately and have no publication gate.
 They do not switch modules on or off or select installation, role or personal
-settings. The backend checks the token's authority and the field's permissions.
+settings. A service token writes with the author scope; a personal token writes
+as its owner and needs an administrator owner. The backend checks the token's
+authority and the field's permissions.
 
 ## Secrets
 - Never handle a real credential. A connector's \`authConfig\` takes placeholders

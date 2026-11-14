@@ -11,6 +11,39 @@ diff in review.
 
 ## Provenance
 
+- **R1 capture on backend `5d2906b` (2026-11-14), not released; replaces the
+  two R1 entries below:** a WHOLE dump with the backend's own
+  `scripts/dump_openapi.py` and `scripts/dump_token_route_classes.py`, run
+  read-only from the Flow worktree `feat/1826-insights-module`, HEAD
+  `5d2906b697bd7711bf600f260d691568a10ffec8` **with uncommitted changes** (so
+  this is not a clean-commit export; the coordinator re-records it on the final
+  sha). Safety: `env -i` with only PATH/HOME/TMPDIR, dotenv off
+  (`Settings.model_config["env_file"] = None`), a database URL at a closed port
+  (importing the app opens no connection), `python -B -I`, `src` verified to load
+  from that worktree. No server, database or tenant.
+  - `openapi.snapshot.json`: **2,576,597 bytes**, SHA-256
+    `fe53632e48730a16e87c21d96e27e29331d2acf4960ac783f35765b816668c74`.
+    Against the snapshot on `main` (`68ef764b9`): 772 -> 788 operations, 16 added,
+    none removed, 6 with a different contract. Added: the eight module-settings
+    operations (`GET/PATCH /modules/{module_id}/settings`, `.../settings/schema`,
+    `.../settings/resolved`, `/me/settings/{module_id}` GET and PATCH, the two
+    platform settings routes), `PUT /platform/modules/{module_id}/emergency-stop`,
+    and seven token routes that arrived from Flow `main`, not from R1
+    (`/me/tokens` x5, `POST /service-tokens/dismiss-expired`,
+    `POST /service-tokens/{token_id}/dismiss`). No filtering, no exclusions
+    of module endpoints. The five `/me/tokens` operations are in `test/denyList.ts`
+    ("a token never manages tokens", the backend's own table).
+  - `token-route-classes.snapshot.json`: **87,451 bytes**, SHA-256
+    `7ad50ae74185218a5026e6506cc7ba651444829a71b613148cd2487e45feaa05`;
+    `src/generated/tokenRouteClasses.ts` regenerated from it. 801 -> 812 rows.
+    At this HEAD the backend lists `PATCH /api/v1/modules/{module_id}/settings`
+    as `dicht` (closed) for a personal token; decision B84 (a personal token of
+    an administrator writes workspace settings) is not in the backend yet. The test
+    "B84: the backend's table does not close the workspace write to a personal
+    token" in `test/modules.test.ts` is red for exactly that reason, on purpose,
+    until both files are re-recorded from a backend that implements B84.
+  - `src/generated/listFilters.ts` regenerates unchanged.
+
 - **R1 refresh after B33/B44 (2026-11-12), not released:** canonical backend
   `scripts/dump_openapi.py` output, copied byte-for-byte. Settings disable dotenv
   before app imports; no server or database connection is needed. The backend's

@@ -24,6 +24,25 @@ and the real MCP SDK over an in-memory transport. This proves argument
 validation, forwarding and response/error handling. It does not prove backend
 authorization, persistence, atomicity or endpoint availability.
 
+## Who may write
+
+Reads (`list_modules`, schema, settings) are open to any token the backend lets
+read. `update_module_settings` writes the **workspace level only**:
+
+- a **service token** with the author scope;
+- a **personal token** (the hosted `/mcp` connector serves only personal
+  tokens) whose owner is an administrator of the workspace. It writes with
+  that person's rights and the save is recorded under that person (decision B84,
+  14/11/2026). In the hosted connector the tool's description also tells the
+  agent which of the token owner's choices the backend's route table requires,
+  worded from `src/generated/tokenRouteClasses.ts`.
+
+Role, personal and installation settings are never written through a token: the
+backend refuses a token there (`module_settings_service.py` `context()`), the
+tools have no selector for them, and `test/denyList.ts` plus the pinned route
+table (`test/modules.test.ts`) keep the personal and installation routes closed.
+The connector decides none of this; the backend's answer is the authority.
+
 ## R1 integration gate
 
 This client preparation is not a standalone release. The vendored snapshot
@@ -36,26 +55,3 @@ snapshot or exclude module endpoints to make a check pass.
 
 Installation, role, user and personal-resolve routes remain outside these tools.
 No package version bump, tag or npm publication belongs to this preparation.
-
-## Real backend wire proof
-
-The paired Flow checkout supplies
-`backend/tests/modules/module_settings_wire_app.py`. Run the explicit integration
-proof from this checkout through the team heavy-task runner:
-
-```sh
-node --import tsx scripts/prove-module-settings-wire.mjs /absolute/path/to/flow-worktree
-```
-
-It requires the coordinator-owned synthetic PostgreSQL cluster recorded in the
-Flow worktree's `workspace/postgres-1826-r1/owner.json`. It refuses another
-endpoint and creates a new private database, migrates it to the actual head,
-mints ephemeral service tokens and sends real SDK calls through the actual
-HTTP client to the Flow ASGI app. It runs no listening server or external
-network request and overrides no authentication or service dependency. It
-checks Page cursors, live schema, author/read/operate permissions, revision
-conflicts, atomic patches, deployment targets and own locks, inherit tombstones,
-server MCP provenance, tenant isolation and personal/installation refusal.
-The database is removed in `finally`. This command fails when its prerequisites
-are unavailable; unit mocks and a skipped integration run do not satisfy it.
-Lossless migration rollback has its own Flow proofs.
