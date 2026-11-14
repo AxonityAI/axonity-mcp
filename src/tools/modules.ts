@@ -56,7 +56,7 @@ const SETTINGS_RESPONSE =
   "permission; roleConflict and needsChoice report resolution state. " +
   "sources is a list of {level, subjectId, value, locked, via, changedAt, actorLabel} " +
   "records filtered by the server for this caller. via, changedAt and actorLabel " +
-  "are server-provided provenance and may be null. ";
+  "are filled in by the server and may be null. ";
 
 export function registerModuleTools(server: McpServer, client: AxonityClient): void {
   server.tool(
@@ -114,7 +114,7 @@ export function registerModuleTools(server: McpServer, client: AxonityClient): v
       "expectedRevision is required for every change. inherit removes the workspace " +
       "override and own lock; follow_deploy uses the server's latest deployed value " +
       "and preserves the own lock. The backend validates field rights, levels, locks " +
-      "and revisions, rejects duplicate keys, and derives actor and provenance from " +
+      "and revisions, rejects duplicate keys, and derives who made the change, and through which route, from " +
       "the authenticated request. Who may write: a service token with the author scope, " +
       "or a personal token whose owner is an administrator of this workspace; a personal " +
       "token writes with that person's rights, needs the token's 'Run actions' choice, and " +

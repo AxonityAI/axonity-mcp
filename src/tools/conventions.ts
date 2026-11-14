@@ -1003,7 +1003,7 @@ Workspace setting saves take effect immediately and have no publication gate.
 They do not switch modules on or off or select installation, role or personal
 settings. A service token writes with the author scope; a personal token writes
 as its owner and needs an administrator owner. The backend checks the token's
-authority and the field's permissions.
+authority and the rights the field requires.
 
 ## Secrets
 - Never handle a real credential. A connector's \`authConfig\` takes placeholders
