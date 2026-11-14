@@ -669,13 +669,21 @@ What differs in hosted mode:
   process runs on the Axonity server, so a `path` would name a file there, and
   it is refused before anything is read.
 - **Stateless, with a ceiling.** Every message is its own POST (no sessions; GET
-  and DELETE on `/mcp` are 405; a batch is answered 400). At most
-  `AXONITY_MCP_MAX_IN_FLIGHT` requests (default 4) run at once,
-  `AXONITY_MCP_MAX_QUEUED` (default 32) wait, and one more is answered 503. A
-  request keeps its place until its work is done, also when its caller hangs
-  up, and every API call ends after `AXONITY_MCP_API_TIMEOUT_MS` (default
-  300000). A body over `AXONITY_MCP_MAX_BODY_BYTES` (default 25 MB) is answered
-  413.
+  and DELETE on `/mcp` are 405; a batch is answered 400). A request waits in
+  three rooms in turn, and a caller that hangs up while it waits leaves the
+  queue: its token's own (`AXONITY_MCP_MAX_IN_FLIGHT_PER_TOKEN`, default 2, and
+  `AXONITY_MCP_MAX_QUEUED_PER_TOKEN`, default 4; one more is answered 429, so
+  one token cannot fill what everybody shares), for a body over
+  `AXONITY_MCP_LARGE_BODY_BYTES` (default 1 MiB) or one that does not say its
+  size, one of `AXONITY_MCP_MAX_LARGE_BODIES` (default 1), and then one of
+  `AXONITY_MCP_MAX_IN_FLIGHT` seats (default 4) with `AXONITY_MCP_MAX_QUEUED`
+  (default 32) waiting, past which it is answered 503. A seat is kept until the
+  work is done, also when the caller hangs up, and every API call ends after
+  `AXONITY_MCP_API_TIMEOUT_MS` (default 300000). A body over
+  `AXONITY_MCP_MAX_BODY_BYTES` (default 25 MB) is answered 413 before it waits
+  for anything. Measured (macOS RSS, Node 22, 473 tools, the V8 limits Axonity
+  starts it with): about 85–95 MB at rest, 207–242 MB with fifty requests at
+  once, 234–267 MB with twelve 23 MiB bodies at once; not measured on Linux.
 - It listens on `127.0.0.1:AXONITY_MCP_PORT` only and calls `AXONITY_API_URL`,
   which has no default in this mode.
 

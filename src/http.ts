@@ -25,13 +25,29 @@
  *   and never the next caller's.
  * - THE TOOL LIST IS COMPUTED ONCE. It does not depend on who asks, and
  *   rendering the schemas of every tool per `tools/list` was the largest cost.
- * - AT MOST `maxInFlight` REQUESTS AT ONCE, the rest wait, and past
- *   `maxQueued` waiting a request is answered 503. A seat is given back when
- *   the request's work is done, not when its caller hangs up — work that goes
- *   on after a disconnect still holds it — and every API call has a time
- *   limit (`apiTimeoutMs`), so no seat is held for ever. Memory then has a
- *   ceiling that does not depend on how hard anyone pushes (217 MB at fifty
- *   at once, with the V8 limits Axonity starts this process with).
+ * - THREE ROOMS, so the memory has a ceiling that does not depend on how hard
+ *   anyone pushes, and one person cannot take it from the rest. A request waits
+ *   in each in turn, and a caller that hangs up while it waits leaves the queue
+ *   at once. (1) The token's own: `maxInFlightPerToken` at once and
+ *   `maxQueuedPerToken` waiting, then 429 — one token cannot fill what everybody
+ *   shares. (2) For a body over `largeBodyBytes` (or one that does not say its
+ *   size): `maxLargeBodies` at once. A body costs about three times its size
+ *   while it is read (the Buffer, its text, the parsed object), so with a limit
+ *   of 25 MiB per body, places alone left room for four of them; this is what
+ *   bounds it to one. (3) `maxInFlight` seats, `maxQueued` waiting, then 503. A
+ *   seat is given back when the request's work is done, not when its caller
+ *   hangs up — work that goes on after a disconnect still holds it — and every
+ *   API call has a time limit (`apiTimeoutMs`), so no seat is held for ever.
+ *
+ * WHAT WAS MEASURED (the hosted process itself, started as Axonity starts it,
+ * with the V8 limits `--max-old-space-size=160 --max-semi-space-size=4`, against
+ * a fake API; Node 22 on macOS, so this is macOS RSS read with `ps` every 50 ms,
+ * not Linux and not the 2 GB sandbox; 473 tools). At rest about 85–95 MB. With
+ * 50 requests at once, five times over: peak 207–242 MB. With 12 bodies of 23
+ * MiB at once from different tokens: peak 234–267 MB, where the version before
+ * the large-body place peaked at 375–384 MB (6 bodies: 241–262 against 338–349).
+ * Not measured: Linux, the memory of the Axonity process that forwards a body
+ * to this one (it holds the whole body too), and any load past what is above.
  */
 
 import { AsyncLocalStorage } from "node:async_hooks";
