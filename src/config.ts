@@ -12,6 +12,12 @@ export interface AxonityConfig {
   apiUrl: string;
   /** The service token (`axs_…`) presented as a bearer on every request. */
   token: string;
+  /**
+   * The longest one API call may take, request and answer, in milliseconds.
+   * Unset: no limit of its own (the local connector, as before). The hosted
+   * connector sets it, so a call that hangs never holds a seat for ever.
+   */
+  timeoutMs?: number;
 }
 
 const DEFAULT_API_URL = "https://app.axonity.ai";
@@ -69,6 +75,8 @@ export interface HttpConfig {
   maxQueued: number;
   /** The largest request body read, in bytes; a larger one is answered 413. */
   maxBodyBytes: number;
+  /** The longest one API call may take, in milliseconds. */
+  apiTimeoutMs: number;
 }
 
 function positiveInt(env: NodeJS.ProcessEnv, name: string, fallback?: number): number {
@@ -106,5 +114,6 @@ export function loadHttpConfig(env: NodeJS.ProcessEnv = process.env): HttpConfig
     maxInFlight: positiveInt(env, "AXONITY_MCP_MAX_IN_FLIGHT", 4),
     maxQueued: positiveInt(env, "AXONITY_MCP_MAX_QUEUED", 32),
     maxBodyBytes: positiveInt(env, "AXONITY_MCP_MAX_BODY_BYTES", 25 * 1024 * 1024),
+    apiTimeoutMs: positiveInt(env, "AXONITY_MCP_API_TIMEOUT_MS", 300_000),
   };
 }

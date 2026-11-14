@@ -66,13 +66,16 @@ afterEach(async () => {
   held = undefined;
 });
 
-async function start(overrides: Partial<{ maxInFlight: number; maxQueued: number; maxBodyBytes: number }> = {}) {
+async function start(
+  overrides: Partial<{ maxInFlight: number; maxQueued: number; maxBodyBytes: number; apiTimeoutMs: number }> = {},
+) {
   const hosted = await startHostedServer({
     apiUrl,
     port: 0,
     maxInFlight: 4,
     maxQueued: 64,
     maxBodyBytes: 1024 * 1024,
+    apiTimeoutMs: 10_000,
     ...overrides,
     serverInfo: SERVER_INFO,
     register: registerHosted,
@@ -155,6 +158,27 @@ describe("the hosted connector answers MCP over HTTP", () => {
   });
 });
 
+describe("the token of one caller never reaches the API for another", () => {
+  it("a tool that calls the API twice, with I/O in between, sends every call with its own caller's token", async () => {
+    // get_measure_formula_spec with includeWorkspace reads twice, one after the
+    // other; a token kept anywhere but the request's own context would be
+    // overwritten by another caller in between (review of the hosted mode, S-2).
+    delayMs = 25;
+    const base = await start({ maxInFlight: 8 });
+    const tokens = Array.from({ length: 40 }, (_, i) => `axp_both${i}`);
+    const answers = await Promise.all(
+      tokens.map((t, i) =>
+        post(base, call("get_measure_formula_spec", { includeWorkspace: true }, i + 1), bearer(t)),
+      ),
+    );
+    answers.forEach((answer, i) => {
+      const seenHere = [...answer.text.matchAll(/Bearer (axp_both\d+)/g)].map((m) => m[1]);
+      expect(seenHere.length, `answer ${i} shows both reads`).toBeGreaterThanOrEqual(2);
+      expect(new Set(seenHere), `answer ${i}`).toEqual(new Set([tokens[i]]));
+    });
+  });
+});
+
 describe("the hosted connector refuses what is not a personal token's MCP request", () => {
   it.each([
     ["no bearer", {}],
@@ -190,6 +214,16 @@ describe("the hosted connector refuses what is not a personal token's MCP reques
     expect(seen).toEqual([]);
   });
 
+  it("a batch is refused before any of it runs: one POST is one message", async () => {
+    // A batch of fifty calls under one seat ran all fifty at once (review M-1).
+    const base = await start({ maxInFlight: 1, maxQueued: 0 });
+    const batch = Array.from({ length: 50 }, (_, i) => call("list_workflows", {}, i + 1));
+    const res = await post(base, batch, bearer("axp_batch"));
+    expect(res.status).toBe(400);
+    expect(res.json!.error.code).toBe(-32600);
+    expect(seen).toEqual([]);
+  });
+
   it("a body that is not JSON is a JSON-RPC parse error", async () => {
     const base = await start();
     const res = await post(base, "{not json", bearer("axp_one"));
@@ -221,6 +255,47 @@ describe("the hosted connector has a ceiling", () => {
     expect(maxInFlight).toBe(2);
     expect(answers.filter((a) => a.status === 200)).toHaveLength(3);
     expect(answers.find((a) => a.status === 503)!.headers.get("retry-after")).toBe("1");
+  });
+
+  it("a caller that hangs up does not give its seat back while its call still runs", async () => {
+    // Ten calls aborted as soon as the API saw them ran ten at once (review S-1).
+    let release!: () => void;
+    held = new Promise<void>((r) => (release = r));
+    const base = await start({ maxInFlight: 1, maxQueued: 32 });
+    const aborted: Promise<unknown>[] = [];
+    for (let i = 0; i < 10; i++) {
+      const controller = new AbortController();
+      aborted.push(
+        fetch(`${base}/mcp`, {
+          method: "POST",
+          headers: { ...HEADERS, ...bearer(`axp_gone${i}`) },
+          body: JSON.stringify(call("list_workflows", {}, i + 1)),
+          signal: controller.signal,
+        }).catch(() => undefined),
+      );
+      for (let t = 0; t < 50 && inFlight === 0 && i === 0; t++) await new Promise((r) => setTimeout(r, 10));
+      await new Promise((r) => setTimeout(r, 30));
+      controller.abort();
+    }
+    await Promise.all(aborted);
+    await new Promise((r) => setTimeout(r, 100));
+    expect(maxInFlight).toBe(1);
+    release();
+    // And nothing leaked: once the work is done, a new call is served.
+    const after = await post(base, call("list_workflows"), bearer("axp_after"));
+    expect(after.status).toBe(200);
+  });
+
+  it("an API call that never answers ends at the time limit, and the seat comes back", async () => {
+    held = new Promise<void>(() => {});
+    const base = await start({ maxInFlight: 1, maxQueued: 0, apiTimeoutMs: 200 });
+    const res = await post(base, call("list_workflows"), bearer("axp_slow"));
+    expect(res.json!.result.isError).toBe(true);
+    expect(res.text).toMatch(/did not answer within/);
+    held = undefined;
+    const next = await post(base, call("list_workflows"), bearer("axp_next"));
+    expect(next.status).toBe(200);
+    expect(next.json!.result.isError).toBeFalsy();
   });
 
   it("a seat is given back: after the burst, every new call is served", async () => {
@@ -275,6 +350,21 @@ describe("the hosted connector reads no file on the server", () => {
     )!;
     expect(tool.description).toMatch(/GIVE THE FILE as `contentBase64`/);
     expect(tool.description).not.toMatch(/WHAT `path` CAN READ/);
+    // The schema says the same as the text: `path` is there only to be refused.
+    const schema = (list.json!.result.tools as { name: string; inputSchema: any }[]).find(
+      (t) => t.name === "upload_run_input_file",
+    )!.inputSchema;
+    expect(schema.properties.path.description).toMatch(/Always refused/);
+    expect(JSON.stringify(schema)).not.toMatch(/Exactly one of `path`/);
+  });
+
+  it("without a file the hosted refusal names only base64", async () => {
+    const base = await start();
+    const res = await post(base, call("upload_run_input_file", { contentType: "text/plain" }), bearer("axp_one"));
+    const text = (res.json!.result.content as { text: string }[]).map((c) => c.text).join("");
+    expect(text).toContain("Give the file as `contentBase64`");
+    expect(text).not.toMatch(/exactly one of `path`/i);
+    expect(seen).toEqual([]);
   });
 
   it("with base64 the upload goes out, with the caller's bearer", async () => {

@@ -198,23 +198,30 @@ export function registerRunInputFileTools(
         .string()
         .optional()
         .describe(
-          "Absolute path to the file on the machine this connector runs on. " +
-            "Exactly one of `path` or `contentBase64`.",
+          hosted
+            ? "Not available on the connector Axonity hosts: it would name a file " +
+                "on the Axonity server. Always refused; send `contentBase64`."
+            : "Absolute path to the file on the machine this connector runs on. " +
+                "Exactly one of `path` or `contentBase64`.",
         ),
       contentBase64: z
         .string()
         .optional()
         .describe(
-          "The file's bytes as standard base64. Exactly one of `path` or " +
-            "`contentBase64`; requires `filename`.",
+          hosted
+            ? "The file's bytes as standard base64; requires `filename`."
+            : "The file's bytes as standard base64. Exactly one of `path` or " +
+                "`contentBase64`; requires `filename`.",
         ),
       filename: z
         .string()
         .optional()
         .describe(
-          "The file's name as the run should see it, e.g. `tender.pdf`. " +
-            "Required with `contentBase64`; with `path`, defaults to the " +
-            "file's own name.",
+          hosted
+            ? "The file's name as the run should see it, e.g. `tender.pdf`. Required."
+            : "The file's name as the run should see it, e.g. `tender.pdf`. " +
+                "Required with `contentBase64`; with `path`, defaults to the " +
+                "file's own name.",
         ),
       contentType: z
         .string()
@@ -228,6 +235,9 @@ export function registerRunInputFileTools(
         // Before anything else, and whatever else was sent: nothing on the
         // server's disk is read for a caller of the hosted connector.
         if (hosted && path !== undefined) throw new Error(HOSTED_PATH_REFUSAL);
+        if (hosted && contentBase64 === undefined) {
+          throw new Error("Give the file as `contentBase64`, with `filename`.");
+        }
         if ((path === undefined) === (contentBase64 === undefined)) {
           throw new Error(
             "Give exactly one of `path` or `contentBase64`: `path` for a file " +

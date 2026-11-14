@@ -12,7 +12,9 @@
  *
  * - STATELESS. Every POST is one JSON-RPC message with its own transport and
  *   its own MCP server object, and nothing is kept between requests: no
- *   session, no stream to resume. The SDK refuses to reuse a stateless
+ *   session, no stream to resume. A batch (an array of messages, which the
+ *   protocol dropped in 2025-06-18) is refused: one POST would otherwise run
+ *   every call in it at once, under one seat. The SDK refuses to reuse a stateless
  *   transport, and a server object holds one transport at a time.
  * - THE TOOLS ARE REGISTERED ONCE. Building all of them again for every
  *   request cost ~15 MB per request in flight, 839 MB at fifty at once.
@@ -24,9 +26,12 @@
  * - THE TOOL LIST IS COMPUTED ONCE. It does not depend on who asks, and
  *   rendering the schemas of every tool per `tools/list` was the largest cost.
  * - AT MOST `maxInFlight` REQUESTS AT ONCE, the rest wait, and past
- *   `maxQueued` waiting a request is answered 503. Memory then has a ceiling
- *   that does not depend on how hard anyone pushes (217 MB at fifty at once,
- *   with the V8 limits Axonity starts this process with).
+ *   `maxQueued` waiting a request is answered 503. A seat is given back when
+ *   the request's work is done, not when its caller hangs up — work that goes
+ *   on after a disconnect still holds it — and every API call has a time
+ *   limit (`apiTimeoutMs`), so no seat is held for ever. Memory then has a
+ *   ceiling that does not depend on how hard anyone pushes (217 MB at fifty
+ *   at once, with the V8 limits Axonity starts this process with).
  */
 
 import { AsyncLocalStorage } from "node:async_hooks";
@@ -170,11 +175,14 @@ function replay(serverInfo: HostedServerOptions["serverInfo"], tools: Registered
  * server stream — a client falls back to plain requests), anything else 404.
  */
 export async function startHostedServer(options: HostedServerOptions): Promise<HostedServer> {
-  const tokenOfRequest = new AsyncLocalStorage<string>();
+  // What belongs to the request being handled: its caller's token, and the
+  // tool calls it started (a seat is given back only once they are done).
+  const ofRequest = new AsyncLocalStorage<{ token: string; work: Set<Promise<unknown>> }>();
   const client = new AxonityClient({
     apiUrl: options.apiUrl,
+    timeoutMs: options.apiTimeoutMs,
     get token(): string {
-      const token = tokenOfRequest.getStore();
+      const token = ofRequest.getStore()?.token;
       // Only reachable by a call made outside any request — a bug, and one
       // that must fail rather than send no token or somebody else's.
       if (!token) throw new Error("No request token: the hosted connector calls the API only for a request.");
@@ -183,8 +191,22 @@ export async function startHostedServer(options: HostedServerOptions): Promise<H
   });
 
   const recorded = recordTools(options.register, client);
-  const tools = options.prepare ? await options.prepare(recorded) : recorded;
-  const toolList = await listOnce(options.serverInfo, tools);
+  const prepared = options.prepare ? await options.prepare(recorded) : recorded;
+  const toolList = await listOnce(options.serverInfo, prepared);
+  // Every tool call is counted with the request that started it.
+  const tools = prepared.map((tool) => ({
+    ...tool,
+    handler: ((args: never, extra: never) => {
+      const work = Promise.resolve(tool.handler(args, extra));
+      const mine = ofRequest.getStore()?.work;
+      if (mine) {
+        mine.add(work);
+        const done = () => mine.delete(work);
+        work.then(done, done);
+      }
+      return work;
+    }) as RegisteredTool["handler"],
+  }));
   const gate = new Gate(options.maxInFlight, options.maxQueued);
 
   const handle = async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
@@ -209,19 +231,40 @@ export async function startHostedServer(options: HostedServerOptions): Promise<H
     }
     const token = bearer[1];
 
-    const leave = await gate.enter();
+    // The seat. A caller that hangs up while it waits gives up its place:
+    // nobody is left to answer. One that hangs up once seated keeps it until
+    // the tool calls it started are done — the SDK does not finish a request
+    // whose connection is gone, so waiting for that would hold the seat for
+    // ever, and giving it back at once would let work pile up past the
+    // ceiling by connecting and hanging up (review of the hosted mode, S-1).
+    const context = { token, work: new Set<Promise<unknown>>() };
+    let gone = false;
+    let leave: (() => void) | undefined;
+    res.once("close", () => {
+      gone = true;
+      const seated = leave;
+      if (seated) void Promise.allSettled([...context.work]).then(seated);
+    });
+    leave = await gate.enter();
     if (!leave) {
       send(res, 503, rpcError(-32000, "The connector is busy. Try again in a moment."), {
         "Retry-After": "1",
       });
       return;
     }
-    res.once("close", leave);
+    if (gone) {
+      leave();
+      return;
+    }
     try {
       let body: unknown;
       try {
         const raw = await readBody(req, options.maxBodyBytes);
         body = JSON.parse(raw.toString("utf8"));
+        if (Array.isArray(body)) {
+          send(res, 400, rpcError(-32600, "Invalid Request: send one message per POST, not a batch."));
+          return;
+        }
       } catch (error) {
         if (error instanceof BodyTooLarge) {
           send(res, 413, rpcError(-32000, "Request body too large."));
@@ -230,6 +273,7 @@ export async function startHostedServer(options: HostedServerOptions): Promise<H
         }
         return;
       }
+      if (gone) return;
 
       const server = replay(options.serverInfo, tools);
       server.server.setRequestHandler(ListToolsRequestSchema, () => toolList);
@@ -242,9 +286,12 @@ export async function startHostedServer(options: HostedServerOptions): Promise<H
         void server.close();
       });
       await server.connect(transport);
-      await tokenOfRequest.run(token, () => transport.handleRequest(req, res, body));
+      await ofRequest.run(context, () => transport.handleRequest(req, res, body));
     } finally {
-      leave();
+      // A request that ended without its connection going (an answer, a
+      // refusal) gives its seat back here; one whose caller hung up gives it
+      // back when its work is done (above). Leaving twice is a no-op.
+      if (!gone) leave();
     }
   };
 

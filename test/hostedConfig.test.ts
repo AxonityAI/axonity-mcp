@@ -25,6 +25,7 @@ describe("loadHttpConfig", () => {
       maxInFlight: 4,
       maxQueued: 32,
       maxBodyBytes: 25 * 1024 * 1024,
+      apiTimeoutMs: 300_000,
     });
   });
 

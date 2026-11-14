@@ -71,8 +71,11 @@ export class AxonityClient {
           ...(body !== undefined && !form ? { "Content-Type": "application/json" } : {}),
         },
         body: body === undefined ? undefined : form ? body : JSON.stringify(body),
+        ...(this.config.timeoutMs ? { signal: AbortSignal.timeout(this.config.timeoutMs) } : {}),
       });
     } catch (cause) {
+      const late = this.timedOut(cause);
+      if (late) throw late;
       // Network-level failure (DNS, connection refused, TLS) — not an HTTP status.
       throw new AxonityApiError(
         `Could not reach the Axonity API at ${this.config.apiUrl}. ` +
@@ -82,7 +85,13 @@ export class AxonityClient {
       );
     }
 
-    const text = await resp.text();
+    let text: string;
+    try {
+      text = await resp.text();
+    } catch (cause) {
+      // The time limit covers the answer too, not only its headers.
+      throw this.timedOut(cause) ?? cause;
+    }
     const parsed = text ? safeJson(text) : undefined;
 
     if (!resp.ok) {
@@ -99,6 +108,17 @@ export class AxonityClient {
       throw errorForStatus(resp.status, parsed);
     }
     return parsed as T;
+  }
+
+  /** The error for a call that ran past `timeoutMs`; `undefined` for any other failure. */
+  private timedOut(cause: unknown): AxonityApiError | undefined {
+    if (!(cause instanceof Error) || cause.name !== "TimeoutError") return undefined;
+    return new AxonityApiError(
+      `The Axonity API did not answer within ${Math.round((this.config.timeoutMs ?? 0) / 1000)} s. ` +
+        "Try again; if it keeps happening, ask for less at once.",
+      0,
+      cause.message,
+    );
   }
 
   get<T = unknown>(path: string, query?: Query): Promise<T> {

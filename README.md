@@ -660,10 +660,13 @@ What differs in hosted mode:
   process runs on the Axonity server, so a `path` would name a file there, and
   it is refused before anything is read.
 - **Stateless, with a ceiling.** Every message is its own POST (no sessions; GET
-  and DELETE on `/mcp` are 405). At most `AXONITY_MCP_MAX_IN_FLIGHT` requests
-  (default 4) run at once, `AXONITY_MCP_MAX_QUEUED` (default 32) wait, and one
-  more is answered 503. A body over `AXONITY_MCP_MAX_BODY_BYTES` (default 25 MB)
-  is answered 413.
+  and DELETE on `/mcp` are 405; a batch is answered 400). At most
+  `AXONITY_MCP_MAX_IN_FLIGHT` requests (default 4) run at once,
+  `AXONITY_MCP_MAX_QUEUED` (default 32) wait, and one more is answered 503. A
+  request keeps its place until its work is done, also when its caller hangs
+  up, and every API call ends after `AXONITY_MCP_API_TIMEOUT_MS` (default
+  300000). A body over `AXONITY_MCP_MAX_BODY_BYTES` (default 25 MB) is answered
+  413.
 - It listens on `127.0.0.1:AXONITY_MCP_PORT` only and calls `AXONITY_API_URL`,
   which has no default in this mode.
 
