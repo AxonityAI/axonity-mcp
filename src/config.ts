@@ -1,10 +1,11 @@
 /**
  * Runtime configuration for the Axonity MCP connector.
  *
- * The connector authenticates to Axonity with a per-tenant SERVICE TOKEN
- * (minted in Axonity → Settings → API tokens). The token fixes the tenant; the
- * connector never chooses one. Values come from the environment so the token
- * never lands in a config file the agent can read.
+ * The connector authenticates to Axonity with one token for one workspace (a
+ * personal token, or a service token made before they stopped being issued).
+ * The token fixes the tenant; the connector never chooses one. Values come
+ * from the environment so the token never lands in a config file the agent
+ * can read.
  */
 
 export interface AxonityConfig {
@@ -35,8 +36,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AxonityConfig 
   const token = env.AXONITY_TOKEN?.trim();
   if (!token) {
     throw new Error(
-      "AXONITY_TOKEN is not set. Mint a service token in Axonity " +
-        "(Settings → API tokens) and pass it as the AXONITY_TOKEN environment variable.",
+      "AXONITY_TOKEN is not set. Pass an Axonity token (a personal token, or a " +
+        "service token you still have) as the AXONITY_TOKEN environment variable.",
     );
   }
   const apiUrl = (env.AXONITY_API_URL?.trim() || DEFAULT_API_URL).replace(/\/+$/, "");
@@ -92,6 +93,18 @@ function positiveInt(env: NodeJS.ProcessEnv, name: string, fallback?: number): n
   return value;
 }
 
+/**
+ * The longest delay a Node timer takes (a signed 32-bit number of
+ * milliseconds). `AbortSignal.timeout` turns anything larger into 1 ms, which
+ * would fail every API call at once.
+ */
+const MAX_TIMER_MS = 2_147_483_647;
+
+function atMost(value: number, limit: number, name: string): number {
+  if (value > limit) throw new Error(`${name} must be at most ${limit}; got ${value}.`);
+  return value;
+}
+
 export function loadHttpConfig(env: NodeJS.ProcessEnv = process.env): HttpConfig {
   if (env.AXONITY_TOKEN?.trim()) {
     throw new Error(
@@ -114,6 +127,10 @@ export function loadHttpConfig(env: NodeJS.ProcessEnv = process.env): HttpConfig
     maxInFlight: positiveInt(env, "AXONITY_MCP_MAX_IN_FLIGHT", 4),
     maxQueued: positiveInt(env, "AXONITY_MCP_MAX_QUEUED", 32),
     maxBodyBytes: positiveInt(env, "AXONITY_MCP_MAX_BODY_BYTES", 25 * 1024 * 1024),
-    apiTimeoutMs: positiveInt(env, "AXONITY_MCP_API_TIMEOUT_MS", 300_000),
+    apiTimeoutMs: atMost(
+      positiveInt(env, "AXONITY_MCP_API_TIMEOUT_MS", 300_000),
+      MAX_TIMER_MS,
+      "AXONITY_MCP_API_TIMEOUT_MS",
+    ),
   };
 }

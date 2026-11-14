@@ -152,14 +152,13 @@ has run cleanly once, at its current version.
 - A 403 on any write means the token is read-only, or (for a direct publish
   attempt, which no tool makes) that publishing must go through
   \`request_publish_*\`. Either way: stop, don't retry, tell your human.
-- A 401 means the service token is dead — missing, wrong, expired, or revoked.
+- A 401 means the token is dead — missing, wrong, expired, or revoked.
   **The backend deliberately returns the identical message for all four
   causes** so it doesn't leak which applies; you have no way to tell them
   apart and no way to check a token's remaining lifetime in advance (every
-  token now expires — 7, 15, 30, 60 or 90 days, chosen when it was minted;
-  there is no "never"). On any 401: stop, do not retry, and tell your human
-  plainly that the configured token is no longer valid and a new one must be
-  minted from Axonity → Settings → API tokens. Do not guess or imply the cause.
+  token expires; there is no "never"). On any 401: stop, do not retry, and
+  tell your human plainly that the configured token is no longer valid and
+  they need a new one from Axonity. Do not guess or imply the cause.
 
 ## Field shape
 - All fields are camelCase JSON (e.g. \`capabilityTier\`, not \`capability_tier\`).

@@ -8,7 +8,7 @@
  *
  *   claude mcp add axonity -- npx -y @axonity-ai/mcp
  *
- * with AXONITY_TOKEN (a service token minted in Axonity → Settings → API tokens)
+ * with AXONITY_TOKEN (a personal token, or a service token you still have)
  * and, if self-hosting, AXONITY_API_URL in the environment.
  *
  * It talks to Axonity ONLY over the public REST API; the backend re-enforces

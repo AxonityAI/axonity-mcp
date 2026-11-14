@@ -8,7 +8,7 @@ Axonity tenant —
 the same verbs the internal Builder team has, minus direct publish.
 
 It runs on your machine and talks to Axonity **only over the public REST API**,
-authenticated with a per-tenant **service token**. The backend re-enforces
+authenticated with a token for one workspace. The backend re-enforces
 tenant + scope on every call, so the connector is not a trust boundary for what
 it may do in Axonity. One thing only the connector decides: which **local file**
 leaves your machine. `upload_run_input_file` with `path` reads any file the user
@@ -19,18 +19,22 @@ the call — your MCP client's approval of each call is the guard.
 
 ## Setup
 
-1. **Mint a service token** in Axonity → **Settings → API tokens**. Copy it once
-   (it starts with `axs_`); you won't see it again. Use a **read-only** token if
-   you only want the agent to read — it is genuinely enforced, any write from it
-   is refused with a 403. Every token expires (you choose 7, 15, 30, 60 or 90
-   days at mint time; there is no "never"), and there is no way for the agent to
-   check remaining lifetime in advance — an expired token fails exactly like a
-   revoked one, so mint a fresh one when that happens.
+1. **Have a token.** The connector sends whatever `AXONITY_TOKEN` holds as a
+   bearer, and the platform decides what it may do:
+   - a **personal token** (`axp_…`) acts as you, within the limits it was made
+     with (see *Hosted by Axonity* below for what that means per tool);
+   - an existing **service token** (`axs_…`) keeps working until it expires or
+     is revoked, but no new ones are made.
+
+   Every token expires, and there is no way for the agent to check the
+   remaining lifetime in advance: an expired token fails exactly like a revoked
+   one, so get a fresh one when that happens. Copy a token once; you will not
+   see it again.
 2. **Add the connector to Claude Code:**
 
    ```bash
    claude mcp add axonity \
-     --env AXONITY_TOKEN=axs_your_token_here \
+     --env AXONITY_TOKEN=your_token_here \
      --env AXONITY_API_URL=https://app.axonity.ai \
      -- npx -y @axonity-ai/mcp
    ```

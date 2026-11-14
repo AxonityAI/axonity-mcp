@@ -33,6 +33,16 @@ describe("loadHttpConfig", () => {
     expect(() => loadHttpConfig({ ...base, AXONITY_TOKEN: "axs_x" })).toThrow(/holds no token/);
   });
 
+  it("refuses a time limit a timer cannot hold, instead of turning it into 1 ms", () => {
+    // AbortSignal.timeout takes a 32-bit delay; a larger one fires after 1 ms (review K-2).
+    expect(loadHttpConfig({ ...base, AXONITY_MCP_API_TIMEOUT_MS: "2147483647" }).apiTimeoutMs).toBe(
+      2147483647,
+    );
+    expect(() => loadHttpConfig({ ...base, AXONITY_MCP_API_TIMEOUT_MS: "2147483648" })).toThrow(
+      /AXONITY_MCP_API_TIMEOUT_MS must be at most 2147483647/,
+    );
+  });
+
   it("has no default API and needs a port", () => {
     expect(() => loadHttpConfig({ AXONITY_MCP_PORT: "1" })).toThrow(/AXONITY_API_URL/);
     expect(() => loadHttpConfig({ AXONITY_API_URL: "http://x" })).toThrow(/AXONITY_MCP_PORT/);
