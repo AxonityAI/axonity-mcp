@@ -253,6 +253,10 @@
     "class": "dicht",
     "why": "delete: configuration without an approval step"
   },
+  "DELETE /mcp": {
+    "class": "dicht",
+    "why": "no authentication of its own: a token never reaches the gate"
+  },
   "GET /": {
     "class": "dicht",
     "why": "no authentication of its own: a token never reaches the gate"
@@ -1237,6 +1241,10 @@
     "why": "webhook triggers"
   },
   "GET /health": {
+    "class": "dicht",
+    "why": "no authentication of its own: a token never reaches the gate"
+  },
+  "GET /mcp": {
     "class": "dicht",
     "why": "no authentication of its own: a token never reaches the gate"
   },
@@ -2626,6 +2634,10 @@
   "POST /api/v1/workflows/{workflow_id}/webhook-triggers": {
     "class": "dicht",
     "why": "webhook triggers"
+  },
+  "POST /mcp": {
+    "class": "dicht",
+    "why": "no authentication of its own: a token never reaches the gate"
   },
   "PUT /api/v1/agents/{agent_id}": {
     "class": "configuratie"
