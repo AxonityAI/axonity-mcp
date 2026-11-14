@@ -36,3 +36,75 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AxonityConfig 
   const apiUrl = (env.AXONITY_API_URL?.trim() || DEFAULT_API_URL).replace(/\/+$/, "");
   return { apiUrl, token };
 }
+
+/** How the connector is reached: a local process on stdio, or Axonity's own `/mcp`. */
+export type Transport = "stdio" | "http";
+
+export function transportOf(env: NodeJS.ProcessEnv = process.env): Transport {
+  const value = env.AXONITY_MCP_TRANSPORT?.trim() || "stdio";
+  if (value !== "stdio" && value !== "http") {
+    throw new Error(
+      `AXONITY_MCP_TRANSPORT must be "stdio" (the default) or "http"; got "${value}".`,
+    );
+  }
+  return value;
+}
+
+/**
+ * The hosted connector (HTTP mode), started by Axonity next to its API.
+ *
+ * It serves many people, so it holds no token of its own: each request brings
+ * its caller's personal token as a bearer, and that token — only that one —
+ * goes to the API for that request. It listens on loopback only; Axonity's
+ * `/mcp` resolves the token first and forwards what it accepts.
+ */
+export interface HttpConfig {
+  /** Axonity's own API, on loopback (e.g. http://127.0.0.1:8000). */
+  apiUrl: string;
+  /** The loopback port to listen on. */
+  port: number;
+  /** Requests handled at once; the rest wait. Bounds the memory a burst takes. */
+  maxInFlight: number;
+  /** Requests that may wait; one more is answered 503. */
+  maxQueued: number;
+  /** The largest request body read, in bytes; a larger one is answered 413. */
+  maxBodyBytes: number;
+}
+
+function positiveInt(env: NodeJS.ProcessEnv, name: string, fallback?: number): number {
+  const raw = env[name]?.trim();
+  if (!raw) {
+    if (fallback !== undefined) return fallback;
+    throw new Error(`${name} is not set. The hosted connector needs it.`);
+  }
+  const value = Number(raw);
+  if (!Number.isInteger(value) || value < 1) {
+    throw new Error(`${name} must be a whole number of at least 1; got "${raw}".`);
+  }
+  return value;
+}
+
+export function loadHttpConfig(env: NodeJS.ProcessEnv = process.env): HttpConfig {
+  if (env.AXONITY_TOKEN?.trim()) {
+    throw new Error(
+      "AXONITY_TOKEN is set, but the hosted connector (AXONITY_MCP_TRANSPORT=http) " +
+        "holds no token of its own: every request brings its caller's. Unset it.",
+    );
+  }
+  const apiUrl = env.AXONITY_API_URL?.trim().replace(/\/+$/, "");
+  if (!apiUrl) {
+    throw new Error(
+      "AXONITY_API_URL is not set. The hosted connector calls the Axonity API it " +
+        "runs beside; there is no default.",
+    );
+  }
+  const port = positiveInt(env, "AXONITY_MCP_PORT");
+  if (port > 65535) throw new Error(`AXONITY_MCP_PORT must be at most 65535; got ${port}.`);
+  return {
+    apiUrl,
+    port,
+    maxInFlight: positiveInt(env, "AXONITY_MCP_MAX_IN_FLIGHT", 4),
+    maxQueued: positiveInt(env, "AXONITY_MCP_MAX_QUEUED", 32),
+    maxBodyBytes: positiveInt(env, "AXONITY_MCP_MAX_BODY_BYTES", 25 * 1024 * 1024),
+  };
+}

@@ -634,6 +634,47 @@ ride along), `members` with why each is there, and `blockers` that name the
 member in the way. Requesting is ours; deciding stays human, like everywhere
 else here.
 
+## Hosted by Axonity (HTTP mode)
+
+The same tools also run inside Axonity, behind its own `/mcp` endpoint, for a
+person who connects with a **personal token** (`axp_…`) instead of running the
+connector locally. Axonity starts this package with
+`AXONITY_MCP_TRANSPORT=http`; you do not run that mode yourself. The local
+connector above (stdio, a service token) is unchanged and is still the default.
+
+What differs in hosted mode:
+
+- **One token per request.** The process holds no token of its own
+  (`AXONITY_TOKEN` set is refused at startup). Each request brings its caller's
+  personal token as a bearer, and the API is called with that token only. A
+  request without an `axp_` bearer is answered 401.
+- **Each tool says what a personal token needs, before the call.** A personal
+  token reads what its person reads; actions need "Run actions" on the token,
+  drafts and publication requests need "Build drafts and request publication",
+  and every other route is closed to it. Axonity decides that per route and
+  enforces it on every call; the hosted tool texts are worded from the same
+  table (`src/generated/tokenRouteClasses.ts`, pinned from
+  `backend/scripts/dump_token_route_classes.py` in axonity-flow). A tool on a
+  closed route keeps its name and says why it is closed.
+- **No local files.** `upload_run_input_file` takes `contentBase64` only: the
+  process runs on the Axonity server, so a `path` would name a file there, and
+  it is refused before anything is read.
+- **Stateless, with a ceiling.** Every message is its own POST (no sessions; GET
+  and DELETE on `/mcp` are 405). At most `AXONITY_MCP_MAX_IN_FLIGHT` requests
+  (default 4) run at once, `AXONITY_MCP_MAX_QUEUED` (default 32) wait, and one
+  more is answered 503. A body over `AXONITY_MCP_MAX_BODY_BYTES` (default 25 MB)
+  is answered 413.
+- It listens on `127.0.0.1:AXONITY_MCP_PORT` only and calls `AXONITY_API_URL`,
+  which has no default in this mode.
+
+Refresh the route table after the backend changes it:
+
+```bash
+node scripts/generate-token-route-classes.mjs --flow ../axonity-flow
+```
+
+A test fails when a tool calls a route the pinned table does not know.
+
 ## What this is for — and what it is not
 
 **Authoring.** An agent composing an entity from intent: drafting a workflow,

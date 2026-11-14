@@ -127,7 +127,7 @@ function tooLarge(err: unknown, name: string, size: number): Error | undefined {
   );
 }
 
-const DESCRIPTION =
+const descriptionWith = (howToGive: string): string =>
   "Upload a file that a workflow run will START with, and get back its " +
   "reference `{ fileId, filename, contentType, sizeBytes, sha256 }` — the " +
   "same upload the start form in Axonity makes. Nothing runs; the file is " +
@@ -145,6 +145,15 @@ const DESCRIPTION =
   "upload the file again for every run. An upload no run takes within 24 " +
   "hours is deleted. Once a run takes it, it is kept as long as that run " +
   "exists, and deleted with the run." +
+  howToGive +
+  "\n\nThe platform decides what it accepts, from `contentType` (an image by " +
+  "its bytes), and refuses a type it does not read or an empty file in " +
+  "words. A file over its size limit is refused with a 413; this tool then " +
+  "names the file's size in bytes. Send a smaller file, or the part that " +
+  "matters.";
+
+/** How a local connector takes the file: `path` on this machine, or base64. */
+const LOCAL_HOW_TO_GIVE =
   "\n\nGIVE THE FILE ONE WAY — exactly one of: `path`, an absolute path to " +
   "the file on the machine this connector runs on (it runs as a local process " +
   "beside your MCP client and reads the file with that user's rights; the " +
@@ -157,20 +166,33 @@ const DESCRIPTION =
   "read, following symlinks — there is no folder it is limited to, and the " +
   "platform cannot tell what the file is. So use it only with a connector " +
   "running locally for a person who trusts it, and check the path before a " +
-  "call is approved: the MCP client's approval of each call is the guard." +
-  "\n\nThe platform decides what it accepts, from `contentType` (an image by " +
-  "its bytes), and refuses a type it does not read or an empty file in " +
-  "words. A file over its size limit is refused with a 413; this tool then " +
-  "names the file's size in bytes. Send a smaller file, or the part that " +
-  "matters.";
+  "call is approved: the MCP client's approval of each call is the guard.";
+
+/**
+ * How the HOSTED connector takes the file: base64 only. It runs on the Axonity
+ * server, so a `path` would name a file there — the server's own files, never
+ * the caller's — and it is refused before anything is read.
+ */
+const HOSTED_HOW_TO_GIVE =
+  "\n\nGIVE THE FILE as `contentBase64`, the file's bytes as standard base64, " +
+  "with `filename`. This connector runs on the Axonity server, not on your " +
+  "machine, so `path` is refused: it would name a file on that server.";
+
+/** Why a hosted connector refuses `path`, before it reads anything. */
+export const HOSTED_PATH_REFUSAL =
+  "`path` is not available on the connector Axonity hosts: it runs on the " +
+  "Axonity server, so a path would name a file there, not on your machine. " +
+  "Send the file's bytes as `contentBase64` with `filename`.";
 
 export function registerRunInputFileTools(
   server: McpServer,
   client: AxonityClient,
+  options: { hosted?: boolean } = {},
 ): void {
+  const hosted = options.hosted === true;
   server.tool(
     "upload_run_input_file",
-    DESCRIPTION,
+    descriptionWith(hosted ? HOSTED_HOW_TO_GIVE : LOCAL_HOW_TO_GIVE),
     {
       path: z
         .string()
@@ -203,6 +225,9 @@ export function registerRunInputFileTools(
     },
     async ({ path, contentBase64, filename, contentType }) =>
       guard(async () => {
+        // Before anything else, and whatever else was sent: nothing on the
+        // server's disk is read for a caller of the hosted connector.
+        if (hosted && path !== undefined) throw new Error(HOSTED_PATH_REFUSAL);
         if ((path === undefined) === (contentBase64 === undefined)) {
           throw new Error(
             "Give exactly one of `path` or `contentBase64`: `path` for a file " +
