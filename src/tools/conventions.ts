@@ -371,6 +371,11 @@ made any time before you attach them.
   an output live in the output_schema (see Validators), not on the agent.
 - Wiring fields — see the Wiring section: \`toolIds\`, \`systemToolIds\`,
   \`delegationTargetIds\`.
+- \`capabilityId\` (its team): one capability of the company model — a key of
+  \`document.capabilities\` in \`read_company\`; left out, no team. Taken by
+  \`create_agent\`; on an existing agent change it with \`set_agent_team\`
+  (null takes it out), never with \`update_agent\`, which refuses it. It is
+  on the agent's record, not in a version: it holds at once, with no publish.
 - Anything else is refused: the body is strict, so a field the platform
   retired (axonity-flow#2176) is a 422 that names it, not a silent drop.
 - Complete check: an agent with no \`toolIds\`/\`systemToolIds\` has no tools and
