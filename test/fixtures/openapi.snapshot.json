@@ -5406,6 +5406,14 @@
             "title": "Planid",
             "type": "string"
           },
+          "settings": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/SettingsPlanFieldSchema"
+            },
+            "title": "Settings",
+            "type": "array"
+          },
           "source": {
             "$ref": "#/components/schemas/PlanSourceSchema"
           },
@@ -9087,10 +9095,26 @@
             "title": "Ismine",
             "type": "boolean"
           },
+          "isPlatform": {
+            "default": false,
+            "title": "Isplatform",
+            "type": "boolean"
+          },
           "layout": {
             "additionalProperties": true,
             "title": "Layout",
             "type": "object"
+          },
+          "module": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Module"
           },
           "name": {
             "title": "Name",
@@ -14620,6 +14644,22 @@
             "title": "Id",
             "type": "string"
           },
+          "isPlatform": {
+            "default": false,
+            "title": "Isplatform",
+            "type": "boolean"
+          },
+          "module": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Module"
+          },
           "name": {
             "title": "Name",
             "type": "string"
@@ -14739,6 +14779,22 @@
           "id": {
             "title": "Id",
             "type": "string"
+          },
+          "isPlatform": {
+            "default": false,
+            "title": "Isplatform",
+            "type": "boolean"
+          },
+          "module": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Module"
           },
           "name": {
             "title": "Name",
@@ -15202,6 +15258,40 @@
         "title": "FollowBranchResponse",
         "type": "object"
       },
+      "FollowDeploySetting": {
+        "additionalProperties": false,
+        "properties": {
+          "expectedRevision": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expectedrevision"
+          },
+          "key": {
+            "pattern": "\\S",
+            "title": "Key",
+            "type": "string"
+          },
+          "operation": {
+            "const": "follow_deploy",
+            "title": "Operation",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "expectedRevision",
+          "operation"
+        ],
+        "title": "FollowDeploySetting",
+        "type": "object"
+      },
       "ForgetBlockerSchema": {
         "description": "One reason the removal is refused, in one sentence.",
         "properties": {
@@ -15347,6 +15437,7 @@
           },
           "where": {
             "enum": [
+              "settings",
               "step",
               "toolbelt",
               "delegates",
@@ -16702,6 +16793,284 @@
         "title": "HiddenValueRequest",
         "type": "object"
       },
+      "HttpSettingField": {
+        "additionalProperties": false,
+        "description": "The canonical declaration with HTTP aliases and explicit default presence.",
+        "properties": {
+          "agentReadsText": {
+            "default": false,
+            "title": "Agentreadstext",
+            "type": "boolean"
+          },
+          "choiceOptions": {
+            "anyOf": [
+              {
+                "items": {
+                  "pattern": "\\S",
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Choiceoptions"
+          },
+          "default": {
+            "$ref": "#/components/schemas/JsonValue"
+          },
+          "description": {
+            "pattern": "\\S",
+            "title": "Description",
+            "type": "string"
+          },
+          "fields": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/HttpSettingValueField"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fields"
+          },
+          "hasDefault": {
+            "readOnly": true,
+            "title": "Hasdefault",
+            "type": "boolean"
+          },
+          "item": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HttpSettingValueField"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "key": {
+            "pattern": "\\S",
+            "title": "Key",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "text",
+              "long-text",
+              "email",
+              "url",
+              "number",
+              "yes-no",
+              "date",
+              "datetime",
+              "time",
+              "choice",
+              "multi-choice",
+              "file",
+              "object",
+              "list",
+              "reference"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "pattern": "\\S",
+            "title": "Label",
+            "type": "string"
+          },
+          "levels": {
+            "items": {
+              "enum": [
+                "installation",
+                "workspace",
+                "role",
+                "user"
+              ],
+              "type": "string"
+            },
+            "title": "Levels",
+            "type": "array"
+          },
+          "lockable": {
+            "default": false,
+            "title": "Lockable",
+            "type": "boolean"
+          },
+          "perEnvironment": {
+            "default": false,
+            "title": "Perenvironment",
+            "type": "boolean"
+          },
+          "right": {
+            "pattern": "\\S",
+            "title": "Right",
+            "type": "string"
+          },
+          "rolesCombine": {
+            "anyOf": [
+              {
+                "enum": [
+                  "union",
+                  "workspace_on_conflict",
+                  "user_on_conflict"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rolescombine"
+          },
+          "staysHome": {
+            "default": false,
+            "title": "Stayshome",
+            "type": "boolean"
+          },
+          "to": {
+            "anyOf": [
+              {
+                "pattern": "\\S",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "To"
+          }
+        },
+        "required": [
+          "kind",
+          "key",
+          "label",
+          "description",
+          "levels",
+          "right",
+          "hasDefault"
+        ],
+        "title": "HttpSettingField",
+        "type": "object"
+      },
+      "HttpSettingValueField": {
+        "additionalProperties": false,
+        "description": "Recursive aliases of canonical value metadata, without a second schema.",
+        "properties": {
+          "choiceOptions": {
+            "anyOf": [
+              {
+                "items": {
+                  "pattern": "\\S",
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Choiceoptions"
+          },
+          "description": {
+            "pattern": "\\S",
+            "title": "Description",
+            "type": "string"
+          },
+          "fields": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/HttpSettingValueField"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fields"
+          },
+          "item": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HttpSettingValueField"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "kind": {
+            "enum": [
+              "text",
+              "long-text",
+              "email",
+              "url",
+              "number",
+              "yes-no",
+              "date",
+              "datetime",
+              "time",
+              "choice",
+              "multi-choice",
+              "file",
+              "object",
+              "list",
+              "reference"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "pattern": "\\S",
+            "title": "Label",
+            "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "pattern": "\\S",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "required": {
+            "default": false,
+            "title": "Required",
+            "type": "boolean"
+          },
+          "to": {
+            "anyOf": [
+              {
+                "pattern": "\\S",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "To"
+          }
+        },
+        "required": [
+          "kind",
+          "label",
+          "description"
+        ],
+        "title": "HttpSettingValueField",
+        "type": "object"
+      },
       "ImportResult": {
         "description": "Per-table count of rows written by an import.",
         "properties": {
@@ -16717,6 +17086,40 @@
           "imported"
         ],
         "title": "ImportResult",
+        "type": "object"
+      },
+      "InheritSetting": {
+        "additionalProperties": false,
+        "properties": {
+          "expectedRevision": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expectedrevision"
+          },
+          "key": {
+            "pattern": "\\S",
+            "title": "Key",
+            "type": "string"
+          },
+          "operation": {
+            "const": "inherit",
+            "title": "Operation",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "expectedRevision",
+          "operation"
+        ],
+        "title": "InheritSetting",
         "type": "object"
       },
       "InstallStubRequest": {
@@ -17017,6 +17420,7 @@
         "title": "InvoiceSummary",
         "type": "object"
       },
+      "JsonValue": {},
       "JudgementBody": {
         "description": "Why a colleague rejects a fact — optional, kept with the event.",
         "properties": {
@@ -19165,6 +19569,11 @@
             "title": "Influences",
             "type": "array"
           },
+          "isPlatform": {
+            "default": false,
+            "title": "Isplatform",
+            "type": "boolean"
+          },
           "isSystem": {
             "title": "Issystem",
             "type": "boolean"
@@ -19172,6 +19581,17 @@
           "label": {
             "title": "Label",
             "type": "string"
+          },
+          "module": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Module"
           },
           "name": {
             "title": "Name",
@@ -20365,6 +20785,11 @@
             "title": "Id",
             "type": "string"
           },
+          "isPlatform": {
+            "default": false,
+            "title": "Isplatform",
+            "type": "boolean"
+          },
           "isSystem": {
             "title": "Issystem",
             "type": "boolean"
@@ -20372,6 +20797,17 @@
           "label": {
             "title": "Label",
             "type": "string"
+          },
+          "module": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Module"
           },
           "name": {
             "title": "Name",
@@ -20487,7 +20923,7 @@
           "nodes": {
             "default": [],
             "items": {
-              "$ref": "#/components/schemas/src__schemas__measure_influence__TreeNode"
+              "$ref": "#/components/schemas/src__modules__insights__schemas__measure_influence__TreeNode"
             },
             "title": "Nodes",
             "type": "array"
@@ -21137,16 +21573,62 @@
         "title": "ModelTierMap",
         "type": "object"
       },
+      "ModuleEmergencyStopRequest": {
+        "additionalProperties": false,
+        "description": "A human platform operator's installation-wide mask.",
+        "properties": {
+          "stopped": {
+            "title": "Stopped",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "stopped"
+        ],
+        "title": "ModuleEmergencyStopRequest",
+        "type": "object"
+      },
+      "ModuleEmergencyStopResponse": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "stopped": {
+            "title": "Stopped",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "stopped"
+        ],
+        "title": "ModuleEmergencyStopResponse",
+        "type": "object"
+      },
       "ModuleResponse": {
-        "description": "One module and whether it is on for this installation.",
+        "description": "One module, its saved workspace choice, and its effective availability.",
         "properties": {
           "alwaysOn": {
             "title": "Alwayson",
             "type": "boolean"
           },
+          "dependsOn": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Dependson",
+            "type": "array"
+          },
           "description": {
             "title": "Description",
             "type": "string"
+          },
+          "emergencyStopped": {
+            "default": false,
+            "title": "Emergencystopped",
+            "type": "boolean"
           },
           "enabled": {
             "title": "Enabled",
@@ -21159,6 +21641,65 @@
           "label": {
             "title": "Label",
             "type": "string"
+          },
+          "navigation": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/NavigationItem"
+            },
+            "title": "Navigation",
+            "type": "array"
+          },
+          "ownEnabled": {
+            "title": "Ownenabled",
+            "type": "boolean"
+          },
+          "parent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent"
+          },
+          "settings": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/HttpSettingField"
+            },
+            "title": "Settings",
+            "type": "array"
+          },
+          "shellSlots": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ShellSlot"
+            },
+            "title": "Shellslots",
+            "type": "array"
+          },
+          "source": {
+            "default": "legacy",
+            "enum": [
+              "legacy",
+              "platform"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "surface": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Surface"
           }
         },
         "required": [
@@ -21166,9 +21707,299 @@
           "label",
           "description",
           "enabled",
+          "ownEnabled",
           "alwaysOn"
         ],
         "title": "ModuleResponse",
+        "type": "object"
+      },
+      "ModuleRight": {
+        "additionalProperties": false,
+        "description": "A declared right and its membership role pending granular rights.",
+        "properties": {
+          "id": {
+            "pattern": "\\S",
+            "title": "Id",
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "admin",
+              "member"
+            ],
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "role"
+        ],
+        "title": "ModuleRight",
+        "type": "object"
+      },
+      "ModuleSettingResponse": {
+        "description": "Current override and resolved value; presence is separate from JSON null.",
+        "properties": {
+          "actorLabel": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actorlabel"
+          },
+          "changedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Changedat"
+          },
+          "deploymentValue": {
+            "$ref": "#/components/schemas/JsonValue"
+          },
+          "effectiveIsSet": {
+            "title": "Effectiveisset",
+            "type": "boolean"
+          },
+          "effectiveValue": {
+            "$ref": "#/components/schemas/JsonValue"
+          },
+          "followsDeploy": {
+            "title": "Followsdeploy",
+            "type": "boolean"
+          },
+          "hasDeployment": {
+            "title": "Hasdeployment",
+            "type": "boolean"
+          },
+          "hasOverride": {
+            "title": "Hasoverride",
+            "type": "boolean"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "locked": {
+            "title": "Locked",
+            "type": "boolean"
+          },
+          "mayWrite": {
+            "title": "Maywrite",
+            "type": "boolean"
+          },
+          "needsChoice": {
+            "title": "Needschoice",
+            "type": "boolean"
+          },
+          "ownLocked": {
+            "title": "Ownlocked",
+            "type": "boolean"
+          },
+          "revision": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revision"
+          },
+          "roleConflict": {
+            "title": "Roleconflict",
+            "type": "boolean"
+          },
+          "sourceLevel": {
+            "anyOf": [
+              {
+                "enum": [
+                  "manifest",
+                  "installation",
+                  "workspace",
+                  "role",
+                  "user"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcelevel"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/SettingSource"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "value": {
+            "$ref": "#/components/schemas/JsonValue"
+          },
+          "via": {
+            "anyOf": [
+              {
+                "enum": [
+                  "ui",
+                  "api",
+                  "mcp",
+                  "deploy",
+                  "release"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Via"
+          }
+        },
+        "required": [
+          "key",
+          "revision",
+          "hasOverride",
+          "value",
+          "effectiveIsSet",
+          "effectiveValue",
+          "sourceLevel",
+          "locked",
+          "ownLocked",
+          "followsDeploy",
+          "hasDeployment",
+          "deploymentValue",
+          "mayWrite",
+          "roleConflict",
+          "needsChoice",
+          "sources"
+        ],
+        "title": "ModuleSettingResponse",
+        "type": "object"
+      },
+      "ModuleSettingsPatch": {
+        "additionalProperties": false,
+        "description": "One atomic write with a separate optimistic revision for every field.",
+        "properties": {
+          "changes": {
+            "items": {
+              "discriminator": {
+                "mapping": {
+                  "follow_deploy": "#/components/schemas/FollowDeploySetting",
+                  "inherit": "#/components/schemas/InheritSetting",
+                  "set": "#/components/schemas/SetSetting"
+                },
+                "propertyName": "operation"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/SetSetting"
+                },
+                {
+                  "$ref": "#/components/schemas/InheritSetting"
+                },
+                {
+                  "$ref": "#/components/schemas/FollowDeploySetting"
+                }
+              ]
+            },
+            "title": "Changes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "changes"
+        ],
+        "title": "ModuleSettingsPatch",
+        "type": "object"
+      },
+      "ModuleSettingsResponse": {
+        "description": "A server-authorized context. The subject is never taken from a patch body.",
+        "properties": {
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/ModuleSettingResponse"
+            },
+            "title": "Fields",
+            "type": "array"
+          },
+          "level": {
+            "enum": [
+              "installation",
+              "workspace",
+              "role",
+              "user"
+            ],
+            "title": "Level",
+            "type": "string"
+          },
+          "moduleId": {
+            "title": "Moduleid",
+            "type": "string"
+          },
+          "subjectId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subjectid"
+          }
+        },
+        "required": [
+          "moduleId",
+          "level",
+          "subjectId",
+          "fields"
+        ],
+        "title": "ModuleSettingsResponse",
+        "type": "object"
+      },
+      "ModuleSettingsSchemaResponse": {
+        "description": "Only declarations discoverable by the authenticated principal.",
+        "properties": {
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/HttpSettingField"
+            },
+            "title": "Fields",
+            "type": "array"
+          },
+          "moduleId": {
+            "title": "Moduleid",
+            "type": "string"
+          },
+          "rights": {
+            "items": {
+              "$ref": "#/components/schemas/ModuleRight"
+            },
+            "title": "Rights",
+            "type": "array"
+          }
+        },
+        "required": [
+          "moduleId",
+          "fields",
+          "rights"
+        ],
+        "title": "ModuleSettingsSchemaResponse",
         "type": "object"
       },
       "ModuleSwitchRequest": {
@@ -21393,6 +22224,40 @@
           "listed"
         ],
         "title": "MyBrief",
+        "type": "object"
+      },
+      "NavigationItem": {
+        "additionalProperties": false,
+        "description": "A shell location with an explicit right; no frontend component code.",
+        "properties": {
+          "label": {
+            "pattern": "\\S",
+            "title": "Label",
+            "type": "string"
+          },
+          "path": {
+            "pattern": "\\S",
+            "title": "Path",
+            "type": "string"
+          },
+          "right": {
+            "pattern": "\\S",
+            "title": "Right",
+            "type": "string"
+          },
+          "slot": {
+            "pattern": "\\S",
+            "title": "Slot",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slot",
+          "label",
+          "path",
+          "right"
+        ],
+        "title": "NavigationItem",
         "type": "object"
       },
       "NetworkGroup": {
@@ -22837,7 +23702,7 @@
           },
           "items": {
             "items": {
-              "$ref": "#/components/schemas/src__schemas__dashboard__DashboardSummary"
+              "$ref": "#/components/schemas/src__modules__insights__schemas__dashboard__DashboardSummary"
             },
             "title": "Items",
             "type": "array"
@@ -23294,6 +24159,42 @@
           "pageSize"
         ],
         "title": "Page[MeasureSummary]",
+        "type": "object"
+      },
+      "Page_ModuleResponse_": {
+        "properties": {
+          "hasMore": {
+            "default": false,
+            "title": "Hasmore",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ModuleResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          },
+          "pageSize": {
+            "title": "Pagesize",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "pageSize"
+        ],
+        "title": "Page[ModuleResponse]",
         "type": "object"
       },
       "Page_NotificationOut_": {
@@ -30220,7 +31121,8 @@
         "type": "object"
       },
       "RunSummary": {
-        "description": "Run summary for list views.",
+        "additionalProperties": false,
+        "description": "Core projection and reviewed module fields, on the existing flat wire.",
         "properties": {
           "archivedAt": {
             "anyOf": [
@@ -32174,9 +33076,16 @@
         "description": "One thing an author chose to commit.\n\nEVERY kind the file format carries. The screen lists what changed and lets\nan author take a line out of the commit, so every changed line has to be\nnameable — a changed policy or table too. Four kinds meant the checkbox was\nmissing on exactly the rows nobody could explain, and the reason lived in a\nserver-side list the operator could not see.\n\nAbsent on purpose: the company (one per workspace, not a line in a list), a\npersona (filed under its agent's slug, travels with it) and a secret (a\ndeclaration with no row to name).\n\n``Literal`` rather than a string: an unknown kind is a 422 before any\ndatabase read. It is held to :data:`~src.services.config_scope.RootKind` by\n``test_the_wire_accepts_exactly_the_kinds_a_commit_can_name``, and the\npair of them is held to the FORMAT by\n``test_every_kind_with_a_file_can_be_named`` — being pinned only to\neach other let both drift behind the file list at once, which is how a\nmeasure and a query came to have a file nobody could name (#2011).",
         "properties": {
           "id": {
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Id"
           },
           "kind": {
             "enum": [
@@ -32193,7 +33102,8 @@
               "data_table",
               "measure",
               "query",
-              "application"
+              "application",
+              "extension"
             ],
             "title": "Kind",
             "type": "string"
@@ -32578,6 +33488,49 @@
         "title": "SetModelKeyRequest",
         "type": "object"
       },
+      "SetSetting": {
+        "additionalProperties": false,
+        "properties": {
+          "expectedRevision": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expectedrevision"
+          },
+          "key": {
+            "pattern": "\\S",
+            "title": "Key",
+            "type": "string"
+          },
+          "locked": {
+            "default": false,
+            "title": "Locked",
+            "type": "boolean"
+          },
+          "operation": {
+            "const": "set",
+            "title": "Operation",
+            "type": "string"
+          },
+          "value": {
+            "$ref": "#/components/schemas/JsonValue"
+          }
+        },
+        "required": [
+          "key",
+          "expectedRevision",
+          "operation",
+          "value"
+        ],
+        "title": "SetSetting",
+        "type": "object"
+      },
       "SetToolboxAuthRequest": {
         "additionalProperties": false,
         "description": "PUT /api/v1/toolboxes/{id}/auth — the credential its tools share.",
@@ -32623,6 +33576,157 @@
         "title": "SetToolboxMembershipRequest",
         "type": "object"
       },
+      "SettingSource": {
+        "description": "A permitted contribution to an effective setting, never an access grant.",
+        "properties": {
+          "actorLabel": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actorlabel"
+          },
+          "changedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Changedat"
+          },
+          "level": {
+            "enum": [
+              "manifest",
+              "installation",
+              "workspace",
+              "role",
+              "user"
+            ],
+            "title": "Level",
+            "type": "string"
+          },
+          "locked": {
+            "title": "Locked",
+            "type": "boolean"
+          },
+          "subjectId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subjectid"
+          },
+          "value": {
+            "$ref": "#/components/schemas/JsonValue"
+          },
+          "via": {
+            "anyOf": [
+              {
+                "enum": [
+                  "ui",
+                  "api",
+                  "mcp",
+                  "deploy",
+                  "release"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Via"
+          }
+        },
+        "required": [
+          "level",
+          "value",
+          "locked"
+        ],
+        "title": "SettingSource",
+        "type": "object"
+      },
+      "SettingsPlanFieldSchema": {
+        "description": "Portable workspace/role target and the value that remains after apply.",
+        "properties": {
+          "effective": {
+            "title": "Effective"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "level": {
+            "enum": [
+              "workspace",
+              "role"
+            ],
+            "title": "Level",
+            "type": "string"
+          },
+          "moduleId": {
+            "title": "Moduleid",
+            "type": "string"
+          },
+          "ownLocked": {
+            "title": "Ownlocked",
+            "type": "boolean"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role"
+          },
+          "status": {
+            "enum": [
+              "applied",
+              "locally_modified",
+              "missing_role"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "target": {
+            "title": "Target"
+          }
+        },
+        "required": [
+          "moduleId",
+          "level",
+          "role",
+          "key",
+          "label",
+          "status",
+          "target",
+          "effective",
+          "ownLocked"
+        ],
+        "title": "SettingsPlanFieldSchema",
+        "type": "object"
+      },
       "SetupRequest": {
         "description": "Claim a fresh installation: the setup token, and the first owner.",
         "properties": {
@@ -32661,6 +33765,40 @@
           "workspaceName"
         ],
         "title": "SetupRequest",
+        "type": "object"
+      },
+      "ShellSlot": {
+        "additionalProperties": false,
+        "description": "A trusted component binding for a named shell location.",
+        "properties": {
+          "binding": {
+            "pattern": "\\S",
+            "title": "Binding",
+            "type": "string"
+          },
+          "reason": {
+            "pattern": "\\S",
+            "title": "Reason",
+            "type": "string"
+          },
+          "right": {
+            "pattern": "\\S",
+            "title": "Right",
+            "type": "string"
+          },
+          "slot": {
+            "pattern": "\\S",
+            "title": "Slot",
+            "type": "string"
+          }
+        },
+        "required": [
+          "binding",
+          "reason",
+          "slot",
+          "right"
+        ],
+        "title": "ShellSlot",
         "type": "object"
       },
       "SignInPolicyResponse": {
@@ -33604,7 +34742,8 @@
         "type": "object"
       },
       "StartConversationRequest": {
-        "description": "Start a Builder-team conversation (epic #593, S7/S8).\n\n``target_workflow_id`` binds the chat to a workflow the user is editing;\n``message`` is an optional opening turn.",
+        "additionalProperties": false,
+        "description": "Start a conversation using core and reviewed module-owned fields.",
         "properties": {
           "dashboardId": {
             "anyOf": [
@@ -35257,6 +36396,25 @@
         "additionalProperties": false,
         "description": "A portable export of a tenant's active configuration.\n\nTyped at the top level (so the route body is a model, not an opaque dict),\npermissive within (rows are arbitrary by design). Keys stay snake_case so\nexport → import is byte-symmetric.",
         "properties": {
+          "all_rows": {
+            "additionalProperties": {
+              "items": {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "title": "All Rows",
+            "type": "object"
+          },
+          "data_source_names": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Data Source Names",
+            "type": "array"
+          },
           "entities": {
             "additionalProperties": {
               "items": {
@@ -35279,12 +36437,30 @@
             "title": "Links",
             "type": "object"
           },
+          "module_settings": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Module Settings",
+            "type": "array"
+          },
           "published_docs": {
             "additionalProperties": {
               "additionalProperties": true,
               "type": "object"
             },
             "title": "Published Docs",
+            "type": "object"
+          },
+          "published_majors": {
+            "additionalProperties": {
+              "additionalProperties": {
+                "type": "integer"
+              },
+              "type": "object"
+            },
+            "title": "Published Majors",
             "type": "object"
           },
           "source_tenant": {
@@ -35649,6 +36825,28 @@
       "TodoItem": {
         "description": "A step needing user input — displayed in the TO-DO panel.",
         "properties": {
+          "agentId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agentid"
+          },
+          "askedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Askedat"
+          },
           "branchOptions": {
             "anyOf": [
               {
@@ -35698,6 +36896,17 @@
               }
             ],
             "title": "Createdat"
+          },
+          "groupKey": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Groupkey"
           },
           "question": {
             "anyOf": [
@@ -41039,7 +42248,8 @@
               "toolbox",
               "tool",
               "data_table",
-              "secret"
+              "secret",
+              "extension"
             ],
             "title": "Kind",
             "type": "string"
@@ -43231,7 +44441,7 @@
         "title": "_ToolCallShape",
         "type": "object"
       },
-      "src__schemas__dashboard__DashboardSummary": {
+      "src__modules__insights__schemas__dashboard__DashboardSummary": {
         "description": "A dashboard in a list — without its layout.",
         "properties": {
           "createdAt": {
@@ -43250,6 +44460,22 @@
             "description": "True when the reader made this dashboard.",
             "title": "Ismine",
             "type": "boolean"
+          },
+          "isPlatform": {
+            "default": false,
+            "title": "Isplatform",
+            "type": "boolean"
+          },
+          "module": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Module"
           },
           "name": {
             "title": "Name",
@@ -43302,6 +44528,49 @@
         "title": "DashboardSummary",
         "type": "object"
       },
+      "src__modules__insights__schemas__measure_influence__TreeNode": {
+        "description": "One measure in the tree. No value: the screen asks for those.",
+        "properties": {
+          "built": {
+            "description": "False for a measure only a planned row names: not built yet.",
+            "title": "Built",
+            "type": "boolean"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "published": {
+            "description": "Whether a version of it is live.",
+            "title": "Published",
+            "type": "boolean"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "number, currency or percent.",
+            "title": "Unit"
+          }
+        },
+        "required": [
+          "name",
+          "label",
+          "published",
+          "built"
+        ],
+        "title": "TreeNode",
+        "type": "object"
+      },
       "src__schemas__knowledge__TreeNode": {
         "description": "One node of the tree (§4.4): a domain (or a group above it) or a topic,\nwith how many facts in its subtree the reader may see.",
         "properties": {
@@ -43347,49 +44616,6 @@
           "label",
           "factCount",
           "hasChildren"
-        ],
-        "title": "TreeNode",
-        "type": "object"
-      },
-      "src__schemas__measure_influence__TreeNode": {
-        "description": "One measure in the tree. No value: the screen asks for those.",
-        "properties": {
-          "built": {
-            "description": "False for a measure only a planned row names: not built yet.",
-            "title": "Built",
-            "type": "boolean"
-          },
-          "label": {
-            "title": "Label",
-            "type": "string"
-          },
-          "name": {
-            "title": "Name",
-            "type": "string"
-          },
-          "published": {
-            "description": "Whether a version of it is live.",
-            "title": "Published",
-            "type": "boolean"
-          },
-          "unit": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "number, currency or percent.",
-            "title": "Unit"
-          }
-        },
-        "required": [
-          "name",
-          "label",
-          "published",
-          "built"
         ],
         "title": "TreeNode",
         "type": "object"
@@ -52221,23 +53447,6 @@
         "operationId": "list_conversations_api_v1_conversations_get",
         "parameters": [
           {
-            "in": "query",
-            "name": "workflowId",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "format": "uuid",
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Workflowid"
-            }
-          },
-          {
             "description": "Your conversations about this dashboard (epic #1772).",
             "in": "query",
             "name": "dashboardId",
@@ -52254,6 +53463,23 @@
               ],
               "description": "Your conversations about this dashboard (epic #1772).",
               "title": "Dashboardid"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workflowId",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Workflowid"
             }
           },
           {
@@ -62102,6 +63328,125 @@
         ]
       }
     },
+    "/api/v1/me/settings/{module_id}": {
+      "get": {
+        "operationId": "personal_settings_api_v1_me_settings__module_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "module_id",
+            "required": true,
+            "schema": {
+              "title": "Module Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModuleSettingsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Personal Settings",
+        "tags": [
+          "module settings"
+        ]
+      },
+      "patch": {
+        "operationId": "patch_personal_settings_api_v1_me_settings__module_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "module_id",
+            "required": true,
+            "schema": {
+              "title": "Module Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Axonity-Settings-Client",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "const": "ui",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Axonity-Settings-Client"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModuleSettingsPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModuleSettingsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Patch Personal Settings",
+        "tags": [
+          "module settings"
+        ]
+      }
+    },
     "/api/v1/measure-influences": {
       "delete": {
         "description": "Take one influence out of the draft; answer with what is left of ``to``.\n\nRemoving one that is not there is a success: two screens may take the\nsame row away, and the second must not read as a failure.",
@@ -63873,20 +65218,60 @@
       "get": {
         "description": "Every module and whether this workspace has it on.",
         "operationId": "list_modules_api_v1_modules_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Limit"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
               "application/json": {
                 "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/ModuleResponse"
-                  },
-                  "title": "Response List Modules Api V1 Modules Get",
-                  "type": "array"
+                  "$ref": "#/components/schemas/Page_ModuleResponse_"
                 }
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "security": [
@@ -63897,6 +65282,292 @@
         "summary": "List Modules",
         "tags": [
           "modules"
+        ]
+      }
+    },
+    "/api/v1/modules/{module_id}/settings": {
+      "get": {
+        "operationId": "read_settings_api_v1_modules__module_id__settings_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "module_id",
+            "required": true,
+            "schema": {
+              "title": "Module Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "level",
+            "required": false,
+            "schema": {
+              "default": "workspace",
+              "enum": [
+                "workspace",
+                "role"
+              ],
+              "title": "Level",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "subject_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Subject Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModuleSettingsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Read Settings",
+        "tags": [
+          "module settings"
+        ]
+      },
+      "patch": {
+        "operationId": "patch_settings_api_v1_modules__module_id__settings_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "module_id",
+            "required": true,
+            "schema": {
+              "title": "Module Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "level",
+            "required": false,
+            "schema": {
+              "default": "workspace",
+              "enum": [
+                "workspace",
+                "role"
+              ],
+              "title": "Level",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "subject_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Subject Id"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Axonity-Settings-Client",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "const": "ui",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Axonity-Settings-Client"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModuleSettingsPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModuleSettingsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Patch Settings",
+        "tags": [
+          "module settings"
+        ]
+      }
+    },
+    "/api/v1/modules/{module_id}/settings/resolved": {
+      "get": {
+        "operationId": "resolved_settings_api_v1_modules__module_id__settings_resolved_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "module_id",
+            "required": true,
+            "schema": {
+              "title": "Module Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "user",
+            "required": false,
+            "schema": {
+              "const": "me",
+              "default": "me",
+              "title": "User",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModuleSettingsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Resolved Settings",
+        "tags": [
+          "module settings"
+        ]
+      }
+    },
+    "/api/v1/modules/{module_id}/settings/schema": {
+      "get": {
+        "operationId": "settings_schema_api_v1_modules__module_id__settings_schema_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "module_id",
+            "required": true,
+            "schema": {
+              "title": "Module Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModuleSettingsSchemaResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Settings Schema",
+        "tags": [
+          "module settings"
         ]
       }
     },
@@ -65897,6 +67568,64 @@
         ]
       }
     },
+    "/api/v1/platform/modules/{module_id}/emergency-stop": {
+      "put": {
+        "description": "Mask one module across this installation, retaining workspace choices.",
+        "operationId": "emergency_stop_module_api_v1_platform_modules__module_id__emergency_stop_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "module_id",
+            "required": true,
+            "schema": {
+              "title": "Module Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModuleEmergencyStopRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModuleEmergencyStopResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Emergency Stop Module",
+        "tags": [
+          "platform"
+        ]
+      }
+    },
     "/api/v1/platform/modules/{module_id}/restore": {
       "post": {
         "description": "Put one module's platform items back to what the code ships (#2135).\n\nPlatform administrators only: a workspace administrator switches a module\nand never restores one. Runs the same seeders as signup and boot, filtered\nto the module, and says in the audit what was put back. The workspace is\nthe caller's own, from the auth context.",
@@ -65946,6 +67675,127 @@
         "summary": "Restore Module Items",
         "tags": [
           "platform"
+        ]
+      }
+    },
+    "/api/v1/platform/modules/{module_id}/settings": {
+      "get": {
+        "operationId": "installation_settings_api_v1_platform_modules__module_id__settings_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "module_id",
+            "required": true,
+            "schema": {
+              "title": "Module Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModuleSettingsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Installation Settings",
+        "tags": [
+          "platform",
+          "platform module settings"
+        ]
+      },
+      "patch": {
+        "operationId": "patch_installation_settings_api_v1_platform_modules__module_id__settings_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "module_id",
+            "required": true,
+            "schema": {
+              "title": "Module Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Axonity-Settings-Client",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "const": "ui",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Axonity-Settings-Client"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModuleSettingsPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModuleSettingsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Patch Installation Settings",
+        "tags": [
+          "platform",
+          "platform module settings"
         ]
       }
     },
@@ -73109,7 +74959,7 @@
     },
     "/api/v1/runs/todo": {
       "get": {
-        "description": "One page of the steps waiting on a human (epic #811 S5).\n\nPaged over the waiting RUNS, not over the to-do items: the cursor\nnames a position in ``(created_at, id)``, which is a run's\ncoordinates. One waiting run can carry several waiting steps, so\n``items`` may outnumber ``pageSize`` — ``pageSize`` bounds what was\nread, which is what keeps the response bounded.\n\nA fan-out can park thousands of items on a manual step at once, and\nnothing bounds how long they wait, so this list needs its\ncontinuation marker as much as the run list does.",
+        "description": "One page of the steps waiting on a human (epic #811 S5).\n\nPaged over the waiting RUNS, not over the to-do items: the cursor\nnames a position in ``(created_at, id)``, which is a run's\ncoordinates. One waiting run can carry several waiting steps, so\n``items`` may outnumber ``pageSize`` — ``pageSize`` bounds what was\nread, which is what keeps the response bounded.\n\nA fan-out can park thousands of items on a manual step at once, and\nnothing bounds how long they wait, so this list needs its\ncontinuation marker as much as the run list does.\n\nWith ``agentId``: the items of one agent (``waiting_on_a_person``), its\nruns paged the same way — what the agent's page lists, and as many as\nits \"Needs you\" says.",
         "operationId": "list_todo_items_api_v1_runs_todo_get",
         "parameters": [
           {
@@ -73146,6 +74996,25 @@
               ],
               "description": "Opaque continuation cursor from a previous response's nextCursor. Omit for the first page.",
               "title": "Cursor"
+            }
+          },
+          {
+            "description": "Only what waits on a person for this agent: the questions it asked and the steps of its workflows a person does — the items its \"Needs you\" counts.",
+            "in": "query",
+            "name": "agentId",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only what waits on a person for this agent: the questions it asked and the steps of its workflows a person does — the items its \"Needs you\" counts.",
+              "title": "Agentid"
             }
           }
         ],

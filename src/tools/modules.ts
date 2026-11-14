@@ -46,18 +46,27 @@ const change = z.discriminatedUnion("operation", [
 
 const SETTINGS_RESPONSE =
   "Returns the workspace settings object {moduleId, level, subjectId, fields}. " +
-  "Each field is {key, revision, hasOverride, value, effectiveValue, sourceLevel, " +
-  "locked, ownLocked, followsDeploy, sources}; sources contains only provenance " +
-  "the server permits this caller to read. hasOverride distinguishes no override " +
-  "from an explicit null value. locked is the effective lock; ownLocked belongs " +
-  "to this workspace context. ";
+  "Each field is {key, revision, hasOverride, value, effectiveIsSet, effectiveValue, " +
+  "sourceLevel, locked, ownLocked, followsDeploy, hasDeployment, deploymentValue, " +
+  "mayWrite, roleConflict, needsChoice, sources, via, changedAt, actorLabel}. " +
+  "hasOverride distinguishes no workspace override from an explicit null value; " +
+  "effectiveIsSet distinguishes no effective value from an effective JSON null. " +
+  "hasDeployment says whether deploymentValue exists. locked is the effective lock; " +
+  "ownLocked belongs to this workspace context. mayWrite reports current write " +
+  "permission; roleConflict and needsChoice report resolution state. " +
+  "sources is a list of {level, subjectId, value, locked, via, changedAt, actorLabel} " +
+  "records filtered by the server for this caller. via, changedAt and actorLabel " +
+  "are server-provided provenance and may be null. ";
 
 export function registerModuleTools(server: McpServer, client: AxonityClient): void {
   server.tool(
     "list_modules",
     "List the workspace's modules. Returns a Page object with items (module records " +
-      "including id, label, description, enabled, alwaysOn, source, parent, dependsOn, " +
-      "navigation and surface), nextCursor, pageSize and hasMore. This is one page: pass nextCursor as " +
+      "including id, label, description, enabled, ownEnabled, emergencyStopped, alwaysOn, " +
+      "source, parent, dependsOn, navigation, shellSlots, surface and settings), " +
+      "nextCursor, pageSize and hasMore. ownEnabled is the saved workspace choice; " +
+      "enabled is effective availability and emergencyStopped is the installation " +
+      "emergency-stop state. This is one page: pass nextCursor as " +
       "cursor until it is null to read every module. The backend chooses the default " +
       "page size when limit is omitted.",
     {
@@ -70,9 +79,15 @@ export function registerModuleTools(server: McpServer, client: AxonityClient): v
 
   server.tool(
     "read_module_settings_schema",
-    "Read the module's live setting-field schema before changing settings. It describes " +
-      "field keys, kinds, human labels, allowed levels, rights, role-combination rules " +
-      "and reference targets. The server filters what this caller may discover; this " +
+    "Read the module's live setting-field schema before changing settings. Returns " +
+      "{moduleId, fields, rights}. fields is a list of {key, kind, label, description, " +
+      "levels, right, lockable, perEnvironment, staysHome, agentReadsText, to, " +
+      "rolesCombine, default, hasDefault, choiceOptions, fields, item}. kind and " +
+      "label describe the value type and human name; hasDefault distinguishes an " +
+      "absent default from JSON null. fields and item describe nested object/list " +
+      "values with {name, kind, label, description, required, choiceOptions, to, " +
+      "fields, item}. rights is a list of {id, role}. The server filters what " +
+      "this caller may discover; this " +
       "reads the schema, not personal setting values. Use its field definitions to " +
       "choose valid values instead of assuming module-specific keys.",
     { id },

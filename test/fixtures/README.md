@@ -11,6 +11,47 @@ diff in review.
 
 ## Provenance
 
+- **R1 refresh after B33/B44 (2026-11-12), not released:** canonical backend
+  `scripts/dump_openapi.py` output, copied byte-for-byte. Settings disable dotenv
+  before app imports; no server or database connection is needed. The backend's
+  documented exporter excludes its development-only routers; MCP applies no
+  additional path or schema filtering.
+  Source: `team/bewijs/r1-mcp/openapi-after-b33.json`, **2,556,273 bytes**,
+  SHA-256 `afcaec02d0f591bdfe4ffdb2d99f81178645936e35a917dad0f52d4de9cf9fbe`.
+  Flow worktree `feat/1826-insights-module`, HEAD `753add54f6172ffe3237f6da4b2c758566340470`
+  with uncommitted R1 work. Compared with the earlier R1 capture below: no
+  operation added or removed; three settings PATCH operations gain the optional
+  UI interface header, and conversation query parameters are reordered with the
+  same names. Schema changes include module-owned component names, conversation
+  composition, settings plan outcomes and configuration transport. This remains
+  an intermediate capture: the final R1 source must be checked before release.
+  Validation on this capture:105 tests across modules/conformance/exclusions/
+  completeness passed; fresh contract drift reports780 identical operations;
+  regenerated list-filter source is byte-identical. This is not release approval.
+
+
+- **R1 module preparation (2026-11-12), not released:** the WHOLE real app
+  OpenAPI export supplied by the Flow R1 coordinator was copied byte-for-byte;
+  no paths or schemas were synthesized or filtered. Source file:
+  `team/bewijs/r1-flow/openapi-r1-current.json` in the modules-1826 team records.
+  Captured size: **2,551,764 bytes**; SHA-256:
+  `3ee54670a8afc41f2f47d9b935798cd285d86f65a922909209a6ed943d93c6c0`.
+  The immutable evidence copy is
+  `team/bewijs/r1-mcp/openapi-r1-3ee54670a8afc41f2f47d9b935798cd285d86f65a922909209a6ed943d93c6c0.json`.
+  Flow working tree: `feat/1826-insights-module`, HEAD
+  `620d00e52dadddb874c86b0987131195c9fe5746` **with uncommitted R1 changes**;
+  this is not a clean-commit export claim. The coordinator ran the app exporter;
+  this MCP step did not rerun it or start a server.
+  - 771 → 780 operations: 9 added (8 settings operations and the installation
+    emergency-stop write), none removed; `GET /api/v1/modules` and `GET /api/v1/runs/todo`
+    contracts changed.
+  - The workspace module list now returns `Page_ModuleResponse_`; metadata
+    includes `ownEnabled`, `emergencyStopped`, canonical settings and shell slots.
+  - Validation against this exact capture is pending resource-gate release:
+    conformance, exclusions, completeness, generated-filter freshness and
+    `check-contract-drift.mjs --fresh`. A static JSON comparison is not a test pass.
+
+
 - **Refresh from `main` at `68ef764b9`, replacing the entry below:** a WHOLE
   dump with `dump_openapi.py` (`build_openapi()` + `serialize()`) from a
   clean, read-only worktree of axonity-flow `main` at `68ef764b9`. 767 → 771

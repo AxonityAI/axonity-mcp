@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { describe, expect, it, vi } from "vitest";
@@ -8,6 +9,7 @@ import { collectCalledRoutes } from "../src/contract.js";
 import { errorForStatus } from "../src/errors.js";
 import { buildServer, registerAll } from "../src/index.js";
 import { CONVENTIONS } from "../src/tools/conventions.js";
+import { FORBIDDEN, forbids } from "./denyList.js";
 
 // These tests prove the connector's wire contract, not backend authorization,
 // revision locking, atomicity or the existence of R1 routes in a deployed API.
@@ -217,5 +219,98 @@ describe("module authoring guidance", () => {
     expect(section).toMatch(/schema/i);
     expect(section).toMatch(/immediate/i);
     expect(section).toMatch(/no publication/i);
+  });
+});
+
+
+// Prepared against the whole real R1 app export. Execution is pending the
+// coordinator's resource gate; this is not evidence of a passing contract.
+const moduleSnapshot = JSON.parse(readFileSync(
+  new URL("./fixtures/openapi.snapshot.json", import.meta.url), "utf8",
+));
+describe("the real R1 backend module contract", () => {
+  it("declares all four generic routes and the Page envelope", () => {
+    const paths = moduleSnapshot.paths;
+    expect(paths["/api/v1/modules"].get.responses["200"].content["application/json"].schema.$ref)
+      .toBe("#/components/schemas/Page_ModuleResponse_");
+    expect(paths["/api/v1/modules/{module_id}/settings/schema"].get).toBeDefined();
+    expect(paths["/api/v1/modules/{module_id}/settings"].get).toBeDefined();
+    expect(paths["/api/v1/modules/{module_id}/settings"].patch).toBeDefined();
+  });
+
+  it("pins strict changes, explicit value and nullable required revision to the backend", () => {
+    const schemas = moduleSnapshot.components.schemas;
+    for (const name of ["SetSetting", "InheritSetting", "FollowDeploySetting"]) {
+      expect(schemas[name].additionalProperties).toBe(false);
+      expect(schemas[name].required).toContain("expectedRevision");
+      expect(schemas[name].properties.expectedRevision.anyOf).toContainEqual({ type: "null" });
+    }
+    expect(schemas.SetSetting.required).toContain("value");
+    expect(schemas.SetSetting.properties.locked.type).toBe("boolean");
+    for (const name of ["InheritSetting", "FollowDeploySetting"]) {
+      expect(schemas[name].properties).not.toHaveProperty("value");
+      expect(schemas[name].properties).not.toHaveProperty("locked");
+    }
+  });
+
+  it("describes the actual response item fields, including nested source records", () => {
+    const { tool } = registered();
+    const requiredFields = (schema: string) => moduleSnapshot.components.schemas[schema].required as string[];
+    for (const key of requiredFields("ModuleResponse")) {
+      expect(tool("list_modules").description, key).toContain(key);
+    }
+    expect(tool("list_modules").description).toContain("emergencyStopped");
+    for (const key of requiredFields("ModuleSettingsSchemaResponse")) {
+      expect(tool("read_module_settings_schema").description, key).toContain(key);
+    }
+    for (const key of requiredFields("HttpSettingField")) {
+      expect(tool("read_module_settings_schema").description, key).toContain(key);
+    }
+    for (const name of ["read_module_settings", "update_module_settings"]) {
+      for (const key of requiredFields("ModuleSettingResponse")) expect(tool(name).description, key).toContain(key);
+      for (const key of Object.keys(moduleSnapshot.components.schemas.SettingSource.properties)) {
+        expect(tool(name).description, `source.${key}`).toContain(key);
+      }
+    }
+  });
+});
+
+
+describe("personal module settings boundary", () => {
+  it.each([
+    ["GET", "/api/v1/me/settings/sample"],
+    ["PATCH", "/api/v1/me/settings/sample"],
+    ["GET", "/api/v1/modules/sample/settings/resolved"],
+  ])("forbids the human-only operation %s %s", (method, path) => {
+    expect(forbids(method, path)).toBe(true);
+  });
+
+  it("covers exactly the three human-only operations in the actual snapshot", () => {
+    const rules = FORBIDDEN.filter((rule) => rule.label.startsWith("personal module settings"));
+    const operations = Object.entries(moduleSnapshot.paths).flatMap(([path, item]) =>
+      Object.keys(item as object).filter((method) => rules.some((rule) =>
+        rule.path.test(path) && rule.methods?.includes(method.toUpperCase()),
+      )).map((method) => `${method.toUpperCase()} ${path}`),
+    );
+    expect(operations.sort()).toEqual([
+      "GET /api/v1/me/settings/{module_id}",
+      "GET /api/v1/modules/{module_id}/settings/resolved",
+      "PATCH /api/v1/me/settings/{module_id}",
+    ]);
+  });
+
+  it.each([
+    ["GET", "/api/v1/modules"],
+    ["GET", "/api/v1/modules/sample/settings/schema"],
+    ["GET", "/api/v1/modules/sample/settings"],
+    ["PATCH", "/api/v1/modules/sample/settings"],
+    ["POST", "/api/v1/me/settings/sample"],
+    ["PUT", "/api/v1/me/settings/sample"],
+    ["DELETE", "/api/v1/me/settings/sample"],
+    ["PATCH", "/api/v1/modules/sample/settings/resolved"],
+    ["GET", "/api/v1/modules/sample/settings/resolved-extra"],
+    ["GET", "/api/v1/me/settings/sample/extra"],
+  ])("does not broaden the boundary to %s %s", (method, path) => {
+    expect(forbids(method, path)).toBe(false);
   });
 });
