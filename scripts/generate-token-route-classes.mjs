@@ -28,7 +28,7 @@
 
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
@@ -42,7 +42,10 @@ function fail(message) {
 }
 
 /** Run the backend's own dump against the backend's own code. */
-function dumpFrom(flowPath) {
+function dumpFrom(given) {
+  // Absolute: the dump runs with the backend as its working directory, and a
+  // relative checkout path would then point somewhere else.
+  const flowPath = resolve(given);
   const script = join(flowPath, "backend", "scripts", "dump_token_route_classes.py");
   if (!existsSync(script)) {
     fail(`no dump script at ${script}. Point --flow at an axonity-flow checkout.`);
