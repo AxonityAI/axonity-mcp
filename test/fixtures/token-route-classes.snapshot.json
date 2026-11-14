@@ -1,0 +1,2810 @@
+{
+  "DELETE /api/v1/agents/{agent_id}": {
+    "class": "dicht",
+    "why": "delete: configuration without an approval step"
+  },
+  "DELETE /api/v1/agents/{agent_id}/policies/{policy_id}": {
+    "class": "dicht",
+    "why": "delete: configuration without an approval step"
+  },
+  "DELETE /api/v1/agents/{agent_id}/reference-docs/{ref_id}": {
+    "class": "dicht",
+    "why": "delete: configuration without an approval step"
+  },
+  "DELETE /api/v1/agents/{agent_id}/skills-v2/{skill_id}": {
+    "class": "dicht",
+    "why": "delete: configuration without an approval step"
+  },
+  "DELETE /api/v1/agents/{agent_id}/versions/{version_id}": {
+    "class": "dicht",
+    "why": "delete: configuration without an approval step"
+  },
+  "DELETE /api/v1/applications/{application_id}": {
+    "class": "dicht",
+    "why": "delete: configuration without an approval step"
+  },
+  "DELETE /api/v1/applications/{application_id}/versions/{version_id}": {
+    "class": "dicht",
+    "why": "delete: configuration without an approval step"
+  },
+  "DELETE /api/v1/audiences/{audience_id}": {
+    "class": "dicht",
+    "why": "delete: configuration without an approval step"
+  },
+  "DELETE /api/v1/concept-links": {
+    "class": "dicht",
+    "why": "rows of the concepts and influences tables: not proven to be written in a draft"
+  },
+  "DELETE /api/v1/concepts/{concept_id}": {
+    "class": "dicht",
+    "why": "rows of the concepts and influences tables: not proven to be written in a draft"
+  },
+  "DELETE /api/v1/conditional-triggers/{trigger_id}": {
+    "class": "dicht",
+    "why": "delete: configuration without an approval step"
+  },
+  "DELETE /api/v1/config/values/decisions": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "DELETE /api/v1/config/values/hidden": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "DELETE /api/v1/config/values/managed": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "DELETE /api/v1/config/values/staged": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "DELETE /api/v1/conversation-attachments/{attachment_id}": {
+    "class": "dicht",
+    "why": "delete: configuration without an approval step"
+  },
+  "DELETE /api/v1/cron-schedules/{schedule_id}": {
+    "class": "dicht",
+    "why": "delete: configuration without an approval step"
+  },
+  "DELETE /api/v1/dashboards/{dashboard_id}": {
+    "class": "dicht",
+    "why": "delete: configuration without an approval step"
+  },
+  "DELETE /api/v1/data-sources/{source_id}": {
+    "class": "dicht",
+    "why": "delete: configuration without an approval step"
+  },
+  "DELETE /api/v1/data-tables/{table_id}": {
+    "class": "dicht",
+    "why": "delete: configuration without an approval step"
+  },
+  "DELETE /api/v1/data-tables/{table_id}/rows": {
+    "class": "actie"
+  },
+  "DELETE /api/v1/data-tables/{table_id}/rows/{row_id}": {
+    "class": "actie"
+  },
+  "DELETE /api/v1/data-tables/{table_id}/versions/{version_id}": {
+    "class": "dicht",
+    "why": "delete: configuration without an approval step"
+  },
+  "DELETE /api/v1/deployment/app": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "DELETE /api/v1/deployment/connection": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "DELETE /api/v1/deployment/github-token": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "DELETE /api/v1/deployment/github/oauth": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "DELETE /api/v1/files/{file_id}": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "DELETE /api/v1/flow-step-prompts/{link_id}": {
+    "class": "dicht",
+    "why": "delete: configuration without an approval step"
+  },
+  "DELETE /api/v1/flows/{flow_id}": {
+    "class": "dicht",
+    "why": "delete: configuration without an approval step"
+  },
+  "DELETE /api/v1/flows/{flow_id}/versions/{version_id}": {
+    "class": "dicht",
+    "why": "delete: configuration without an approval step"
+  },
+  "DELETE /api/v1/me/tokens/{token_id}": {
+    "class": "dicht",
+    "why": "a token never manages tokens"
+  },
+  "DELETE /api/v1/measure-influences": {
+    "class": "dicht",
+    "why": "rows of the concepts and influences tables: not proven to be written in a draft"
+  },
+  "DELETE /api/v1/measures/{measure_id}": {
+    "class": "dicht",
+    "why": "delete: configuration without an approval step"
+  },
+  "DELETE /api/v1/measures/{measure_id}/versions/{version_id}": {
+    "class": "dicht",
+    "why": "delete: configuration without an approval step"
+  },
+  "DELETE /api/v1/output-schemas/{schema_id}": {
+    "class": "dicht",
+    "why": "delete: configuration without an approval step"
+  },
+  "DELETE /api/v1/output-schemas/{schema_id}/versions/{version_id}": {
+    "class": "dicht",
+    "why": "delete: configuration without an approval step"
+  },
+  "DELETE /api/v1/platform/models/keys/{name}": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "DELETE /api/v1/platform/models/{model_id}": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "DELETE /api/v1/platform/workspaces/{workspace_id}/support-access": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "DELETE /api/v1/policies/{policy_id}": {
+    "class": "dicht",
+    "why": "delete: configuration without an approval step"
+  },
+  "DELETE /api/v1/policies/{policy_id}/versions/{version_id}": {
+    "class": "dicht",
+    "why": "delete: configuration without an approval step"
+  },
+  "DELETE /api/v1/prompt-snippets/{snippet_id}": {
+    "class": "dicht",
+    "why": "delete: configuration without an approval step"
+  },
+  "DELETE /api/v1/prompt-snippets/{snippet_id}/versions/{version_id}": {
+    "class": "dicht",
+    "why": "delete: configuration without an approval step"
+  },
+  "DELETE /api/v1/queries/{query_id}": {
+    "class": "dicht",
+    "why": "delete: configuration without an approval step"
+  },
+  "DELETE /api/v1/queries/{query_id}/versions/{version_id}": {
+    "class": "dicht",
+    "why": "delete: configuration without an approval step"
+  },
+  "DELETE /api/v1/reference-docs/{ref_id}": {
+    "class": "dicht",
+    "why": "delete: configuration without an approval step"
+  },
+  "DELETE /api/v1/reference-docs/{ref_id}/versions/{version_id}": {
+    "class": "dicht",
+    "why": "delete: configuration without an approval step"
+  },
+  "DELETE /api/v1/roles/{role_id}": {
+    "class": "dicht",
+    "why": "delete: configuration without an approval step"
+  },
+  "DELETE /api/v1/runs/{run_id}": {
+    "class": "dicht",
+    "why": "delete: configuration without an approval step"
+  },
+  "DELETE /api/v1/secrets/{secret_id}": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "DELETE /api/v1/skills/{skill_id}": {
+    "class": "dicht",
+    "why": "delete: configuration without an approval step"
+  },
+  "DELETE /api/v1/skills/{skill_id}/versions/{version_id}": {
+    "class": "dicht",
+    "why": "delete: configuration without an approval step"
+  },
+  "DELETE /api/v1/table-relationships/{relationship_id}": {
+    "class": "dicht",
+    "why": "delete: configuration without an approval step"
+  },
+  "DELETE /api/v1/test-api/echo": {
+    "class": "dicht",
+    "why": "no authentication of its own: a token never reaches the gate"
+  },
+  "DELETE /api/v1/toolboxes/{toolbox_id}": {
+    "class": "dicht",
+    "why": "delete: configuration without an approval step"
+  },
+  "DELETE /api/v1/tools/{tool_id}": {
+    "class": "dicht",
+    "why": "delete: configuration without an approval step"
+  },
+  "DELETE /api/v1/tools/{tool_id}/versions/{version_id}": {
+    "class": "dicht",
+    "why": "delete: configuration without an approval step"
+  },
+  "DELETE /api/v1/users/{user_id}": {
+    "class": "dicht",
+    "why": "delete: configuration without an approval step"
+  },
+  "DELETE /api/v1/webhook-triggers/{webhook_id}": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "DELETE /api/v1/workflows/{workflow_id}": {
+    "class": "dicht",
+    "why": "delete: configuration without an approval step"
+  },
+  "DELETE /api/v1/workflows/{workflow_id}/reference-docs/{ref_id}": {
+    "class": "dicht",
+    "why": "delete: configuration without an approval step"
+  },
+  "DELETE /api/v1/workflows/{workflow_id}/skills-v2/{skill_id}": {
+    "class": "dicht",
+    "why": "delete: configuration without an approval step"
+  },
+  "DELETE /api/v1/workflows/{workflow_id}/versions/{version_id}": {
+    "class": "dicht",
+    "why": "delete: configuration without an approval step"
+  },
+  "DELETE /mcp": {
+    "class": "dicht",
+    "why": "no authentication of its own: a token never reaches the gate"
+  },
+  "GET /": {
+    "class": "dicht",
+    "why": "no authentication of its own: a token never reaches the gate"
+  },
+  "GET /api/v1/_test/stub-stats": {
+    "class": "dicht",
+    "why": "no authentication of its own: a token never reaches the gate"
+  },
+  "GET /api/v1/agent-templates": {
+    "class": "lezen"
+  },
+  "GET /api/v1/agents": {
+    "class": "lezen"
+  },
+  "GET /api/v1/agents/activity": {
+    "class": "lezen"
+  },
+  "GET /api/v1/agents/deleted": {
+    "class": "lezen"
+  },
+  "GET /api/v1/agents/framework-tools": {
+    "class": "lezen"
+  },
+  "GET /api/v1/agents/{agent_id}": {
+    "class": "lezen"
+  },
+  "GET /api/v1/agents/{agent_id}/activity": {
+    "class": "lezen"
+  },
+  "GET /api/v1/agents/{agent_id}/policies": {
+    "class": "lezen"
+  },
+  "GET /api/v1/agents/{agent_id}/publish-overview": {
+    "class": "lezen"
+  },
+  "GET /api/v1/agents/{agent_id}/published": {
+    "class": "lezen"
+  },
+  "GET /api/v1/agents/{agent_id}/reference-docs": {
+    "class": "lezen"
+  },
+  "GET /api/v1/agents/{agent_id}/runs": {
+    "class": "lezen"
+  },
+  "GET /api/v1/agents/{agent_id}/skills-v2": {
+    "class": "lezen"
+  },
+  "GET /api/v1/agents/{agent_id}/versions": {
+    "class": "lezen"
+  },
+  "GET /api/v1/agents/{agent_id}/versions/deleted": {
+    "class": "lezen"
+  },
+  "GET /api/v1/agents/{agent_id}/versions/{version}": {
+    "class": "lezen"
+  },
+  "GET /api/v1/applications": {
+    "class": "lezen"
+  },
+  "GET /api/v1/applications/deleted": {
+    "class": "lezen"
+  },
+  "GET /api/v1/applications/{application_id}": {
+    "class": "lezen"
+  },
+  "GET /api/v1/applications/{application_id}/executors": {
+    "class": "lezen"
+  },
+  "GET /api/v1/applications/{application_id}/knowledge": {
+    "class": "lezen"
+  },
+  "GET /api/v1/applications/{application_id}/knowledge/{knowledge_id}/versions": {
+    "class": "lezen"
+  },
+  "GET /api/v1/applications/{application_id}/versions": {
+    "class": "lezen"
+  },
+  "GET /api/v1/applications/{application_id}/versions/deleted": {
+    "class": "lezen"
+  },
+  "GET /api/v1/applications/{application_id}/versions/published": {
+    "class": "lezen"
+  },
+  "GET /api/v1/applications/{application_id}/versions/{version}": {
+    "class": "lezen"
+  },
+  "GET /api/v1/audiences": {
+    "class": "lezen"
+  },
+  "GET /api/v1/audiences/{audience_id}": {
+    "class": "lezen"
+  },
+  "GET /api/v1/audit-events": {
+    "class": "lezen"
+  },
+  "GET /api/v1/auth/me": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "GET /api/v1/auth/sso/config": {
+    "class": "dicht",
+    "why": "no authentication of its own: a token never reaches the gate"
+  },
+  "GET /api/v1/auth/sso/entra/authorize-url": {
+    "class": "dicht",
+    "why": "no authentication of its own: a token never reaches the gate"
+  },
+  "GET /api/v1/authoring/entity-contracts": {
+    "class": "lezen"
+  },
+  "GET /api/v1/authoring/prompt-placement": {
+    "class": "lezen"
+  },
+  "GET /api/v1/authoring/prompt-variables": {
+    "class": "lezen"
+  },
+  "GET /api/v1/authoring/semantic-knowledge": {
+    "class": "lezen"
+  },
+  "GET /api/v1/automatic-agents": {
+    "class": "lezen"
+  },
+  "GET /api/v1/briefs": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "GET /api/v1/briefs/me": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "GET /api/v1/briefs/{brief_id}": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "GET /api/v1/company": {
+    "class": "lezen"
+  },
+  "GET /api/v1/company/published": {
+    "class": "lezen"
+  },
+  "GET /api/v1/company/versions": {
+    "class": "lezen"
+  },
+  "GET /api/v1/company/versions/{version}": {
+    "class": "lezen"
+  },
+  "GET /api/v1/concept-links": {
+    "class": "lezen"
+  },
+  "GET /api/v1/concepts": {
+    "class": "lezen"
+  },
+  "GET /api/v1/conditional-trigger-checks": {
+    "class": "lezen"
+  },
+  "GET /api/v1/conditional-triggers": {
+    "class": "lezen"
+  },
+  "GET /api/v1/conditional-triggers/{trigger_id}/checks": {
+    "class": "lezen"
+  },
+  "GET /api/v1/config/branches": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "GET /api/v1/config/environments": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "GET /api/v1/config/environments/rollback-target": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "GET /api/v1/config/environments/runtime": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "GET /api/v1/config/sources": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "GET /api/v1/config/values": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "GET /api/v1/consultant/settings": {
+    "class": "lezen"
+  },
+  "GET /api/v1/contract": {
+    "class": "lezen"
+  },
+  "GET /api/v1/conversation-attachments": {
+    "class": "lezen"
+  },
+  "GET /api/v1/conversation-attachments/{attachment_id}": {
+    "class": "lezen"
+  },
+  "GET /api/v1/conversation-attachments/{attachment_id}/content": {
+    "class": "lezen"
+  },
+  "GET /api/v1/conversations": {
+    "class": "lezen"
+  },
+  "GET /api/v1/cron-schedules": {
+    "class": "lezen"
+  },
+  "GET /api/v1/dashboards": {
+    "class": "lezen"
+  },
+  "GET /api/v1/dashboards/deleted": {
+    "class": "lezen"
+  },
+  "GET /api/v1/dashboards/{dashboard_id}": {
+    "class": "lezen"
+  },
+  "GET /api/v1/data-sources": {
+    "class": "lezen"
+  },
+  "GET /api/v1/data-sources/deleted": {
+    "class": "lezen"
+  },
+  "GET /api/v1/data-sources/drivers": {
+    "class": "lezen"
+  },
+  "GET /api/v1/data-sources/{source_id}": {
+    "class": "lezen"
+  },
+  "GET /api/v1/data-sources/{source_id}/changes": {
+    "class": "lezen"
+  },
+  "GET /api/v1/data-sources/{source_id}/schema": {
+    "class": "lezen"
+  },
+  "GET /api/v1/data-tables": {
+    "class": "lezen"
+  },
+  "GET /api/v1/data-tables/deleted": {
+    "class": "lezen"
+  },
+  "GET /api/v1/data-tables/{table_id}": {
+    "class": "lezen"
+  },
+  "GET /api/v1/data-tables/{table_id}/rows": {
+    "class": "lezen"
+  },
+  "GET /api/v1/data-tables/{table_id}/rows/count": {
+    "class": "lezen"
+  },
+  "GET /api/v1/data-tables/{table_id}/tools": {
+    "class": "lezen"
+  },
+  "GET /api/v1/data-tables/{table_id}/versions": {
+    "class": "lezen"
+  },
+  "GET /api/v1/data-tables/{table_id}/versions/deleted": {
+    "class": "lezen"
+  },
+  "GET /api/v1/data-tables/{table_id}/versions/published": {
+    "class": "lezen"
+  },
+  "GET /api/v1/data-tables/{table_id}/versions/{version}": {
+    "class": "lezen"
+  },
+  "GET /api/v1/deployment/app/register-url": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "GET /api/v1/deployment/app/status": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "GET /api/v1/deployment/connection": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "GET /api/v1/deployment/create-targets": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "GET /api/v1/deployment/credentials": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "GET /api/v1/deployment/github-token": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "GET /api/v1/deployment/github/oauth/authorize-url": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "GET /api/v1/deployment/github/oauth/status": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "GET /api/v1/deployment/install-url": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "GET /api/v1/deployment/repo-branches": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "GET /api/v1/deployment/repos": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "GET /api/v1/deployment/repos/visible": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "GET /api/v1/deployment/repos/visible/branches": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "GET /api/v1/executors": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "GET /api/v1/executors/commands": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "GET /api/v1/executors/{executor_id}": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "GET /api/v1/executors/{executor_id}/applications": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "GET /api/v1/files/{file_id}": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "GET /api/v1/findings": {
+    "class": "lezen"
+  },
+  "GET /api/v1/findings/{finding_id}": {
+    "class": "lezen"
+  },
+  "GET /api/v1/flow-steps/{flow_step_id}/prompts": {
+    "class": "dicht",
+    "why": "attachment rows, not proven to be draft-only"
+  },
+  "GET /api/v1/flows": {
+    "class": "lezen"
+  },
+  "GET /api/v1/flows/deleted": {
+    "class": "lezen"
+  },
+  "GET /api/v1/flows/{flow_id}": {
+    "class": "lezen"
+  },
+  "GET /api/v1/flows/{flow_id}/prompt-stacks": {
+    "class": "lezen"
+  },
+  "GET /api/v1/flows/{flow_id}/published": {
+    "class": "lezen"
+  },
+  "GET /api/v1/flows/{flow_id}/versions": {
+    "class": "lezen"
+  },
+  "GET /api/v1/flows/{flow_id}/versions/deleted": {
+    "class": "lezen"
+  },
+  "GET /api/v1/flows/{flow_id}/versions/{version}": {
+    "class": "lezen"
+  },
+  "GET /api/v1/folders/{folder_id}/files": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "GET /api/v1/invoices": {
+    "class": "lezen"
+  },
+  "GET /api/v1/invoices/{invoice_id}": {
+    "class": "lezen"
+  },
+  "GET /api/v1/knowledge/archived": {
+    "class": "lezen"
+  },
+  "GET /api/v1/knowledge/attention": {
+    "class": "lezen"
+  },
+  "GET /api/v1/knowledge/decisions": {
+    "class": "lezen"
+  },
+  "GET /api/v1/knowledge/facts/{fact_id}": {
+    "class": "lezen"
+  },
+  "GET /api/v1/knowledge/learning/items": {
+    "class": "lezen"
+  },
+  "GET /api/v1/knowledge/learning/measure": {
+    "class": "lezen"
+  },
+  "GET /api/v1/knowledge/map": {
+    "class": "lezen"
+  },
+  "GET /api/v1/knowledge/network/{node_id}": {
+    "class": "lezen"
+  },
+  "GET /api/v1/knowledge/oversight/cases/{case_id}/candidates": {
+    "class": "lezen"
+  },
+  "GET /api/v1/knowledge/oversight/doubtful": {
+    "class": "lezen"
+  },
+  "GET /api/v1/knowledge/oversight/expiring": {
+    "class": "lezen"
+  },
+  "GET /api/v1/knowledge/oversight/scope": {
+    "class": "lezen"
+  },
+  "GET /api/v1/knowledge/oversight/tips": {
+    "class": "lezen"
+  },
+  "GET /api/v1/knowledge/search": {
+    "class": "lezen"
+  },
+  "GET /api/v1/knowledge/settings": {
+    "class": "lezen"
+  },
+  "GET /api/v1/knowledge/source-types": {
+    "class": "lezen"
+  },
+  "GET /api/v1/knowledge/sources/{source_id}": {
+    "class": "lezen"
+  },
+  "GET /api/v1/knowledge/topics": {
+    "class": "lezen"
+  },
+  "GET /api/v1/knowledge/topics/{topic_id}/facts": {
+    "class": "lezen"
+  },
+  "GET /api/v1/knowledge/tree": {
+    "class": "lezen"
+  },
+  "GET /api/v1/knowledge/tree/{node_id}/related": {
+    "class": "lezen"
+  },
+  "GET /api/v1/me/tokens": {
+    "class": "dicht",
+    "why": "a token never manages tokens"
+  },
+  "GET /api/v1/measure-influences": {
+    "class": "lezen"
+  },
+  "GET /api/v1/measures": {
+    "class": "lezen"
+  },
+  "GET /api/v1/measures/deleted": {
+    "class": "lezen"
+  },
+  "GET /api/v1/measures/formula-spec": {
+    "class": "lezen"
+  },
+  "GET /api/v1/measures/formula-symbols": {
+    "class": "lezen"
+  },
+  "GET /api/v1/measures/tables/{table_id}": {
+    "class": "lezen"
+  },
+  "GET /api/v1/measures/tree": {
+    "class": "lezen"
+  },
+  "GET /api/v1/measures/{measure_id}": {
+    "class": "lezen"
+  },
+  "GET /api/v1/measures/{measure_id}/live-versions": {
+    "class": "lezen"
+  },
+  "GET /api/v1/measures/{measure_id}/versions": {
+    "class": "lezen"
+  },
+  "GET /api/v1/measures/{measure_id}/versions/deleted": {
+    "class": "lezen"
+  },
+  "GET /api/v1/measures/{measure_id}/versions/published": {
+    "class": "lezen"
+  },
+  "GET /api/v1/measures/{measure_id}/versions/{version}": {
+    "class": "lezen"
+  },
+  "GET /api/v1/modules": {
+    "class": "lezen"
+  },
+  "GET /api/v1/notifications": {
+    "class": "lezen"
+  },
+  "GET /api/v1/notifications/unread-count": {
+    "class": "lezen"
+  },
+  "GET /api/v1/output-schemas": {
+    "class": "lezen"
+  },
+  "GET /api/v1/output-schemas/deleted": {
+    "class": "lezen"
+  },
+  "GET /api/v1/output-schemas/{schema_id}": {
+    "class": "lezen"
+  },
+  "GET /api/v1/output-schemas/{schema_id}/versions": {
+    "class": "lezen"
+  },
+  "GET /api/v1/output-schemas/{schema_id}/versions/deleted": {
+    "class": "lezen"
+  },
+  "GET /api/v1/output-schemas/{schema_id}/versions/published": {
+    "class": "lezen"
+  },
+  "GET /api/v1/output-schemas/{schema_id}/versions/{version}": {
+    "class": "lezen"
+  },
+  "GET /api/v1/platform/models": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "GET /api/v1/platform/outbound-recipients": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "GET /api/v1/platform/run-capacity": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "GET /api/v1/platform/runtime": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "GET /api/v1/platform/sandbox-sizing": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "GET /api/v1/platform/sign-in": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "GET /api/v1/platform/workspaces": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "GET /api/v1/platform/workspaces/{workspace_id}": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "GET /api/v1/policies": {
+    "class": "lezen"
+  },
+  "GET /api/v1/policies/deleted": {
+    "class": "lezen"
+  },
+  "GET /api/v1/policies/{policy_id}": {
+    "class": "lezen"
+  },
+  "GET /api/v1/policies/{policy_id}/dependent-agents": {
+    "class": "lezen"
+  },
+  "GET /api/v1/policies/{policy_id}/versions": {
+    "class": "lezen"
+  },
+  "GET /api/v1/policies/{policy_id}/versions/deleted": {
+    "class": "lezen"
+  },
+  "GET /api/v1/policies/{policy_id}/versions/published": {
+    "class": "lezen"
+  },
+  "GET /api/v1/policies/{policy_id}/versions/{version}": {
+    "class": "lezen"
+  },
+  "GET /api/v1/prompt-snippets": {
+    "class": "lezen"
+  },
+  "GET /api/v1/prompt-snippets/deleted": {
+    "class": "lezen"
+  },
+  "GET /api/v1/prompt-snippets/{snippet_id}": {
+    "class": "lezen"
+  },
+  "GET /api/v1/prompt-snippets/{snippet_id}/versions": {
+    "class": "lezen"
+  },
+  "GET /api/v1/prompt-snippets/{snippet_id}/versions/deleted": {
+    "class": "lezen"
+  },
+  "GET /api/v1/prompt-snippets/{snippet_id}/versions/published": {
+    "class": "lezen"
+  },
+  "GET /api/v1/prompt-snippets/{snippet_id}/versions/{version}": {
+    "class": "lezen"
+  },
+  "GET /api/v1/publish-approvals": {
+    "class": "lezen"
+  },
+  "GET /api/v1/publish-approvals/pending-count": {
+    "class": "lezen"
+  },
+  "GET /api/v1/publish-approvals/release": {
+    "class": "lezen"
+  },
+  "GET /api/v1/publish-approvals/release/{release_id}": {
+    "class": "lezen"
+  },
+  "GET /api/v1/publish-approvals/{approval_id}": {
+    "class": "lezen"
+  },
+  "GET /api/v1/queries": {
+    "class": "lezen"
+  },
+  "GET /api/v1/queries/deleted": {
+    "class": "lezen"
+  },
+  "GET /api/v1/queries/{query_id}": {
+    "class": "lezen"
+  },
+  "GET /api/v1/queries/{query_id}/live-versions": {
+    "class": "lezen"
+  },
+  "GET /api/v1/queries/{query_id}/usage": {
+    "class": "lezen"
+  },
+  "GET /api/v1/queries/{query_id}/versions": {
+    "class": "lezen"
+  },
+  "GET /api/v1/queries/{query_id}/versions/deleted": {
+    "class": "lezen"
+  },
+  "GET /api/v1/queries/{query_id}/versions/published": {
+    "class": "lezen"
+  },
+  "GET /api/v1/queries/{query_id}/versions/{version}": {
+    "class": "lezen"
+  },
+  "GET /api/v1/queues/overview": {
+    "class": "lezen"
+  },
+  "GET /api/v1/queues/runs": {
+    "class": "lezen"
+  },
+  "GET /api/v1/reference-docs": {
+    "class": "lezen"
+  },
+  "GET /api/v1/reference-docs/deleted": {
+    "class": "lezen"
+  },
+  "GET /api/v1/reference-docs/{ref_id}": {
+    "class": "lezen"
+  },
+  "GET /api/v1/reference-docs/{ref_id}/dependent-agents": {
+    "class": "lezen"
+  },
+  "GET /api/v1/reference-docs/{ref_id}/versions": {
+    "class": "lezen"
+  },
+  "GET /api/v1/reference-docs/{ref_id}/versions/deleted": {
+    "class": "lezen"
+  },
+  "GET /api/v1/reference-docs/{ref_id}/versions/published": {
+    "class": "lezen"
+  },
+  "GET /api/v1/reference-docs/{ref_id}/versions/{version}": {
+    "class": "lezen"
+  },
+  "GET /api/v1/roles": {
+    "class": "lezen"
+  },
+  "GET /api/v1/roles/{role_id}": {
+    "class": "lezen"
+  },
+  "GET /api/v1/runs": {
+    "class": "lezen"
+  },
+  "GET /api/v1/runs/storage": {
+    "class": "lezen"
+  },
+  "GET /api/v1/runs/summary": {
+    "class": "lezen"
+  },
+  "GET /api/v1/runs/todo": {
+    "class": "lezen"
+  },
+  "GET /api/v1/runs/{run_id}": {
+    "class": "lezen"
+  },
+  "GET /api/v1/runs/{run_id}/action-verdicts": {
+    "class": "lezen"
+  },
+  "GET /api/v1/runs/{run_id}/application-actions": {
+    "class": "lezen"
+  },
+  "GET /api/v1/runs/{run_id}/cost": {
+    "class": "lezen"
+  },
+  "GET /api/v1/runs/{run_id}/for-each/{batch_id}/progress": {
+    "class": "lezen"
+  },
+  "GET /api/v1/runs/{run_id}/invocations/{invocation_id}/messages": {
+    "class": "lezen"
+  },
+  "GET /api/v1/runs/{run_id}/items": {
+    "class": "lezen"
+  },
+  "GET /api/v1/runs/{run_id}/items/summary": {
+    "class": "lezen"
+  },
+  "GET /api/v1/runs/{run_id}/outline": {
+    "class": "lezen"
+  },
+  "GET /api/v1/runs/{run_id}/outline/items": {
+    "class": "lezen"
+  },
+  "GET /api/v1/runs/{run_id}/session-memory": {
+    "class": "lezen"
+  },
+  "GET /api/v1/runs/{run_id}/session-memory/{file_id}": {
+    "class": "lezen"
+  },
+  "GET /api/v1/runs/{run_id}/tasks": {
+    "class": "lezen"
+  },
+  "GET /api/v1/runs/{run_id}/trace": {
+    "class": "lezen"
+  },
+  "GET /api/v1/runs/{run_id}/trace/export": {
+    "class": "lezen"
+  },
+  "GET /api/v1/runs/{run_id}/values/{digest}": {
+    "class": "lezen"
+  },
+  "GET /api/v1/runs/{run_id}/waiting-on": {
+    "class": "lezen"
+  },
+  "GET /api/v1/runs/{run_id}/workflow-memory": {
+    "class": "lezen"
+  },
+  "GET /api/v1/screen-state/{screen}": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "GET /api/v1/secrets": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "GET /api/v1/secrets/transfer": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "GET /api/v1/secrets/{secret_id}": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "GET /api/v1/service-tokens": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "GET /api/v1/skills": {
+    "class": "lezen"
+  },
+  "GET /api/v1/skills/deleted": {
+    "class": "lezen"
+  },
+  "GET /api/v1/skills/{skill_id}": {
+    "class": "lezen"
+  },
+  "GET /api/v1/skills/{skill_id}/dependent-agents": {
+    "class": "lezen"
+  },
+  "GET /api/v1/skills/{skill_id}/versions": {
+    "class": "lezen"
+  },
+  "GET /api/v1/skills/{skill_id}/versions/deleted": {
+    "class": "lezen"
+  },
+  "GET /api/v1/skills/{skill_id}/versions/published": {
+    "class": "lezen"
+  },
+  "GET /api/v1/skills/{skill_id}/versions/{version}": {
+    "class": "lezen"
+  },
+  "GET /api/v1/system-tools": {
+    "class": "lezen"
+  },
+  "GET /api/v1/system-tools/functions": {
+    "class": "lezen"
+  },
+  "GET /api/v1/table-relationships": {
+    "class": "lezen"
+  },
+  "GET /api/v1/table-relationships/deleted": {
+    "class": "lezen"
+  },
+  "GET /api/v1/table-relationships/{relationship_id}": {
+    "class": "lezen"
+  },
+  "GET /api/v1/task-queue": {
+    "class": "lezen"
+  },
+  "GET /api/v1/task-queue/dashboard-summary": {
+    "class": "lezen"
+  },
+  "GET /api/v1/task-queue/export": {
+    "class": "lezen"
+  },
+  "GET /api/v1/task-queue/{task_id}": {
+    "class": "lezen"
+  },
+  "GET /api/v1/templates": {
+    "class": "lezen"
+  },
+  "GET /api/v1/templates/{template_id}": {
+    "class": "lezen"
+  },
+  "GET /api/v1/tenant-settings/concurrency-status": {
+    "class": "lezen"
+  },
+  "GET /api/v1/tenant-settings/concurrent-run-cap": {
+    "class": "lezen"
+  },
+  "GET /api/v1/tenant-settings/for-each-rate": {
+    "class": "lezen"
+  },
+  "GET /api/v1/tenant-settings/model-tier-map": {
+    "class": "lezen"
+  },
+  "GET /api/v1/tenant-settings/system-agent-models": {
+    "class": "lezen"
+  },
+  "GET /api/v1/tenant/config": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "GET /api/v1/tenant/export": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "GET /api/v1/test-api/auth/oauth2/resource": {
+    "class": "dicht",
+    "why": "no authentication of its own: a token never reaches the gate"
+  },
+  "GET /api/v1/test-api/echo": {
+    "class": "dicht",
+    "why": "no authentication of its own: a token never reaches the gate"
+  },
+  "GET /api/v1/test-api/users": {
+    "class": "dicht",
+    "why": "no authentication of its own: a token never reaches the gate"
+  },
+  "GET /api/v1/test-api/users/{user_id}": {
+    "class": "dicht",
+    "why": "no authentication of its own: a token never reaches the gate"
+  },
+  "GET /api/v1/tool-templates": {
+    "class": "lezen"
+  },
+  "GET /api/v1/toolboxes": {
+    "class": "lezen"
+  },
+  "GET /api/v1/toolboxes/{toolbox_id}/dependent-tools": {
+    "class": "lezen"
+  },
+  "GET /api/v1/tools": {
+    "class": "lezen"
+  },
+  "GET /api/v1/tools/deleted": {
+    "class": "lezen"
+  },
+  "GET /api/v1/tools/packages": {
+    "class": "lezen"
+  },
+  "GET /api/v1/tools/{tool_id}": {
+    "class": "lezen"
+  },
+  "GET /api/v1/tools/{tool_id}/published": {
+    "class": "lezen"
+  },
+  "GET /api/v1/tools/{tool_id}/versions": {
+    "class": "lezen"
+  },
+  "GET /api/v1/tools/{tool_id}/versions/deleted": {
+    "class": "lezen"
+  },
+  "GET /api/v1/tools/{tool_id}/versions/{version}": {
+    "class": "lezen"
+  },
+  "GET /api/v1/usage/days": {
+    "class": "lezen"
+  },
+  "GET /api/v1/usage/runs": {
+    "class": "lezen"
+  },
+  "GET /api/v1/usage/series": {
+    "class": "lezen"
+  },
+  "GET /api/v1/usage/workflows": {
+    "class": "lezen"
+  },
+  "GET /api/v1/users": {
+    "class": "lezen"
+  },
+  "GET /api/v1/users/members": {
+    "class": "lezen"
+  },
+  "GET /api/v1/users/{user_id}/roles": {
+    "class": "lezen"
+  },
+  "GET /api/v1/webhook-triggers/environment": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "GET /api/v1/wildcard-prompts": {
+    "class": "lezen"
+  },
+  "GET /api/v1/workflow-templates": {
+    "class": "lezen"
+  },
+  "GET /api/v1/workflows": {
+    "class": "lezen"
+  },
+  "GET /api/v1/workflows/callable": {
+    "class": "lezen"
+  },
+  "GET /api/v1/workflows/deleted": {
+    "class": "lezen"
+  },
+  "GET /api/v1/workflows/operations": {
+    "class": "lezen"
+  },
+  "GET /api/v1/workflows/using/{entity_kind}/{entity_id}": {
+    "class": "lezen"
+  },
+  "GET /api/v1/workflows/{workflow_id}": {
+    "class": "lezen"
+  },
+  "GET /api/v1/workflows/{workflow_id}/action-verdicts": {
+    "class": "lezen"
+  },
+  "GET /api/v1/workflows/{workflow_id}/action-verdicts/counts": {
+    "class": "lezen"
+  },
+  "GET /api/v1/workflows/{workflow_id}/components": {
+    "class": "lezen"
+  },
+  "GET /api/v1/workflows/{workflow_id}/conditional-triggers": {
+    "class": "lezen"
+  },
+  "GET /api/v1/workflows/{workflow_id}/cron-schedules": {
+    "class": "lezen"
+  },
+  "GET /api/v1/workflows/{workflow_id}/ownership-preview": {
+    "class": "lezen"
+  },
+  "GET /api/v1/workflows/{workflow_id}/prompt-stacks": {
+    "class": "lezen"
+  },
+  "GET /api/v1/workflows/{workflow_id}/published": {
+    "class": "lezen"
+  },
+  "GET /api/v1/workflows/{workflow_id}/reference-docs": {
+    "class": "lezen"
+  },
+  "GET /api/v1/workflows/{workflow_id}/runs": {
+    "class": "lezen"
+  },
+  "GET /api/v1/workflows/{workflow_id}/skills-v2": {
+    "class": "lezen"
+  },
+  "GET /api/v1/workflows/{workflow_id}/trigger-parameters": {
+    "class": "lezen"
+  },
+  "GET /api/v1/workflows/{workflow_id}/versions": {
+    "class": "lezen"
+  },
+  "GET /api/v1/workflows/{workflow_id}/versions/deleted": {
+    "class": "lezen"
+  },
+  "GET /api/v1/workflows/{workflow_id}/versions/{version}": {
+    "class": "lezen"
+  },
+  "GET /api/v1/workflows/{workflow_id}/webhook-triggers": {
+    "class": "dicht",
+    "why": "webhook triggers"
+  },
+  "GET /health": {
+    "class": "dicht",
+    "why": "no authentication of its own: a token never reaches the gate"
+  },
+  "GET /mcp": {
+    "class": "dicht",
+    "why": "no authentication of its own: a token never reaches the gate"
+  },
+  "PATCH /api/v1/admin/wake-tasks/{task_id}": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "PATCH /api/v1/agents/{agent_id}/versions/major/{major_version}": {
+    "class": "configuratie"
+  },
+  "PATCH /api/v1/applications/{application_id}/versions/major/{major_version}": {
+    "class": "configuratie"
+  },
+  "PATCH /api/v1/auth/me": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "PATCH /api/v1/automatic-agents/{agent_id}": {
+    "class": "dicht",
+    "why": "administration settings"
+  },
+  "PATCH /api/v1/company/versions/major/{major_version}": {
+    "class": "configuratie"
+  },
+  "PATCH /api/v1/concepts/{concept_id}": {
+    "class": "dicht",
+    "why": "rows of the concepts and influences tables: not proven to be written in a draft"
+  },
+  "PATCH /api/v1/conditional-triggers/{trigger_id}": {
+    "class": "dicht",
+    "why": "schedules change the cadence of approved work"
+  },
+  "PATCH /api/v1/cron-schedules/{schedule_id}": {
+    "class": "dicht",
+    "why": "schedules change the cadence of approved work"
+  },
+  "PATCH /api/v1/data-tables/{table_id}/rows": {
+    "class": "actie"
+  },
+  "PATCH /api/v1/data-tables/{table_id}/rows/{row_id}": {
+    "class": "actie"
+  },
+  "PATCH /api/v1/data-tables/{table_id}/versions/major/{major_version}": {
+    "class": "configuratie"
+  },
+  "PATCH /api/v1/files/{file_id}": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "PATCH /api/v1/flow-step-prompts/{link_id}": {
+    "class": "dicht",
+    "why": "attachment rows, not proven to be draft-only"
+  },
+  "PATCH /api/v1/flows/{flow_id}": {
+    "class": "configuratie"
+  },
+  "PATCH /api/v1/flows/{flow_id}/versions/major/{major_version}": {
+    "class": "configuratie"
+  },
+  "PATCH /api/v1/knowledge/source-types/{key}": {
+    "class": "dicht",
+    "why": "knowledge upkeep"
+  },
+  "PATCH /api/v1/knowledge/sources/{source_id}": {
+    "class": "dicht",
+    "why": "knowledge upkeep"
+  },
+  "PATCH /api/v1/measures/{measure_id}/versions/major/{major_version}": {
+    "class": "configuratie"
+  },
+  "PATCH /api/v1/output-schemas/{schema_id}/versions/major/{major_version}": {
+    "class": "configuratie"
+  },
+  "PATCH /api/v1/platform/models/prices/{price_id}": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "PATCH /api/v1/platform/models/routes/{route_id}": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "PATCH /api/v1/platform/models/{model_id}": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "PATCH /api/v1/platform/outbound-recipients": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "PATCH /api/v1/platform/run-capacity": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "PATCH /api/v1/platform/runtime": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "PATCH /api/v1/platform/sandbox-sizing": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "PATCH /api/v1/platform/sign-in": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "PATCH /api/v1/platform/workspaces/{workspace_id}": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "PATCH /api/v1/policies/{policy_id}/versions/major/{major_version}": {
+    "class": "configuratie"
+  },
+  "PATCH /api/v1/prompt-snippets/{snippet_id}": {
+    "class": "configuratie"
+  },
+  "PATCH /api/v1/prompt-snippets/{snippet_id}/versions/major/{major_version}": {
+    "class": "configuratie"
+  },
+  "PATCH /api/v1/queries/{query_id}/versions/major/{major_version}": {
+    "class": "configuratie"
+  },
+  "PATCH /api/v1/reference-docs/{ref_id}/versions/major/{major_version}": {
+    "class": "configuratie"
+  },
+  "PATCH /api/v1/skills/{skill_id}/versions/major/{major_version}": {
+    "class": "configuratie"
+  },
+  "PATCH /api/v1/tenant-settings/concurrent-run-cap": {
+    "class": "dicht",
+    "why": "administration settings"
+  },
+  "PATCH /api/v1/tenant-settings/for-each-rate": {
+    "class": "dicht",
+    "why": "administration settings"
+  },
+  "PATCH /api/v1/tenant-settings/model-tier-map": {
+    "class": "dicht",
+    "why": "administration settings"
+  },
+  "PATCH /api/v1/tools/{tool_id}/versions/major/{major_version}": {
+    "class": "configuratie"
+  },
+  "PATCH /api/v1/users/{user_id}": {
+    "class": "dicht",
+    "why": "members and credentials"
+  },
+  "PATCH /api/v1/workflows/{workflow_id}": {
+    "class": "configuratie"
+  },
+  "PATCH /api/v1/workflows/{workflow_id}/versions/major/{major_version}": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/_test/install-stub-provider": {
+    "class": "dicht",
+    "why": "no authentication of its own: a token never reaches the gate"
+  },
+  "POST /api/v1/_test/reset-stub-provider": {
+    "class": "dicht",
+    "why": "no authentication of its own: a token never reaches the gate"
+  },
+  "POST /api/v1/_test/seed-agent": {
+    "class": "dicht",
+    "why": "no authentication of its own: a token never reaches the gate"
+  },
+  "POST /api/v1/_test/seed-flow": {
+    "class": "dicht",
+    "why": "no authentication of its own: a token never reaches the gate"
+  },
+  "POST /api/v1/_test/seed-published-workflow": {
+    "class": "dicht",
+    "why": "no authentication of its own: a token never reaches the gate"
+  },
+  "POST /api/v1/_test/seed-test-user": {
+    "class": "dicht",
+    "why": "no authentication of its own: a token never reaches the gate"
+  },
+  "POST /api/v1/_test/suspend-run": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/_test/wake/{run_id}": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/action-verdicts/{verdict_id}/mark": {
+    "class": "dicht",
+    "why": "already refused for tokens"
+  },
+  "POST /api/v1/admin/wake-tasks": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/admin/wake-tasks/{task_id}/dismiss": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/admin/wake-tasks/{task_id}/wake-now": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/agents": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/agents/{agent_id}/copy": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/agents/{agent_id}/discard-draft": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/agents/{agent_id}/policies/{policy_id}": {
+    "class": "dicht",
+    "why": "attachment rows, not proven to be draft-only"
+  },
+  "POST /api/v1/agents/{agent_id}/publish": {
+    "class": "dicht",
+    "why": "direct publish: only the approval request"
+  },
+  "POST /api/v1/agents/{agent_id}/publish-release": {
+    "class": "dicht",
+    "why": "direct publish: only the approval request"
+  },
+  "POST /api/v1/agents/{agent_id}/reference-docs/{ref_id}": {
+    "class": "dicht",
+    "why": "attachment rows, not proven to be draft-only"
+  },
+  "POST /api/v1/agents/{agent_id}/restore": {
+    "class": "dicht",
+    "why": "restore: configuration without an approval step"
+  },
+  "POST /api/v1/agents/{agent_id}/skills-v2/{skill_id}": {
+    "class": "dicht",
+    "why": "attachment rows, not proven to be draft-only"
+  },
+  "POST /api/v1/agents/{agent_id}/unpublish": {
+    "class": "dicht",
+    "why": "direct publish: only the approval request"
+  },
+  "POST /api/v1/agents/{agent_id}/versions": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/agents/{agent_id}/versions/ensure": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/agents/{agent_id}/versions/{version_id}/restore": {
+    "class": "dicht",
+    "why": "restore: configuration without an approval step"
+  },
+  "POST /api/v1/agents/{agent_id}/versions/{version_id}/restore-deleted": {
+    "class": "dicht",
+    "why": "restore: configuration without an approval step"
+  },
+  "POST /api/v1/applications": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/applications/{application_id}/discard-draft": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/applications/{application_id}/knowledge": {
+    "class": "dicht",
+    "why": "application executors and knowledge"
+  },
+  "POST /api/v1/applications/{application_id}/knowledge/{knowledge_id}/forget": {
+    "class": "dicht",
+    "why": "application executors and knowledge"
+  },
+  "POST /api/v1/applications/{application_id}/knowledge/{knowledge_id}/restore": {
+    "class": "dicht",
+    "why": "restore: configuration without an approval step"
+  },
+  "POST /api/v1/applications/{application_id}/restore": {
+    "class": "dicht",
+    "why": "restore: configuration without an approval step"
+  },
+  "POST /api/v1/applications/{application_id}/versions": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/applications/{application_id}/versions/ensure": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/applications/{application_id}/versions/publish/{major_version}": {
+    "class": "dicht",
+    "why": "direct publish: only the approval request"
+  },
+  "POST /api/v1/applications/{application_id}/versions/unpublish": {
+    "class": "dicht",
+    "why": "direct publish: only the approval request"
+  },
+  "POST /api/v1/applications/{application_id}/versions/{version_id}/restore": {
+    "class": "dicht",
+    "why": "restore: configuration without an approval step"
+  },
+  "POST /api/v1/applications/{application_id}/versions/{version_id}/restore-deleted": {
+    "class": "dicht",
+    "why": "restore: configuration without an approval step"
+  },
+  "POST /api/v1/audiences": {
+    "class": "dicht",
+    "why": "administration settings"
+  },
+  "POST /api/v1/auth/admin-login": {
+    "class": "dicht",
+    "why": "no authentication of its own: a token never reaches the gate"
+  },
+  "POST /api/v1/auth/change-password": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/auth/forgot-password": {
+    "class": "dicht",
+    "why": "no authentication of its own: a token never reaches the gate"
+  },
+  "POST /api/v1/auth/fork": {
+    "class": "dicht",
+    "why": "no authentication of its own: a token never reaches the gate"
+  },
+  "POST /api/v1/auth/login": {
+    "class": "dicht",
+    "why": "no authentication of its own: a token never reaches the gate"
+  },
+  "POST /api/v1/auth/login/select-tenant": {
+    "class": "dicht",
+    "why": "no authentication of its own: a token never reaches the gate"
+  },
+  "POST /api/v1/auth/login/select-tenant/workspace": {
+    "class": "dicht",
+    "why": "no authentication of its own: a token never reaches the gate"
+  },
+  "POST /api/v1/auth/logout": {
+    "class": "dicht",
+    "why": "no authentication of its own: a token never reaches the gate"
+  },
+  "POST /api/v1/auth/refresh": {
+    "class": "dicht",
+    "why": "no authentication of its own: a token never reaches the gate"
+  },
+  "POST /api/v1/auth/reset-password": {
+    "class": "dicht",
+    "why": "no authentication of its own: a token never reaches the gate"
+  },
+  "POST /api/v1/auth/session": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/auth/setup": {
+    "class": "dicht",
+    "why": "no authentication of its own: a token never reaches the gate"
+  },
+  "POST /api/v1/auth/setup/claim": {
+    "class": "dicht",
+    "why": "no authentication of its own: a token never reaches the gate"
+  },
+  "POST /api/v1/auth/signup": {
+    "class": "dicht",
+    "why": "no authentication of its own: a token never reaches the gate"
+  },
+  "POST /api/v1/auth/sso/entra/callback": {
+    "class": "dicht",
+    "why": "no authentication of its own: a token never reaches the gate"
+  },
+  "POST /api/v1/company/discard-draft": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/company/from-template": {
+    "class": "dicht",
+    "why": "company from template: not proven draft-only"
+  },
+  "POST /api/v1/company/mutations": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/company/publish": {
+    "class": "dicht",
+    "why": "direct publish: only the approval request"
+  },
+  "POST /api/v1/company/unpublish": {
+    "class": "dicht",
+    "why": "direct publish: only the approval request"
+  },
+  "POST /api/v1/company/versions": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/company/versions/ensure": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/company/versions/{version_id}/restore": {
+    "class": "dicht",
+    "why": "restore: configuration without an approval step"
+  },
+  "POST /api/v1/concept-links": {
+    "class": "dicht",
+    "why": "rows of the concepts and influences tables: not proven to be written in a draft"
+  },
+  "POST /api/v1/concepts": {
+    "class": "dicht",
+    "why": "rows of the concepts and influences tables: not proven to be written in a draft"
+  },
+  "POST /api/v1/config/branches": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/config/branches/catch-up": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/config/branches/discard": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/config/branches/follow": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/config/branches/merge": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/config/draft-migration/apply": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/config/draft-migration/fidelity": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/config/draft-migration/plan": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/config/draft-migration/tools/preflight": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/config/environments/promote": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/config/environments/rollback": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/config/environments/sync": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/config/forget": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/config/forget/plan": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/config/plan": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/config/secrets": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/config/secrets/preflight": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/config/values/commit": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/conversation-attachments": {
+    "class": "actie"
+  },
+  "POST /api/v1/conversations": {
+    "class": "actie"
+  },
+  "POST /api/v1/cron-schedules/reconcile": {
+    "class": "dicht",
+    "why": "schedules change the cadence of approved work"
+  },
+  "POST /api/v1/cron-schedules/{schedule_id}/run-now": {
+    "class": "dicht",
+    "why": "schedules change the cadence of approved work"
+  },
+  "POST /api/v1/dashboards": {
+    "class": "dicht",
+    "why": "no draft: saved directly"
+  },
+  "POST /api/v1/dashboards/{dashboard_id}/duplicate": {
+    "class": "dicht",
+    "why": "no draft: saved directly"
+  },
+  "POST /api/v1/dashboards/{dashboard_id}/restore": {
+    "class": "dicht",
+    "why": "restore: configuration without an approval step"
+  },
+  "POST /api/v1/data-sources": {
+    "class": "dicht",
+    "why": "no draft: saved directly"
+  },
+  "POST /api/v1/data-sources/{source_id}/explore": {
+    "class": "actie"
+  },
+  "POST /api/v1/data-sources/{source_id}/query": {
+    "class": "actie"
+  },
+  "POST /api/v1/data-sources/{source_id}/restore": {
+    "class": "dicht",
+    "why": "restore: configuration without an approval step"
+  },
+  "POST /api/v1/data-sources/{source_id}/test": {
+    "class": "actie"
+  },
+  "POST /api/v1/data-tables": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/data-tables/{table_id}/discard-draft": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/data-tables/{table_id}/refresh": {
+    "class": "actie"
+  },
+  "POST /api/v1/data-tables/{table_id}/restore": {
+    "class": "dicht",
+    "why": "restore: configuration without an approval step"
+  },
+  "POST /api/v1/data-tables/{table_id}/rows": {
+    "class": "actie"
+  },
+  "POST /api/v1/data-tables/{table_id}/rows/clear": {
+    "class": "actie"
+  },
+  "POST /api/v1/data-tables/{table_id}/rows/delete": {
+    "class": "actie"
+  },
+  "POST /api/v1/data-tables/{table_id}/versions": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/data-tables/{table_id}/versions/ensure": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/data-tables/{table_id}/versions/publish/{major_version}": {
+    "class": "dicht",
+    "why": "direct publish: only the approval request"
+  },
+  "POST /api/v1/data-tables/{table_id}/versions/unpublish": {
+    "class": "dicht",
+    "why": "direct publish: only the approval request"
+  },
+  "POST /api/v1/data-tables/{table_id}/versions/{version_id}/restore": {
+    "class": "dicht",
+    "why": "restore: configuration without an approval step"
+  },
+  "POST /api/v1/data-tables/{table_id}/versions/{version_id}/restore-deleted": {
+    "class": "dicht",
+    "why": "restore: configuration without an approval step"
+  },
+  "POST /api/v1/deployment/app/register": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/deployment/app/register-url": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/deployment/ci/deploy": {
+    "class": "dicht",
+    "why": "no authentication of its own: a token never reaches the gate"
+  },
+  "POST /api/v1/deployment/ci/plan": {
+    "class": "dicht",
+    "why": "no authentication of its own: a token never reaches the gate"
+  },
+  "POST /api/v1/deployment/commit": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/deployment/commit/preview": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/deployment/commit/scope": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/deployment/connection": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/deployment/credentials": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/deployment/credentials/{credential_id}/revoke": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/deployment/credentials/{credential_id}/rotate": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/deployment/deploy": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/deployment/github/oauth/callback": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/deployment/github/oauth/connect": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/deployment/github/oauth/scaffold-and-connect": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/deployment/github/setup": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/deployment/github/webhook": {
+    "class": "dicht",
+    "why": "no authentication of its own: a token never reaches the gate"
+  },
+  "POST /api/v1/deployment/repos/adopt": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/deployment/repos/create": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/deployment/resolve-connectable": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/executors": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/executors/{executor_id}/revoke": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/findings/{finding_id}/handled": {
+    "class": "dicht",
+    "why": "consultant"
+  },
+  "POST /api/v1/flow-steps/{flow_step_id}/prompts": {
+    "class": "dicht",
+    "why": "attachment rows, not proven to be draft-only"
+  },
+  "POST /api/v1/flows": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/flows/{flow_id}/clone": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/flows/{flow_id}/discard-draft": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/flows/{flow_id}/publish": {
+    "class": "dicht",
+    "why": "direct publish: only the approval request"
+  },
+  "POST /api/v1/flows/{flow_id}/restore": {
+    "class": "dicht",
+    "why": "restore: configuration without an approval step"
+  },
+  "POST /api/v1/flows/{flow_id}/unpublish": {
+    "class": "dicht",
+    "why": "direct publish: only the approval request"
+  },
+  "POST /api/v1/flows/{flow_id}/versions": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/flows/{flow_id}/versions/ensure": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/flows/{flow_id}/versions/{version_id}/restore": {
+    "class": "dicht",
+    "why": "restore: configuration without an approval step"
+  },
+  "POST /api/v1/flows/{flow_id}/versions/{version_id}/restore-deleted": {
+    "class": "dicht",
+    "why": "restore: configuration without an approval step"
+  },
+  "POST /api/v1/folders/ensure": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/folders/{folder_id}/files": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/invoices/generate": {
+    "class": "dicht",
+    "why": "billing"
+  },
+  "POST /api/v1/knowledge/decisions/{decision_id}": {
+    "class": "dicht",
+    "why": "knowledge upkeep"
+  },
+  "POST /api/v1/knowledge/facts/{fact_id}/archive": {
+    "class": "dicht",
+    "why": "knowledge upkeep"
+  },
+  "POST /api/v1/knowledge/facts/{fact_id}/confirm": {
+    "class": "dicht",
+    "why": "knowledge upkeep"
+  },
+  "POST /api/v1/knowledge/facts/{fact_id}/correct": {
+    "class": "dicht",
+    "why": "knowledge upkeep"
+  },
+  "POST /api/v1/knowledge/facts/{fact_id}/reject": {
+    "class": "dicht",
+    "why": "knowledge upkeep"
+  },
+  "POST /api/v1/knowledge/facts/{fact_id}/relabel": {
+    "class": "dicht",
+    "why": "knowledge upkeep"
+  },
+  "POST /api/v1/knowledge/facts/{fact_id}/restore": {
+    "class": "dicht",
+    "why": "restore: configuration without an approval step"
+  },
+  "POST /api/v1/knowledge/facts/{fact_id}/right-version": {
+    "class": "dicht",
+    "why": "knowledge upkeep"
+  },
+  "POST /api/v1/knowledge/learning/items/{item_id}/answer": {
+    "class": "dicht",
+    "why": "knowledge upkeep"
+  },
+  "POST /api/v1/knowledge/learning/items/{item_id}/choice": {
+    "class": "dicht",
+    "why": "knowledge upkeep"
+  },
+  "POST /api/v1/knowledge/learning/items/{item_id}/report": {
+    "class": "dicht",
+    "why": "knowledge upkeep"
+  },
+  "POST /api/v1/knowledge/learning/round": {
+    "class": "dicht",
+    "why": "knowledge upkeep"
+  },
+  "POST /api/v1/knowledge/nodes/{node_id}/erase": {
+    "class": "dicht",
+    "why": "knowledge upkeep"
+  },
+  "POST /api/v1/knowledge/oversight/cases/{case_id}/assign": {
+    "class": "dicht",
+    "why": "knowledge upkeep"
+  },
+  "POST /api/v1/knowledge/source-types": {
+    "class": "dicht",
+    "why": "knowledge upkeep"
+  },
+  "POST /api/v1/knowledge/tips/shown": {
+    "class": "dicht",
+    "why": "knowledge upkeep"
+  },
+  "POST /api/v1/me/tokens": {
+    "class": "dicht",
+    "why": "a token never manages tokens"
+  },
+  "POST /api/v1/me/tokens/remove-expired": {
+    "class": "dicht",
+    "why": "a token never manages tokens"
+  },
+  "POST /api/v1/me/tokens/{token_id}/revoke": {
+    "class": "dicht",
+    "why": "a token never manages tokens"
+  },
+  "POST /api/v1/measure-influences": {
+    "class": "dicht",
+    "why": "rows of the concepts and influences tables: not proven to be written in a draft"
+  },
+  "POST /api/v1/measures": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/measures/query": {
+    "class": "actie"
+  },
+  "POST /api/v1/measures/rows": {
+    "class": "actie"
+  },
+  "POST /api/v1/measures/validate": {
+    "class": "lezen"
+  },
+  "POST /api/v1/measures/{measure_id}/discard-draft": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/measures/{measure_id}/restore": {
+    "class": "dicht",
+    "why": "restore: configuration without an approval step"
+  },
+  "POST /api/v1/measures/{measure_id}/versions": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/measures/{measure_id}/versions/ensure": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/measures/{measure_id}/versions/publish/{major_version}": {
+    "class": "dicht",
+    "why": "direct publish: only the approval request"
+  },
+  "POST /api/v1/measures/{measure_id}/versions/unpublish": {
+    "class": "dicht",
+    "why": "direct publish: only the approval request"
+  },
+  "POST /api/v1/measures/{measure_id}/versions/{version_id}/restore": {
+    "class": "dicht",
+    "why": "restore: configuration without an approval step"
+  },
+  "POST /api/v1/measures/{measure_id}/versions/{version_id}/restore-deleted": {
+    "class": "dicht",
+    "why": "restore: configuration without an approval step"
+  },
+  "POST /api/v1/notifications/read-all": {
+    "class": "dicht",
+    "why": "personal state"
+  },
+  "POST /api/v1/notifications/{notification_id}/read": {
+    "class": "dicht",
+    "why": "personal state"
+  },
+  "POST /api/v1/output-schemas": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/output-schemas/{schema_id}/discard-draft": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/output-schemas/{schema_id}/restore": {
+    "class": "dicht",
+    "why": "restore: configuration without an approval step"
+  },
+  "POST /api/v1/output-schemas/{schema_id}/versions": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/output-schemas/{schema_id}/versions/ensure": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/output-schemas/{schema_id}/versions/publish/{major_version}": {
+    "class": "dicht",
+    "why": "direct publish: only the approval request"
+  },
+  "POST /api/v1/output-schemas/{schema_id}/versions/unpublish": {
+    "class": "dicht",
+    "why": "direct publish: only the approval request"
+  },
+  "POST /api/v1/output-schemas/{schema_id}/versions/{version_id}/restore": {
+    "class": "dicht",
+    "why": "restore: configuration without an approval step"
+  },
+  "POST /api/v1/output-schemas/{schema_id}/versions/{version_id}/restore-deleted": {
+    "class": "dicht",
+    "why": "restore: configuration without an approval step"
+  },
+  "POST /api/v1/platform/models": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/platform/models/providers/{provider}/check": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/platform/models/routes/{route_id}/prices": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/platform/models/{model_id}/provider-check": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/platform/modules/{module_id}/restore": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/platform/runtime/restart": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/platform/workspaces": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/platform/workspaces/{workspace_id}/close": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/platform/workspaces/{workspace_id}/restore": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/platform/workspaces/{workspace_id}/support-access": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/policies": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/policies/{policy_id}/discard-draft": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/policies/{policy_id}/restore": {
+    "class": "dicht",
+    "why": "restore: configuration without an approval step"
+  },
+  "POST /api/v1/policies/{policy_id}/versions": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/policies/{policy_id}/versions/ensure": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/policies/{policy_id}/versions/publish/{major_version}": {
+    "class": "dicht",
+    "why": "direct publish: only the approval request"
+  },
+  "POST /api/v1/policies/{policy_id}/versions/unpublish": {
+    "class": "dicht",
+    "why": "direct publish: only the approval request"
+  },
+  "POST /api/v1/policies/{policy_id}/versions/{version_id}/restore": {
+    "class": "dicht",
+    "why": "restore: configuration without an approval step"
+  },
+  "POST /api/v1/policies/{policy_id}/versions/{version_id}/restore-deleted": {
+    "class": "dicht",
+    "why": "restore: configuration without an approval step"
+  },
+  "POST /api/v1/prompt-snippets": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/prompt-snippets/{snippet_id}/clone": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/prompt-snippets/{snippet_id}/discard-draft": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/prompt-snippets/{snippet_id}/restore": {
+    "class": "dicht",
+    "why": "restore: configuration without an approval step"
+  },
+  "POST /api/v1/prompt-snippets/{snippet_id}/versions": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/prompt-snippets/{snippet_id}/versions/ensure": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/prompt-snippets/{snippet_id}/versions/publish/{major_version}": {
+    "class": "dicht",
+    "why": "direct publish: only the approval request"
+  },
+  "POST /api/v1/prompt-snippets/{snippet_id}/versions/unpublish": {
+    "class": "dicht",
+    "why": "direct publish: only the approval request"
+  },
+  "POST /api/v1/prompt-snippets/{snippet_id}/versions/{version_id}/restore": {
+    "class": "dicht",
+    "why": "restore: configuration without an approval step"
+  },
+  "POST /api/v1/prompt-snippets/{snippet_id}/versions/{version_id}/restore-deleted": {
+    "class": "dicht",
+    "why": "restore: configuration without an approval step"
+  },
+  "POST /api/v1/publish-approvals": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/publish-approvals/bulk": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/publish-approvals/bulk-approve": {
+    "class": "dicht",
+    "why": "a token never approves"
+  },
+  "POST /api/v1/publish-approvals/bulk-reject": {
+    "class": "dicht",
+    "why": "a token never approves"
+  },
+  "POST /api/v1/publish-approvals/release": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/publish-approvals/release/{release_id}/approve": {
+    "class": "dicht",
+    "why": "a token never approves"
+  },
+  "POST /api/v1/publish-approvals/release/{release_id}/reject": {
+    "class": "dicht",
+    "why": "a token never approves"
+  },
+  "POST /api/v1/publish-approvals/{approval_id}/approve": {
+    "class": "dicht",
+    "why": "a token never approves"
+  },
+  "POST /api/v1/publish-approvals/{approval_id}/reject": {
+    "class": "dicht",
+    "why": "a token never approves"
+  },
+  "POST /api/v1/queries": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/queries/{query_id}/discard-draft": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/queries/{query_id}/restore": {
+    "class": "dicht",
+    "why": "restore: configuration without an approval step"
+  },
+  "POST /api/v1/queries/{query_id}/test": {
+    "class": "actie"
+  },
+  "POST /api/v1/queries/{query_id}/versions": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/queries/{query_id}/versions/ensure": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/queries/{query_id}/versions/publish/{major_version}": {
+    "class": "dicht",
+    "why": "direct publish: only the approval request"
+  },
+  "POST /api/v1/queries/{query_id}/versions/unpublish": {
+    "class": "dicht",
+    "why": "direct publish: only the approval request"
+  },
+  "POST /api/v1/queries/{query_id}/versions/{version_id}/restore": {
+    "class": "dicht",
+    "why": "restore: configuration without an approval step"
+  },
+  "POST /api/v1/queries/{query_id}/versions/{version_id}/restore-deleted": {
+    "class": "dicht",
+    "why": "restore: configuration without an approval step"
+  },
+  "POST /api/v1/reference-docs": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/reference-docs/{ref_id}/discard-draft": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/reference-docs/{ref_id}/restore": {
+    "class": "dicht",
+    "why": "restore: configuration without an approval step"
+  },
+  "POST /api/v1/reference-docs/{ref_id}/versions": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/reference-docs/{ref_id}/versions/ensure": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/reference-docs/{ref_id}/versions/publish/{major_version}": {
+    "class": "dicht",
+    "why": "direct publish: only the approval request"
+  },
+  "POST /api/v1/reference-docs/{ref_id}/versions/unpublish": {
+    "class": "dicht",
+    "why": "direct publish: only the approval request"
+  },
+  "POST /api/v1/reference-docs/{ref_id}/versions/{version_id}/restore": {
+    "class": "dicht",
+    "why": "restore: configuration without an approval step"
+  },
+  "POST /api/v1/reference-docs/{ref_id}/versions/{version_id}/restore-deleted": {
+    "class": "dicht",
+    "why": "restore: configuration without an approval step"
+  },
+  "POST /api/v1/roles": {
+    "class": "dicht",
+    "why": "administration settings"
+  },
+  "POST /api/v1/run-input-files": {
+    "class": "actie"
+  },
+  "POST /api/v1/runs/bulk/archive": {
+    "class": "actie"
+  },
+  "POST /api/v1/runs/bulk/delete": {
+    "class": "dicht",
+    "why": "delete"
+  },
+  "POST /api/v1/runs/bulk/stop": {
+    "class": "actie_beheerder"
+  },
+  "POST /api/v1/runs/{run_id}/archive": {
+    "class": "actie"
+  },
+  "POST /api/v1/runs/{run_id}/cancel": {
+    "class": "actie"
+  },
+  "POST /api/v1/runs/{run_id}/channel-reply": {
+    "class": "dicht",
+    "why": "no authentication of its own: a token never reaches the gate"
+  },
+  "POST /api/v1/runs/{run_id}/end-conversation": {
+    "class": "actie"
+  },
+  "POST /api/v1/runs/{run_id}/message": {
+    "class": "actie"
+  },
+  "POST /api/v1/runs/{run_id}/restart": {
+    "class": "actie_beheerder"
+  },
+  "POST /api/v1/runs/{run_id}/steps/{step_id}/answer": {
+    "class": "actie"
+  },
+  "POST /api/v1/runs/{run_id}/steps/{step_id}/complete": {
+    "class": "actie"
+  },
+  "POST /api/v1/runs/{run_id}/steps/{step_id}/plan-approval": {
+    "class": "actie"
+  },
+  "POST /api/v1/runs/{run_id}/unarchive": {
+    "class": "actie"
+  },
+  "POST /api/v1/secrets": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/secrets/transfer": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/secrets/{secret_id}/duplicate": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/secrets/{secret_id}/reveal": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/service-tokens": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/service-tokens/{token_id}/revoke": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/skills": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/skills/{skill_id}/discard-draft": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/skills/{skill_id}/restore": {
+    "class": "dicht",
+    "why": "restore: configuration without an approval step"
+  },
+  "POST /api/v1/skills/{skill_id}/versions": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/skills/{skill_id}/versions/ensure": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/skills/{skill_id}/versions/publish/{major_version}": {
+    "class": "dicht",
+    "why": "direct publish: only the approval request"
+  },
+  "POST /api/v1/skills/{skill_id}/versions/unpublish": {
+    "class": "dicht",
+    "why": "direct publish: only the approval request"
+  },
+  "POST /api/v1/skills/{skill_id}/versions/{version_id}/restore": {
+    "class": "dicht",
+    "why": "restore: configuration without an approval step"
+  },
+  "POST /api/v1/skills/{skill_id}/versions/{version_id}/restore-deleted": {
+    "class": "dicht",
+    "why": "restore: configuration without an approval step"
+  },
+  "POST /api/v1/table-relationships": {
+    "class": "dicht",
+    "why": "no draft: saved directly"
+  },
+  "POST /api/v1/table-relationships/{relationship_id}/restore": {
+    "class": "dicht",
+    "why": "restore: configuration without an approval step"
+  },
+  "POST /api/v1/task-queue/dismiss-bulk": {
+    "class": "actie_beheerder"
+  },
+  "POST /api/v1/task-queue/purge": {
+    "class": "dicht",
+    "why": "purge"
+  },
+  "POST /api/v1/task-queue/release-bulk": {
+    "class": "actie_beheerder"
+  },
+  "POST /api/v1/task-queue/replay-bulk": {
+    "class": "actie_beheerder"
+  },
+  "POST /api/v1/task-queue/stop-bulk": {
+    "class": "actie_beheerder"
+  },
+  "POST /api/v1/task-queue/{task_id}/dismiss": {
+    "class": "actie_beheerder"
+  },
+  "POST /api/v1/task-queue/{task_id}/release": {
+    "class": "actie_beheerder"
+  },
+  "POST /api/v1/task-queue/{task_id}/replay": {
+    "class": "actie_beheerder"
+  },
+  "POST /api/v1/task-queue/{task_id}/stop": {
+    "class": "actie_beheerder"
+  },
+  "POST /api/v1/templates": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/tenant/config": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/tenant/import": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/test-api/auth/api-key": {
+    "class": "dicht",
+    "why": "no authentication of its own: a token never reaches the gate"
+  },
+  "POST /api/v1/test-api/auth/basic": {
+    "class": "dicht",
+    "why": "no authentication of its own: a token never reaches the gate"
+  },
+  "POST /api/v1/test-api/auth/bearer": {
+    "class": "dicht",
+    "why": "no authentication of its own: a token never reaches the gate"
+  },
+  "POST /api/v1/test-api/auth/oauth2/token": {
+    "class": "dicht",
+    "why": "no authentication of its own: a token never reaches the gate"
+  },
+  "POST /api/v1/test-api/echo": {
+    "class": "dicht",
+    "why": "no authentication of its own: a token never reaches the gate"
+  },
+  "POST /api/v1/test-api/graphql": {
+    "class": "dicht",
+    "why": "no authentication of its own: a token never reaches the gate"
+  },
+  "POST /api/v1/toolboxes": {
+    "class": "dicht",
+    "why": "no draft: saved directly"
+  },
+  "POST /api/v1/tools": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/tools/execute": {
+    "class": "actie"
+  },
+  "POST /api/v1/tools/execute-connector": {
+    "class": "dicht",
+    "why": "free destination: credential exfiltration"
+  },
+  "POST /api/v1/tools/format-code": {
+    "class": "lezen"
+  },
+  "POST /api/v1/tools/validate-code": {
+    "class": "lezen"
+  },
+  "POST /api/v1/tools/{tool_id}/discard-draft": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/tools/{tool_id}/dry-run": {
+    "class": "actie"
+  },
+  "POST /api/v1/tools/{tool_id}/execute-connector": {
+    "class": "actie"
+  },
+  "POST /api/v1/tools/{tool_id}/publish": {
+    "class": "dicht",
+    "why": "direct publish: only the approval request"
+  },
+  "POST /api/v1/tools/{tool_id}/restore": {
+    "class": "dicht",
+    "why": "restore: configuration without an approval step"
+  },
+  "POST /api/v1/tools/{tool_id}/unpublish": {
+    "class": "dicht",
+    "why": "direct publish: only the approval request"
+  },
+  "POST /api/v1/tools/{tool_id}/versions": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/tools/{tool_id}/versions/ensure": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/tools/{tool_id}/versions/{version_id}/restore": {
+    "class": "dicht",
+    "why": "restore: configuration without an approval step"
+  },
+  "POST /api/v1/tools/{tool_id}/versions/{version_id}/restore-deleted": {
+    "class": "dicht",
+    "why": "restore: configuration without an approval step"
+  },
+  "POST /api/v1/triggers/{token}": {
+    "class": "dicht",
+    "why": "no authentication of its own: a token never reaches the gate"
+  },
+  "POST /api/v1/users": {
+    "class": "dicht",
+    "why": "members and credentials"
+  },
+  "POST /api/v1/users/{user_id}/reset-link": {
+    "class": "dicht",
+    "why": "members and credentials"
+  },
+  "POST /api/v1/webhook-triggers/{webhook_id}/reveal": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/webhook-triggers/{webhook_id}/rotate": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/workflows": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/workflows/bulk-delete": {
+    "class": "dicht",
+    "why": "delete"
+  },
+  "POST /api/v1/workflows/reachable-outputs": {
+    "class": "lezen"
+  },
+  "POST /api/v1/workflows/validate": {
+    "class": "lezen"
+  },
+  "POST /api/v1/workflows/{workflow_id}/components/duplicate": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/workflows/{workflow_id}/conditional-triggers": {
+    "class": "dicht",
+    "why": "schedules"
+  },
+  "POST /api/v1/workflows/{workflow_id}/cron-schedules": {
+    "class": "dicht",
+    "why": "schedules"
+  },
+  "POST /api/v1/workflows/{workflow_id}/discard-draft": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/workflows/{workflow_id}/mutations": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/workflows/{workflow_id}/publish": {
+    "class": "dicht",
+    "why": "direct publish: only the approval request"
+  },
+  "POST /api/v1/workflows/{workflow_id}/reference-docs/{ref_id}": {
+    "class": "dicht",
+    "why": "attachment rows, not proven to be draft-only"
+  },
+  "POST /api/v1/workflows/{workflow_id}/restore": {
+    "class": "dicht",
+    "why": "restore: configuration without an approval step"
+  },
+  "POST /api/v1/workflows/{workflow_id}/runs": {
+    "class": "actie"
+  },
+  "POST /api/v1/workflows/{workflow_id}/skills-v2/{skill_id}": {
+    "class": "dicht",
+    "why": "attachment rows, not proven to be draft-only"
+  },
+  "POST /api/v1/workflows/{workflow_id}/unpublish": {
+    "class": "dicht",
+    "why": "direct publish: only the approval request"
+  },
+  "POST /api/v1/workflows/{workflow_id}/validate": {
+    "class": "lezen"
+  },
+  "POST /api/v1/workflows/{workflow_id}/versions": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/workflows/{workflow_id}/versions/ensure": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/workflows/{workflow_id}/versions/{version_id}/restore": {
+    "class": "dicht",
+    "why": "restore: configuration without an approval step"
+  },
+  "POST /api/v1/workflows/{workflow_id}/versions/{version_id}/restore-deleted": {
+    "class": "dicht",
+    "why": "restore: configuration without an approval step"
+  },
+  "POST /api/v1/workflows/{workflow_id}/webhook-triggers": {
+    "class": "dicht",
+    "why": "webhook triggers"
+  },
+  "POST /mcp": {
+    "class": "dicht",
+    "why": "no authentication of its own: a token never reaches the gate"
+  },
+  "PUT /api/v1/agents/{agent_id}": {
+    "class": "configuratie"
+  },
+  "PUT /api/v1/applications/{application_id}": {
+    "class": "configuratie"
+  },
+  "PUT /api/v1/applications/{application_id}/executors": {
+    "class": "dicht",
+    "why": "application executors and knowledge"
+  },
+  "PUT /api/v1/audiences/{audience_id}": {
+    "class": "dicht",
+    "why": "administration settings"
+  },
+  "PUT /api/v1/briefs/profiles": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "PUT /api/v1/briefs/recipients": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "PUT /api/v1/company": {
+    "class": "configuratie"
+  },
+  "PUT /api/v1/config/values/decisions": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "PUT /api/v1/config/values/hidden": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "PUT /api/v1/config/values/managed": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "PUT /api/v1/config/values/staged": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "PUT /api/v1/config/values/staged/batch": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "PUT /api/v1/consultant/settings": {
+    "class": "dicht",
+    "why": "administration settings"
+  },
+  "PUT /api/v1/dashboards/{dashboard_id}": {
+    "class": "dicht",
+    "why": "no draft: saved directly"
+  },
+  "PUT /api/v1/data-sources/{source_id}": {
+    "class": "dicht",
+    "why": "no draft: saved directly"
+  },
+  "PUT /api/v1/data-tables/{table_id}": {
+    "class": "configuratie"
+  },
+  "PUT /api/v1/deployment/github-token": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "PUT /api/v1/executors/{executor_id}/applications": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "PUT /api/v1/flow-steps/{flow_step_id}/prompts/order": {
+    "class": "dicht",
+    "why": "attachment rows, not proven to be draft-only"
+  },
+  "PUT /api/v1/knowledge/learning/topic": {
+    "class": "dicht",
+    "why": "knowledge upkeep"
+  },
+  "PUT /api/v1/knowledge/settings": {
+    "class": "dicht",
+    "why": "knowledge upkeep"
+  },
+  "PUT /api/v1/measure-influences": {
+    "class": "dicht",
+    "why": "rows of the concepts and influences tables: not proven to be written in a draft"
+  },
+  "PUT /api/v1/measures/{measure_id}": {
+    "class": "configuratie"
+  },
+  "PUT /api/v1/output-schemas/{schema_id}": {
+    "class": "configuratie"
+  },
+  "PUT /api/v1/platform/models/keys/{name}": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "PUT /api/v1/platform/models/system-agents/{slug}": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "PUT /api/v1/platform/models/tiers": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "PUT /api/v1/platform/modules/{module_id}": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "PUT /api/v1/policies/{policy_id}": {
+    "class": "configuratie"
+  },
+  "PUT /api/v1/queries/{query_id}": {
+    "class": "configuratie"
+  },
+  "PUT /api/v1/reference-docs/{ref_id}": {
+    "class": "configuratie"
+  },
+  "PUT /api/v1/roles/{role_id}": {
+    "class": "dicht",
+    "why": "administration settings"
+  },
+  "PUT /api/v1/screen-state/{screen}": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "PUT /api/v1/secrets/{secret_id}": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "PUT /api/v1/skills/{skill_id}": {
+    "class": "configuratie"
+  },
+  "PUT /api/v1/table-relationships/{relationship_id}": {
+    "class": "dicht",
+    "why": "no draft: saved directly"
+  },
+  "PUT /api/v1/tenant-settings/system-agent-models/{slug}": {
+    "class": "dicht",
+    "why": "administration settings"
+  },
+  "PUT /api/v1/test-api/echo": {
+    "class": "dicht",
+    "why": "no authentication of its own: a token never reaches the gate"
+  },
+  "PUT /api/v1/toolboxes/{toolbox_id}": {
+    "class": "dicht",
+    "why": "no draft: saved directly"
+  },
+  "PUT /api/v1/toolboxes/{toolbox_id}/auth": {
+    "class": "dicht",
+    "why": "no draft: saved directly"
+  },
+  "PUT /api/v1/toolboxes/{toolbox_id}/tools": {
+    "class": "dicht",
+    "why": "no draft: saved directly"
+  },
+  "PUT /api/v1/tools/{tool_id}": {
+    "class": "configuratie"
+  },
+  "PUT /api/v1/tools/{tool_id}/toolbox": {
+    "class": "dicht",
+    "why": "tool toolbox membership is read live"
+  },
+  "PUT /api/v1/users/{user_id}/roles": {
+    "class": "dicht",
+    "why": "members and credentials"
+  },
+  "PUT /api/v1/workflows/{workflow_id}": {
+    "class": "configuratie"
+  }
+}

@@ -8,12 +8,16 @@
  *
  *   claude mcp add axonity -- npx -y @axonity-ai/mcp
  *
- * with AXONITY_TOKEN (a service token minted in Axonity → Settings → API tokens)
+ * with AXONITY_TOKEN (a personal token, or a service token you still have)
  * and, if self-hosting, AXONITY_API_URL in the environment.
  *
  * It talks to Axonity ONLY over the public REST API; the backend re-enforces
  * tenant + scope on every call. Publishing is human-approved and lands in a
  * later slice (C3) — this connector never publishes directly.
+ *
+ * The same tools also run hosted by Axonity behind its `/mcp`
+ * (AXONITY_MCP_TRANSPORT=http, see `http.ts`), for a caller with a personal
+ * token. stdio stays the default.
  */
 
 import { realpathSync } from "node:fs";
@@ -23,8 +27,11 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 
 import { AxonityClient } from "./client.js";
-import { loadConfig } from "./config.js";
-import { reportContractSkew } from "./contract.js";
+import { loadConfig, loadHttpConfig, transportOf } from "./config.js";
+import { startHostedServer } from "./http.js";
+import { forPersonalTokens, routesPerTool } from "./routeClasses.js";
+import { TOKEN_ROUTE_CLASSES } from "./generated/tokenRouteClasses.js";
+import { type ProbeServer, reportContractSkew } from "./contract.js";
 import { registerConventions } from "./tools/conventions.js";
 import { registerEntityContractTools } from "./tools/entityContract.js";
 import {
@@ -730,7 +737,21 @@ const VERSIONED: VersionedEntity[] = [
  */
 type ServerLike = Pick<McpServer, "tool">;
 
-export function registerAll(server: ServerLike, client: AxonityClient): void {
+/** Where the tools are served from, where that changes what a tool may do. */
+export interface RegisterOptions {
+  /**
+   * Served by Axonity itself (`/mcp`, HTTP mode) rather than as a local process
+   * beside the MCP client. A tool that reads THIS machine's files must not do
+   * so there: this machine is the Axonity server, not the caller's.
+   */
+  hosted?: boolean;
+}
+
+export function registerAll(
+  server: ServerLike,
+  client: AxonityClient,
+  options: RegisterOptions = {},
+): void {
   registerConventions(server as McpServer, client);
   for (const def of ENTITIES) {
     // Filters are GENERATED from the pinned schema (#48 M4), never declared on
@@ -752,7 +773,7 @@ export function registerAll(server: ServerLike, client: AxonityClient): void {
   registerApprovalTools(server as McpServer, client);
   registerTriggerTools(server as McpServer, client);
   registerRunTools(server as McpServer, client);
-  registerRunInputFileTools(server as McpServer, client);
+  registerRunInputFileTools(server as McpServer, client, { hosted: options.hosted === true });
   registerPersonaTools(server as McpServer, client);
   registerConnectorTools(server as McpServer, client);
   registerAttachTools(server as McpServer, client);
@@ -778,14 +799,44 @@ export function registerAll(server: ServerLike, client: AxonityClient): void {
   registerKnowledgeGraphTools(server as McpServer, client);
 }
 
+/** How the server introduces itself, on either transport. */
+export const SERVER_INFO = { name: "axonity", version: "0.1.0" };
+
 export function buildServer(client: AxonityClient): McpServer {
-  const server = new McpServer({ name: "axonity", version: "0.1.0" });
+  const server = new McpServer(SERVER_INFO);
   registerAll(server, client);
   return server;
 }
 
+/** The hosted surface: the same tools, for a caller elsewhere. */
+export const registerHosted = (server: ProbeServer, client: AxonityClient): void =>
+  // The four-argument `.tool()` every registrar uses; the same cast the
+  // startup contract check makes.
+  registerAll(server as never, client, { hosted: true });
+
+/**
+ * The hosted connector (AXONITY_MCP_TRANSPORT=http), started by Axonity beside
+ * its API. Every caller holds a personal token, so every tool is worded with
+ * what such a token may do there (`routeClasses.ts`). No contract check at
+ * startup: it ships in the same image as the API it calls.
+ */
+async function mainHttp(): Promise<void> {
+  const config = loadHttpConfig();
+  const routes = await routesPerTool(registerHosted);
+  await startHostedServer({
+    ...config,
+    serverInfo: SERVER_INFO,
+    register: registerHosted,
+    prepare: (tools) => forPersonalTokens(tools, routes, TOKEN_ROUTE_CLASSES),
+  });
+}
+
 async function main(): Promise<void> {
   assertNoExtraArguments(process.argv.slice(2));
+  if (transportOf() === "http") {
+    await mainHttp();
+    return;
+  }
   const config = loadConfig();
   const client = new AxonityClient(config);
   const server = buildServer(client);

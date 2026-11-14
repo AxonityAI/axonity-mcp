@@ -8,7 +8,7 @@ Axonity tenant —
 the same verbs the internal Builder team has, minus direct publish.
 
 It runs on your machine and talks to Axonity **only over the public REST API**,
-authenticated with a per-tenant **service token**. The backend re-enforces
+authenticated with a token for one workspace. The backend re-enforces
 tenant + scope on every call, so the connector is not a trust boundary for what
 it may do in Axonity. One thing only the connector decides: which **local file**
 leaves your machine. `upload_run_input_file` with `path` reads any file the user
@@ -19,18 +19,22 @@ the call — your MCP client's approval of each call is the guard.
 
 ## Setup
 
-1. **Mint a service token** in Axonity → **Settings → API tokens**. Copy it once
-   (it starts with `axs_`); you won't see it again. Use a **read-only** token if
-   you only want the agent to read — it is genuinely enforced, any write from it
-   is refused with a 403. Every token expires (you choose 7, 15, 30, 60 or 90
-   days at mint time; there is no "never"), and there is no way for the agent to
-   check remaining lifetime in advance — an expired token fails exactly like a
-   revoked one, so mint a fresh one when that happens.
+1. **Have a token.** The connector sends whatever `AXONITY_TOKEN` holds as a
+   bearer, and the platform decides what it may do:
+   - a **personal token** (`axp_…`) acts as you, within the limits it was made
+     with (see *Hosted by Axonity* below for what that means per tool);
+   - an existing **service token** (`axs_…`) keeps working until it expires or
+     is revoked, but no new ones are made.
+
+   Every token expires, and there is no way for the agent to check the
+   remaining lifetime in advance: an expired token fails exactly like a revoked
+   one, so get a fresh one when that happens. Copy a token once; you will not
+   see it again.
 2. **Add the connector to Claude Code:**
 
    ```bash
    claude mcp add axonity \
-     --env AXONITY_TOKEN=axs_your_token_here \
+     --env AXONITY_TOKEN=your_token_here \
      --env AXONITY_API_URL=https://app.axonity.ai \
      -- npx -y @axonity-ai/mcp
    ```
@@ -633,6 +637,50 @@ live calling a tool that did not. The response carries the bundle's verdict —
 ride along), `members` with why each is there, and `blockers` that name the
 member in the way. Requesting is ours; deciding stays human, like everywhere
 else here.
+
+## Hosted by Axonity (HTTP mode)
+
+The same tools also run inside Axonity, behind its own `/mcp` endpoint, for a
+person who connects with a **personal token** (`axp_…`) instead of running the
+connector locally. Axonity starts this package with
+`AXONITY_MCP_TRANSPORT=http`; you do not run that mode yourself. The local
+connector above (stdio, a service token) is unchanged and is still the default.
+
+What differs in hosted mode:
+
+- **One token per request.** The process holds no token of its own
+  (`AXONITY_TOKEN` set is refused at startup). Each request brings its caller's
+  personal token as a bearer, and the API is called with that token only. A
+  request without an `axp_` bearer is answered 401.
+- **Each tool says what a personal token needs, before the call.** A personal
+  token reads what its person reads; actions need "Run actions" on the token,
+  drafts and publication requests need "Build drafts and request publication",
+  and every other route is closed to it. Axonity decides that per route and
+  enforces it on every call; the hosted tool texts are worded from the same
+  table (`src/generated/tokenRouteClasses.ts`, pinned from
+  `backend/scripts/dump_token_route_classes.py` in axonity-flow). A tool on a
+  closed route keeps its name and says why it is closed.
+- **No local files.** `upload_run_input_file` takes `contentBase64` only: the
+  process runs on the Axonity server, so a `path` would name a file there, and
+  it is refused before anything is read.
+- **Stateless, with a ceiling.** Every message is its own POST (no sessions; GET
+  and DELETE on `/mcp` are 405; a batch is answered 400). At most
+  `AXONITY_MCP_MAX_IN_FLIGHT` requests (default 4) run at once,
+  `AXONITY_MCP_MAX_QUEUED` (default 32) wait, and one more is answered 503. A
+  request keeps its place until its work is done, also when its caller hangs
+  up, and every API call ends after `AXONITY_MCP_API_TIMEOUT_MS` (default
+  300000). A body over `AXONITY_MCP_MAX_BODY_BYTES` (default 25 MB) is answered
+  413.
+- It listens on `127.0.0.1:AXONITY_MCP_PORT` only and calls `AXONITY_API_URL`,
+  which has no default in this mode.
+
+Refresh the route table after the backend changes it:
+
+```bash
+node scripts/generate-token-route-classes.mjs --flow ../axonity-flow
+```
+
+A test fails when a tool calls a route the pinned table does not know.
 
 ## What this is for — and what it is not
 
