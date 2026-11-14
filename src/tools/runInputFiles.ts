@@ -76,13 +76,31 @@ export function decodeBase64(text: string): Buffer {
   return bytes;
 }
 
+/**
+ * How a refusal of a local file speaks: the parameter that named it, and what
+ * to send when the file is not on this machine. `start_workflow_run` reads its
+ * `triggerInputPath` through the same reader, with its own words.
+ */
+export interface LocalFileWords {
+  param: string;
+  elsewhere: string;
+}
+
+const PATH_WORDS: LocalFileWords = {
+  param: "path",
+  elsewhere: "send its bytes as `contentBase64` instead",
+};
+
 /** The bytes at `path` on this machine, or a refusal that says why not. */
-async function readLocalFile(path: string): Promise<Buffer> {
+export async function readLocalFile(
+  path: string,
+  words: LocalFileWords = PATH_WORDS,
+): Promise<Buffer> {
   if (!isAbsolute(path)) {
     throw new Error(
-      `\`path\` must be an absolute path; got "${path}". A relative path would ` +
-        "be read against the connector's working directory, which you do not " +
-        "know.",
+      `\`${words.param}\` must be an absolute path; got "${path}". A relative ` +
+        "path would be read against the connector's working directory, which " +
+        "you do not know.",
     );
   }
   let info;
@@ -92,9 +110,9 @@ async function readLocalFile(path: string): Promise<Buffer> {
     const code = (err as NodeJS.ErrnoException).code;
     if (code === "ENOENT" || code === "ENOTDIR") {
       throw new Error(
-        `No file at "${path}" on the machine this connector runs on. \`path\` ` +
-          "is read there, not where you are: if the file is somewhere else, " +
-          "send its bytes as `contentBase64` instead.",
+        `No file at "${path}" on the machine this connector runs on. ` +
+          `\`${words.param}\` is read there, not where you are: if the file is ` +
+          `somewhere else, ${words.elsewhere}.`,
       );
     }
     throw new Error(`Cannot read "${path}": ${(err as Error).message}`);
