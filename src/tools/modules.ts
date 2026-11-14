@@ -117,7 +117,8 @@ export function registerModuleTools(server: McpServer, client: AxonityClient): v
       "and revisions, rejects duplicate keys, and derives actor and provenance from " +
       "the authenticated request. Who may write: a service token with the author scope, " +
       "or a personal token whose owner is an administrator of this workspace; a personal " +
-      "token writes with that person's rights and the save is recorded under that person. " +
+      "token writes with that person's rights, needs the token's 'Run actions' choice, and " +
+      "the save is recorded under that person. " +
       "Either can write permitted workspace fields, including admin-classified fields. " +
       "Only the workspace level is written here: installation, role and personal settings " +
       "are changed by a person in Axonity in the browser, never through a token. " +

@@ -1338,8 +1338,7 @@
     "class": "configuratie"
   },
   "PATCH /api/v1/modules/{module_id}/settings": {
-    "class": "dicht",
-    "why": "module settings (#1826 R1): saved directly and read live, no approval step (B8)"
+    "class": "actie_beheerder"
   },
   "PATCH /api/v1/output-schemas/{schema_id}/versions/major/{major_version}": {
     "class": "configuratie"
@@ -1400,15 +1399,15 @@
   },
   "PATCH /api/v1/tenant-settings/concurrent-run-cap": {
     "class": "dicht",
-    "why": "module settings (#1826 R1): saved directly and read live, no approval step (B8)"
+    "why": "administration settings"
   },
   "PATCH /api/v1/tenant-settings/for-each-rate": {
     "class": "dicht",
-    "why": "module settings (#1826 R1): saved directly and read live, no approval step (B8)"
+    "why": "administration settings"
   },
   "PATCH /api/v1/tenant-settings/model-tier-map": {
     "class": "dicht",
-    "why": "module settings (#1826 R1): saved directly and read live, no approval step (B8)"
+    "why": "administration settings"
   },
   "PATCH /api/v1/tools/{tool_id}/versions/major/{major_version}": {
     "class": "configuratie"
@@ -2342,7 +2341,7 @@
   },
   "POST /api/v1/roles": {
     "class": "dicht",
-    "why": "module settings (#1826 R1): saved directly and read live, no approval step (B8)"
+    "why": "administration settings"
   },
   "POST /api/v1/run-input-files": {
     "class": "actie"
@@ -2801,7 +2800,7 @@
   },
   "PUT /api/v1/roles/{role_id}": {
     "class": "dicht",
-    "why": "module settings (#1826 R1): saved directly and read live, no approval step (B8)"
+    "why": "administration settings"
   },
   "PUT /api/v1/screen-state/{screen}": {
     "class": "dicht",
@@ -2820,7 +2819,7 @@
   },
   "PUT /api/v1/tenant-settings/system-agent-models/{slug}": {
     "class": "dicht",
-    "why": "module settings (#1826 R1): saved directly and read live, no approval step (B8)"
+    "why": "administration settings"
   },
   "PUT /api/v1/test-api/echo": {
     "class": "dicht",

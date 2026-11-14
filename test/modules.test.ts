@@ -10,7 +10,7 @@ import { errorForStatus } from "../src/errors.js";
 import { TOKEN_ROUTE_CLASSES } from "../src/generated/tokenRouteClasses.js";
 import { buildServer, registerAll, registerHosted } from "../src/index.js";
 import {
-  BUILD_DRAFTS,
+  RUN_ACTIONS,
   forPersonalTokens,
   recordTools,
   routesPerTool,
@@ -373,17 +373,19 @@ describe("who may write module settings, and where the tools stop", () => {
     expect(TOKEN_ROUTE_CLASSES[key]?.class, key).toBe("dicht");
   });
 
-  // B84: the backend's table must let a personal token write the workspace level
-  // (with its owner's rights). The pinned table is the backend's; this goes green
-  // when the fixture is re-recorded from a backend that implements B84, and says
-  // so in the tool's hosted wording instead of "NOT AVAILABLE WITH A PERSONAL TOKEN".
-  it("B84: the backend's table does not close the workspace write to a personal token", async () => {
-    const row = TOKEN_ROUTE_CLASSES["PATCH /api/v1/modules/{module_id}/settings"];
-    expect(row?.class).not.toBe("dicht");
-    const hosted = await hostedDescriptions();
-    expect(hosted.get("update_module_settings")).not.toMatch(/^NOT AVAILABLE/);
-    if (row?.class === "configuratie") {
-      expect(hosted.get("update_module_settings")).toContain(`'${BUILD_DRAFTS}' switched on`);
-    }
+  // B84: the backend's table lets a personal token write the workspace level as an
+  // administrator who left "Run actions" on (class actie_beheerder). The hosted
+  // wording is derived from that row, so it says exactly those two conditions.
+  it("B84: the backend's table opens the workspace write to a personal token of an administrator", async () => {
+    expect(TOKEN_ROUTE_CLASSES["PATCH /api/v1/modules/{module_id}/settings"]?.class).toBe("actie_beheerder");
+    const text = (await hostedDescriptions()).get("update_module_settings") ?? "";
+    expect(text).not.toMatch(/^NOT AVAILABLE/);
+    expect(text).toMatch(/^WITH A PERSONAL TOKEN this needs /);
+    expect(text).toContain(`'${RUN_ACTIONS}' switched on`);
+    expect(text).toContain("an administrator role in this workspace");
+  });
+
+  it("the written description names the Run actions choice a personal token also needs", () => {
+    expect(write()).toMatch(/Run actions/);
   });
 });

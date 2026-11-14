@@ -31,11 +31,12 @@ read. `update_module_settings` writes the **workspace level only**:
 
 - a **service token** with the author scope;
 - a **personal token** (the hosted `/mcp` connector serves only personal
-  tokens) whose owner is an administrator of the workspace. It writes with
-  that person's rights and the save is recorded under that person (decision B84,
-  14/11/2026). In the hosted connector the tool's description also tells the
-  agent which of the token owner's choices the backend's route table requires,
-  worded from `src/generated/tokenRouteClasses.ts`.
+  tokens) whose owner is an administrator of the workspace and who left "Run
+  actions" on for the token (the backend's `actie_beheerder` class). It writes
+  with that person's live rights and the save is recorded under that person,
+  with the token named (decision B84, 14/11/2026). In the hosted connector the
+  tool's description states both conditions, worded from
+  `src/generated/tokenRouteClasses.ts`.
 
 Role, personal and installation settings are never written through a token: the
 backend refuses a token there (`module_settings_service.py` `context()`), the

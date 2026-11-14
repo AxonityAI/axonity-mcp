@@ -11,18 +11,19 @@ diff in review.
 
 ## Provenance
 
-- **R1 capture on backend `5d2906b` (2026-11-14), not released; replaces the
+- **R1 capture on backend `2f75397eb` (2026-11-14), not released; replaces the
   two R1 entries below:** a WHOLE dump with the backend's own
   `scripts/dump_openapi.py` and `scripts/dump_token_route_classes.py`, run
-  read-only from the Flow worktree `feat/1826-insights-module`, HEAD
-  `5d2906b697bd7711bf600f260d691568a10ffec8` **with uncommitted changes** (so
-  this is not a clean-commit export; the coordinator re-records it on the final
-  sha). Safety: `env -i` with only PATH/HOME/TMPDIR, dotenv off
-  (`Settings.model_config["env_file"] = None`), a database URL at a closed port
-  (importing the app opens no connection), `python -B -I`, `src` verified to load
-  from that worktree. No server, database or tenant.
+  read-only on a `git archive` of the CLEAN commit
+  `2f75397eb454c238a502427cc92b32105b655c70` (Flow `feat/1826-insights-module`,
+  B84 included), using that worktree's venv. Safety: `env -i` with only
+  PATH/HOME/TMPDIR, dotenv off (`Settings.model_config["env_file"] = None`), a
+  database URL at a closed port (importing the app opens no connection),
+  `python -B -I`, `src` verified to load from the archive. No server, database
+  or tenant. A later backend commit that touches the contract needs a re-record.
   - `openapi.snapshot.json`: **2,576,597 bytes**, SHA-256
-    `fe53632e48730a16e87c21d96e27e29331d2acf4960ac783f35765b816668c74`.
+    `fe53632e48730a16e87c21d96e27e29331d2acf4960ac783f35765b816668c74`
+    (byte-identical to the dump of `5d2906b`: B84 changed no route or schema).
     Against the snapshot on `main` (`68ef764b9`): 772 -> 788 operations, 16 added,
     none removed, 6 with a different contract. Added: the eight module-settings
     operations (`GET/PATCH /modules/{module_id}/settings`, `.../settings/schema`,
@@ -33,15 +34,14 @@ diff in review.
     `POST /service-tokens/{token_id}/dismiss`). No filtering, no exclusions
     of module endpoints. The five `/me/tokens` operations are in `test/denyList.ts`
     ("a token never manages tokens", the backend's own table).
-  - `token-route-classes.snapshot.json`: **87,451 bytes**, SHA-256
-    `7ad50ae74185218a5026e6506cc7ba651444829a71b613148cd2487e45feaa05`;
-    `src/generated/tokenRouteClasses.ts` regenerated from it. 801 -> 812 rows.
-    At this HEAD the backend lists `PATCH /api/v1/modules/{module_id}/settings`
-    as `dicht` (closed) for a personal token; decision B84 (a personal token of
-    an administrator writes workspace settings) is not in the backend yet. The test
-    "B84: the backend's table does not close the workspace write to a personal
-    token" in `test/modules.test.ts` is red for exactly that reason, on purpose,
-    until both files are re-recorded from a backend that implements B84.
+  - `token-route-classes.snapshot.json`: **87,031 bytes**, SHA-256
+    `e182a823024380740ee6e34239dd5f10f1d034d9de295491438713ec51657668`;
+    `src/generated/tokenRouteClasses.ts` regenerated from it. 812 rows.
+    B84: `PATCH /api/v1/modules/{module_id}/settings` is `actie_beheerder` (a
+    personal token needs "Run actions" and a live administrator role); the role,
+    personal and installation settings routes stay `dicht`. The reasons of six
+    unrelated administration-settings routes read "administration settings"
+    again (they had inherited the module-settings comment).
   - `src/generated/listFilters.ts` regenerates unchanged.
 
 - **R1 refresh after B33/B44 (2026-11-12), not released:** canonical backend
