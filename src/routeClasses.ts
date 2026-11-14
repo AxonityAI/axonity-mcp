@@ -213,6 +213,94 @@ function firstSentence(text: string): string {
 }
 
 /**
+ * Wording that is true for a service token and not for a personal one.
+ *
+ * The local connector's texts were written for service tokens: "needs a token
+ * with the `author` scope", "This service token lacks the 'author' scope". A
+ * personal token has no scopes: it has two switches, which the table puts in
+ * the prefix above, and it carries its person's live role. A sentence that
+ * says otherwise contradicts that prefix, so the hosted text drops it (or says
+ * what the backend does). One list, applied to every tool: a text added later
+ * that says the same thing is caught the same way, and a test over all tools
+ * keeps the list from rotting. The local texts are not touched.
+ *
+ * `becomes` replaces the sentence; without it the sentence goes.
+ */
+export interface Wording {
+  match: RegExp;
+  becomes?: string;
+  /** The backend fact that makes the sentence wrong for a personal token. */
+  why: string;
+}
+
+export const SERVICE_TOKEN_WORDING: readonly Wording[] = [
+  {
+    // runs.ts send_run_message, runInputFiles.ts, validation.ts validate_workflow
+    match: /\bneeds a token with the `\w+` scope/i,
+    why:
+      "A personal token has no scopes. What its tool needs is its owner's 'Run actions' or " +
+      "'Build drafts…' switch, which the table puts first (token_route_classes.py classes).",
+  },
+  {
+    // runs.ts start_conversation: the 403 a service token gets
+    match: /service token (lacks|is read-only)/i,
+    why:
+      "A personal token that may not start a conversation is refused by its class (Run " +
+      "actions off), not by a scope; the refusals that remain are listed beside it.",
+  },
+  {
+    // runs.ts start_conversation: who continues
+    match: /any token they minted/i,
+    becomes:
+      "Only that person can continue it — in the app, or through the token that started it: " +
+      "any other token of theirs is refused (403).",
+    why:
+      "run_service.py _refuse_a_token_a_conversation: a personal token may only continue a " +
+      "Dashboard Analyst conversation it started itself (trigger_input carries the token id).",
+  },
+  {
+    // applications.ts ADMIN_ONLY on read_application_executors
+    match: /a service token always counts as a member/i,
+    becomes:
+      "ADMINISTRATOR ONLY on the platform: a 403 unless the person this token acts as is an " +
+      "administrator of this workspace.",
+    why:
+      "A personal token carries its person's live role (dependencies.py resolve_personal_token, " +
+      "role=identity.role), and GET /applications/{id}/executors is `lezen` in the table with " +
+      "require_admin on the route (routes/applications.py).",
+  },
+];
+
+/**
+ * A text split into sentences and clauses (after `.`, `!`, `?` or `;`, not
+ * after "e.g."/"i.e."), with the whitespace between them kept as it was.
+ */
+function units(text: string): { parts: string[]; gaps: string[] } {
+  const pieces = text.split(/(?<!\be\.g\.|\bi\.e\.)(?<=[.!?;])(\s+)/);
+  const parts: string[] = [];
+  const gaps: string[] = [];
+  pieces.forEach((piece, i) => (i % 2 === 0 ? parts : gaps).push(piece));
+  return { parts, gaps };
+}
+
+/** The text without the sentences that only a service token would meet. */
+export function withoutServiceTokenWording(
+  text: string,
+  rules: readonly Pick<Wording, "match" | "becomes">[] = SERVICE_TOKEN_WORDING,
+): string {
+  const { parts, gaps } = units(text);
+  let out = "";
+  let gap = "";
+  parts.forEach((part, i) => {
+    const rule = rules.find((r) => r.match.test(part));
+    const kept = rule ? rule.becomes : part;
+    if (kept !== undefined) out += (out ? gap : "") + kept;
+    gap = gaps[i] ?? "";
+  });
+  return out;
+}
+
+/**
  * The description a tool carries for a personal token.
  *
  * A tool on a closed route keeps only what it is, after why it is closed: the
@@ -220,7 +308,8 @@ function firstSentence(text: string): string {
  * every tool's text travels in every `tools/list`. A tool that needs a choice
  * says which, first. A read is unchanged.
  */
-export function personalTokenDescription(description: string, reach: ToolReach): string {
+export function personalTokenDescription(original: string, reach: ToolReach): string {
+  const description = withoutServiceTokenWording(original);
   if (reach.closed.length > 0) {
     return (
       `NOT AVAILABLE WITH A PERSONAL TOKEN: closed to tokens (${reach.closed.join("; ")}). ` +

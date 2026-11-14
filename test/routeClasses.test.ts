@@ -10,6 +10,7 @@ import {
   BUILD_DRAFTS,
   NOT_IN_TABLE,
   RUN_ACTIONS,
+  SERVICE_TOKEN_WORDING,
   type TokenRoute,
   forPersonalTokens,
   personalTokenDescription,
@@ -17,6 +18,7 @@ import {
   recordTools,
   routeLookup,
   routesPerTool,
+  withoutServiceTokenWording,
 } from "../src/routeClasses.js";
 // @ts-expect-error — a plain .mjs script, imported for its renderer
 import { renderModule } from "../scripts/generate-token-route-classes.mjs";
@@ -73,7 +75,10 @@ describe("every hosted tool says what a personal token needs, before the call", 
 
   it("the invariant over all tools: the text follows the classes of the routes it calls", () => {
     for (const tool of hosted) {
-      const original = recorded.find((t) => t.name === tool.name)!.description;
+      // Apart from the service-token wording (below), a text is what the tool wrote.
+      const original = withoutServiceTokenWording(
+        recorded.find((t) => t.name === tool.name)!.description,
+      );
       const reach = reachOf(routes.get(tool.name) ?? [], lookup);
       if (reach.closed.length > 0) {
         expect(tool.description, tool.name).toMatch(/^NOT AVAILABLE WITH A PERSONAL TOKEN: closed to tokens \(/);
@@ -152,5 +157,84 @@ describe("the parts", () => {
 
   it("the renderer refuses a class it does not know", () => {
     expect(() => renderModule({ "GET /x": { class: "open" } })).toThrow(/unknown class/);
+  });
+});
+
+/**
+ * A personal token has no scopes and is not a service token. The local texts
+ * say what a service token needs ("Needs a token with the `author` scope"),
+ * and those sentences stay there; the hosted text says what the table says,
+ * once, in the prefix. Backend: a personal token has two switches ("Run
+ * actions", "Build drafts…"), carries its person's live role
+ * (`auth/dependencies.py` resolve_personal_token, role=identity.role) and may
+ * only continue a Dashboard Analyst conversation it started itself
+ * (`run_service.py` _refuse_a_token_a_conversation).
+ */
+describe("a hosted text never talks of scopes or service tokens the backend does not apply", () => {
+  const flat = (name: string) => byName.get(name)!.description.replace(/\s+/g, " ");
+  // Written apart from the rules, so a rule that rots does not hide its own gap.
+  const WRONG =
+    /needs a token with the `\w+` scope|service token (lacks|is read-only)|other write scopes|any token they minted|refused for every token|always counts as a member/i;
+
+  it("the invariant over every tool: none says what only a service token would meet", () => {
+    const offenders = hosted.filter((t) => WRONG.test(t.description)).map((t) => t.name);
+    expect(offenders).toEqual([]);
+  });
+
+  it("each rule is still needed: some local text carries the wording it removes", () => {
+    for (const rule of SERVICE_TOKEN_WORDING) {
+      expect(
+        recorded.some((t) => rule.match.test(t.description)),
+        String(rule.match),
+      ).toBe(true);
+    }
+  });
+
+  it("what the table says stays: the choice a tool needs is named first", () => {
+    expect(byName.get("send_run_message")!.description).toMatch(/^WITH A PERSONAL TOKEN this needs 'Run actions'/);
+    expect(byName.get("upload_run_input_file")!.description).toMatch(/^WITH A PERSONAL TOKEN this needs 'Run actions'/);
+    expect(byName.get("start_conversation")!.description).toMatch(/^WITH A PERSONAL TOKEN this needs 'Run actions'/);
+  });
+
+  it("start_conversation: the true rule for continuing, the refusals that still hold", () => {
+    const d = flat("start_conversation");
+    expect(d).toMatch(/through the token that started it/);
+    expect(d).toMatch(/any other token of theirs is refused/);
+    expect(d).toContain("404 when the dashboard does not exist");
+    expect(d).toContain("403 with the module's own sentence");
+    expect(d).toMatch(/; 422 for an oversized focus\.$/);
+  });
+
+  it("send_run_message, upload_run_input_file, validate_workflow: the scope sentence is gone, the rest is not", () => {
+    expect(flat("send_run_message")).toMatch(/the person who opened it\.$/);
+    expect(flat("upload_run_input_file")).toContain("Nothing runs; the file is only stored. USE THE REFERENCE");
+    const validate = byName.get("validate_workflow")!.description;
+    expect(validate).toContain("This is the real 'can this run?'.\n- document");
+  });
+
+  it("read_application_executors: administrator only, by the person's role", () => {
+    const d = flat("read_application_executors");
+    expect(d).toContain("ADMINISTRATOR ONLY on the platform: a 403 unless the person this token acts as is an administrator");
+    expect(d).toContain("Do not retry");
+  });
+
+  it("the local connector keeps its service-token sentences", () => {
+    const local = recordTools((s, c) => registerAll(s as never, c), {} as AxonityClient);
+    const text = (n: string) => local.find((t) => t.name === n)!.description;
+    expect(text("send_run_message")).toMatch(/Needs a token with the `operate` scope/);
+    expect(text("start_conversation")).toMatch(/any token they minted/);
+  });
+
+  it("the parts: units are dropped or replaced, separators survive, nothing else moves", () => {
+    const rules = [
+      { match: /DROP/, why: "" },
+      { match: /SWAP/, becomes: "Swapped.", why: "" },
+    ];
+    expect(withoutServiceTokenWording("A. DROP this. B.\n- C; D.", rules)).toBe("A. B.\n- C; D.");
+    expect(withoutServiceTokenWording("A. DROP this.\n- B", rules)).toBe("A.\n- B");
+    expect(withoutServiceTokenWording("A. SWAP this; B.", rules)).toBe("A. Swapped. B.");
+    expect(withoutServiceTokenWording("DROP first. B.", rules)).toBe("B.");
+    expect(withoutServiceTokenWording("A. e.g. DROP x; B.", rules)).toBe("A. B.");
+    expect(withoutServiceTokenWording("Nothing here.", rules)).toBe("Nothing here.");
   });
 });

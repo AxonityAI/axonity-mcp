@@ -362,7 +362,9 @@ describe("start_conversation", () => {
     });
   }
 
-  it("says it executes, answers in the background, and as whom", () => {
+  // The LOCAL text (a service token): its scope sentences are true there. The
+  // hosted text, for a personal token, is worded in test/routeClasses.test.ts.
+  it("says it executes, answers in the background, and as whom (local connector)", () => {
     const d = setup().descriptions.get("start_conversation")!;
     expect(d).toMatch(/EXECUTES/);
     expect(d).toMatch(/send_run_message/);
