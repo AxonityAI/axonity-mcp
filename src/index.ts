@@ -58,6 +58,7 @@ import { registerQueryTools } from "./tools/queries.js";
 import { LIST_FILTERS } from "./generated/listFilters.js";
 import { type EntityDef, registerEntityTools } from "./tools/register.js";
 import { registerRunTools } from "./tools/runs.js";
+import { registerRunInputFileTools } from "./tools/runInputFiles.js";
 import { registerSecretTools } from "./tools/secrets.js";
 import { registerSubworkflowTools } from "./tools/subworkflows.js";
 import { registerToolboxTools } from "./tools/toolboxes.js";
@@ -751,6 +752,7 @@ export function registerAll(server: ServerLike, client: AxonityClient): void {
   registerApprovalTools(server as McpServer, client);
   registerTriggerTools(server as McpServer, client);
   registerRunTools(server as McpServer, client);
+  registerRunInputFileTools(server as McpServer, client);
   registerPersonaTools(server as McpServer, client);
   registerConnectorTools(server as McpServer, client);
   registerAttachTools(server as McpServer, client);

@@ -58,15 +58,19 @@ export class AxonityClient {
     body?: unknown,
     query?: Query,
   ): Promise<T> {
+    // A multipart form (an upload, axonity-flow#1963) goes as it is: fetch
+    // writes the body and puts its boundary in the Content-Type, which a
+    // header set here would overwrite. Everything else is JSON.
+    const form = body instanceof FormData;
     let resp: Response;
     try {
       resp = await fetch(this.url(path, query), {
         method,
         headers: {
           Authorization: `Bearer ${this.config.token}`,
-          ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
+          ...(body !== undefined && !form ? { "Content-Type": "application/json" } : {}),
         },
-        body: body !== undefined ? JSON.stringify(body) : undefined,
+        body: body === undefined ? undefined : form ? body : JSON.stringify(body),
       });
     } catch (cause) {
       // Network-level failure (DNS, connection refused, TLS) — not an HTTP status.
