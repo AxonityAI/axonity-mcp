@@ -20,7 +20,10 @@ diff in review.
   PATH/HOME/TMPDIR, dotenv off (`Settings.model_config["env_file"] = None`), a
   database URL at a closed port (importing the app opens no connection),
   `python -B -I`, `src` verified to load from the archive. No server, database
-  or tenant. A later backend commit that touches the contract needs a re-record.
+  or tenant. Re-dumped the same way on the clean final backend commit
+  `9de1a8dcfb8d9dc4d28605f4b26b6938e1f3111d` (config import, S1): both files
+  byte-identical, so the hashes below hold for it too. A later backend commit that
+  touches the contract needs a re-record.
   - `openapi.snapshot.json`: **2,576,597 bytes**, SHA-256
     `fe53632e48730a16e87c21d96e27e29331d2acf4960ac783f35765b816668c74`
     (byte-identical to the dump of `5d2906b`: B84 changed no route or schema).
