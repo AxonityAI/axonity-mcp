@@ -773,7 +773,7 @@ export function registerAll(
   registerExecutionTools(server as McpServer, client);
   registerApprovalTools(server as McpServer, client);
   registerTriggerTools(server as McpServer, client);
-  registerRunTools(server as McpServer, client);
+  registerRunTools(server as McpServer, client, { hosted: options.hosted === true });
   registerRunInputFileTools(server as McpServer, client, { hosted: options.hosted === true });
   registerPersonaTools(server as McpServer, client);
   registerAgentTeamTools(server as McpServer, client);
