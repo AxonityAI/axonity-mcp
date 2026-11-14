@@ -101,9 +101,13 @@ const post = (port: number, token: string, body: string) =>
       Authorization: `Bearer axp_${token}`,
     },
     body,
-    signal: AbortSignal.timeout(60_000),
+    signal: AbortSignal.timeout(150_000),
   }).then(
-    (res) => res.status,
+    async (res) => {
+      // A caller reads its answer: a seat is kept until the answer has left.
+      await res.arrayBuffer();
+      return res.status;
+    },
     (error: Error & { cause?: { code?: string } }) => `error:${error.cause?.code ?? error.name}`,
   );
 
@@ -129,4 +133,51 @@ describe("the hosted connector stays alive whatever one message holds (review M1
     expect(await post(connector.port, "big", toolsList)).toBe(200);
     connector.stop();
   }, 90_000);
+});
+
+/**
+ * The message `numbers` of the reviewer of 14/11/2026 (second round): a list of
+ * 49 500 numbers is under every limit of one message (97 KB, 49 500 marks), and
+ * `apply_workflow_mutations` makes a validation error of it per item. Twelve
+ * from different tokens at once ended the process in three runs of five, twenty
+ * in four of five. The limit per message cannot be what holds the sum.
+ */
+const numbers = (count: number) =>
+  JSON.stringify({
+    jsonrpc: "2.0",
+    id: 1,
+    method: "tools/call",
+    params: {
+      name: "apply_workflow_mutations",
+      arguments: { workflowId: "w", version: 1, mutations: JSON.parse(`[${"1,".repeat(count)}0]`) },
+    },
+  });
+
+describe("the hosted connector stays alive when many messages at the limit come at once (review M1, second round)", () => {
+  it("twenty messages of 49 500 marks at once, twice over: every one is answered and the process lives", async () => {
+    const connector = await startConnector();
+    const body = numbers(49_500);
+    for (let round = 0; round < 2; round++) {
+      const answers = await Promise.all(
+        Array.from({ length: 20 }, (_, i) => post(connector.port, `r${round}n${i}`, body)),
+      );
+      expect(connector.exited(), `round ${round}: ${answers.join(",")}`).toBeNull();
+      // Each is served (the message is invalid for the tool, which is an answer) or
+      // turned away with the existing refusals; none is cut off.
+      expect(answers.every((status) => status === 200 || status === 429 || status === 503), answers.join(",")).toBe(true);
+      expect(answers.filter((status) => status === 200).length).toBeGreaterThanOrEqual(4);
+    }
+    expect(await post(connector.port, "after", toolsList)).toBe(200);
+    connector.stop();
+  }, 600_000);
+
+  it("twelve at once, once: the reviewer's second probe", async () => {
+    const connector = await startConnector();
+    const body = numbers(49_500);
+    const answers = await Promise.all(Array.from({ length: 12 }, (_, i) => post(connector.port, `t${i}`, body)));
+    expect(connector.exited(), answers.join(",")).toBeNull();
+    expect(answers.every((status) => status === 200 || status === 429 || status === 503), answers.join(",")).toBe(true);
+    expect(await post(connector.port, "after", toolsList)).toBe(200);
+    connector.stop();
+  }, 300_000);
 });

@@ -688,13 +688,29 @@ What differs in hosted mode:
   structure marks `{`, `[` and `,` outside strings (every object, array item and
   member) are counted as the body arrives; a message with more than
   `AXONITY_MCP_MAX_STRUCTURE` (default 50000) is answered 400 before it is
-  parsed, with the limit in the error. A file sent as base64 has none. Measured
-  with the real process and the V8 limits Axonity starts it with, four messages
-  at once, each at the limit, through `apply_workflow_mutations` (a list of
-  objects, the most expensive shape found): the process lives at 50000 and at
-  100000 (slowly: 8–10 s) and ended at 200000; so the default is at least twice
-  below the edge for that tool. Not every tool was measured (3 of 473), and a
-  tool with a still more expensive schema may sit closer to it.
+  parsed, with the limit in the error. A file sent as base64 has none. That
+  bounds one message, not the sum, so the messages in work at once also share one
+  budget, `AXONITY_MCP_MAX_STRUCTURE_IN_FLIGHT` (default 100000, never less than
+  the limit per message): a message is weighed after it is read and before it is
+  parsed, and one that does not fit waits its turn (first come, first served)
+  while it holds its seat, so past the seats and the queue it is the same 503.
+  The seat and the budget go back when the answer has left the process, not when
+  the handler returns: a failed call of a big message answers with a thousand
+  times its size (97 KB of numbers is 10.9 MB of validation errors through
+  `apply_workflow_mutations`), and those answers piled up past the heap when the
+  seats went back early. Measured with the real process and the V8 limits Axonity
+  starts it with (macOS RSS, 5 runs per case): twelve and twenty messages of
+  49 500 marks at once from different tokens, `numbers 49500` through
+  `apply_workflow_mutations`, died in 3 of 5 and 4 of 5 runs before; they now die
+  in 0 of 5 (peak 219–229 MB and 224–235 MB). Without the budget, with only the
+  rule about the answer, 20 at once also lived (0 of 5, peak 245–280 MB): the rule
+  about the answer is the cause that was found, the budget is the bound that does
+  not depend on what the answers weigh. One message at the limit lives at 50000
+  and at 100000 (slowly: 8–10 s) and ended at 200000, so the budget is kept under
+  that. Not every tool was measured (3 of 473), and a tool with a still more
+  expensive schema may sit closer to it. An answer that stands still for 30
+  seconds without being read is cut with its connection, so a caller that does
+  not read cannot keep a seat for ever.
 - Measured (macOS RSS, Node 22, 473 tools, the V8 limits Axonity starts it
   with): about 85–95 MB at rest; 209–292 MB with fifty requests at once (five
   times over, measured before the structure limit and not repeated after it); four

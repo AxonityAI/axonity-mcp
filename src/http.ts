@@ -44,9 +44,21 @@
  *   ended the process (V8 heap limit), where a 10 MB base64 file is one string.
  *   The structure marks `{`, `[` and `,` outside strings are counted as the body
  *   arrives (`StructureCounter`); over `maxStructure` it is answered 400 before it
- *   is parsed. The default (50000) is at least twice below where four such
- *   messages at once ended the process, measured through the most expensive tool
- *   shape found (a list of objects): see the README.
+ *   is parsed. That bounds one message, not the sum: twelve messages of 49 500
+ *   marks at once (a list of numbers through `apply_workflow_mutations`) ended
+ *   the process in 3 runs of 5, twenty in 4 of 5, each one alone harmless. So
+ *   the marks of all the messages in work at once share one budget
+ *   (`maxStructureInFlight`, `Budget`): a message is weighed after it is read
+ *   and before it is parsed, and waits (first come, first served) while the
+ *   budget is spent, holding its seat, so what it waits behind is the seats and
+ *   the queue that were already there, and past them the same 503. The budget
+ *   comes back with the seat: when the work is done, not when the caller hangs up.
+ *   And the seat is kept until the answer has left the process, not until the
+ *   handler returns: a failed call of a big message answers with a thousand times
+ *   its size (97 KB of numbers is 10.9 MB of validation errors), and answers of
+ *   seats that went back early piled up past the heap (the budget alone did not
+ *   stop it: measured, 2 of 5 runs died with it). Default 100000, kept under the
+ *   200000 at which one message ended the process; see the README.
  *
  * WHAT WAS MEASURED (the hosted process itself, started as Axonity starts it,
  * with the V8 limits `--max-old-space-size=160 --max-semi-space-size=4`, against
@@ -54,8 +66,9 @@
  * not Linux and not the 2 GB sandbox; 473 tools). At rest about 85–95 MB. With
  * 50 requests at once, five times over: peak 209–292 MB (before the structure
  * limit; one run in twelve died of the V8 heap limit then, which was not
- * reproduced in later runs and is not explained: dense JSON is a cause that
- * was found, and is closed above). With 12 bodies of 23
+ * reproduced in later runs and is not explained: dense JSON and many messages
+ * at the per-message limit at once are two causes that were found, and are
+ * closed above). With 12 bodies of 23
  * MiB at once from different tokens: peak 234–267 MB, where the version before
  * the large-body place peaked at 375–384 MB (6 bodies: 241–262 against 338–349).
  * Not measured: Linux, the memory of the Axonity process that forwards a body
@@ -78,6 +91,9 @@ import type { HttpConfig } from "./config.js";
 import type { ProbeServer } from "./contract.js";
 import { type RegisteredTool, recordTools } from "./routeClasses.js";
 
+/** How long an answer that is not being read may stand still before its connection is cut. */
+const ANSWER_STALL_MS = 30_000;
+
 /** The one path this server answers MCP on. */
 export const MCP_PATH = "/mcp";
 
@@ -96,6 +112,11 @@ export interface HostedServerOptions extends HttpConfig {
   prepare?: (tools: RegisteredTool[]) => RegisteredTool[] | Promise<RegisteredTool[]>;
   /** Bind address. Loopback; a test may not change it either. */
   host?: "127.0.0.1";
+  /**
+   * How long an answer may stand still in this process before the connection is
+   * cut, in milliseconds. Not a setting of the connector: only a test changes it.
+   */
+  answerStallMs?: number;
   /** Where the one startup line goes. Never a token. */
   log?: (message: string) => void;
 }
@@ -103,7 +124,12 @@ export interface HostedServerOptions extends HttpConfig {
 /** The limits the gate applies: the part of `HttpConfig` that is about load. */
 type HostedLimits = Pick<
   HttpConfig,
-  "maxInFlight" | "maxQueued" | "maxInFlightPerToken" | "maxQueuedPerToken" | "maxLargeBodies"
+  | "maxInFlight"
+  | "maxQueued"
+  | "maxInFlightPerToken"
+  | "maxQueuedPerToken"
+  | "maxLargeBodies"
+  | "maxStructureInFlight"
 >;
 
 export interface HostedServer {
@@ -165,6 +191,68 @@ class Seats {
       if (next) next(this.leaver());
       else this.inFlight -= 1;
     };
+  }
+}
+
+/**
+ * A budget shared by weight: the sum of what is held never passes `capacity`,
+ * and what does not fit waits its turn (first come, first served, so a heavy
+ * one is not starved by a stream of light ones). A request waits here only
+ * while it holds a seat, so how many can wait is bounded by the seats and the
+ * queue before them; nobody waits for the budget while holding something that
+ * one who holds it needs.
+ */
+class Budget {
+  private used = 0;
+  private readonly waiting: { weight: number; grant: () => void }[] = [];
+
+  constructor(private readonly capacity: number) {}
+
+  /** A release function once the weight is held; `"gone"` when `gone` fires while waiting. */
+  async enter(weight: number, gone: AbortSignal): Promise<(() => void) | "gone"> {
+    if (gone.aborted) return "gone";
+    // A weight the budget could never hold is held whole: the config refuses a
+    // limit per message above the budget, this keeps a mistake from waiting for ever.
+    const w = Math.min(Math.max(weight, 1), this.capacity);
+    if (this.waiting.length === 0 && this.used + w <= this.capacity) {
+      this.used += w;
+      return this.leaver(w);
+    }
+    return new Promise((resolve) => {
+      const entry = {
+        weight: w,
+        grant: () => {
+          gone.removeEventListener("abort", giveUp);
+          this.used += w;
+          resolve(this.leaver(w));
+        },
+      };
+      const giveUp = () => {
+        const at = this.waiting.indexOf(entry);
+        if (at >= 0) this.waiting.splice(at, 1);
+        resolve("gone");
+        // The one in front may have been the only thing keeping the others out.
+        this.admit();
+      };
+      this.waiting.push(entry);
+      gone.addEventListener("abort", giveUp, { once: true });
+    });
+  }
+
+  private leaver(weight: number): () => void {
+    let left = false;
+    return () => {
+      if (left) return;
+      left = true;
+      this.used -= weight;
+      this.admit();
+    };
+  }
+
+  private admit(): void {
+    while (this.waiting.length > 0 && this.used + this.waiting[0].weight <= this.capacity) {
+      this.waiting.shift()!.grant();
+    }
   }
 }
 
@@ -292,21 +380,29 @@ export class StructureCounter {
 class BodyTooLarge extends Error {}
 class BodyTooComplex extends Error {}
 
-async function readBody(req: IncomingMessage, limit: number, maxStructure: number): Promise<Buffer> {
+/** A body read, and the structure marks it holds (what the budget is weighed in). */
+interface BodyRead {
+  raw: Buffer;
+  structure: number;
+}
+
+async function readBody(req: IncomingMessage, limit: number, maxStructure: number): Promise<BodyRead> {
   const declared = Number(req.headers["content-length"]);
   if (Number.isFinite(declared) && declared > limit) throw new BodyTooLarge();
   const chunks: Buffer[] = [];
   const counter = new StructureCounter();
+  let structure = 0;
   let size = 0;
   for await (const chunk of req) {
     size += (chunk as Buffer).length;
     if (size > limit) throw new BodyTooLarge();
     // Counted as it arrives: a body that holds too much is refused after the
     // chunk that crosses the line, not after the whole of it has been read.
-    if (counter.add(chunk as Buffer) > maxStructure) throw new BodyTooComplex();
+    structure = counter.add(chunk as Buffer);
+    if (structure > maxStructure) throw new BodyTooComplex();
     chunks.push(chunk as Buffer);
   }
-  return Buffer.concat(chunks);
+  return { raw: Buffer.concat(chunks), structure };
 }
 
 /** The tool list, rendered once by the SDK itself from one replayed server. */
@@ -375,6 +471,7 @@ export async function startHostedServer(options: HostedServerOptions): Promise<H
     }) as RegisteredTool["handler"],
   }));
   const gate = new Gate(options);
+  const budget = new Budget(options.maxStructureInFlight);
 
   const handle = async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
     const path = (req.url ?? "").split("?")[0];
@@ -418,6 +515,8 @@ export async function startHostedServer(options: HostedServerOptions): Promise<H
     const hungUp = new AbortController();
     let gone = false;
     let leave: (() => void) | undefined;
+    // What the message holds of the shared budget, once it is read and weighed.
+    let leaveBudget: (() => void) | undefined;
     res.once("close", () => {
       gone = true;
       hungUp.abort();
@@ -438,7 +537,15 @@ export async function startHostedServer(options: HostedServerOptions): Promise<H
       });
       return;
     }
-    leave = admission.leave;
+    // The seat and the budget are given back together, once, whichever comes first.
+    let left = false;
+    const seat = admission.leave;
+    leave = () => {
+      if (left) return;
+      left = true;
+      seat();
+      leaveBudget?.();
+    };
     if (gone) {
       leave();
       return;
@@ -446,7 +553,17 @@ export async function startHostedServer(options: HostedServerOptions): Promise<H
     try {
       let body: unknown;
       try {
-        const raw = await readBody(req, options.maxBodyBytes, options.maxStructure);
+        const { raw, structure } = await readBody(req, options.maxBodyBytes, options.maxStructure);
+        // Weighed before it is parsed: what a parse builds hangs on the marks, and
+        // the limit per message does not bound the sum of the messages in work at
+        // once. One that does not fit waits here, holding its seat (so the queue and
+        // the 503 behind the seats are the ones that were there already).
+        const got = await budget.enter(structure, hungUp.signal);
+        if (got === "gone") return;
+        leaveBudget = got;
+        // The caller hung up and the seat went back while it waited: nothing more is held.
+        if (left) got();
+        if (gone) return;
         body = JSON.parse(raw.toString("utf8"));
         if (Array.isArray(body)) {
           send(res, 400, rpcError(-32600, "Invalid Request: send one message per POST, not a batch."));
@@ -487,9 +604,28 @@ export async function startHostedServer(options: HostedServerOptions): Promise<H
       await ofRequest.run(context, () => transport.handleRequest(req, res, body));
     } finally {
       // A request that ended without its connection going (an answer, a
-      // refusal) gives its seat back here; one whose caller hung up gives it
-      // back when its work is done (above). Leaving twice is a no-op.
-      if (!gone) leave();
+      // refusal) gives its seat back once the answer has left this process;
+      // one whose caller hung up gives it back when its work is done (above).
+      // Not when the handler returns: the answer is still in this process then
+      // (a failed call of a big message is ten megabytes of errors, a thousand
+      // times its request), and seats that go back before it is written let
+      // those pile up past the heap. Leaving twice is a no-op.
+      if (!gone) {
+        if (res.writableFinished) {
+          leave();
+        } else {
+          // An answer nobody reads would keep the seat for ever: the connection
+          // is cut when it stands still for `answerStallMs` with the answer in
+          // it, and a cut connection gives the seat back like any hang-up.
+          const socket = res.socket;
+          const stall = options.answerStallMs ?? ANSWER_STALL_MS;
+          socket?.setTimeout(stall, () => socket.destroy());
+          res.once("finish", () => {
+            socket?.setTimeout(0);
+            leave();
+          });
+        }
+      }
     }
   };
 

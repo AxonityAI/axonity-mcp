@@ -31,6 +31,8 @@ let inFlight = 0;
 let maxInFlight = 0;
 /** While set, the API holds every request until it is released. */
 let held: Promise<void> | undefined;
+/** Bytes of padding the API adds to its answer (a big answer for a small call). */
+let padBytes = 0;
 
 beforeAll(async () => {
   api = createServer(async (req: IncomingMessage, res) => {
@@ -46,7 +48,14 @@ beforeAll(async () => {
     if (held) await held;
     inFlight -= 1;
     res.writeHead(200, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({ items: [], total: 0, sawBearer: req.headers.authorization ?? null }));
+    res.end(
+      JSON.stringify({
+        items: [],
+        total: 0,
+        sawBearer: req.headers.authorization ?? null,
+        ...(padBytes ? { pad: "x".repeat(padBytes) } : {}),
+      }),
+    );
   });
   await new Promise<void>((r) => api.listen(0, "127.0.0.1", () => r()));
   apiUrl = `http://127.0.0.1:${(api.address() as AddressInfo).port}`;
@@ -65,6 +74,7 @@ afterEach(async () => {
   inFlight = 0;
   maxInFlight = 0;
   held = undefined;
+  padBytes = 0;
 });
 
 async function start(
@@ -77,6 +87,8 @@ async function start(
     largeBodyBytes: number;
     maxBodyBytes: number;
     maxStructure: number;
+    maxStructureInFlight: number;
+    answerStallMs: number;
     apiTimeoutMs: number;
   }> = {},
 ) {
@@ -93,6 +105,7 @@ async function start(
     maxBodyBytes: 1024 * 1024,
     // Out of the way unless a test is about it.
     maxStructure: 100_000,
+    maxStructureInFlight: 1_000_000,
     apiTimeoutMs: 10_000,
     ...overrides,
     serverInfo: SERVER_INFO,
@@ -323,6 +336,140 @@ describe("a message is refused by what it holds, not only by its size (review M1
   });
 });
 
+describe("the messages handled at once share one structure budget (review M1, second round)", () => {
+  // The limit per message does not bound the sum: twelve messages of 49 500
+  // structure marks each, at once, ended the real process (V8 heap limit) while
+  // each one alone was fine. The marks of all the messages in work at once
+  // share one budget; a message that does not fit waits for it.
+  const ITEMS = 850;
+  const heavy = (id: number) => call("list_workflows", { x: Array.from({ length: ITEMS }, () => 0) }, id);
+  const marks = (message: unknown) => new StructureCounter().add(Buffer.from(JSON.stringify(message)));
+  const options = { maxStructure: 1000, maxStructureInFlight: 2500, maxInFlight: 8, maxQueued: 64 };
+
+  it("the sum of the marks of the calls in work never passes the budget; the rest waits and is then served", async () => {
+    const weight = marks(heavy(1));
+    expect(weight).toBeGreaterThan(ITEMS);
+    expect(weight).toBeLessThanOrEqual(options.maxStructure);
+    const fits = Math.floor(options.maxStructureInFlight / weight);
+    expect(fits).toBe(2);
+    let release!: () => void;
+    held = new Promise<void>((r) => (release = r));
+    const base = await start(options);
+    const pending = Array.from({ length: 6 }, (_, i) => post(base, heavy(i + 1), bearer(`axp_b${i}`)));
+    await until(() => inFlight === fits);
+    // Let the others show whether they pass the budget.
+    await new Promise((r) => setTimeout(r, 200));
+    expect(inFlight).toBe(fits);
+    release();
+    const answers = await Promise.all(pending);
+    expect(answers.map((a) => a.status)).toEqual([200, 200, 200, 200, 200, 200]);
+    expect(maxInFlight).toBe(fits);
+    expect(maxInFlight * weight).toBeLessThanOrEqual(options.maxStructureInFlight);
+  });
+
+  it("a small message is served beside a heavy one: the budget is the marks, not the places", async () => {
+    let release!: () => void;
+    held = new Promise<void>((r) => (release = r));
+    const base = await start(options);
+    const one = post(base, heavy(1), bearer("axp_heavy"));
+    await until(() => inFlight === 1);
+    const small = post(base, call("list_workflows", {}, 2), bearer("axp_small"));
+    await until(() => inFlight === 2);
+    expect(inFlight).toBe(2);
+    release();
+    expect((await Promise.all([one, small])).map((a) => a.status)).toEqual([200, 200]);
+  });
+
+  it("past the seats and the queue it is the existing 503, not a new refusal", async () => {
+    let release!: () => void;
+    held = new Promise<void>((r) => (release = r));
+    // Two seats, no queue: the first holds the budget, the second waits for it
+    // while it holds a seat, so a third finds neither a seat nor room.
+    const base = await start({ ...options, maxStructureInFlight: 1000, maxInFlight: 2, maxQueued: 0 });
+    const first = post(base, heavy(1), bearer("axp_s1"));
+    await until(() => inFlight === 1);
+    const second = post(base, heavy(2), bearer("axp_s2"));
+    await new Promise((r) => setTimeout(r, 150));
+    expect(inFlight).toBe(1);
+    const third = await post(base, heavy(3), bearer("axp_s3"));
+    expect(third.status).toBe(503);
+    expect(third.headers.get("retry-after")).toBe("1");
+    release();
+    expect([(await first).status, (await second).status]).toEqual([200, 200]);
+    expect(maxInFlight).toBe(1);
+  });
+
+  it("the budget comes back after every answer: a long run one after another is all served", async () => {
+    const base = await start({ ...options, maxStructureInFlight: 1000 });
+    for (let i = 0; i < 8; i++) {
+      expect((await post(base, heavy(i + 1), bearer("axp_seq"))).status).toBe(200);
+    }
+    // And after a refused message and a message that fails to parse.
+    expect((await post(base, "{not json", bearer("axp_seq"))).status).toBe(400);
+    expect((await post(base, call("list_workflows", { x: Array(2000).fill(0) }), bearer("axp_seq"))).status).toBe(400);
+    expect((await post(base, heavy(99), bearer("axp_seq"))).status).toBe(200);
+  });
+
+  it("a caller that hangs up while it waits for the budget gives its place up", async () => {
+    let release!: () => void;
+    held = new Promise<void>((r) => (release = r));
+    const base = await start({ ...options, maxStructureInFlight: 1000 });
+    const first = post(base, heavy(1), bearer("axp_h1"));
+    await until(() => inFlight === 1);
+    const controller = new AbortController();
+    const waiter = fetch(`${base}/mcp`, {
+      method: "POST",
+      headers: { ...HEADERS, ...bearer("axp_h2") },
+      body: JSON.stringify(heavy(2)),
+      signal: controller.signal,
+    }).catch(() => undefined);
+    await new Promise((r) => setTimeout(r, 150));
+    controller.abort();
+    await waiter;
+    release();
+    expect((await first).status).toBe(200);
+    // Nothing is left of the one that hung up: the budget is whole again.
+    expect(inFlight).toBe(0);
+    const after = await Promise.all([1, 2, 3].map((i) => post(base, heavy(i + 10), bearer(`axp_a${i}`))));
+    expect(after.map((a) => a.status)).toEqual([200, 200, 200]);
+    expect(maxInFlight).toBe(1);
+  });
+
+  it("a caller that hangs up keeps its budget until its call is done (it is memory still in use)", async () => {
+    let release!: () => void;
+    held = new Promise<void>((r) => (release = r));
+    const base = await start({ ...options, maxStructureInFlight: 1000 });
+    const gone: Promise<unknown>[] = [];
+    for (let i = 0; i < 5; i++) {
+      const controller = new AbortController();
+      gone.push(
+        fetch(`${base}/mcp`, {
+          method: "POST",
+          headers: { ...HEADERS, ...bearer(`axp_g${i}`) },
+          body: JSON.stringify(heavy(i + 1)),
+          signal: controller.signal,
+        }).catch(() => undefined),
+      );
+      if (i === 0) await until(() => inFlight === 1);
+      await new Promise((r) => setTimeout(r, 40));
+      controller.abort();
+    }
+    await Promise.all(gone);
+    await new Promise((r) => setTimeout(r, 100));
+    expect(maxInFlight).toBe(1);
+    release();
+    const after = await post(base, heavy(50), bearer("axp_after"));
+    expect(after.status).toBe(200);
+  });
+
+  it("a message over the limit of one message is still 400, whatever the budget", async () => {
+    const base = await start({ ...options, maxStructureInFlight: 1000 });
+    const res = await post(base, call("list_workflows", { x: Array(1500).fill(0) }), bearer("axp_big"));
+    expect(res.status).toBe(400);
+    expect(res.json!.error.code).toBe(-32600);
+  });
+});
+
 describe("StructureCounter counts { [ and , outside strings", () => {
   const count = (text: string) => new StructureCounter().add(Buffer.from(text));
 
@@ -420,6 +567,70 @@ describe("the hosted connector has a ceiling", () => {
     const next = await post(base, call("list_workflows"), bearer("axp_next"));
     expect(next.status).toBe(200);
     expect(next.json!.result.isError).toBeFalsy();
+  });
+
+  it("a seat is kept until the answer has left the process, not until the handler returns", async () => {
+    // A small call can have a big answer (a failed call of a big message is ten
+    // megabytes of errors): the answers of seats that went back early piled up
+    // past the heap. A caller that does not read its answer keeps its seat.
+    padBytes = 24 * 1024 * 1024;
+    const base = await start({ maxInFlight: 1, maxQueued: 0, answerStallMs: 60_000 });
+    const url = new URL(`${base}/mcp`);
+    let stalled!: IncomingMessage;
+    const first = new Promise<void>((resolve, reject) => {
+      const req = httpRequest(
+        { host: url.hostname, port: url.port, path: url.pathname, method: "POST", headers: { ...HEADERS, ...bearer("axp_slowreader") } },
+        (res) => {
+          res.pause(); // the answer is not read
+          stalled = res;
+          resolve();
+        },
+      );
+      req.on("error", reject);
+      req.end(JSON.stringify(call("list_workflows")));
+    });
+    await first;
+    await new Promise((r) => setTimeout(r, 300));
+    expect(stalled.statusCode).toBe(200);
+    // The one seat is still taken by the answer that is waiting to be read.
+    const turnedAway = await post(base, call("list_workflows", {}, 2), bearer("axp_next"));
+    expect(turnedAway.status).toBe(503);
+    // Read to the end: the seat comes back.
+    stalled.resume();
+    await new Promise<void>((r) => stalled.once("end", () => r()));
+    padBytes = 0;
+    let served = 0;
+    for (let i = 0; i < 100 && served !== 200; i++) {
+      served = (await post(base, call("list_workflows", {}, 3), bearer("axp_next"))).status;
+      if (served !== 200) await new Promise((r) => setTimeout(r, 20));
+    }
+    expect(served).toBe(200);
+  });
+
+  it("an answer that is never read is cut after a while, and the seat comes back", async () => {
+    padBytes = 24 * 1024 * 1024;
+    const base = await start({ maxInFlight: 1, maxQueued: 0, answerStallMs: 500 });
+    const url = new URL(`${base}/mcp`);
+    await new Promise<void>((resolve, reject) => {
+      const req = httpRequest(
+        { host: url.hostname, port: url.port, path: url.pathname, method: "POST", headers: { ...HEADERS, ...bearer("axp_never") } },
+        (res) => {
+          res.pause(); // never read
+          res.on("error", () => {});
+          res.on("close", () => {});
+          resolve();
+        },
+      );
+      req.on("error", reject);
+      req.end(JSON.stringify(call("list_workflows")));
+    });
+    padBytes = 0;
+    let served = 0;
+    for (let i = 0; i < 100 && served !== 200; i++) {
+      served = (await post(base, call("list_workflows", {}, 2), bearer("axp_next"))).status;
+      if (served !== 200) await new Promise((r) => setTimeout(r, 50));
+    }
+    expect(served).toBe(200);
   });
 
   it("a seat is given back: after the burst, every new call is served", async () => {
