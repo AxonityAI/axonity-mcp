@@ -813,6 +813,16 @@ After releasing, optionally cut a GitHub release for the tag. That triggers
 Keep npm 11 locally: Node 20 bundles npm 10, whose resolver writes an
 incompatible lockfile tree. CI pins npm 11 for the same reason.
 
+The package bundles its dependencies (`bundleDependencies`): the tarball carries
+the tree `npm ci` installed from `package-lock.json`, so whoever installs it —
+Axonity's image and Windows package included — runs the versions the tests ran
+on, not whatever the ranges allow that day. `scripts/release.sh` runs `npm ci`
+before it publishes, which is what makes the tree the lock's;
+`test/bundledDependencies.test.ts` fails if a dependency is left out or the tree
+on disk is not the lock's. A tarball is about ten times larger for it (3.1 MB
+packed, 15.5 MB unpacked, at 0.29.0). `npm-shrinkwrap.json` would pin the same
+but npm 12 does not pack it.
+
 ## Staying level with the backend
 
 The snapshot every drift guard reads is only as fresh as the last time someone
