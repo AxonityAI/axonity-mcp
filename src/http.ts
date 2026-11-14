@@ -43,7 +43,7 @@
  * with the V8 limits `--max-old-space-size=160 --max-semi-space-size=4`, against
  * a fake API; Node 22 on macOS, so this is macOS RSS read with `ps` every 50 ms,
  * not Linux and not the 2 GB sandbox; 473 tools). At rest about 85–95 MB. With
- * 50 requests at once, five times over: peak 207–242 MB. With 12 bodies of 23
+ * 50 requests at once, five times over: peak 209–292 MB (one run in twelve died: V8 heap limit, see the PR). With 12 bodies of 23
  * MiB at once from different tokens: peak 234–267 MB, where the version before
  * the large-body place peaked at 375–384 MB (6 bodies: 241–262 against 338–349).
  * Not measured: Linux, the memory of the Axonity process that forwards a body

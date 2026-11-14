@@ -682,7 +682,7 @@ What differs in hosted mode:
   `AXONITY_MCP_API_TIMEOUT_MS` (default 300000). A body over
   `AXONITY_MCP_MAX_BODY_BYTES` (default 25 MB) is answered 413 before it waits
   for anything. Measured (macOS RSS, Node 22, 473 tools, the V8 limits Axonity
-  starts it with): about 85–95 MB at rest, 207–242 MB with fifty requests at
+  starts it with): about 85–95 MB at rest, 209–292 MB with fifty requests at
   once, 234–267 MB with twelve 23 MiB bodies at once; not measured on Linux.
 - It listens on `127.0.0.1:AXONITY_MCP_PORT` only and calls `AXONITY_API_URL`,
   which has no default in this mode.
