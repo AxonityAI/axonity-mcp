@@ -2378,6 +2378,14 @@
     "class": "dicht",
     "why": "credentials, secrets, platform, deployment, configuration"
   },
+  "POST /api/v1/service-tokens/dismiss-expired": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/service-tokens/{token_id}/dismiss": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
   "POST /api/v1/service-tokens/{token_id}/revoke": {
     "class": "dicht",
     "why": "credentials, secrets, platform, deployment, configuration"

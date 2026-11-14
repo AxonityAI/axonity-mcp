@@ -692,6 +692,8 @@ export const TOKEN_ROUTE_CLASSES: Readonly<Record<string, TokenRoute>> = {
   "POST /api/v1/secrets/{secret_id}/duplicate": { class: "dicht", why: "credentials, secrets, platform, deployment, configuration" },
   "POST /api/v1/secrets/{secret_id}/reveal": { class: "dicht", why: "credentials, secrets, platform, deployment, configuration" },
   "POST /api/v1/service-tokens": { class: "dicht", why: "credentials, secrets, platform, deployment, configuration" },
+  "POST /api/v1/service-tokens/dismiss-expired": { class: "dicht", why: "credentials, secrets, platform, deployment, configuration" },
+  "POST /api/v1/service-tokens/{token_id}/dismiss": { class: "dicht", why: "credentials, secrets, platform, deployment, configuration" },
   "POST /api/v1/service-tokens/{token_id}/revoke": { class: "dicht", why: "credentials, secrets, platform, deployment, configuration" },
   "POST /api/v1/skills": { class: "configuratie" },
   "POST /api/v1/skills/{skill_id}/discard-draft": { class: "configuratie" },
