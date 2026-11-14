@@ -699,6 +699,10 @@
   "GET /api/v1/knowledge/tree/{node_id}/related": {
     "class": "lezen"
   },
+  "GET /api/v1/me/settings/{module_id}": {
+    "class": "dicht",
+    "why": "(forbid_service_token_for_personal_reads); the person resolves their own settings in the browser"
+  },
   "GET /api/v1/me/tokens": {
     "class": "dicht",
     "why": "a token never manages tokens"
@@ -743,6 +747,16 @@
     "class": "lezen"
   },
   "GET /api/v1/modules": {
+    "class": "lezen"
+  },
+  "GET /api/v1/modules/{module_id}/settings": {
+    "class": "lezen"
+  },
+  "GET /api/v1/modules/{module_id}/settings/resolved": {
+    "class": "dicht",
+    "why": "(forbid_service_token_for_personal_reads); the person resolves their own settings in the browser"
+  },
+  "GET /api/v1/modules/{module_id}/settings/schema": {
     "class": "lezen"
   },
   "GET /api/v1/notifications": {
@@ -1248,6 +1262,10 @@
     "class": "dicht",
     "why": "no authentication of its own: a token never reaches the gate"
   },
+  "GET /modules/{module_id}/settings": {
+    "class": "dicht",
+    "why": "scope[\"route\"] \u2014 carries the path it was declared with."
+  },
   "PATCH /api/v1/admin/wake-tasks/{task_id}": {
     "class": "dicht",
     "why": "credentials, secrets, platform, deployment, configuration"
@@ -1312,8 +1330,15 @@
     "class": "dicht",
     "why": "knowledge upkeep"
   },
+  "PATCH /api/v1/me/settings/{module_id}": {
+    "class": "dicht",
+    "why": "(forbid_service_token_for_personal_reads); the person resolves their own settings in the browser"
+  },
   "PATCH /api/v1/measures/{measure_id}/versions/major/{major_version}": {
     "class": "configuratie"
+  },
+  "PATCH /api/v1/modules/{module_id}/settings": {
+    "class": "actie_beheerder"
   },
   "PATCH /api/v1/output-schemas/{schema_id}/versions/major/{major_version}": {
     "class": "configuratie"
@@ -1396,6 +1421,10 @@
   },
   "PATCH /api/v1/workflows/{workflow_id}/versions/major/{major_version}": {
     "class": "configuratie"
+  },
+  "PATCH /modules/{module_id}/settings": {
+    "class": "dicht",
+    "why": "scope[\"route\"] \u2014 carries the path it was declared with."
   },
   "POST /api/v1/_test/install-stub-provider": {
     "class": "dicht",
@@ -2378,6 +2407,14 @@
     "class": "dicht",
     "why": "credentials, secrets, platform, deployment, configuration"
   },
+  "POST /api/v1/service-tokens/dismiss-expired": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/service-tokens/{token_id}/dismiss": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
   "POST /api/v1/service-tokens/{token_id}/revoke": {
     "class": "dicht",
     "why": "credentials, secrets, platform, deployment, configuration"
@@ -2745,6 +2782,10 @@
     "why": "credentials, secrets, platform, deployment, configuration"
   },
   "PUT /api/v1/platform/modules/{module_id}": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "PUT /api/v1/platform/modules/{module_id}/emergency-stop": {
     "class": "dicht",
     "why": "credentials, secrets, platform, deployment, configuration"
   },

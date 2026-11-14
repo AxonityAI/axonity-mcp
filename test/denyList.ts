@@ -29,6 +29,23 @@ export interface Rule {
 export const WRITE_METHODS = ["POST", "PUT", "PATCH", "DELETE"];
 
 export const FORBIDDEN: Rule[] = [
+  // Module settings R1 (axonity-flow#1826): these exact personal operations
+  // use forbid_service_token_for_personal_reads in routes/module_settings.py
+  // (personal_settings, patch_personal_settings and resolved_settings).
+  // A service token may use the separate workspace settings routes only;
+  // neither the module catalogue/schema nor workspace GET/PATCH is excluded.
+  {
+    label: "personal module settings read/write (human only)",
+    path: /^\/api\/v1\/me\/settings\/[^/]+$/,
+    methods: ["GET", "PATCH"],
+  },
+  // Personal resolution uses the same human-only backend dependency. Keep
+  // this anchored to GET .../settings/resolved, not the settings route family.
+  {
+    label: "personal module settings resolution (human only)",
+    path: /^\/api\/v1\/modules\/[^/]+\/settings\/resolved$/,
+    methods: ["GET"],
+  },
   // The founding rule, and the one the whole connector is shaped around:
   // PUBLISHING IS A HUMAN DECISION. Every publish route on the backend carries
   // `forbid_service_token`, so this is not only our boundary — but stating it
@@ -103,6 +120,11 @@ export const FORBIDDEN: Rule[] = [
   // `delete_secret` out (#39).
   { label: "run workflow-memory (retired placeholder)", path: /\/runs\/[^/]+\/workflow-memory$/ },
   { label: "service tokens", path: /\/service-tokens(\/|$)/ },
+  // A token never manages tokens: the backend's own route table closes every
+  // `/me/tokens` route to a token (`# a token never manages tokens` in
+  // `token_route_classes.py`), so a tool here would only be refused. Letting a
+  // token mint, list or revoke tokens would also let it widen its own reach.
+  { label: "personal tokens (a token never manages tokens)", path: /\/api\/v1\/me\/tokens(\/|$)/ },
   { label: "deployment", path: /\/deployment(\/|$)/ },
   // `/config/secrets` lives behind this rule and stays closed to every verb —
   // it is the deploy-time surface, not the tenant's secret catalogue.

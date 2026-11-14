@@ -11,6 +11,83 @@ diff in review.
 
 ## Provenance
 
+- **R1 capture on backend `2f75397eb` (2026-11-14), not released; replaces the
+  two R1 entries below:** a WHOLE dump with the backend's own
+  `scripts/dump_openapi.py` and `scripts/dump_token_route_classes.py`, run
+  read-only on a `git archive` of the CLEAN commit
+  `2f75397eb454c238a502427cc92b32105b655c70` (Flow `feat/1826-insights-module`,
+  B84 included), using that worktree's venv. Safety: `env -i` with only
+  PATH/HOME/TMPDIR, dotenv off (`Settings.model_config["env_file"] = None`), a
+  database URL at a closed port (importing the app opens no connection),
+  `python -B -I`, `src` verified to load from the archive. No server, database
+  or tenant. Re-dumped the same way on the clean final backend commit
+  `9de1a8dcfb8d9dc4d28605f4b26b6938e1f3111d` (config import, S1): both files
+  byte-identical, so the hashes below hold for it too. A later backend commit that
+  touches the contract needs a re-record.
+  - `openapi.snapshot.json`: **2,576,597 bytes**, SHA-256
+    `fe53632e48730a16e87c21d96e27e29331d2acf4960ac783f35765b816668c74`
+    (byte-identical to the dump of `5d2906b`: B84 changed no route or schema).
+    Against the snapshot on `main` (`68ef764b9`): 772 -> 788 operations, 16 added,
+    none removed, 6 with a different contract. Added: the eight module-settings
+    operations (`GET/PATCH /modules/{module_id}/settings`, `.../settings/schema`,
+    `.../settings/resolved`, `/me/settings/{module_id}` GET and PATCH, the two
+    platform settings routes), `PUT /platform/modules/{module_id}/emergency-stop`,
+    and seven token routes that arrived from Flow `main`, not from R1
+    (`/me/tokens` x5, `POST /service-tokens/dismiss-expired`,
+    `POST /service-tokens/{token_id}/dismiss`). No filtering, no exclusions
+    of module endpoints. The five `/me/tokens` operations are in `test/denyList.ts`
+    ("a token never manages tokens", the backend's own table).
+  - `token-route-classes.snapshot.json`: **87,031 bytes**, SHA-256
+    `e182a823024380740ee6e34239dd5f10f1d034d9de295491438713ec51657668`;
+    `src/generated/tokenRouteClasses.ts` regenerated from it. 812 rows.
+    B84: `PATCH /api/v1/modules/{module_id}/settings` is `actie_beheerder` (a
+    personal token needs "Run actions" and a live administrator role); the role,
+    personal and installation settings routes stay `dicht`. The reasons of six
+    unrelated administration-settings routes read "administration settings"
+    again (they had inherited the module-settings comment).
+  - `src/generated/listFilters.ts` regenerates unchanged.
+
+- **R1 refresh after B33/B44 (2026-11-12), not released:** canonical backend
+  `scripts/dump_openapi.py` output, copied byte-for-byte. Settings disable dotenv
+  before app imports; no server or database connection is needed. The backend's
+  documented exporter excludes its development-only routers; MCP applies no
+  additional path or schema filtering.
+  Source: `team/bewijs/r1-mcp/openapi-after-b33.json`, **2,556,273 bytes**,
+  SHA-256 `afcaec02d0f591bdfe4ffdb2d99f81178645936e35a917dad0f52d4de9cf9fbe`.
+  Flow worktree `feat/1826-insights-module`, HEAD `753add54f6172ffe3237f6da4b2c758566340470`
+  with uncommitted R1 work. Compared with the earlier R1 capture below: no
+  operation added or removed; three settings PATCH operations gain the optional
+  UI interface header, and conversation query parameters are reordered with the
+  same names. Schema changes include module-owned component names, conversation
+  composition, settings plan outcomes and configuration transport. This remains
+  an intermediate capture: the final R1 source must be checked before release.
+  Validation on this capture:105 tests across modules/conformance/exclusions/
+  completeness passed; fresh contract drift reports780 identical operations;
+  regenerated list-filter source is byte-identical. This is not release approval.
+
+
+- **R1 module preparation (2026-11-12), not released:** the WHOLE real app
+  OpenAPI export supplied by the Flow R1 coordinator was copied byte-for-byte;
+  no paths or schemas were synthesized or filtered. Source file:
+  `team/bewijs/r1-flow/openapi-r1-current.json` in the modules-1826 team records.
+  Captured size: **2,551,764 bytes**; SHA-256:
+  `3ee54670a8afc41f2f47d9b935798cd285d86f65a922909209a6ed943d93c6c0`.
+  The immutable evidence copy is
+  `team/bewijs/r1-mcp/openapi-r1-3ee54670a8afc41f2f47d9b935798cd285d86f65a922909209a6ed943d93c6c0.json`.
+  Flow working tree: `feat/1826-insights-module`, HEAD
+  `620d00e52dadddb874c86b0987131195c9fe5746` **with uncommitted R1 changes**;
+  this is not a clean-commit export claim. The coordinator ran the app exporter;
+  this MCP step did not rerun it or start a server.
+  - 771 → 780 operations: 9 added (8 settings operations and the installation
+    emergency-stop write), none removed; `GET /api/v1/modules` and `GET /api/v1/runs/todo`
+    contracts changed.
+  - The workspace module list now returns `Page_ModuleResponse_`; metadata
+    includes `ownEnabled`, `emergencyStopped`, canonical settings and shell slots.
+  - Validation against this exact capture is pending resource-gate release:
+    conformance, exclusions, completeness, generated-filter freshness and
+    `check-contract-drift.mjs --fresh`. A static JSON comparison is not a test pass.
+
+
 - **Refresh from `main` at `68ef764b9`, replacing the entry below:** a WHOLE
   dump with `dump_openapi.py` (`build_openapi()` + `serialize()`) from a
   clean, read-only worktree of axonity-flow `main` at `68ef764b9`. 767 → 771
