@@ -2642,6 +2642,9 @@
   "PUT /api/v1/agents/{agent_id}": {
     "class": "configuratie"
   },
+  "PUT /api/v1/agents/{agent_id}/team": {
+    "class": "configuratie"
+  },
   "PUT /api/v1/applications/{application_id}": {
     "class": "configuratie"
   },
