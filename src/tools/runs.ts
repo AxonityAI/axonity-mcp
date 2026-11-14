@@ -58,6 +58,10 @@ export function registerRunTools(server: McpServer, client: AxonityClient): void
       "PLUS whatever that start declares on top in its own `parameters` — a " +
       "triggerId that does not exist is a 422 listing the ones that do, never a " +
       "quiet fallback to a different start. " +
+      "\n\nA start with a FILE parameter takes the reference " +
+      "upload_run_input_file returns: upload each file first, then put the " +
+      "reference in triggerInput under that parameter. One upload serves one " +
+      "run. " +
       "\n\nA run may PARK on a step that asks a question instead of finishing. " +
       "list_todo_steps lists the step it waits on (each item carries its runId " +
       "and stepId); answer_run_question and send_run_message are how it moves " +

@@ -184,7 +184,6 @@ const OPEN_FOR_DECISION_79: readonly string[] = [
   "POST /api/v1/invoices/generate",
   "POST /api/v1/knowledge/source-types",
   "POST /api/v1/roles",
-  "POST /api/v1/run-input-files",
   "POST /api/v1/webhook-triggers/{webhook_id}/reveal",
   "PUT /api/v1/audiences/{audience_id}",
   "PUT /api/v1/briefs/profiles",

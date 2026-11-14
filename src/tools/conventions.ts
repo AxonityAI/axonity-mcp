@@ -213,6 +213,10 @@ has run cleanly once, at its current version.
     workflow can have several starts, each with different fields, and omitting
     it fires whichever comes first. Never send a parameter marked \`pinned\` —
     the author owns that value and it is overwritten anyway.
+  - A start with a file parameter (\`file\`, or a list of \`file\`) takes the
+    reference \`upload_run_input_file\` returns — upload each file, then put
+    the reference under that parameter in \`triggerInput\`. One upload serves
+    one run; upload again for the next.
   - **A run can park instead of finishing.** A step that asks a question waits
     for an answer, so "it never came back" usually means "it is waiting on you".
     \`list_todo_steps\` has every step that waits on a person (a question, a
