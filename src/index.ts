@@ -43,6 +43,7 @@ import {
   registerConnectorTools,
   registerDependencyTools,
   registerPersonaTools,
+  registerAgentTeamTools,
 } from "./tools/extras.js";
 import { registerApplicationTools } from "./tools/applications.js";
 import { registerAccessTools } from "./tools/access.js";
@@ -752,6 +753,7 @@ export function registerAll(server: ServerLike, client: AxonityClient): void {
   registerTriggerTools(server as McpServer, client);
   registerRunTools(server as McpServer, client);
   registerPersonaTools(server as McpServer, client);
+  registerAgentTeamTools(server as McpServer, client);
   registerConnectorTools(server as McpServer, client);
   registerAttachTools(server as McpServer, client);
   registerDependencyTools(server as McpServer, client);

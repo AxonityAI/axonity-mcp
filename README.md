@@ -41,7 +41,7 @@ tenant + scope on every call, so the connector is not a trust boundary.
 
 ## Tools
 
-476 tools total. `axonity_conventions` (read this first) covers the authoring
+477 tools total. `axonity_conventions` (read this first) covers the authoring
 rules — drafts vs live, optimistic locking, per-entity fields, delete/restore,
 and how to tell a retryable error from one that will never succeed.
 `axonity_semantic_conventions` is its counterpart for one job only: building a
@@ -180,6 +180,11 @@ across these routes — the tool parameter names say which.
   `read_agent_persona` reads the field (with the agent's `version`) and
   `create_agent_persona` writes it (`agentId`, `expectedVersion`, `persona`);
   `""` removes it, `null` on an update leaves it as it is.
+- **An agent's team**: one capability of the company model (`capabilityId`,
+  a key of `document.capabilities` in `read_company`). `create_agent` takes
+  it; on an existing agent `set_agent_team` (`agentId`, `capabilityId`, null
+  for none) changes it — `update_agent` refuses it. It is on the agent's
+  record, not in a version: it holds at once, with no publish.
 - **Connectors** (a tool of type `connector`): `create_connector`,
   `update_connector` — `authConfig` must be placeholders only; a human fills real
   secrets in Axonity. (`create_tool`/`update_tool` carry the same guard, so a

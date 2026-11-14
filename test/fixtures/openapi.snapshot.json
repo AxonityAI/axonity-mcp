@@ -855,6 +855,18 @@
             ],
             "title": "Avatar"
           },
+          "capabilityId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The agent's team: the id of one capability of this workspace's company model (GET /api/v1/company, document.capabilities). Null: no team. Not part of a version: a change holds at once.",
+            "title": "Capabilityid"
+          },
           "capabilityTier": {
             "enum": [
               "economy",
@@ -1298,6 +1310,32 @@
           "skills"
         ],
         "title": "AgentSkillsResponse",
+        "type": "object"
+      },
+      "AgentTeamResponse": {
+        "description": "The agent's team after ``PUT /api/v1/agents/{id}/team``.",
+        "properties": {
+          "capabilityId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The agent's team: the id of one capability of this workspace's company model (GET /api/v1/company, document.capabilities). Null: no team. Not part of a version: a change holds at once.",
+            "title": "Capabilityid"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "AgentTeamResponse",
         "type": "object"
       },
       "AgentTemplateListItem": {
@@ -6321,6 +6359,19 @@
             ],
             "description": "Avatar identifier or URL for the agent.",
             "title": "Avatar"
+          },
+          "capabilityId": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The agent's team: the id of one capability of this workspace's company model (GET /api/v1/company, document.capabilities). Null: no team. Not part of a version: a change holds at once. Left out: no team.",
+            "title": "Capabilityid"
           },
           "capabilityTier": {
             "default": "standard",
@@ -15749,6 +15800,18 @@
               }
             ],
             "title": "Avatar"
+          },
+          "capabilityId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The agent's team: the id of one capability of this workspace's company model (GET /api/v1/company, document.capabilities). Null: no team. Not part of a version: a change holds at once.",
+            "title": "Capabilityid"
           },
           "capabilityTier": {
             "enum": [
@@ -32490,6 +32553,30 @@
         "title": "SessionResponse",
         "type": "object"
       },
+      "SetAgentTeamRequest": {
+        "additionalProperties": false,
+        "description": "PUT /api/v1/agents/{id}/team — put the agent in a team, or take it out.\n\nIts own door, apart from the agent update: the team belongs to the row,\nnot to a version (ENTITY-LIFECYCLE-CONTRACT.md §4.8), so it takes no\n``expectedVersion``, mints no draft and holds at once — for a platform\nagent too, whose versioned fields are locked.",
+        "properties": {
+          "capabilityId": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The agent's team: the id of one capability of this workspace's company model (GET /api/v1/company, document.capabilities). Null: no team. Not part of a version: a change holds at once.",
+            "title": "Capabilityid"
+          }
+        },
+        "required": [
+          "capabilityId"
+        ],
+        "title": "SetAgentTeamRequest",
+        "type": "object"
+      },
       "SetApplicationExecutorsRequest": {
         "additionalProperties": false,
         "description": "Replace the whole set of executors an application runs on.",
@@ -34581,7 +34668,7 @@
           },
           "kind": {
             "default": "text",
-            "description": "The type of value a cell holds: text, long-text, number, yes-no, date, datetime, time, email, url, choice, multi-choice, object or list. A file is not a cell value and is refused.",
+            "description": "The type of value a cell holds: text, long-text, number, yes-no, date, datetime, time, email, url, choice, multi-choice, object, list or reference. A reference cell holds the id of the entity `to` names. A file is not a cell value and is refused.",
             "maxLength": 32,
             "title": "Kind",
             "type": "string"
@@ -34617,6 +34704,19 @@
             "description": "Whether every row must carry a value for this column.",
             "title": "Required",
             "type": "boolean"
+          },
+          "to": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What a reference column points at: `workflow`. Required for a reference column and refused on any other. Each cell then holds a workflow's id, or is empty. Where the rows travel in a config export, a cell is written as that workflow's slug and a deploy turns it back into the id the target environment has for it.",
+            "title": "To"
           },
           "unique": {
             "default": false,
@@ -37234,6 +37334,18 @@
               }
             ],
             "title": "Avatar"
+          },
+          "capabilityId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The agent's team: the id of one capability of this workspace's company model (GET /api/v1/company, document.capabilities). Null: no team. Not part of a version: a change holds at once.",
+            "title": "Capabilityid"
           },
           "capabilityTier": {
             "enum": [
@@ -42534,7 +42646,7 @@
             "type": "array"
           },
           "tableColumnKinds": {
-            "description": "What a table column may hold, in its `kind` field. A fourth vocabulary beside the three above, with its own spellings (`yes-no`, `long-text`, `multi-choice`) — and `file` is deliberately absent, because a file is storage with a lifecycle rather than a cell value.",
+            "description": "What a table column may hold, in its `kind` field. A fourth vocabulary beside the three above, with its own spellings (`yes-no`, `long-text`, `multi-choice`) — and `file` is deliberately absent, because a file is storage with a lifecycle rather than a cell value. `reference` is in no other vocabulary: its cell holds a workflow's id, and the column says so with `to: workflow`.",
             "items": {
               "type": "string"
             },
@@ -45334,6 +45446,65 @@
         "summary": "Link Skill To Agent",
         "tags": [
           "skills"
+        ]
+      }
+    },
+    "/api/v1/agents/{agent_id}/team": {
+      "put": {
+        "description": "Put the agent in a team — a capability of the company model — or take it out.\n\nHolds at once: the team belongs to the agent's record, not to a version\n(ENTITY-LIFECYCLE-CONTRACT.md §4.8), so there is no ``expectedVersion``\nand no draft. A platform agent gets one the same way.",
+        "operationId": "set_agent_team_api_v1_agents__agent_id__team_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetAgentTeamRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentTeamResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Set Agent Team",
+        "tags": [
+          "agents"
         ]
       }
     },

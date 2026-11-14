@@ -92,6 +92,47 @@ export function registerPersonaTools(
 }
 
 /**
+ * An agent's team (axonity-flow agteam01): one capability of its workspace's
+ * company model, on the agent's record and not in its versions. The strict
+ * agent update refuses `capabilityId`, so a team change has its own route and
+ * its own tool; `create_agent` takes it in its body. Every sentence of the
+ * description is the backend's behaviour: `agent_service.set_agent_team` and
+ * `_require_capability`, `ENTITY-LIFECYCLE-CONTRACT.md` §4.8.
+ */
+export function registerAgentTeamTools(
+  server: McpServer,
+  client: AxonityClient,
+): void {
+  server.tool(
+    "set_agent_team",
+    "Put an agent in a team, or take it out with `null`. A team is one " +
+      "capability of this workspace's company model: pass its id, a key of " +
+      "`document.capabilities` in `read_company`. An id that is not there is " +
+      "refused (422). The change holds at once: the team is on the agent's " +
+      "record, not in a version, so there is no `expectedVersion`, no draft " +
+      "and nothing to publish, and it is recorded in the audit trail. A " +
+      "platform agent gets a team the same way. `update_agent` does not take " +
+      "`capabilityId`; `create_agent` does. `read_agent` and `list_agents` " +
+      "show it as `capabilityId`. When the capability is removed from the " +
+      "company model, its agents lose their team.",
+    {
+      agentId: z.string().describe("The agent's id."),
+      capabilityId: z
+        .string()
+        .max(255)
+        .nullable()
+        .describe(
+          "The capability id, from `read_company` (`document.capabilities`), or null for no team.",
+        ),
+    },
+    async ({ agentId, capabilityId }) =>
+      guard(async () =>
+        jsonResult(await client.put(`/api/v1/agents/${agentId}/team`, { capabilityId })),
+      ),
+  );
+}
+
+/**
  * The shape `implementation` must have for a connector to run.
  *
  * An author wrote `headers` as an object instead of a list of entries; it saved
