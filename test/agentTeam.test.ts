@@ -90,6 +90,14 @@ describe("an agent's team (axonity-flow agteam01)", () => {
     expect(shape.capabilityId.isOptional()).toBe(false);
   });
 
+  it("the description says which company writes clear a team and which do not (review S-MCP1)", () => {
+    const { tools } = registered();
+    const text = tools.get("set_agent_team")!.description;
+
+    expect(text).toContain("apply_company_mutation");
+    expect(text).toContain("`update_company` and `discard_company_draft` leave the id");
+  });
+
   it("the guide sends a team change to set_agent_team, not update_agent", () => {
     expect(CONVENTIONS).toContain("capabilityId");
     expect(CONVENTIONS).toContain("set_agent_team");

@@ -113,8 +113,11 @@ export function registerAgentTeamTools(
       "and nothing to publish, and it is recorded in the audit trail. A " +
       "platform agent gets a team the same way. `update_agent` does not take " +
       "`capabilityId`; `create_agent` does. `read_agent` and `list_agents` " +
-      "show it as `capabilityId`. When the capability is removed from the " +
-      "company model, its agents lose their team.",
+      "show it as `capabilityId`. When the capability is removed with " +
+      "`apply_company_mutation` or a company version restore, its agents lose " +
+      "their team; `update_company` and `discard_company_draft` leave the id, " +
+      "which then reads as no team. A copy of an agent lands in its " +
+      "original's team.",
     {
       agentId: z.string().describe("The agent's id."),
       capabilityId: z
