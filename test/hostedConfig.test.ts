@@ -24,7 +24,13 @@ describe("loadHttpConfig", () => {
       port: 8765,
       maxInFlight: 4,
       maxQueued: 32,
+      maxInFlightPerToken: 2,
+      maxQueuedPerToken: 4,
+      maxLargeBodies: 1,
+      largeBodyBytes: 1024 * 1024,
       maxBodyBytes: 25 * 1024 * 1024,
+      maxStructure: 50_000,
+      maxStructureInFlight: 100_000,
       apiTimeoutMs: 300_000,
     });
   });
@@ -41,6 +47,35 @@ describe("loadHttpConfig", () => {
     expect(() => loadHttpConfig({ ...base, AXONITY_MCP_API_TIMEOUT_MS: "2147483648" })).toThrow(
       /AXONITY_MCP_API_TIMEOUT_MS must be at most 2147483647/,
     );
+  });
+
+  it("reads the per-token and big-body limits, each a whole number of at least 1", () => {
+    const got = loadHttpConfig({
+      ...base,
+      AXONITY_MCP_MAX_IN_FLIGHT_PER_TOKEN: "3",
+      AXONITY_MCP_MAX_QUEUED_PER_TOKEN: "7",
+      AXONITY_MCP_MAX_LARGE_BODIES: "2",
+      AXONITY_MCP_LARGE_BODY_BYTES: "2048",
+    });
+    expect([got.maxInFlightPerToken, got.maxQueuedPerToken, got.maxLargeBodies, got.largeBodyBytes]).toEqual([
+      3, 7, 2, 2048,
+    ]);
+    expect(() => loadHttpConfig({ ...base, AXONITY_MCP_MAX_LARGE_BODIES: "0" })).toThrow(/at least 1/);
+  });
+
+  it("reads the shared structure budget, and refuses one a single message could not fit in", () => {
+    expect(loadHttpConfig({ ...base, AXONITY_MCP_MAX_STRUCTURE_IN_FLIGHT: "90000" }).maxStructureInFlight).toBe(90_000);
+    // Equal is fine: one message at the limit is then handled alone.
+    expect(
+      loadHttpConfig({ ...base, AXONITY_MCP_MAX_STRUCTURE: "1000", AXONITY_MCP_MAX_STRUCTURE_IN_FLIGHT: "1000" })
+        .maxStructureInFlight,
+    ).toBe(1000);
+    expect(() =>
+      loadHttpConfig({ ...base, AXONITY_MCP_MAX_STRUCTURE_IN_FLIGHT: "49999" }),
+    ).toThrow(/AXONITY_MCP_MAX_STRUCTURE_IN_FLIGHT \(49999\) must be at least AXONITY_MCP_MAX_STRUCTURE \(50000\)/);
+    // Raising the limit of one message past the default budget alone is refused too.
+    expect(() => loadHttpConfig({ ...base, AXONITY_MCP_MAX_STRUCTURE: "300000" })).toThrow(/Set both/);
+    expect(() => loadHttpConfig({ ...base, AXONITY_MCP_MAX_STRUCTURE_IN_FLIGHT: "0" })).toThrow(/at least 1/);
   });
 
   it("has no default API and needs a port", () => {

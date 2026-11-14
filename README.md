@@ -679,13 +679,53 @@ What differs in hosted mode:
   Axonity server, so a `path` or `triggerInputPath` would name a file there, and
   it is refused before anything is read.
 - **Stateless, with a ceiling.** Every message is its own POST (no sessions; GET
-  and DELETE on `/mcp` are 405; a batch is answered 400). At most
-  `AXONITY_MCP_MAX_IN_FLIGHT` requests (default 4) run at once,
-  `AXONITY_MCP_MAX_QUEUED` (default 32) wait, and one more is answered 503. A
-  request keeps its place until its work is done, also when its caller hangs
-  up, and every API call ends after `AXONITY_MCP_API_TIMEOUT_MS` (default
-  300000). A body over `AXONITY_MCP_MAX_BODY_BYTES` (default 25 MB) is answered
-  413.
+  and DELETE on `/mcp` are 405; a batch is answered 400). A request waits in
+  three rooms in turn, and a caller that hangs up while it waits leaves the
+  queue: its token's own (`AXONITY_MCP_MAX_IN_FLIGHT_PER_TOKEN`, default 2, and
+  `AXONITY_MCP_MAX_QUEUED_PER_TOKEN`, default 4; one more is answered 429, so
+  one token cannot fill what everybody shares), for a body over
+  `AXONITY_MCP_LARGE_BODY_BYTES` (default 1 MiB) or one that does not say its
+  size, one of `AXONITY_MCP_MAX_LARGE_BODIES` (default 1), and then one of
+  `AXONITY_MCP_MAX_IN_FLIGHT` seats (default 4) with `AXONITY_MCP_MAX_QUEUED`
+  (default 32) waiting, past which it is answered 503. A seat is kept until the
+  work is done, also when the caller hangs up, and every API call ends after
+  `AXONITY_MCP_API_TIMEOUT_MS` (default 300000). A body over
+  `AXONITY_MCP_MAX_BODY_BYTES` (default 25 MB) is answered 413 before it waits
+  for anything.
+- **A message is bounded by what it holds, not only by its size.** The heap
+  hangs on what a parse builds: 10 MB of `{},` is 3.3 million objects and ended
+  the process (V8 heap limit), where a 10 MB base64 file is one string. The
+  structure marks `{`, `[` and `,` outside strings (every object, array item and
+  member) are counted as the body arrives; a message with more than
+  `AXONITY_MCP_MAX_STRUCTURE` (default 50000) is answered 400 before it is
+  parsed, with the limit in the error. A file sent as base64 has none. That
+  bounds one message, not the sum, so the messages in work at once also share one
+  budget, `AXONITY_MCP_MAX_STRUCTURE_IN_FLIGHT` (default 100000, never less than
+  the limit per message): a message is weighed after it is read and before it is
+  parsed, and one that does not fit waits its turn (first come, first served)
+  while it holds its seat, so past the seats and the queue it is the same 503.
+  The seat and the budget go back when the answer has left the process, not when
+  the handler returns: a failed call of a big message answers with a thousand
+  times its size (97 KB of numbers is 10.9 MB of validation errors through
+  `apply_workflow_mutations`), and those answers piled up past the heap when the
+  seats went back early. Measured with the real process and the V8 limits Axonity
+  starts it with (macOS RSS, 5 runs per case): twelve and twenty messages of
+  49 500 marks at once from different tokens, `numbers 49500` through
+  `apply_workflow_mutations`, died in 3 of 5 and 4 of 5 runs before; they now die
+  in 0 of 5 (peak 219–229 MB and 224–235 MB). Without the budget, with only the
+  rule about the answer, 20 at once also lived (0 of 5, peak 245–280 MB): the rule
+  about the answer is the cause that was found, the budget is the bound that does
+  not depend on what the answers weigh. One message at the limit lives at 50000
+  and at 100000 (slowly: 8–10 s) and ended at 200000, so the budget is kept under
+  that. Not every tool was measured (3 of 473), and a tool with a still more
+  expensive schema may sit closer to it. An answer that stands still for 30
+  seconds without being read is cut with its connection, so a caller that does
+  not read cannot keep a seat for ever.
+- Measured (macOS RSS, Node 22, 473 tools, the V8 limits Axonity starts it
+  with): about 85–95 MB at rest; 209–292 MB with fifty requests at once (five
+  times over, measured before the structure limit and not repeated after it); four
+  24 MB bodies at once 247 MB with the big-body place and 369–407 MB without it,
+  which is why it stays. Not measured on Linux.
 - It listens on `127.0.0.1:AXONITY_MCP_PORT` only and calls `AXONITY_API_URL`,
   which has no default in this mode.
 
@@ -822,6 +862,16 @@ After releasing, optionally cut a GitHub release for the tag. That triggers
 
 Keep npm 11 locally: Node 20 bundles npm 10, whose resolver writes an
 incompatible lockfile tree. CI pins npm 11 for the same reason.
+
+The package bundles its dependencies (`bundleDependencies`): the tarball carries
+the tree `npm ci` installed from `package-lock.json`, so whoever installs it —
+Axonity's image and Windows package included — runs the versions the tests ran
+on, not whatever the ranges allow that day. `scripts/release.sh` runs `npm ci`
+before it publishes, which is what makes the tree the lock's;
+`test/bundledDependencies.test.ts` fails if a dependency is left out or the tree
+on disk is not the lock's. A tarball is about ten times larger for it (3.1 MB
+packed, 15.5 MB unpacked, at 0.29.0). `npm-shrinkwrap.json` would pin the same
+but npm 12 does not pack it.
 
 ## Staying level with the backend
 

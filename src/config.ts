@@ -74,11 +74,47 @@ export interface HttpConfig {
   maxInFlight: number;
   /** Requests that may wait; one more is answered 503. */
   maxQueued: number;
+  /**
+   * What ONE token may have at once, so one token cannot fill the places
+   * everybody shares: this many seated…
+   */
+  maxInFlightPerToken: number;
+  /** …and this many waiting; one more of that token is answered 429. */
+  maxQueuedPerToken: number;
+  /**
+   * A body over `largeBodyBytes` (or one that does not say its size) takes one
+   * of this many places before it is read: the memory a body takes is about
+   * three times its size, so this is what makes the memory ceiling real.
+   */
+  maxLargeBodies: number;
+  /** The size over which a body is large, in bytes. */
+  largeBodyBytes: number;
   /** The largest request body read, in bytes; a larger one is answered 413. */
   maxBodyBytes: number;
+  /**
+   * The most JSON structure a message may hold: `{`, `[` and `,` outside
+   * strings, which is every object, array, item and member. The heap hangs on
+   * what a parse builds, not on the bytes: a message over this is answered 400
+   * before it is parsed. A file sent as base64 is one string and has none.
+   */
+  maxStructure: number;
+  /**
+   * The most structure (the same marks) that all the messages in work at once
+   * may hold together. The limit above is per message; this one is for the
+   * process, which every tenant shares: twelve messages at the limit, each
+   * harmless alone, ended it (V8 heap limit). A message that does not fit in
+   * what is left waits for it. Never less than `maxStructure`, or a message
+   * allowed alone could never be handled.
+   */
+  maxStructureInFlight: number;
   /** The longest one API call may take, in milliseconds. */
   apiTimeoutMs: number;
 }
+
+/** The most structure one message may hold (see `HttpConfig.maxStructure`). */
+const DEFAULT_MAX_STRUCTURE = 50_000;
+/** What all the messages in work at once may hold together (measured: README). */
+const DEFAULT_MAX_STRUCTURE_IN_FLIGHT = 100_000;
 
 function positiveInt(env: NodeJS.ProcessEnv, name: string, fallback?: number): number {
   const raw = env[name]?.trim();
@@ -121,12 +157,30 @@ export function loadHttpConfig(env: NodeJS.ProcessEnv = process.env): HttpConfig
   }
   const port = positiveInt(env, "AXONITY_MCP_PORT");
   if (port > 65535) throw new Error(`AXONITY_MCP_PORT must be at most 65535; got ${port}.`);
+  const maxStructure = positiveInt(env, "AXONITY_MCP_MAX_STRUCTURE", DEFAULT_MAX_STRUCTURE);
+  const maxStructureInFlight = positiveInt(
+    env,
+    "AXONITY_MCP_MAX_STRUCTURE_IN_FLIGHT",
+    DEFAULT_MAX_STRUCTURE_IN_FLIGHT,
+  );
+  if (maxStructureInFlight < maxStructure) {
+    throw new Error(
+      `AXONITY_MCP_MAX_STRUCTURE_IN_FLIGHT (${maxStructureInFlight}) must be at least ` +
+        `AXONITY_MCP_MAX_STRUCTURE (${maxStructure}): a message allowed alone has to fit. Set both.`,
+    );
+  }
   return {
     apiUrl,
     port,
     maxInFlight: positiveInt(env, "AXONITY_MCP_MAX_IN_FLIGHT", 4),
     maxQueued: positiveInt(env, "AXONITY_MCP_MAX_QUEUED", 32),
+    maxInFlightPerToken: positiveInt(env, "AXONITY_MCP_MAX_IN_FLIGHT_PER_TOKEN", 2),
+    maxQueuedPerToken: positiveInt(env, "AXONITY_MCP_MAX_QUEUED_PER_TOKEN", 4),
+    maxLargeBodies: positiveInt(env, "AXONITY_MCP_MAX_LARGE_BODIES", 1),
+    largeBodyBytes: positiveInt(env, "AXONITY_MCP_LARGE_BODY_BYTES", 1024 * 1024),
     maxBodyBytes: positiveInt(env, "AXONITY_MCP_MAX_BODY_BYTES", 25 * 1024 * 1024),
+    maxStructure,
+    maxStructureInFlight,
     apiTimeoutMs: atMost(
       positiveInt(env, "AXONITY_MCP_API_TIMEOUT_MS", 300_000),
       MAX_TIMER_MS,

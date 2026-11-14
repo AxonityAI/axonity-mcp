@@ -1,5 +1,5 @@
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { createServer, type IncomingMessage, type Server } from "node:http";
+import { createServer, request as httpRequest, type IncomingMessage, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -7,7 +7,7 @@ import { join } from "node:path";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import type { AxonityClient } from "../src/client.js";
-import { type HostedServer, startHostedServer } from "../src/http.js";
+import { type HostedServer, StructureCounter, startHostedServer } from "../src/http.js";
 import { SERVER_INFO, registerHosted } from "../src/index.js";
 import { recordTools } from "../src/routeClasses.js";
 import { HOSTED_PATH_REFUSAL } from "../src/tools/runInputFiles.js";
@@ -32,6 +32,8 @@ let inFlight = 0;
 let maxInFlight = 0;
 /** While set, the API holds every request until it is released. */
 let held: Promise<void> | undefined;
+/** Bytes of padding the API adds to its answer (a big answer for a small call). */
+let padBytes = 0;
 
 beforeAll(async () => {
   api = createServer(async (req: IncomingMessage, res) => {
@@ -47,7 +49,14 @@ beforeAll(async () => {
     if (held) await held;
     inFlight -= 1;
     res.writeHead(200, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({ items: [], total: 0, sawBearer: req.headers.authorization ?? null }));
+    res.end(
+      JSON.stringify({
+        items: [],
+        total: 0,
+        sawBearer: req.headers.authorization ?? null,
+        ...(padBytes ? { pad: "x".repeat(padBytes) } : {}),
+      }),
+    );
   });
   await new Promise<void>((r) => api.listen(0, "127.0.0.1", () => r()));
   apiUrl = `http://127.0.0.1:${(api.address() as AddressInfo).port}`;
@@ -58,6 +67,7 @@ afterAll(async () => {
 });
 
 const running: HostedServer[] = [];
+let lastStarted: HostedServer;
 afterEach(async () => {
   while (running.length) await running.pop()!.close();
   seen = [];
@@ -65,17 +75,38 @@ afterEach(async () => {
   inFlight = 0;
   maxInFlight = 0;
   held = undefined;
+  padBytes = 0;
 });
 
 async function start(
-  overrides: Partial<{ maxInFlight: number; maxQueued: number; maxBodyBytes: number; apiTimeoutMs: number }> = {},
+  overrides: Partial<{
+    maxInFlight: number;
+    maxQueued: number;
+    maxInFlightPerToken: number;
+    maxQueuedPerToken: number;
+    maxLargeBodies: number;
+    largeBodyBytes: number;
+    maxBodyBytes: number;
+    maxStructure: number;
+    maxStructureInFlight: number;
+    answerStallMs: number;
+    apiTimeoutMs: number;
+  }> = {},
 ) {
   const hosted = await startHostedServer({
     apiUrl,
     port: 0,
     maxInFlight: 4,
     maxQueued: 64,
+    // Out of the way unless a test is about them.
+    maxInFlightPerToken: 100,
+    maxQueuedPerToken: 100,
+    maxLargeBodies: 100,
+    largeBodyBytes: 512 * 1024,
     maxBodyBytes: 1024 * 1024,
+    // Out of the way unless a test is about it.
+    maxStructure: 100_000,
+    maxStructureInFlight: 1_000_000,
     apiTimeoutMs: 10_000,
     ...overrides,
     serverInfo: SERVER_INFO,
@@ -83,6 +114,7 @@ async function start(
     log: () => {},
   });
   running.push(hosted);
+  lastStarted = hosted;
   return `http://127.0.0.1:${hosted.port}`;
 }
 
@@ -233,6 +265,245 @@ describe("the hosted connector refuses what is not a personal token's MCP reques
   });
 });
 
+describe("a message is refused by what it holds, not only by its size (review M1)", () => {
+  // The heap hangs on the parse, not on the byte: 10 MB of `{},` is 3.3 million
+  // objects and ended the process (V8 heap limit) while a 10 MB base64 file is
+  // one string. The structure marks outside strings are counted as the body is
+  // read, so what would be parsed is bounded before it is.
+  const dense = (objects: number) => `[${"{},".repeat(objects)}0]`;
+
+  it("a dense body is 400 and nothing reaches the API; the next call is served", async () => {
+    const base = await start({ maxBodyBytes: 25 * 1024 * 1024, maxStructure: 1000 });
+    const res = await post(base, call("list_workflows", { x: JSON.parse(dense(3000)) }), bearer("axp_dense"));
+    expect(res.status).toBe(400);
+    expect(res.json!.error.code).toBe(-32600);
+    expect(res.json!.error.message).toMatch(/1000/);
+    expect(seen).toEqual([]);
+    const next = await post(base, call("list_workflows"), bearer("axp_dense"));
+    expect(next.status).toBe(200);
+  });
+
+  it("a body is refused as soon as it holds too much: the rest is not waited for", async () => {
+    const base = await start({ maxBodyBytes: 25 * 1024 * 1024, maxStructure: 1000 });
+    let timer: NodeJS.Timeout | undefined;
+    const answered = await new Promise<number>((resolve, reject) => {
+      const url = new URL(`${base}/mcp`);
+      const req = httpRequest(
+        { host: url.hostname, port: url.port, path: url.pathname, method: "POST", headers: { ...HEADERS, ...bearer("axp_slow") } },
+        (res) => {
+          res.resume();
+          resolve(res.statusCode ?? 0);
+          req.destroy();
+        },
+      );
+      req.on("error", () => {});
+      timer = setTimeout(() => reject(new Error("no answer before the body ended")), 5000);
+      // A chunked body that never ends: the answer has to come without it.
+      req.write(`{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"list_workflows","arguments":{"x":[${"{},".repeat(2000)}`);
+    });
+    clearTimeout(timer);
+    expect(answered).toBe(400);
+    expect(seen).toEqual([]);
+  });
+
+  it("a message at the limit is served and one mark more is refused; strings do not count", async () => {
+    const limit = 400;
+    const base = await start({ maxStructure: limit });
+    const marks = (message: unknown) => {
+      const counter = new StructureCounter();
+      return counter.add(Buffer.from(JSON.stringify(message)));
+    };
+    const withItems = (n: number) => call("list_workflows", { x: Array.from({ length: n }, () => 0) });
+    // Each item adds one mark (its comma): find the message that is exactly at the limit.
+    const exact = limit - marks(withItems(0)) + 1;
+    expect(marks(withItems(exact))).toBe(limit);
+    expect((await post(base, withItems(exact), bearer("axp_edge"))).status).toBe(200);
+    expect((await post(base, withItems(exact + 1), bearer("axp_edge"))).status).toBe(400);
+    // Eighty thousand commas and braces inside one string are text, not structure.
+    const text = ",{[".repeat(30_000);
+    expect((await post(base, call("list_workflows", { x: text }), bearer("axp_edge"))).status).toBe(200);
+  });
+
+  it("a large base64 file (no structure) is still served up to the body limit", async () => {
+    const base = await start({ maxStructure: 1000, maxBodyBytes: 8 * 1024 * 1024, largeBodyBytes: 1024 * 1024 });
+    const file = Buffer.alloc(5 * 1024 * 1024, 7).toString("base64");
+    const res = await post(
+      base,
+      call("upload_run_input_file", { contentBase64: file, filename: "big.bin", contentType: "application/octet-stream" }),
+      bearer("axp_file"),
+    );
+    expect(res.status).toBe(200);
+    expect(seen.length).toBe(1);
+  });
+});
+
+describe("the messages handled at once share one structure budget (review M1, second round)", () => {
+  // The limit per message does not bound the sum: twelve messages of 49 500
+  // structure marks each, at once, ended the real process (V8 heap limit) while
+  // each one alone was fine. The marks of all the messages in work at once
+  // share one budget; a message that does not fit waits for it.
+  const ITEMS = 850;
+  const heavy = (id: number) => call("list_workflows", { x: Array.from({ length: ITEMS }, () => 0) }, id);
+  const marks = (message: unknown) => new StructureCounter().add(Buffer.from(JSON.stringify(message)));
+  const options = { maxStructure: 1000, maxStructureInFlight: 2500, maxInFlight: 8, maxQueued: 64 };
+
+  it("the sum of the marks of the calls in work never passes the budget; the rest waits and is then served", async () => {
+    const weight = marks(heavy(1));
+    expect(weight).toBeGreaterThan(ITEMS);
+    expect(weight).toBeLessThanOrEqual(options.maxStructure);
+    const fits = Math.floor(options.maxStructureInFlight / weight);
+    expect(fits).toBe(2);
+    let release!: () => void;
+    held = new Promise<void>((r) => (release = r));
+    const base = await start(options);
+    const pending = Array.from({ length: 6 }, (_, i) => post(base, heavy(i + 1), bearer(`axp_b${i}`)));
+    await until(() => inFlight === fits);
+    // Let the others show whether they pass the budget.
+    await new Promise((r) => setTimeout(r, 200));
+    expect(inFlight).toBe(fits);
+    release();
+    const answers = await Promise.all(pending);
+    expect(answers.map((a) => a.status)).toEqual([200, 200, 200, 200, 200, 200]);
+    expect(maxInFlight).toBe(fits);
+    expect(maxInFlight * weight).toBeLessThanOrEqual(options.maxStructureInFlight);
+  });
+
+  it("a small message is served beside a heavy one: the budget is the marks, not the places", async () => {
+    let release!: () => void;
+    held = new Promise<void>((r) => (release = r));
+    const base = await start(options);
+    const one = post(base, heavy(1), bearer("axp_heavy"));
+    await until(() => inFlight === 1);
+    const small = post(base, call("list_workflows", {}, 2), bearer("axp_small"));
+    await until(() => inFlight === 2);
+    expect(inFlight).toBe(2);
+    release();
+    expect((await Promise.all([one, small])).map((a) => a.status)).toEqual([200, 200]);
+  });
+
+  it("past the seats and the queue it is the existing 503, not a new refusal", async () => {
+    let release!: () => void;
+    held = new Promise<void>((r) => (release = r));
+    // Two seats, no queue: the first holds the budget, the second waits for it
+    // while it holds a seat, so a third finds neither a seat nor room.
+    const base = await start({ ...options, maxStructureInFlight: 1000, maxInFlight: 2, maxQueued: 0 });
+    const first = post(base, heavy(1), bearer("axp_s1"));
+    await until(() => inFlight === 1);
+    const second = post(base, heavy(2), bearer("axp_s2"));
+    await new Promise((r) => setTimeout(r, 150));
+    expect(inFlight).toBe(1);
+    const third = await post(base, heavy(3), bearer("axp_s3"));
+    expect(third.status).toBe(503);
+    expect(third.headers.get("retry-after")).toBe("1");
+    release();
+    expect([(await first).status, (await second).status]).toEqual([200, 200]);
+    expect(maxInFlight).toBe(1);
+  });
+
+  it("the budget comes back after every answer: a long run one after another is all served", async () => {
+    const base = await start({ ...options, maxStructureInFlight: 1000 });
+    for (let i = 0; i < 8; i++) {
+      expect((await post(base, heavy(i + 1), bearer("axp_seq"))).status).toBe(200);
+    }
+    // And after a refused message and a message that fails to parse.
+    expect((await post(base, "{not json", bearer("axp_seq"))).status).toBe(400);
+    expect((await post(base, call("list_workflows", { x: Array(2000).fill(0) }), bearer("axp_seq"))).status).toBe(400);
+    expect((await post(base, heavy(99), bearer("axp_seq"))).status).toBe(200);
+  });
+
+  it("a caller that hangs up while it waits for the budget gives its place up", async () => {
+    let release!: () => void;
+    held = new Promise<void>((r) => (release = r));
+    const base = await start({ ...options, maxStructureInFlight: 1000 });
+    const first = post(base, heavy(1), bearer("axp_h1"));
+    await until(() => inFlight === 1);
+    const controller = new AbortController();
+    const waiter = fetch(`${base}/mcp`, {
+      method: "POST",
+      headers: { ...HEADERS, ...bearer("axp_h2") },
+      body: JSON.stringify(heavy(2)),
+      signal: controller.signal,
+    }).catch(() => undefined);
+    await new Promise((r) => setTimeout(r, 150));
+    controller.abort();
+    await waiter;
+    release();
+    expect((await first).status).toBe(200);
+    // Nothing is left of the one that hung up: the budget is whole again.
+    expect(inFlight).toBe(0);
+    const after = await Promise.all([1, 2, 3].map((i) => post(base, heavy(i + 10), bearer(`axp_a${i}`))));
+    expect(after.map((a) => a.status)).toEqual([200, 200, 200]);
+    expect(maxInFlight).toBe(1);
+  });
+
+  it("a caller that hangs up keeps its budget until its call is done (it is memory still in use)", async () => {
+    let release!: () => void;
+    held = new Promise<void>((r) => (release = r));
+    const base = await start({ ...options, maxStructureInFlight: 1000 });
+    const gone: Promise<unknown>[] = [];
+    for (let i = 0; i < 5; i++) {
+      const controller = new AbortController();
+      gone.push(
+        fetch(`${base}/mcp`, {
+          method: "POST",
+          headers: { ...HEADERS, ...bearer(`axp_g${i}`) },
+          body: JSON.stringify(heavy(i + 1)),
+          signal: controller.signal,
+        }).catch(() => undefined),
+      );
+      if (i === 0) await until(() => inFlight === 1);
+      await new Promise((r) => setTimeout(r, 40));
+      controller.abort();
+    }
+    await Promise.all(gone);
+    await new Promise((r) => setTimeout(r, 100));
+    expect(maxInFlight).toBe(1);
+    release();
+    const after = await post(base, heavy(50), bearer("axp_after"));
+    expect(after.status).toBe(200);
+  });
+
+  it("a message over the limit of one message is still 400, whatever the budget", async () => {
+    const base = await start({ ...options, maxStructureInFlight: 1000 });
+    const res = await post(base, call("list_workflows", { x: Array(1500).fill(0) }), bearer("axp_big"));
+    expect(res.status).toBe(400);
+    expect(res.json!.error.code).toBe(-32600);
+  });
+});
+
+describe("StructureCounter counts { [ and , outside strings", () => {
+  const count = (text: string) => new StructureCounter().add(Buffer.from(text));
+
+  it("counts objects, arrays and separators", () => {
+    expect(count("{}")).toBe(1);
+    expect(count("[1,2,3]")).toBe(3);
+    expect(count('{"a":[1,{"b":null}],"c":2}')).toBe(5);
+    expect(count("")).toBe(0);
+  });
+
+  it("ignores everything inside a string, escaped quotes and escaped backslashes included", () => {
+    // JSON text ["a\\",{}]: the string is a, then a backslash; it ends at its quote, so `[`, the comma and the brace count.
+    expect(count('["a\\\\",{}]')).toBe(3);
+    // JSON text ["a\",{}"]: the quote is escaped, so `,{}` is still text and only `[` counts.
+    expect(count('["a\\",{}"]')).toBe(1);
+  });
+
+  it("gives the same count however the body is cut into chunks (state carries over)", () => {
+    const body = Buffer.from('{"k":"va\"l,{[ue","list":[1,2,{"x":"\\"},[],[3]],"n":null}');
+    const whole = new StructureCounter().add(body);
+    for (let cut = 1; cut < body.length; cut++) {
+      const counter = new StructureCounter();
+      counter.add(body.subarray(0, cut));
+      expect(counter.add(body.subarray(cut)), `cut at ${cut}`).toBe(whole);
+    }
+    // And byte by byte.
+    const bytes = new StructureCounter();
+    let last = 0;
+    for (const byte of body) last = bytes.add(Buffer.from([byte]));
+    expect(last).toBe(whole);
+  });
+});
+
 describe("the hosted connector has a ceiling", () => {
   it("never more than maxInFlight calls at the API at once, and past the queue a 503", async () => {
     let release!: () => void;
@@ -299,12 +570,275 @@ describe("the hosted connector has a ceiling", () => {
     expect(next.json!.result.isError).toBeFalsy();
   });
 
+  it("a seat is kept until the answer has left the process, not until the handler returns", async () => {
+    // A small call can have a big answer (a failed call of a big message is ten
+    // megabytes of errors): the answers of seats that went back early piled up
+    // past the heap. A caller that does not read its answer keeps its seat.
+    padBytes = 24 * 1024 * 1024;
+    const base = await start({ maxInFlight: 1, maxQueued: 0, answerStallMs: 60_000 });
+    const url = new URL(`${base}/mcp`);
+    let stalled!: IncomingMessage;
+    const first = new Promise<void>((resolve, reject) => {
+      const req = httpRequest(
+        { host: url.hostname, port: url.port, path: url.pathname, method: "POST", headers: { ...HEADERS, ...bearer("axp_slowreader") } },
+        (res) => {
+          res.pause(); // the answer is not read
+          stalled = res;
+          resolve();
+        },
+      );
+      req.on("error", reject);
+      req.end(JSON.stringify(call("list_workflows")));
+    });
+    await first;
+    await new Promise((r) => setTimeout(r, 300));
+    expect(stalled.statusCode).toBe(200);
+    // The one seat is still taken by the answer that is waiting to be read.
+    const turnedAway = await post(base, call("list_workflows", {}, 2), bearer("axp_next"));
+    expect(turnedAway.status).toBe(503);
+    // Read to the end: the seat comes back.
+    stalled.resume();
+    await new Promise<void>((r) => stalled.once("end", () => r()));
+    padBytes = 0;
+    let served = 0;
+    for (let i = 0; i < 100 && served !== 200; i++) {
+      served = (await post(base, call("list_workflows", {}, 3), bearer("axp_next"))).status;
+      if (served !== 200) await new Promise((r) => setTimeout(r, 20));
+    }
+    expect(served).toBe(200);
+  });
+
+  it("an answer that is never read is cut after a while, and the seat comes back", async () => {
+    padBytes = 24 * 1024 * 1024;
+    const base = await start({ maxInFlight: 1, maxQueued: 0, answerStallMs: 500 });
+    const url = new URL(`${base}/mcp`);
+    await new Promise<void>((resolve, reject) => {
+      const req = httpRequest(
+        { host: url.hostname, port: url.port, path: url.pathname, method: "POST", headers: { ...HEADERS, ...bearer("axp_never") } },
+        (res) => {
+          res.pause(); // never read
+          res.on("error", () => {});
+          res.on("close", () => {});
+          resolve();
+        },
+      );
+      req.on("error", reject);
+      req.end(JSON.stringify(call("list_workflows")));
+    });
+    padBytes = 0;
+    let served = 0;
+    for (let i = 0; i < 100 && served !== 200; i++) {
+      served = (await post(base, call("list_workflows", {}, 2), bearer("axp_next"))).status;
+      if (served !== 200) await new Promise((r) => setTimeout(r, 50));
+    }
+    expect(served).toBe(200);
+  });
+
   it("a seat is given back: after the burst, every new call is served", async () => {
     const base = await start({ maxInFlight: 1, maxQueued: 0 });
     for (let i = 0; i < 5; i++) {
       const res = await post(base, call("list_workflows", {}, i + 1), bearer("axp_seq"));
       expect(res.status).toBe(200);
     }
+  });
+});
+
+const until = async (ok: () => boolean) => {
+  for (let i = 0; i < 300 && !ok(); i++) await new Promise((r) => setTimeout(r, 10));
+};
+
+describe("one token cannot fill the connector for everybody else (review S1)", () => {
+  it("A holds its calls open; B, with another token, is still served (the reviewer's probe)", async () => {
+    let release!: () => void;
+    held = new Promise<void>((r) => (release = r));
+    // The defaults of the connector: 4 seats, 32 waiting; per token 2 seats and 4 waiting.
+    const base = await start({
+      maxInFlight: 4,
+      maxQueued: 32,
+      maxInFlightPerToken: 2,
+      maxQueuedPerToken: 4,
+    });
+    const a = Array.from({ length: 36 }, (_, i) => post(base, call("list_workflows", {}, i + 1), bearer("axp_personA")));
+    const aStatuses: number[] = [];
+    a.forEach((p) => void p.then((r) => aStatuses.push(r.status)));
+    await until(() => inFlight === 2);
+    // 36 − (2 seated + 4 waiting) are turned away at once.
+    await until(() => aStatuses.length === 30);
+    expect(aStatuses.every((s) => s === 429)).toBe(true);
+    const b = post(base, call("list_workflows", {}, 1), bearer("axp_personB"));
+    await until(() => inFlight === 3);
+    expect(inFlight).toBe(3); // B reached the API while A is holding its places
+    release();
+    expect((await b).status).toBe(200);
+    const answers = await Promise.all(a);
+    expect(answers.filter((r) => r.status === 200)).toHaveLength(6);
+    expect(maxInFlight).toBeLessThanOrEqual(3); // A never held more than its two
+    expect(answers.find((r) => r.status === 429)!.headers.get("retry-after")).toBe("1");
+  });
+
+  it("the limit is per token, not per connection or per caller: a token's places come back", async () => {
+    const base = await start({ maxInFlightPerToken: 1, maxQueuedPerToken: 0 });
+    for (let i = 0; i < 4; i++) {
+      expect((await post(base, call("list_workflows", {}, i + 1), bearer("axp_one"))).status).toBe(200);
+    }
+  });
+
+  it("a token with nothing left in the room leaves no trace (its entry is dropped)", async () => {
+    // 200 different tokens, one call each: the connector does not keep 200 entries.
+    const base = await start({ maxInFlightPerToken: 1, maxQueuedPerToken: 1 });
+    for (let i = 0; i < 200; i++) await post(base, call("list_workflows", {}, i + 1), bearer(`axp_t${i}`));
+    expect(lastStarted.tokensTracked()).toBe(0);
+  });
+});
+
+describe("a caller that hangs up while it waits leaves the queue (review K6)", () => {
+  async function hangUpWhileWaiting(base: string, token: string, count: number) {
+    const controllers: AbortController[] = [];
+    const settled: Promise<unknown>[] = [];
+    for (let i = 0; i < count; i++) {
+      const controller = new AbortController();
+      controllers.push(controller);
+      settled.push(
+        fetch(`${base}/mcp`, {
+          method: "POST",
+          headers: { ...HEADERS, ...bearer(`${token}${i}`) },
+          body: JSON.stringify(call("list_workflows", {}, i + 1)),
+          signal: controller.signal,
+        }).catch(() => undefined),
+      );
+    }
+    await new Promise((r) => setTimeout(r, 100));
+    controllers.forEach((c) => c.abort());
+    await Promise.all(settled);
+    await new Promise((r) => setTimeout(r, 100));
+  }
+
+  it("the global queue: two that hung up do not keep its two places", async () => {
+    let release!: () => void;
+    held = new Promise<void>((r) => (release = r));
+    const base = await start({ maxInFlight: 1, maxQueued: 2 });
+    const first = post(base, call("list_workflows", {}, 1), bearer("axp_seated"));
+    await until(() => inFlight === 1);
+    await hangUpWhileWaiting(base, "axp_gone", 2);
+    // The queue is empty again: two new callers wait, rather than being turned away.
+    const next = [
+      post(base, call("list_workflows", {}, 2), bearer("axp_n1")),
+      post(base, call("list_workflows", {}, 3), bearer("axp_n2")),
+    ];
+    await new Promise((r) => setTimeout(r, 100));
+    release();
+    expect((await first).status).toBe(200);
+    expect((await Promise.all(next)).map((r) => r.status)).toEqual([200, 200]);
+  });
+
+  it("a token's own queue: one that hung up does not keep its place", async () => {
+    let release!: () => void;
+    held = new Promise<void>((r) => (release = r));
+    const base = await start({ maxInFlightPerToken: 1, maxQueuedPerToken: 1 });
+    const first = post(base, call("list_workflows", {}, 1), bearer("axp_same"));
+    await until(() => inFlight === 1);
+    const controller = new AbortController();
+    const hung = fetch(`${base}/mcp`, {
+      method: "POST",
+      headers: { ...HEADERS, ...bearer("axp_same") },
+      body: JSON.stringify(call("list_workflows", {}, 2)),
+      signal: controller.signal,
+    }).catch(() => undefined);
+    await new Promise((r) => setTimeout(r, 100));
+    controller.abort();
+    await hung;
+    await new Promise((r) => setTimeout(r, 100));
+    const next = post(base, call("list_workflows", {}, 3), bearer("axp_same"));
+    await new Promise((r) => setTimeout(r, 100));
+    release();
+    expect((await first).status).toBe(200);
+    expect((await next).status).toBe(200);
+  });
+});
+
+describe("a big body is one at a time, so the memory ceiling is real (review S2)", () => {
+  const padded = (bytes: number, id = 1) =>
+    JSON.stringify(call("list_workflows", { padding: "x".repeat(bytes) }, id));
+  const small = { largeBodyBytes: 2_000, maxBodyBytes: 50_000, maxLargeBodies: 1 };
+
+  it("two big bodies at once are served one after the other; a small call is not held behind them", async () => {
+    let release!: () => void;
+    held = new Promise<void>((r) => (release = r));
+    const base = await start(small);
+    const big = [
+      post(base, padded(10_000, 1), bearer("axp_big1")),
+      post(base, padded(10_000, 2), bearer("axp_big2")),
+    ];
+    await until(() => inFlight === 1);
+    await new Promise((r) => setTimeout(r, 150));
+    expect(inFlight).toBe(1); // the second big body has not been read, let alone sent on
+    const little = post(base, call("list_workflows", {}, 3), bearer("axp_little"));
+    await until(() => inFlight === 2);
+    expect(inFlight).toBe(2);
+    release();
+    expect((await Promise.all([...big, little])).map((r) => r.status)).toEqual([200, 200, 200]);
+    expect(maxInFlight).toBe(2);
+  });
+
+  it("a body over the limit is 413 at once, even with the big-body place taken", async () => {
+    let release!: () => void;
+    held = new Promise<void>((r) => (release = r));
+    const base = await start(small);
+    const first = post(base, padded(10_000), bearer("axp_big1"));
+    await until(() => inFlight === 1);
+    const tooBig = await post(base, padded(60_000), bearer("axp_big2"));
+    expect(tooBig.status).toBe(413);
+    release();
+    expect((await first).status).toBe(200);
+  });
+
+  it("a body that does not say its size is counted as big", async () => {
+    let release!: () => void;
+    held = new Promise<void>((r) => (release = r));
+    const base = await start(small);
+    const chunked = (id: number, token: string) =>
+      fetch(`${base}/mcp`, {
+        method: "POST",
+        headers: { ...HEADERS, ...bearer(token) },
+        body: new ReadableStream({
+          start(controller) {
+            controller.enqueue(new TextEncoder().encode(JSON.stringify(call("list_workflows", {}, id))));
+            controller.close();
+          },
+        }),
+        // @ts-expect-error — Node's fetch needs it for a stream body
+        duplex: "half",
+      }).then((r) => r.status);
+    const both = [chunked(1, "axp_c1"), chunked(2, "axp_c2")];
+    await until(() => inFlight === 1);
+    await new Promise((r) => setTimeout(r, 150));
+    expect(inFlight).toBe(1);
+    release();
+    expect(await Promise.all(both)).toEqual([200, 200]);
+  });
+
+  it("a big body whose caller hangs up while it waits for its place gives the place up", async () => {
+    let release!: () => void;
+    held = new Promise<void>((r) => (release = r));
+    const base = await start({ ...small, maxQueued: 1 });
+    const first = post(base, padded(10_000), bearer("axp_big1"));
+    await until(() => inFlight === 1);
+    const controller = new AbortController();
+    const hung = fetch(`${base}/mcp`, {
+      method: "POST",
+      headers: { ...HEADERS, ...bearer("axp_big2") },
+      body: padded(10_000, 2),
+      signal: controller.signal,
+    }).catch(() => undefined);
+    await new Promise((r) => setTimeout(r, 100));
+    controller.abort();
+    await hung;
+    await new Promise((r) => setTimeout(r, 100));
+    const next = post(base, padded(10_000, 3), bearer("axp_big3"));
+    await new Promise((r) => setTimeout(r, 100));
+    release();
+    expect((await first).status).toBe(200);
+    expect((await next).status).toBe(200);
   });
 });
 
