@@ -684,9 +684,10 @@ describe("one token cannot fill the connector for everybody else (review S1)", (
   });
 
   it("a token with nothing left in the room leaves no trace (its entry is dropped)", async () => {
-    // 200 different tokens, one call each: the connector does not keep 200 entries.
+    // 20 different tokens, one call each: the connector does not keep 20 entries.
+    // (20, not 200: a leak shows from the first entry, and 200 sequential calls hit the 5s timeout on a loaded machine.)
     const base = await start({ maxInFlightPerToken: 1, maxQueuedPerToken: 1 });
-    for (let i = 0; i < 200; i++) await post(base, call("list_workflows", {}, i + 1), bearer(`axp_t${i}`));
+    for (let i = 0; i < 20; i++) await post(base, call("list_workflows", {}, i + 1), bearer(`axp_t${i}`));
     expect(lastStarted.tokensTracked()).toBe(0);
   });
 });
