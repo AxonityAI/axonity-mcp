@@ -9,7 +9,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import { AxonityClient } from "../src/client.js";
-import { AxonityApiError } from "../src/errors.js";
+import { AxonityApiError, errorForStatus } from "../src/errors.js";
 import { registerAll } from "../src/index.js";
 import { CONVENTIONS } from "../src/tools/conventions.js";
 import {
@@ -254,6 +254,10 @@ describe("upload_run_input_file — refused before anything is sent", () => {
     ["text that is not base64", { contentBase64: "not base64!", filename: "a.pdf", contentType: "application/pdf" }, /not base64/],
     ["base64url instead of base64", { contentBase64: "-_-_", filename: "a.pdf", contentType: "application/pdf" }, /not base64/],
     ["one character too many", { contentBase64: "YWJjZ", filename: "a.pdf", contentType: "application/pdf" }, /not base64/],
+    // Stray bits in the last character: the decoder drops them without a
+    // word, so only the round trip refuses these (review K2 of #1963).
+    ["stray bits in the last character (one byte)", { contentBase64: "YR==", filename: "a.pdf", contentType: "application/pdf" }, /not base64/],
+    ["stray bits in the last character (four bytes)", { contentBase64: "YWJjZB==", filename: "a.pdf", contentType: "application/pdf" }, /not base64/],
     ["an empty content type", { contentBase64: "YQ==", filename: "a.pdf", contentType: " " }, /contentType/],
     ["a content type that is no media type", { contentBase64: "YQ==", filename: "a.pdf", contentType: "pdf" }, /contentType/],
     ["a content type with characters a header cannot carry", { contentBase64: "YQ==", filename: "a.pdf", contentType: "application/pdf; name=é" }, /contentType/],
@@ -286,6 +290,35 @@ describe("upload_run_input_file — refused before anything is sent", () => {
     expect(r.isError).toBe(true);
     expect(r.content[0].text).toMatch(/not a regular file/);
     expect(client.post).not.toHaveBeenCalled();
+  });
+
+  it("a 413 from the platform names the file and its size in bytes, and keeps what the platform said", async () => {
+    const { handlers, client } = setup();
+    const body = { error: "payload_too_large", code: "payload_too_large", message: "Request body too large" };
+    client.post.mockRejectedValueOnce(errorForStatus(413, body));
+    const bytes = randomBytes(1234);
+    const r = await upload(handlers, {
+      contentBase64: bytes.toString("base64"),
+      filename: "big.pdf",
+      contentType: "application/pdf",
+    });
+    expect(r.isError).toBe(true);
+    expect(r.content[0].text).toContain("'big.pdf'");
+    expect(r.content[0].text).toContain("1234 bytes");
+    expect(r.content[0].text).toContain("413");
+    expect(r.content[0].text).toContain("Request body too large");
+  });
+
+  it("any other refusal is the platform's, unchanged", async () => {
+    const { handlers, client } = setup();
+    const said = "'a.exe' is not a format we read.";
+    client.post.mockRejectedValueOnce(
+      errorForStatus(422, { error: "validation_error", code: "validation_error", message: said }),
+    );
+    const r = await upload(handlers, { contentBase64: "YQ==", filename: "a.exe", contentType: "application/pdf" });
+    expect(r.isError).toBe(true);
+    expect(r.content[0].text).toContain(said);
+    expect(r.content[0].text).not.toMatch(/too large/);
   });
 
   it("an empty file still goes to the platform, which refuses it in its own words", async () => {
@@ -326,6 +359,25 @@ describe("upload_run_input_file — what it says is what the platform does", () 
     expect(d).toMatch(/deleted with the run/);
     // The rule since axonity-flow#2165: NOT deleted when the run ends.
     expect(d).not.toMatch(/when the run ends/);
+  });
+
+  it("says `path` reads any file the user may read, follows symlinks, and that approving the call is the guard", () => {
+    const d = description();
+    expect(d).toMatch(/any file the user running this connector may\s+read/);
+    expect(d).toMatch(/following symlinks/);
+    expect(d).toMatch(/no folder it is limited to/);
+    expect(d).toMatch(/approval of each call is the guard/);
+    const readme = readFileSync(fileURLToPath(new URL("../README.md", import.meta.url)), "utf8");
+    expect(readme).toMatch(/which \*\*local file\*\*\s+leaves your machine/);
+    expect(readme).toMatch(/following symlinks/);
+    expect(readme).not.toMatch(/so the connector is not a trust boundary\.\n/);
+  });
+
+  it("says a file too large comes back as a 413 and the tool names its size", () => {
+    const d = description();
+    expect(d).toMatch(/413/);
+    expect(d).toMatch(/size in bytes/);
+    expect(d).not.toMatch(/says which/);
   });
 
   it("says where `path` is read, and when to send contentBase64 instead", () => {

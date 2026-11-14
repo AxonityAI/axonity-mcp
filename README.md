@@ -9,7 +9,13 @@ the same verbs the internal Builder team has, minus direct publish.
 
 It runs on your machine and talks to Axonity **only over the public REST API**,
 authenticated with a per-tenant **service token**. The backend re-enforces
-tenant + scope on every call, so the connector is not a trust boundary.
+tenant + scope on every call, so the connector is not a trust boundary for what
+it may do in Axonity. One thing only the connector decides: which **local file**
+leaves your machine. `upload_run_input_file` with `path` reads any file the user
+running the connector may read, following symlinks, with no folder it is limited
+to, and the platform cannot tell what the file is. Use it with a connector
+running locally for someone who trusts it, and check the path before you approve
+the call — your MCP client's approval of each call is the guard.
 
 ## Setup
 

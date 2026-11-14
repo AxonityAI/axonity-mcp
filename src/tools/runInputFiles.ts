@@ -13,9 +13,17 @@
  * is ~6.7 MB of base64 a model would otherwise have to write out. `contentBase64`
  * is for a caller whose file is NOT on the connector's machine. Exactly one.
  *
- * WHAT THE PLATFORM DECIDES, IT SAYS. Which types are read, the size limit and
- * an empty file are refused by the backend in words (`RunInputFileService`), so
- * this module keeps no list of types and no size of its own: two lists drift.
+ * WHAT THE PLATFORM DECIDES, IT SAYS. Which types are read and an empty file
+ * are refused by the backend in words (`RunInputFileService`), so this module
+ * keeps no list of types and no size of its own: two lists drift. Only a file
+ * too large is answered by the body-size guard with a bare 413; the tool adds
+ * the file's size in bytes, not a limit nobody serves.
+ *
+ * `path` READS ANY FILE the connector's user may read, symlinks followed:
+ * there is no folder it is held to (decided in the review of #1963: no
+ * allow-list setting). The platform cannot tell a tender from a key,
+ * so the guard is the person approving each call in their MCP client, and the
+ * description and the README say so.
  * What it does check is what only it can know — whether the path is a file on
  * this machine, and whether the text is base64 at all (Node's decoder skips
  * characters it does not know, so a malformed string would upload a different
@@ -33,6 +41,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 
 import type { AxonityClient } from "../client.js";
+import { AxonityApiError } from "../errors.js";
 import { guard, jsonResult } from "./result.js";
 
 export const RUN_INPUT_FILES_ROUTE = "/api/v1/run-input-files";
@@ -100,6 +109,24 @@ async function readLocalFile(path: string): Promise<Buffer> {
   }
 }
 
+/**
+ * A 413 said in words: which file, how many bytes. The platform's body-size
+ * guard answers before the upload service can name its own limit, with only
+ * "Request body too large" (axonity-flow `middleware/body_size_limit.py`).
+ * No route serves that limit, so this names the size the connector knows and
+ * invents no limit of its own.
+ */
+function tooLarge(err: unknown, name: string, size: number): Error | undefined {
+  if (!(err instanceof AxonityApiError) || err.status !== 413) return undefined;
+  const mb = (size / (1024 * 1024)).toFixed(1);
+  return new Error(
+    `The platform refused '${name}' as too large (413): it is ${size} bytes ` +
+      `(${mb} MB), over the size the platform accepts for one upload. Send a ` +
+      "smaller file, or the part of it that matters. " +
+      `The platform said: ${err.message}`,
+  );
+}
+
 const DESCRIPTION =
   "Upload a file that a workflow run will START with, and get back its " +
   "reference `{ fileId, filename, contentType, sizeBytes, sha256 }` — the " +
@@ -126,9 +153,16 @@ const DESCRIPTION =
   "caller whose file is not on that machine (an automation, a client " +
   "elsewhere). If the connector runs somewhere else than you, `path` is read " +
   "THERE, and a file it cannot find is reported, never guessed." +
+  "\n\nWHAT `path` CAN READ: any file the user running this connector may " +
+  "read, following symlinks — there is no folder it is limited to, and the " +
+  "platform cannot tell what the file is. So use it only with a connector " +
+  "running locally for a person who trusts it, and check the path before a " +
+  "call is approved: the MCP client's approval of each call is the guard." +
   "\n\nThe platform decides what it accepts, from `contentType` (an image by " +
-  "its bytes), and refuses a type it does not read, an empty file or one " +
-  "over its size limit, and says which.";
+  "its bytes), and refuses a type it does not read or an empty file in " +
+  "words. A file over its size limit is refused with a 413; this tool then " +
+  "names the file's size in bytes. Send a smaller file, or the part that " +
+  "matters.";
 
 export function registerRunInputFileTools(
   server: McpServer,
@@ -204,7 +238,11 @@ export function registerRunInputFileTools(
         // plain form value, not an upload, and the route answers 422.
         const form = new FormData();
         form.append("file", new Blob([new Uint8Array(bytes)], { type }), name);
-        return jsonResult(await client.post(RUN_INPUT_FILES_ROUTE, form));
+        try {
+          return jsonResult(await client.post(RUN_INPUT_FILES_ROUTE, form));
+        } catch (err) {
+          throw tooLarge(err, name, bytes.length) ?? err;
+        }
       }),
   );
 }
