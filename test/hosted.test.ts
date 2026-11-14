@@ -11,6 +11,7 @@ import { type HostedServer, StructureCounter, startHostedServer } from "../src/h
 import { SERVER_INFO, registerHosted } from "../src/index.js";
 import { recordTools } from "../src/routeClasses.js";
 import { HOSTED_PATH_REFUSAL } from "../src/tools/runInputFiles.js";
+import { HOSTED_TRIGGER_INPUT_PATH_REFUSAL } from "../src/tools/runs.js";
 
 /**
  * The hosted connector (HTTP mode), driven over real HTTP against a fake API
@@ -890,6 +891,27 @@ describe("the hosted connector reads no file on the server", () => {
     )!.inputSchema;
     expect(schema.properties.path.description).toMatch(/Always refused/);
     expect(JSON.stringify(schema)).not.toMatch(/Exactly one of `path`/);
+  });
+
+  it("start_workflow_run with `triggerInputPath` is refused before anything is read or sent", async () => {
+    const base = await start();
+    const res = await post(
+      base,
+      call("start_workflow_run", { workflowId: "w-1", triggerInputPath: file }),
+      bearer("axp_one"),
+    );
+    expect(res.status).toBe(200);
+    expect(res.json!.result.isError).toBe(true);
+    const text = (res.json!.result.content as { text: string }[]).map((c) => c.text).join("");
+    expect(text).toContain(HOSTED_TRIGGER_INPUT_PATH_REFUSAL);
+    expect(text).not.toContain("SERVER-ONLY-BYTES");
+    expect(seen).toEqual([]);
+
+    const list = await post(base, { jsonrpc: "2.0", id: 2, method: "tools/list", params: {} }, bearer("axp_one"));
+    const schema = (list.json!.result.tools as { name: string; inputSchema: any }[]).find(
+      (t) => t.name === "start_workflow_run",
+    )!.inputSchema;
+    expect(schema.properties.triggerInputPath.description).toMatch(/Always refused/);
   });
 
   it("without a file the hosted refusal names only base64", async () => {

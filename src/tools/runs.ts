@@ -32,6 +32,16 @@
  *   - `POST /runs/{id}/steps/{id}/plan-approval` is NOT, and
  *     `POST /runs/{id}/restart` cannot be. Both are recorded, with the reason,
  *     in `test/exclusions.test.ts` — as a decision rather than an omission.
+ *
+ * A START INPUT CAN COME FROM A FILE. A start input of hundreds of KB (a few
+ * hundred rows and a report) is more than a model can write out inline. So
+ * `triggerInputPath` names a JSON file on the connector's machine
+ * and the tool sends its object as `triggerInput`, unchanged — the same trust
+ * model as `upload_run_input_file`'s `path`, through the same reader, refused
+ * the same way on the hosted connector. It checks only what it alone can know:
+ * that the file is UTF-8 JSON holding one object, which is what the platform's
+ * `TriggerRunRequest.triggerInput` takes. No size limit of its own: the
+ * platform's body-size guard is the limit.
  */
 
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -39,12 +49,119 @@ import { z } from "zod";
 
 import type { AxonityClient } from "../client.js";
 import { guard, jsonResult } from "./result.js";
+import { readLocalFile } from "./runInputFiles.js";
 
 const CONFIRM = z
   .literal(true)
   .describe("Must be true. Destructive and irreversible — ask your human first.");
 
-export function registerRunTools(server: McpServer, client: AxonityClient): void {
+/** Why a hosted connector refuses `triggerInputPath`, before it reads anything. */
+export const HOSTED_TRIGGER_INPUT_PATH_REFUSAL =
+  "`triggerInputPath` is not available on the connector Axonity hosts: it runs " +
+  "on the Axonity server, so a path would name a file there, not on your " +
+  "machine. Send the start input itself as `triggerInput`.";
+
+/** How a local file's refusals name `triggerInputPath`, and what to send instead. */
+const TRIGGER_INPUT_PATH_WORDS = {
+  param: "triggerInputPath",
+  elsewhere: "send the start input itself as `triggerInput` instead",
+};
+
+/** What a JSON value is, in words, without any of its content. */
+function kindOf(value: unknown): string {
+  if (value === null) return "null";
+  if (Array.isArray(value)) return "an array";
+  return `a ${typeof value}`;
+}
+
+/**
+ * Where the JSON broke, as a line and column — and never the parser's own
+ * message, which quotes the file ("Unexpected token 's', "{"a": secret…" is
+ * not valid JSON"). The path may name any file the connector's user can read;
+ * a refusal must not carry its content into the conversation.
+ */
+function whereBroken(text: string, err: unknown): string {
+  const at = /at position (\d+)/.exec((err as Error).message ?? "");
+  if (!at) return "";
+  const position = Number(at[1]);
+  const before = text.slice(0, position);
+  const line = before.split("\n").length;
+  const column = position - before.lastIndexOf("\n");
+  return ` at line ${line}, column ${column}`;
+}
+
+/** The JSON object in the file at `path` on this machine, or a refusal that says why not. */
+export async function readTriggerInputFile(path: string): Promise<Record<string, unknown>> {
+  const bytes = await readLocalFile(path, TRIGGER_INPUT_PATH_WORDS);
+  let text: string;
+  try {
+    // `fatal`: a byte that is not UTF-8 is refused, not silently replaced by
+    // U+FFFD — which would send different text than the file holds. A leading
+    // byte order mark is skipped.
+    text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+  } catch {
+    throw new Error(
+      `"${path}" is not UTF-8 text. \`triggerInputPath\` names a JSON file, ` +
+        "saved as UTF-8.",
+    );
+  }
+  if (text.trim() === "") {
+    throw new Error(
+      `"${path}" is empty. \`triggerInputPath\` names a file holding the start ` +
+        "input as one JSON object.",
+    );
+  }
+  let value: unknown;
+  try {
+    value = JSON.parse(text);
+  } catch (err) {
+    throw new Error(
+      `"${path}" is not valid JSON${whereBroken(text, err)}. ` +
+        "`triggerInputPath` names a file holding the start input as one JSON " +
+        "object.",
+    );
+  }
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error(
+      `"${path}" holds ${kindOf(value)}, not a JSON object. The start input is ` +
+        "one object keyed by each parameter's `name`: " +
+        '{ "<name>": <value>, ... }.',
+    );
+  }
+  return value as Record<string, unknown>;
+}
+
+/** How a local connector takes a start input too large to write out: a file. */
+const LOCAL_TRIGGER_INPUT_FILE =
+  "\n\nA START INPUT TOO LARGE TO WRITE OUT can come from a file: " +
+  "`triggerInputPath`, an absolute path to a JSON file on the machine this " +
+  "connector runs on, holding the one JSON object you would otherwise send as " +
+  "triggerInput. The tool reads it and sends that object as triggerInput, " +
+  "unchanged; its content never passes through the conversation. Give at most " +
+  "one of `triggerInput` or `triggerInputPath`. If the connector runs " +
+  "somewhere else than you, the path is read THERE, and a file it cannot find " +
+  "is reported, never guessed. It reads any file the user running this " +
+  "connector may read, following symlinks, from any folder: check the path " +
+  "before a call is approved — the MCP client's approval of each call is the " +
+  "guard.";
+
+/**
+ * How the HOSTED connector takes the start input: inline only. It runs on the
+ * Axonity server, so a path would name a file there — the server's own files,
+ * never the caller's — and `triggerInputPath` is refused before anything is
+ * read.
+ */
+const HOSTED_TRIGGER_INPUT_FILE =
+  "\n\nGive the start input as triggerInput. `triggerInputPath` is refused: " +
+  "this connector runs on the Axonity server, so a path would name a file " +
+  "there, not on your machine.";
+
+export function registerRunTools(
+  server: McpServer,
+  client: AxonityClient,
+  options: { hosted?: boolean } = {},
+): void {
+  const hosted = options.hosted === true;
   server.tool(
     "start_workflow_run",
     "Start a real run of a workflow — the way to TEST a workflow you just " +
@@ -61,6 +178,7 @@ export function registerRunTools(server: McpServer, client: AxonityClient): void
       "\n\nA start with a FILE parameter takes the reference " +
       "upload_run_input_file returns: upload each file first, then put the " +
       "reference in triggerInput under that parameter. " +
+      (hosted ? HOSTED_TRIGGER_INPUT_FILE : LOCAL_TRIGGER_INPUT_FILE) +
       "\n\nA run may PARK on a step that asks a question instead of finishing. " +
       "list_todo_steps lists the step it waits on (each item carries its runId " +
       "and stepId); answer_run_question and send_run_message are how it moves " +
@@ -85,23 +203,55 @@ export function registerRunTools(server: McpServer, client: AxonityClient): void
           "Input payload for the start you are firing, keyed by each " +
             "parameter's `name`. Omit for none. Do NOT send a parameter marked " +
             "`pinned` — the author owns that value and it is overwritten on " +
-            "every run regardless of what you send.",
+            "every run regardless of what you send." +
+            (hosted
+              ? ""
+              : " At most one of `triggerInput` or `triggerInputPath`; for an " +
+                "input too large to write out, use `triggerInputPath`."),
+        ),
+      triggerInputPath: z
+        .string()
+        .optional()
+        .describe(
+          hosted
+            ? "Not available on the connector Axonity hosts: it would name a " +
+                "file on the Axonity server. Always refused; send `triggerInput`."
+            : "Absolute path to a JSON file on the machine this connector runs " +
+                "on, holding the start input as one JSON object; it is sent as " +
+                "`triggerInput`, so the same keys and rules apply. At most one " +
+                "of `triggerInput` or `triggerInputPath`.",
         ),
       manualPhases: z
         .boolean()
         .optional()
         .describe("Run with manual phase gating. Defaults to false."),
     },
-    async ({ workflowId, triggerId, triggerInput, manualPhases }) =>
-      guard(async () =>
-        jsonResult(
+    async ({ workflowId, triggerId, triggerInput, triggerInputPath, manualPhases }) =>
+      guard(async () => {
+        // Before anything else, and whatever else was sent: nothing on the
+        // server's disk is read for a caller of the hosted connector.
+        if (hosted && triggerInputPath !== undefined) {
+          throw new Error(HOSTED_TRIGGER_INPUT_PATH_REFUSAL);
+        }
+        if (triggerInput !== undefined && triggerInputPath !== undefined) {
+          throw new Error(
+            "Give at most one of `triggerInput` or `triggerInputPath`: the " +
+              "input itself, or the path of a JSON file on the machine this " +
+              "connector runs on that holds it.",
+          );
+        }
+        const input =
+          triggerInputPath !== undefined
+            ? await readTriggerInputFile(triggerInputPath)
+            : triggerInput;
+        return jsonResult(
           await client.post(`/api/v1/workflows/${workflowId}/runs`, {
             ...(triggerId ? { triggerId } : {}),
-            ...(triggerInput ? { triggerInput } : {}),
+            ...(input ? { triggerInput: input } : {}),
             ...(manualPhases === undefined ? {} : { manualPhases }),
           }),
-        ),
-      ),
+        );
+      }),
   );
 
   server.tool(

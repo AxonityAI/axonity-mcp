@@ -11,11 +11,12 @@ It runs on your machine and talks to Axonity **only over the public REST API**,
 authenticated with a token for one workspace. The backend re-enforces
 tenant + scope on every call, so the connector is not a trust boundary for what
 it may do in Axonity. One thing only the connector decides: which **local file**
-leaves your machine. `upload_run_input_file` with `path` reads any file the user
-running the connector may read, following symlinks, with no folder it is limited
-to, and the platform cannot tell what the file is. Use it with a connector
-running locally for someone who trusts it, and check the path before you approve
-the call — your MCP client's approval of each call is the guard.
+leaves your machine. `upload_run_input_file` with `path` and `start_workflow_run`
+with `triggerInputPath` read any file the user running the connector may read,
+following symlinks, with no folder they are limited to, and the platform cannot
+tell what the file is. Use them with a connector running locally for someone who
+trusts it, and check the path before you approve the call — your MCP client's
+approval of each call is the guard.
 
 ## Setup
 
@@ -520,6 +521,14 @@ omitting it fires the first, which on a workflow with a button *and* a schedule
 is an arbitrary choice. A parameter marked `pinned` is one the **author** owns:
 it is overwritten on every run, so a caller must not send it.
 
+**A start input too large to write out.** Give `start_workflow_run` a
+`triggerInputPath` instead of `triggerInput`: an absolute path to a JSON file on
+the machine the connector runs on, holding the start input as one JSON object.
+The connector reads it and sends that object as `triggerInput`, unchanged, so
+its content never passes through the conversation. At most one of the two. A
+file that is not UTF-8 JSON holding one object is refused in words, without
+quoting the file.
+
 **A start that takes a file.** `upload_run_input_file` stores a file the way the
 start form in Axonity does (`POST /api/v1/run-input-files`) and answers its
 reference, `{ fileId, filename, contentType, sizeBytes, sha256 }`. Put that
@@ -665,8 +674,9 @@ What differs in hosted mode:
   table (`src/generated/tokenRouteClasses.ts`, pinned from
   `backend/scripts/dump_token_route_classes.py` in axonity-flow). A tool on a
   closed route keeps its name and says why it is closed.
-- **No local files.** `upload_run_input_file` takes `contentBase64` only: the
-  process runs on the Axonity server, so a `path` would name a file there, and
+- **No local files.** `upload_run_input_file` takes `contentBase64` only, and
+  `start_workflow_run` takes `triggerInput` only: the process runs on the
+  Axonity server, so a `path` or `triggerInputPath` would name a file there, and
   it is refused before anything is read.
 - **Stateless, with a ceiling.** Every message is its own POST (no sessions; GET
   and DELETE on `/mcp` are 405; a batch is answered 400). A request waits in
