@@ -691,6 +691,9 @@
   "GET /api/v1/knowledge/oversight/tips": {
     "class": "lezen"
   },
+  "GET /api/v1/knowledge/oversight/waiting": {
+    "class": "lezen"
+  },
   "GET /api/v1/knowledge/search": {
     "class": "lezen"
   },
@@ -713,6 +716,9 @@
     "class": "lezen"
   },
   "GET /api/v1/knowledge/tree/{node_id}/related": {
+    "class": "lezen"
+  },
+  "GET /api/v1/library/summary": {
     "class": "lezen"
   },
   "GET /api/v1/me/mcp-access": {
@@ -1288,7 +1294,7 @@
   },
   "GET /modules/{module_id}/settings": {
     "class": "dicht",
-    "why": "scope[\"route\"] \u2014 carries the path it was declared with."
+    "why": "scope[\"route\"] — carries the path it was declared with."
   },
   "GET /oauth/authorize": {
     "class": "dicht",
@@ -1452,7 +1458,7 @@
   },
   "PATCH /modules/{module_id}/settings": {
     "class": "dicht",
-    "why": "scope[\"route\"] \u2014 carries the path it was declared with."
+    "why": "scope[\"route\"] — carries the path it was declared with."
   },
   "POST /api/v1/_test/install-stub-provider": {
     "class": "dicht",

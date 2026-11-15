@@ -127,6 +127,13 @@ function isExcluded(operation: string): boolean {
  * workflow's owner move (#2363). The fourth operation it brought,
  * `POST /agents/{id}/publish-release`, is excluded in `denyList.ts`: it
  * publishes.
+ *
+ * The refresh for agent-first R4 (axonity-flow `af-r4-navigatie`) brought two
+ * routes in: `GET /knowledge/oversight/waiting`, which is excluded in
+ * `denyList.ts` (the badge of the oversight work lists), and
+ * `GET /library/summary` — the counts on the Library hub, per kind — which
+ * stays open here, next to `GET /publish-approvals/pending-count`, the other
+ * count behind a badge: whether an agent needs it is a product decision.
  */
 const OPEN_FOR_DECISION_79: readonly string[] = [
   "DELETE /api/v1/audiences/{audience_id}",
@@ -153,6 +160,7 @@ const OPEN_FOR_DECISION_79: readonly string[] = [
   "GET /api/v1/invoices/{invoice_id}",
   "GET /api/v1/knowledge/settings",
   "GET /api/v1/knowledge/source-types",
+  "GET /api/v1/library/summary",
   "GET /api/v1/publish-approvals/pending-count",
   "GET /api/v1/runs/{run_id}/action-verdicts",
   "GET /api/v1/runs/{run_id}/application-actions",

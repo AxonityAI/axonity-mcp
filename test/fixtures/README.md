@@ -11,6 +11,38 @@ diff in review.
 
 ## Provenance
 
+- **Agent-first R4 delta on the R3 capture (2026-11-15), not released; NOT a
+  whole dump — to be re-recorded whole when axonity-flow's R4 is merged.** Flow
+  `af-r4-navigatie` at `98b435dddbe66300545772c47c7539b47a65fff1` is based on
+  `5ac0e287e`, which lags `main` (R3 of #1826 moved Cortex into a module and
+  changed the module schemas), so a whole dump of it would take R3's changes out
+  of the pin. Instead: the backend's own `scripts/dump_openapi.py` and
+  `scripts/dump_token_route_classes.py` were run read-only on a `git archive` of
+  `98b435ddd` and on one of its merge-base `5ac0e287e` (`env -i`, dotenv off, a
+  database URL at a closed port, `python -B -I`, `src` verified to load from the
+  archive; no server, database or tenant), and what R4 changed between the two
+  was applied to the R3 pin. For every operation and schema touched, the pin was
+  first checked to equal the dump of `5ac0e287e` (all did), so nothing of R3's was
+  overwritten. The result equals the dump of `98b435ddd` everywhere except the
+  seven R3 module schemas, which keep R3's version.
+  - `openapi.snapshot.json`: **2,599,925 bytes**, SHA-256
+    `b16e719d15261502a8d083ae5223977a959e8c95de14c368a295fa8d8fb12381`.
+    791 -> 793 operations, none removed. Added: `GET /knowledge/oversight/waiting`
+    (`OversightWaiting`), `GET /library/summary` (`LibrarySummary`,
+    `LibraryKindSummary`). Changed, nine operations: `view` (`mine` | `all`,
+    default `mine`) on `GET /publish-approvals` and `GET /publish-approvals/release`;
+    new route descriptions on the single reads and on approve and reject of both
+    kinds and on `GET /publish-approvals/pending-count`. Changed schemas:
+    `PublishApprovalItem`, `ReleaseApprovalSummary`, `ReleaseApprovalItem` (`origin`,
+    `requestedByName`, `canDecide`, `version`), `PendingApprovalCount`
+    (`allPending`), `RunSummary` (`ownerAgentId`, `currentStepName`).
+  - `token-route-classes.snapshot.json`: **88,459 bytes**, SHA-256
+    `64ca5361fe9023b552566cf0ccbfab679165e3eac2c10dba06621fb4e0f16df6`; 821 -> 823
+    rows (both new routes `lezen`); `src/generated/tokenRouteClasses.ts`
+    regenerated from it. `src/generated/listFilters.ts` regenerated: unchanged.
+  - The levenscyclus (R3) capture waits in its own branch and was not merged when
+    this was recorded; whichever of the two is merged second re-records.
+
 - **R3 capture on backend `783becc90` (2026-11-15), not released:** a WHOLE dump
   with the backend's own `scripts/dump_openapi.py` and
   `scripts/dump_token_route_classes.py`, run read-only on a `git archive` of the

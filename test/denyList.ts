@@ -290,9 +290,17 @@ export const FORBIDDEN: Rule[] = [
   // person, but a case is handed to a PERSON, never to a token: opening these
   // lists to tokens is its own decision, not taken yet. #88 asked for
   // doubtful and expiring.
+  //
+  // `oversight/waiting` (agent-first R4, A3) is the BADGE of those lists: one
+  // number, "how many cases wait for YOUR decision" — the questions about two
+  // facts and the facts waiting for a person of an audience you maintain, and
+  // the doubtful cases you hold (its route description says so). It is counted
+  // from the same lists and answers for the same reader, so it stays out for
+  // the same reason; a count of someone's own work is no more an agent's than
+  // the work.
   {
-    label: "oversight work lists (a colleague's own)",
-    path: /\/api\/v1\/knowledge\/(attention|oversight\/(doubtful|expiring|tips|scope))$/,
+    label: "oversight work lists (a colleague's own) and their badge",
+    path: /\/api\/v1\/knowledge\/(attention|oversight\/(doubtful|expiring|tips|scope|waiting))$/,
   },
 ];
 
