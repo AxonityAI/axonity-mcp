@@ -422,7 +422,15 @@ export function registerEntityTools(
             `again with a new name, or rename the other one first." — restore it ` +
             `again with \`name\`, 1 to 255 characters; a name another item already ` +
             `has is refused too ("Choose a different name."). \`name\` is not ` +
-            `applied to a ${singular} that is already live (\`restored: false\`).`
+            `applied to a ${singular} that is already live (\`restored: false\`).` +
+            // Both sentences are held by backend tests; the source per sentence is in
+            // af-levenscyclus.md (R3 stap n). A kind without versions has no draft.
+            (publishable
+              ? ` The new name lands on the working draft (one is made if there is ` +
+                `none); the published version stays as it was until a new publication.`
+              : "") +
+            ` An archived ${singular} may come back under a new name too: it comes ` +
+            `back archived, under the new name.`
           : "") +
         (def.archivable
           ? ` A ${singular} that was archived when it was deleted is still archived ` +

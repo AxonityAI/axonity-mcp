@@ -826,7 +826,7 @@ These are enforced by the backend, not merely by convention:
   schema; `test/conformance.test.ts` fails if a route or documented enum
   diverges (see `test/fixtures/README.md`).
 - **Every backend route is decided, and the build says so.**
-  `test/completeness.test.ts` partitions all 444 operations in the pinned
+  `test/completeness.test.ts` partitions all 826 operations in the pinned
   snapshot into *covered by a tool* or *excluded by a rule that carries a
   written reason*, and fails on anything in neither. A route nobody has decided
   about is indistinguishable from one somebody is still working on, which is

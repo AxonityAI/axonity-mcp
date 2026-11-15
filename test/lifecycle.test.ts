@@ -215,6 +215,44 @@ describe("restore takes a new name on exactly the kinds whose name is unique", (
   });
 });
 
+describe("what a rename on restore does to a published item and to an archived one", () => {
+  // Each sentence is held by a backend test (R3 stap n, "Bron per zin").
+  it("a kind with versions says the new name lands on the working draft and the publication stays", () => {
+    const { descriptions } = surface();
+    for (const e of renamingKinds.filter((x) => x.publishable !== false)) {
+      const d = descriptions.get(`restore_${e.singular}`)!;
+      expect(d, e.singular).toMatch(/lands on the working draft/);
+      expect(d, e.singular).toMatch(/published version stays as it was until a new publication/);
+    }
+  });
+
+  it("a kind without versions (data_source) does not claim a draft", () => {
+    const { descriptions } = surface();
+    const unversioned = renamingKinds.filter((x) => x.publishable === false);
+    expect(unversioned.map((e) => e.singular)).toEqual(["data_source"]);
+    for (const e of unversioned) {
+      const d = descriptions.get(`restore_${e.singular}`)!;
+      expect(d, e.singular).not.toMatch(/working draft|published version/);
+    }
+  });
+
+  it("every renaming kind says an archived item may take a new name and comes back archived", () => {
+    const { descriptions } = surface();
+    for (const e of renamingKinds) {
+      const d = descriptions.get(`restore_${e.singular}`)!;
+      expect(d, e.singular).toMatch(/An archived .* may come back under a new name too/);
+    }
+  });
+
+  it("a kind that cannot rename says none of it", () => {
+    const { descriptions } = surface();
+    for (const e of ENTITIES.filter((x) => x.deleteVersionParam && !renamingKinds.includes(x))) {
+      const d = descriptions.get(`restore_${e.singular}`)!;
+      expect(d, e.singular).not.toMatch(/working draft|new name too/);
+    }
+  });
+});
+
 describe("a restored item that was archived is still archived", () => {
   it("every restore says so, once", () => {
     const { descriptions } = surface();

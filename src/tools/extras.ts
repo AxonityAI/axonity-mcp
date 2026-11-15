@@ -273,13 +273,12 @@ export function registerConnectorTools(
  * spellings are carried when present rather than renamed into a shape the
  * backend does not use.
  */
-const IDENTITY_FIELDS = [
+export const IDENTITY_FIELDS = [
   "id",
   "name",
   "title",
   "description",
   "summary",
-  "status",
   "source",
   "linkSource",
   "scope",
@@ -443,7 +442,7 @@ export function registerAttachTools(
       `List the ${subject} currently scoped to an agent — the read-back for ` +
         `attach_${subject}_to_agent. Use it to confirm a link took, or to read a ` +
         `source agent's wiring before recreating it. Read-only. ` +
-        `\n\nReturns IDENTITY by default: id, name, description, status and ` +
+        `\n\nReturns IDENTITY by default: id, name, description and ` +
         `linkSource (why it is in scope — an explicit link, or tenant-wide). ` +
         `Bodies are omitted, because auditing a tenant means asking this for ` +
         `every agent and a single playbook can run to 15 KB. Read one body ` +
@@ -468,7 +467,7 @@ export function registerAttachTools(
           .optional()
           .describe(
             'How much of each row to return. "identity" (default) is id, name, ' +
-              'description, status and linkSource. "full" is the entire entity, ' +
+              'description and linkSource. "full" is the entire entity, ' +
               "bodies included — expensive, and rarely what an audit needs.",
           ),
       },
@@ -546,7 +545,7 @@ export function registerAttachTools(
           .optional()
           .describe(
             'How much of each row to return. "identity" (default) is id, name, ' +
-              `description and status. "full" is the entire ${subject}, body ` +
+              `description. "full" is the entire ${subject}, body ` +
               "included.",
           ),
       },
