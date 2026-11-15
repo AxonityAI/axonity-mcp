@@ -11,6 +11,36 @@ diff in review.
 
 ## Provenance
 
+- **R3 capture on backend `783becc90` (2026-11-15), not released:** a WHOLE dump
+  with the backend's own `scripts/dump_openapi.py` and
+  `scripts/dump_token_route_classes.py`, run read-only on a `git archive` of the
+  clean commit `783becc9055c0124ab9b37034deb116fd8a028ce` (Flow
+  `feat/1826-r3`), with a venv of that same branch. Safety as for the R1
+  capture below: `env -i`, dotenv off, a database URL at a closed port,
+  `python -B -I`, `src` verified to load from the archive. No server, database
+  or tenant. Replaces the R1 capture.
+  - `openapi.snapshot.json`: **2,589,605 bytes**, SHA-256
+    `1ddbe1a92754550c3f069d382061f2c70fcee97c5f02cc39a4c3572d5a21710c`.
+    788 -> 791 operations, none removed, none of the 788 changed.
+    From R3 of #1826: `ModuleResponse.source` is `core|platform` (default
+    `platform`, was `legacy|platform`), `ModuleResponse.toolTypes: string[]`,
+    `ModuleResponse.settingsPath`, `NavigationItem` became
+    `NavigationItemResponse` (+ `section`, `order`; new
+    `NavigationSectionResponse`), and `src__schemas__knowledge__TreeNode` is now
+    `src__modules__cortex__schemas__knowledge__TreeNode`.
+    From Flow `main` (team mcp-token, not R3): three operations
+    (`GET /me/mcp-access`, `GET /oauth/requests/{request_handle}`,
+    `POST /oauth/requests/{request_handle}/decision`) with their schemas, and
+    `effectiveReads` / `readsReduced` on `CreatePersonalTokenResponse` and
+    `PersonalTokenItem`. The three operations are excluded in `test/denyList.ts`
+    with the backend table's own reasons; no tool covers them.
+  - `token-route-classes.snapshot.json`: **88,331 bytes**, SHA-256
+    `690f43462b29d127fe1d9d4af381c7e0ecef702a4b446864f0af70891e1591dd`;
+    `src/generated/tokenRouteClasses.ts` regenerated from it. 821 rows (+9, all
+    `dicht`, all from Flow `main`): the three operations above, four
+    `/.well-known/*`, `GET /oauth/authorize` and `POST /oauth/token`.
+  - `src/generated/listFilters.ts` regenerates unchanged.
+
 - **R1 capture on backend `2f75397eb` (2026-11-14), not released; replaces the
   two R1 entries below:** a WHOLE dump with the backend's own
   `scripts/dump_openapi.py` and `scripts/dump_token_route_classes.py`, run

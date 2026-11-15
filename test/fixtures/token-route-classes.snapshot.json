@@ -261,6 +261,22 @@
     "class": "dicht",
     "why": "no authentication of its own: a token never reaches the gate"
   },
+  "GET /.well-known/oauth-authorization-server": {
+    "class": "dicht",
+    "why": "no authentication of its own: a token never reaches the gate"
+  },
+  "GET /.well-known/oauth-protected-resource": {
+    "class": "dicht",
+    "why": "no authentication of its own: a token never reaches the gate"
+  },
+  "GET /.well-known/oauth-protected-resource/mcp": {
+    "class": "dicht",
+    "why": "no authentication of its own: a token never reaches the gate"
+  },
+  "GET /.well-known/{rest:path}": {
+    "class": "dicht",
+    "why": "no authentication of its own: a token never reaches the gate"
+  },
   "GET /api/v1/_test/stub-stats": {
     "class": "dicht",
     "why": "no authentication of its own: a token never reaches the gate"
@@ -699,6 +715,10 @@
   "GET /api/v1/knowledge/tree/{node_id}/related": {
     "class": "lezen"
   },
+  "GET /api/v1/me/mcp-access": {
+    "class": "dicht",
+    "why": "a token never manages tokens"
+  },
   "GET /api/v1/me/settings/{module_id}": {
     "class": "dicht",
     "why": "(forbid_service_token_for_personal_reads); the person resolves their own settings in the browser"
@@ -764,6 +784,10 @@
   },
   "GET /api/v1/notifications/unread-count": {
     "class": "lezen"
+  },
+  "GET /api/v1/oauth/requests/{request_handle}": {
+    "class": "dicht",
+    "why": "a token never grants a token: the consent screen is a person's, with a session"
   },
   "GET /api/v1/output-schemas": {
     "class": "lezen"
@@ -1265,6 +1289,10 @@
   "GET /modules/{module_id}/settings": {
     "class": "dicht",
     "why": "scope[\"route\"] \u2014 carries the path it was declared with."
+  },
+  "GET /oauth/authorize": {
+    "class": "dicht",
+    "why": "no authentication of its own: a token never reaches the gate"
   },
   "PATCH /api/v1/admin/wake-tasks/{task_id}": {
     "class": "dicht",
@@ -2100,6 +2128,10 @@
     "class": "dicht",
     "why": "personal state"
   },
+  "POST /api/v1/oauth/requests/{request_handle}/decision": {
+    "class": "dicht",
+    "why": "a token never grants a token: the consent screen is a person's, with a session"
+  },
   "POST /api/v1/output-schemas": {
     "class": "configuratie"
   },
@@ -2673,6 +2705,10 @@
     "why": "webhook triggers"
   },
   "POST /mcp": {
+    "class": "dicht",
+    "why": "no authentication of its own: a token never reaches the gate"
+  },
+  "POST /oauth/token": {
     "class": "dicht",
     "why": "no authentication of its own: a token never reaches the gate"
   },

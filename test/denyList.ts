@@ -125,6 +125,14 @@ export const FORBIDDEN: Rule[] = [
   // `token_route_classes.py`), so a tool here would only be refused. Letting a
   // token mint, list or revoke tokens would also let it widen its own reach.
   { label: "personal tokens (a token never manages tokens)", path: /\/api\/v1\/me\/tokens(\/|$)/ },
+  // The same backend group holds `GET /me/mcp-access` — what a person may put
+  // on a personal token, which only the screen that mints one reads
+  // (`# a token never manages tokens`, same table).
+  { label: "personal token eligibility (a token never manages tokens)", path: /\/api\/v1\/me\/mcp-access$/ },
+  // OAuth consent for the hosted /mcp (axonity-flow R4): the request and its
+  // decision are a person's, with a session. The table's reason is "a token
+  // never grants a token: the consent screen is a person's, with a session".
+  { label: "OAuth consent (a token never grants a token)", path: /\/api\/v1\/oauth\/requests\/[^/]+(\/decision)?$/ },
   { label: "deployment", path: /\/deployment(\/|$)/ },
   // `/config/secrets` lives behind this rule and stays closed to every verb —
   // it is the deploy-time surface, not the tenant's secret catalogue.
