@@ -66,6 +66,7 @@ import { registerPromptPlacementTools } from "./tools/promptPlacement.js";
 import { registerQueryTools } from "./tools/queries.js";
 import { LIST_FILTERS } from "./generated/listFilters.js";
 import { type EntityDef, registerEntityTools } from "./tools/register.js";
+import { registerTrashTools } from "./tools/trash.js";
 import { registerRunTools } from "./tools/runs.js";
 import { registerRunInputFileTools } from "./tools/runInputFiles.js";
 import { registerSecretTools } from "./tools/secrets.js";
@@ -376,6 +377,8 @@ const QUERY_NOTE =
 export const ENTITIES: EntityDef[] = [
   {
     singular: "workflow",
+    archivable: true,
+    archiveGuard: "in_use",
     basePath: "/api/v1/workflows",
     updateMethod: "PATCH",
     label: "workflows (business processes)",
@@ -385,6 +388,9 @@ export const ENTITIES: EntityDef[] = [
   },
   {
     singular: "agent",
+    archivable: true,
+    archiveGuard: "in_use",
+    statusRetired: true,
     basePath: "/api/v1/agents",
     updateMethod: "PUT",
     label: "agents",
@@ -395,6 +401,9 @@ export const ENTITIES: EntityDef[] = [
   },
   {
     singular: "tool",
+    archivable: true,
+    archiveGuard: "in_use",
+    statusRetired: true,
     basePath: "/api/v1/tools",
     updateMethod: "PUT",
     label: "tools (functions, connectors, validators, evaluators)",
@@ -405,6 +414,9 @@ export const ENTITIES: EntityDef[] = [
   },
   {
     singular: "skill",
+    archivable: true,
+    restoreRename: true,
+    statusRetired: true,
     basePath: "/api/v1/skills",
     updateMethod: "PUT",
     label: "skills (reusable know-how for agents)",
@@ -414,6 +426,9 @@ export const ENTITIES: EntityDef[] = [
   },
   {
     singular: "policy",
+    archivable: true,
+    restoreRename: true,
+    statusRetired: true,
     basePath: "/api/v1/policies",
     updateMethod: "PUT",
     label: "policies (rules and guardrails for agents)",
@@ -425,6 +440,9 @@ export const ENTITIES: EntityDef[] = [
   },
   {
     singular: "reference_doc",
+    archivable: true,
+    restoreRename: true,
+    statusRetired: true,
     basePath: "/api/v1/reference-docs",
     updateMethod: "PUT",
     label: "reference docs (background knowledge for agents)",
@@ -435,6 +453,10 @@ export const ENTITIES: EntityDef[] = [
   },
   {
     singular: "output_schema",
+    archivable: true,
+    archiveGuard: "in_use",
+    restoreRename: true,
+    statusRetired: true,
     basePath: "/api/v1/output-schemas",
     updateMethod: "PUT",
     label: "output schemas (reusable step/agent output contracts)",
@@ -444,6 +466,8 @@ export const ENTITIES: EntityDef[] = [
   },
   {
     singular: "prompt_snippet",
+    archivable: true,
+    archiveGuard: "locked",
     basePath: "/api/v1/prompt-snippets",
     updateMethod: "PATCH",
     label: "prompt snippets (reusable prompt fragments)",
@@ -451,6 +475,7 @@ export const ENTITIES: EntityDef[] = [
   },
   {
     singular: "flow",
+    archivable: true,
     basePath: "/api/v1/flows",
     updateMethod: "PATCH",
     label: "flows (reusable workflow fragments)",
@@ -465,6 +490,10 @@ export const ENTITIES: EntityDef[] = [
     // field a blind `fields` bag can wipe) — hence the two entries below and
     // the explicit row tools in `tools/dataTables.ts`.
     singular: "data_table",
+    archivable: true,
+    archiveGuard: "in_use",
+    restoreRename: true,
+    statusRetired: true,
     basePath: "/api/v1/data-tables",
     updateMethod: "PUT",
     plural: "data_tables",
@@ -507,6 +536,10 @@ export const ENTITIES: EntityDef[] = [
     // as a table's routes — so the whole family, versions and publish request
     // included, comes from the registrars with no code of its own.
     singular: "measure",
+    archivable: true,
+    archiveGuard: "in_use",
+    restoreRename: true,
+    statusRetired: true,
     basePath: "/api/v1/measures",
     updateMethod: "PUT",
     label: "measures (the agreed definition of one number in the model)",
@@ -545,6 +578,9 @@ export const ENTITIES: EntityDef[] = [
     // the registrars. Running it once, and who holds its tool, are in
     // tools/queries.ts.
     singular: "query",
+    archivable: true,
+    restoreRename: true,
+    statusRetired: true,
     basePath: "/api/v1/queries",
     updateMethod: "PUT",
     plural: "queries",
@@ -573,6 +609,9 @@ export const ENTITIES: EntityDef[] = [
     // family comes from the registrars. What is not generic (the executors it
     // runs on, what it has learned) is in tools/applications.ts.
     singular: "application",
+    archivable: true,
+    restoreRename: true,
+    statusRetired: true,
     basePath: "/api/v1/applications",
     updateMethod: "PUT",
     label: "applications (programs an agent operates through an executor, with their limits)",
@@ -604,6 +643,9 @@ export const ENTITIES: EntityDef[] = [
   // on the shared cursor.
   {
     singular: "data_source",
+    archivable: true,
+    archiveGuard: "in_use",
+    restoreRename: true,
     basePath: "/api/v1/data-sources",
     updateMethod: "PUT",
     label: "data sources (warehouses the workspace may read, e.g. BigQuery)",
@@ -656,6 +698,7 @@ export const ENTITIES: EntityDef[] = [
   },
   {
     singular: "dashboard",
+    archivable: true,
     basePath: "/api/v1/dashboards",
     updateMethod: "PUT",
     label: "dashboards (tiles of measures over the workspace's model)",
@@ -801,6 +844,7 @@ export function registerAll(
   registerApplicationTools(server as McpServer, client);
   registerAccessTools(server as McpServer, client);
   registerKnowledgeGraphTools(server as McpServer, client);
+  registerTrashTools(server as McpServer, client);
 }
 
 /** How the server introduces itself, on either transport. */

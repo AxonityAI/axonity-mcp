@@ -280,32 +280,51 @@ describe("review 13 of #107: the guide's paged lists, the plan's count, the gene
 });
 
 describe("review 14 of #107: archive state and the contract's kinds, from the schema and the recording", () => {
-  /** Entities whose update body takes a `status` that can be `archived`. */
-  const archivable = (): string[] => {
-    const schemas = snapshot.components.schemas as Record<
-      string,
-      { properties?: Record<string, { enum?: string[]; anyOf?: { enum?: string[] }[]; description?: string }> }
-    >;
-    const pascal = (e: string) => e.split("_").map((x) => x[0].toUpperCase() + x.slice(1)).join("");
-    return ENTITIES.map((e) => e.singular)
-      .filter((e) => {
-        const body = schemas[`Update${pascal(e)}Request`] ?? schemas[`Update${pascal(e)}V2Request`];
-        const status = body?.properties?.status;
-        if (!status) return false;
-        const values = [...(status.enum ?? []), ...(status.anyOf ?? []).flatMap((a) => a.enum ?? [])];
-        return values.includes("archived") || /`archived`/.test(status.description ?? "");
-      })
+  /** Entities whose collection has `POST {base}/{entity_id}/archive` on the backend. */
+  const archivable = (): string[] =>
+    ENTITIES.filter((e) => `${e.basePath}/{entity_id}/archive` in snapshot.paths)
+      .map((e) => e.singular)
       .sort();
-  };
 
-  it("the delete section names exactly the entities that also have an archived status", () => {
+  const named = (text: string): string[] =>
+    [...text.matchAll(/`([a-z_]+)`/g)]
+      .map((m) => m[1])
+      .filter((x) => ENTITIES.some((e) => e.singular === x))
+      .sort();
+
+  it("the delete section names exactly the entities the backend lets you archive", () => {
     const start = CONVENTIONS.indexOf("## Delete is recoverable");
     const section = CONVENTIONS.slice(start, CONVENTIONS.indexOf("\n## ", start + 1));
     expect(section).not.toMatch(/There is no "archive" state/);
-    const bullet = section.slice(section.indexOf("- Deleting is not archiving."));
-    const named = [...bullet.slice(0, bullet.indexOf("\n- ") > 0 ? bullet.indexOf("\n- ") : undefined)
-      .matchAll(/`([a-z_]+)`/g)].map((m) => m[1]).filter((x) => ENTITIES.some((e) => e.singular === x));
-    expect(named.sort()).toEqual(archivable());
+    expect(section).not.toMatch(/set with[\s\\`]*update_/);
+    const bullet = section
+      .slice(section.indexOf("- Deleting is not archiving."))
+      .replace(/\s+/g, " ");
+    const archive = bullet.slice(0, bullet.indexOf("Do not archive by sending"));
+    expect(archive.length).toBeGreaterThan(0);
+    expect(named(archive)).toEqual(archivable());
+  });
+
+  it("and the ones that refuse a `status` are the ones registered as having lost it", () => {
+    const start = CONVENTIONS.indexOf("## Delete is recoverable");
+    const section = CONVENTIONS.slice(start, CONVENTIONS.indexOf("\n## ", start + 1));
+    const bullet = section
+      .slice(section.indexOf("Do not archive by"))
+      .replace(/\s+/g, " ");
+    const refusing = bullet.slice(0, bullet.indexOf("refuse it."));
+    expect(named(refusing)).toEqual(
+      ENTITIES.filter((e) => e.statusRetired).map((e) => e.singular).sort(),
+    );
+  });
+
+  it("the restore bullet names exactly the kinds whose restore takes a name", () => {
+    const start = CONVENTIONS.indexOf("## Delete is recoverable");
+    const section = CONVENTIONS.slice(start, CONVENTIONS.indexOf("\n## ", start + 1));
+    const from = section.indexOf("- `restore_*` can itself 409");
+    const bullet = section.slice(from, section.indexOf("\n- ", from + 1));
+    expect(named(bullet)).toEqual(
+      ENTITIES.filter((e) => e.restoreRename).map((e) => e.singular).sort(),
+    );
   });
 
   it("does not call runs the only thing with an archive state", () => {

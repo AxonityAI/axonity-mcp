@@ -243,6 +243,10 @@ has run cleanly once, at its current version.
   \`restore_*\` brings it back; \`list_deleted_*\` shows what's waiting. This
   applies uniformly to every entity that has a \`delete_*\` and a
   \`restore_*\` tool.
+- The Trash is one list for every kind: \`list_trash\` (a page, newest deletion
+  first, with who deleted it and what it was carried by) and \`trash_summary\`
+  (how many of each, and the installation's \"Empty the trash after\"). Deleting
+  permanently is an administrator's act in Axonity; there is no tool for it.
 - The same applies one level down, to version HISTORY:
   \`delete_*_version\` removes one entry from history (the current draft and
   published version are protected and can't be targeted this way);
@@ -250,12 +254,22 @@ has run cleanly once, at its current version.
   version numbers stay reserved rather than reused, so gaps in the numbering
   are normal, not a sign of corruption.
 - \`restore_*\` can itself 409 if a live entity now holds the same name/slot —
-  the error names the conflicting one.
-- Deleting is not archiving. Some entities also have a \`status\` that can be
-  \`archived\` — kept, not offered — set with \`update_*\`: \`agent\`, \`tool\`,
-  \`skill\`, \`policy\`, \`reference_doc\`, \`output_schema\`, \`data_table\`,
-  \`measure\`, \`query\` and \`application\`. The values each takes are in
-  \`get_entity_authoring_contract\`. Runs have an archive of their own
+  the error names the conflicting one. On \`skill\`, \`policy\`,
+  \`reference_doc\`, \`output_schema\`, \`application\`, \`data_table\`,
+  \`measure\`, \`query\` and \`data_source\`, whose name is unique, pass
+  \`name\` to restore it under another one.
+- Deleting is not archiving. **Archived** is its own act, beside Draft and
+  Published: \`archive_*\` / \`unarchive_*\` on \`workflow\`, \`agent\`, \`tool\`,
+  \`skill\`, \`policy\`, \`reference_doc\`, \`output_schema\`, \`prompt_snippet\`,
+  \`flow\`, \`data_table\`, \`measure\`, \`query\`, \`application\`,
+  \`data_source\` and \`dashboard\`. An archived item is out of use — no run
+  reads it — and out of \`list_*\` unless \`archived\` is \`include\` or \`only\`;
+  its row says \`archivedAt\`. It is not edited until it is unarchived, and only
+  a draft can be archived: a published one is refused until a person
+  unpublishes it in Axonity. Archiving touches no version. Do not archive by
+  sending a \`status\` to \`update_*\`: \`agent\`, \`tool\`, \`skill\`, \`policy\`,
+  \`reference_doc\`, \`output_schema\`, \`data_table\`, \`measure\`, \`query\` and
+  \`application\` refuse it. Runs have an archive of their own
   (\`archive_run\` / \`unarchive_run\`, see below).
 
 ## Per entity — what to create, and what "complete" means

@@ -158,13 +158,13 @@ describe("list_data_tables answers ONE PAGE and says so (#37)", () => {
     const { handlers, client } = setup();
     await handlers.get("list_data_tables")!({
       name: "Pricing bands",
-      status: "active",
+      archived: "only",
       isDynamic: false,
     });
 
     const [, params] = client.get.mock.calls[0] as [string, Record<string, unknown>];
     expect(params.name).toBe("Pricing bands");
-    expect(params.status).toBe("active");
+    expect(params.archived).toBe("only");
     // camelCase argument, snake_case wire — the inconsistency the generator
     // exists to keep out of the caller's head.
     expect(params.is_dynamic).toBe(false);
@@ -207,7 +207,11 @@ describe("list_data_tables answers ONE PAGE and says so (#37)", () => {
     // filter an agent would trust.
     const { handlers, descriptions, client } = setup();
     await handlers.get("list_output_schemas")!({});
-    expect(client.get).toHaveBeenCalledWith("/api/v1/output-schemas");
+    // Its one filter (`archived`, Levenscyclus R3) is passed as the caller gave
+    // it — here not at all — and there is no `limit` or `cursor` beside it.
+    expect(client.get).toHaveBeenCalledWith("/api/v1/output-schemas", {
+      archived: undefined,
+    });
     expect(descriptions.get("list_output_schemas")!).not.toMatch(/ONE PAGE/);
 
     // And one that DOES have filters still sends only those.

@@ -9,6 +9,7 @@
  *   update_<entity>   — PUT|PATCH <basePath>/{id}       (read-then-write)
  *   delete_<entity>   — DELETE <basePath>/{id}          (soft-delete, recoverable)
  *   restore_<entity>  — POST   <basePath>/{id}/restore  (undo a delete)
+ *   archive_<entity> / unarchive_<entity> — POST <basePath>/{id}/archive|unarchive
  *   list_deleted_<plural> — restore candidates
  *   discard_<entity>_draft — reset the draft to the last published state
  *
@@ -186,6 +187,36 @@ export interface EntityDef {
    * carries more than its readiness.
    */
   publishNote?: string;
+  /**
+   * Archive is its own act on this kind (Levenscyclus, DECISIONS.md 1):
+   * `archive_<entity>` and `unarchive_<entity>`, and `archived` on the list.
+   * True exactly where the backend mounts `POST <basePath>/{entity_id}/archive`;
+   * `test/lifecycle.test.ts` reads the pinned schema and fails when the two
+   * part, in either direction.
+   */
+  archivable?: boolean;
+  /**
+   * What stops the archive beyond "it is published" and "it is the platform's":
+   * `"in_use"` = the same guard the kind's delete calls
+   * (`archive_ops.GUARDS` and the two Insights kinds' own refusal), `"locked"`
+   * = a locked prompt snippet. Omit where the backend has none (skill, policy,
+   * reference doc, method, application, query, dashboard).
+   */
+  archiveGuard?: "in_use" | "locked";
+  /**
+   * The restore route takes an optional `name` (`RestoreEntityRequest`): a
+   * kind whose name is unique, so a live item may have taken it while this one
+   * sat in the Trash. True exactly where the pinned schema gives the restore
+   * route a request body.
+   */
+  restoreRename?: boolean;
+  /**
+   * This kind had a writable `status` before Levenscyclus: its update body no
+   * longer has one (the backend refuses it as an unknown field), because
+   * archived is `archive_<entity>` now. True exactly where the pinned update
+   * body is strict and has no `status`.
+   */
+  statusRetired?: boolean;
 }
 
 export function registerEntityTools(
@@ -204,7 +235,11 @@ export function registerEntityTools(
 
   server.tool(
     `list_${plural}`,
-    `List ${paging ? "" : "all "}${label} in your Axonity tenant (id, name, status, version).` +
+    `List ${paging ? "" : "all "}${label} in your Axonity tenant (id, name or title, version).` +
+      (def.archivable
+        ? ` Archived items are left out unless \`archived\` is \`include\` or \`only\`; ` +
+          `each row carries \`archivedAt\`, null while the ${singular} is in use.`
+        : "") +
       (listFilters.length > 0
         ? ` Narrow it with ${listFilters
             .map((f) => `\`${f.arg}\``)
@@ -315,6 +350,15 @@ export function registerEntityTools(
     `Update a ${singular} draft. Read it first to get \`expectedVersion\`; on a ` +
       `409 conflict, read again and retry. Pass only the fields you are ` +
       `changing (camelCase) in \`fields\`.` +
+      (def.archivable
+        ? ` An archived ${singular} is not edited: the update is refused with ` +
+          `"… is archived. Unarchive it first." — call unarchive_${singular} first.`
+        : "") +
+      (def.statusRetired
+        ? ` \`status\` is refused: it is not a field of a ${singular} any more. ` +
+          `Whether it is archived is archive_${singular} / unarchive_${singular}, ` +
+          `and the row says so in \`archivedAt\`.`
+        : "") +
       (def.updateWarning ? `\n\n${def.updateWarning}` : ""),
     {
       id: z.string().describe(`The ${singular}'s id.`),
@@ -347,7 +391,8 @@ export function registerEntityTools(
       `delete_${singular}`,
       `Delete a ${singular}. Destructive, but RECOVERABLE — it is soft-deleted ` +
         `and can be brought back with restore_${singular} (it will not appear in ` +
-        `list_${plural} until then). Read it first for its version. A 409 here ` +
+        `list_${plural} until then; it goes to the Trash, see list_trash). Read it ` +
+        `first for its version. A 409 here ` +
         `may be a stale version (re-read and retry) or a reference conflict ` +
         `(something published still uses it — re-reading will not help; the ` +
         `error tells you which).` +
@@ -371,10 +416,41 @@ export function registerEntityTools(
       `restore_${singular}`,
       `Undo delete_${singular} — bring a soft-deleted ${singular} back. Takes no ` +
         `version check (a restore must never lose to a stale-version guard). Can ` +
-        `409 if a live ${singular} now holds a name/slot this one also claims.`,
-      { id: z.string().describe(`The ${singular}'s id.`) },
-      async ({ id }) =>
-        guard(async () => jsonResult(await client.post(`${basePath}/${id}/restore`))),
+        `409 if a live ${singular} now holds a name/slot this one also claims.` +
+        (def.restoreRename
+          ? ` When it is the name — "The name '…' is taken by another …. Restore it ` +
+            `again with a new name, or rename the other one first." — restore it ` +
+            `again with \`name\`, 1 to 255 characters; a name another item already ` +
+            `has is refused too ("Choose a different name."). \`name\` is not ` +
+            `applied to a ${singular} that is already live (\`restored: false\`).`
+          : "") +
+        (def.archivable
+          ? ` A ${singular} that was archived when it was deleted is still archived ` +
+            `when it comes back: unarchive_${singular} afterwards.`
+          : ""),
+      {
+        id: z.string().describe(`The ${singular}'s id.`),
+        ...(def.restoreRename
+          ? {
+              name: z
+                .string()
+                .optional()
+                .describe(
+                  `Restore it under this name instead of its own, when its own was ` +
+                    `taken while it was in the Trash. 1 to 255 characters. Leave it out ` +
+                    `to restore it as it was.`,
+                ),
+            }
+          : {}),
+      },
+      async ({ id, name }: { id: string; name?: string }) =>
+        guard(async () =>
+          jsonResult(
+            name === undefined
+              ? await client.post(`${basePath}/${id}/restore`)
+              : await client.post(`${basePath}/${id}/restore`, { name }),
+          ),
+        ),
     );
 
     server.tool(
@@ -406,6 +482,8 @@ export function registerEntityTools(
     }
   }
 
+  if (def.archivable) registerArchiveTools(server, client, def);
+
   if (!publishable) return;
 
   server.tool(
@@ -432,5 +510,59 @@ export function registerEntityTools(
           }),
         );
       }),
+  );
+}
+
+/**
+ * `archive_<entity>` and `unarchive_<entity>` (DECISIONS.md 1).
+ *
+ * Archived is an explicit choice beside Draft and Published: out of use and out
+ * of the lists, back exactly as it was when unarchived. Both routes are
+ * `POST <basePath>/{id}/archive|unarchive` with no body and answer
+ * `{ id, archived, changed, archivedAt }`.
+ *
+ * What the descriptions say is what the backend validates, each sentence with
+ * its source in the team file (R3 stap j): the three refusals are checked in
+ * `services/archive_ops.py` (`set_archived`), once for every kind.
+ */
+function registerArchiveTools(
+  server: McpServer,
+  client: AxonityClient,
+  def: EntityDef,
+): void {
+  const { singular, basePath } = def;
+
+  server.tool(
+    `archive_${singular}`,
+    `Archive a ${singular}: out of use — no run reads it — and out of the lists, ` +
+      `until unarchive_${singular} brings it back. The versions and the ` +
+      `publication are not touched, and no version is needed. Only a draft can ` +
+      `be archived: a published ${singular} is refused ("Unpublish it first"), ` +
+      `and a person unpublishes it in Axonity — no tool does. One the platform ` +
+      `ships is refused too.` +
+      (def.archiveGuard === "in_use"
+        ? ` While something still uses it, it is refused in the same words as ` +
+          `delete_${singular}.`
+        : "") +
+      (def.archiveGuard === "locked" ? ` A locked ${singular} is refused.` : "") +
+      ` Archiving an archived ${singular} is not an error: it answers ` +
+      `\`changed: false\`. A ${singular} in the Trash is not found here: restore ` +
+      `it first. Answers { id, archived, changed, archivedAt }. Archived is not ` +
+      `deleted: delete_${singular} is the Trash.`,
+    { id: z.string().describe(`The ${singular}'s id.`) },
+    async ({ id }) =>
+      guard(async () => jsonResult(await client.post(`${basePath}/${id}/archive`))),
+  );
+
+  server.tool(
+    `unarchive_${singular}`,
+    `Unarchive a ${singular}: back in use, in the state it had (draft or ` +
+      `published). Never refused for what uses it. Unarchiving one that is not ` +
+      `archived is not an error: it answers \`changed: false\`. A ${singular} in ` +
+      `the Trash is not found here: restore_${singular} it first. Answers ` +
+      `{ id, archived, changed, archivedAt }.`,
+    { id: z.string().describe(`The ${singular}'s id.`) },
+    async ({ id }) =>
+      guard(async () => jsonResult(await client.post(`${basePath}/${id}/unarchive`))),
   );
 }

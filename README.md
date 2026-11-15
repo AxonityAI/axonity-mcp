@@ -52,7 +52,7 @@ approval of each call is the guard.
 
 ## Tools
 
-474 tools total. `axonity_conventions` (read this first) covers the authoring
+510 tools total. `axonity_conventions` (read this first) covers the authoring
 rules — drafts vs live, optimistic locking, per-entity fields, delete/restore,
 and how to tell a retryable error from one that will never succeed.
 `axonity_semantic_conventions` is its counterpart for one job only: building a
@@ -80,8 +80,9 @@ exceptions):
 | `create_<entity>` | Create a new **draft**. |
 | `update_<entity>` | Update a draft (`expectedVersion` in the body; 409 on a stale write). |
 | `delete_<entity>` | Soft-delete. **Recoverable** — see `restore_<entity>`. |
-| `restore_<entity>` | Undo a delete. No version check. |
+| `restore_<entity>` | Undo a delete. No version check. Takes an optional `name` on the nine entities whose name is unique (see *Archive and the Trash*). |
 | `list_deleted_<plural>` | Restore candidates. |
+| `archive_<entity>` / `unarchive_<entity>` | Archived is its own act, not a delete: out of use and out of the lists, back as it was. Only a draft can be archived. Fifteen entities: every one above and the three below except `table_relationship` — see *Archive and the Trash*. |
 | `discard_<entity>_draft` | Reset the draft to the last published state. |
 | `request_publish_<entity>` | Ask for a draft to be published — creates a pending approval; never publishes. |
 
@@ -97,17 +98,22 @@ Warehouses and dashboards below.
 
 Some list routes narrow in the query, which is where narrowing belongs — the
 backend applies it before the rows come back:
-`list_workflows({ stageId?, capabilityId? })`,
-`list_agents({ includeSystem? })`,
-`list_policies({ scope?, ownerId? })`,
-`list_reference_docs({ scope?, ownerId? })`,
-`list_prompt_snippets({ deleted? })`,
-`list_data_tables({ name?, status?, isDynamic?, filledBy? })`,
-`list_data_sources({ enabled? })`,
+`list_workflows({ stageId?, capabilityId?, archived? })`,
+`list_agents({ includeSystem?, archived? })`,
+`list_tools({ archived? })`,
+`list_skills({ archived? })`,
+`list_policies({ scope?, ownerId?, archived? })`,
+`list_reference_docs({ scope?, ownerId?, archived? })`,
+`list_output_schemas({ archived? })`,
+`list_prompt_snippets({ deleted?, archived? })`,
+`list_flows({ archived? })`,
+`list_data_tables({ name?, archived?, isDynamic?, filledBy? })`,
+`list_data_sources({ enabled?, archived? })`,
 `list_table_relationships({ tableId? })`,
-`list_measures({ tableId? })`,
-`list_applications({ name? })`,
-`list_queries({ dataSourceId? })`.
+`list_measures({ tableId?, archived? })`,
+`list_applications({ name?, archived? })`,
+`list_queries({ dataSourceId?, archived? })`,
+`list_dashboards({ archived? })`.
 
 That table is **generated** from the pinned schema's own query parameters
 (`npm run generate:filters` → `src/generated/listFilters.ts`), not hand-listed.
@@ -160,6 +166,37 @@ Plus:
   flag marking the values the author owns.
 - `bulk_delete_workflows` — soft-delete several at once (each with its own
   `expectedVersion`).
+
+### Archive and the Trash
+
+**Archived** is an explicit choice beside Draft and Published ("I no longer want
+to see this"), made with `archive_<entity>` and undone with `unarchive_<entity>`
+on workflow, agent, tool, skill, policy, reference_doc, output_schema,
+prompt_snippet, flow, data_table, measure, query, application, data_source and
+dashboard. The routes are `POST /{entity}/{id}/archive` and `/unarchive`, with
+no body and no version, and answer `{ id, archived, changed, archivedAt }`;
+doing it twice is `changed: false`, not an error. What the backend refuses is
+said in the tool: a published item (a person unpublishes it in Axonity — no tool
+does), one the platform ships, and, on the kinds whose delete has the same
+guard, one that is still in use, in the words delete uses. An archived item is
+out of use (no run reads it), cannot be edited until it is unarchived, and is
+left out of every `list_<plural>` unless `archived` is `include` or `only`;
+each row carries `archivedAt`. The `status` that used to say the same is gone
+from the update of agent, tool, skill, policy, reference_doc, output_schema,
+data_table, measure, query and application: the backend refuses it.
+
+**The Trash** is where `delete_<entity>` puts an item, one list for every kind:
+`list_trash({ kind?, limit?, cursor? })` is a page, newest deletion first, with
+who deleted it, the item's own `restorePath` and `carriedBy` (the agents and
+workflows that used it); `trash_summary` counts per kind and says the
+installation's "Empty the trash after" (`retentionDays`, null is Never) and
+whether the caller may delete permanently. **Deleting permanently is not a
+tool**: it is admin-only and cannot be undone, and `test/denyList.ts` records
+it. `restore_<entity>` takes an item out; an item that was archived when it
+was deleted comes back archived. On skill, policy, reference_doc, output_schema,
+application, data_table, measure, query and data_source the name is unique, so
+a live item may have taken it while this one sat in the Trash: `restore_<entity>`
+then takes `name` and brings it back under another one.
 
 ### Version history, rollback, and version-level delete
 
