@@ -7490,6 +7490,20 @@
             "title": "Createdat",
             "type": "string"
           },
+          "effectiveReads": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ReadPairSchema"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effectivereads"
+          },
           "environment": {
             "title": "Environment",
             "type": "string"
@@ -7524,6 +7538,11 @@
           "name": {
             "title": "Name",
             "type": "string"
+          },
+          "readsReduced": {
+            "default": false,
+            "title": "Readsreduced",
+            "type": "boolean"
           },
           "restriction": {
             "$ref": "#/components/schemas/TokenRestrictionSchema"
@@ -19237,6 +19256,46 @@
         "title": "MarkActionVerdictRequest",
         "type": "object"
       },
+      "McpAccessResponse": {
+        "description": "GET /api/v1/me/mcp-access — what the MCP-access screen shows before any token exists.\n\n``available`` is false where ``/mcp`` cannot answer: the operator has not set ``APP_BASE_URL``\n(without an address no token or connection can be bound to an environment), or the connector\nis switched off, missing or without Node. The screen says so instead of offering a button whose\ntoken then meets a 503. ``mcp_url`` is the address a person pastes into an AI client.",
+        "properties": {
+          "available": {
+            "title": "Available",
+            "type": "boolean"
+          },
+          "environment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Environment"
+          },
+          "mcpUrl": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mcpurl"
+          },
+          "personalToken": {
+            "$ref": "#/components/schemas/PersonalTokenEligibility"
+          }
+        },
+        "required": [
+          "available",
+          "personalToken"
+        ],
+        "title": "McpAccessResponse",
+        "type": "object"
+      },
       "MeasureDefinitionPayload": {
         "additionalProperties": false,
         "description": "The calculation: how the number comes out of the rows.\n\n**A measure is ONE expression** (#1908). ``expression`` is the whole of\nit, as the formula text an author types or as the stored tree, and the\ntwo are one-to-one. The fields below it — ``aggregation``, ``column``,\n``numerator``, ``denominator`` — are the shape from before the formula,\nkept while measures are migrated: one aggregation, or a division of two\nparts, and nothing else.",
@@ -21705,7 +21764,7 @@
           "navigation": {
             "default": [],
             "items": {
-              "$ref": "#/components/schemas/NavigationItem"
+              "$ref": "#/components/schemas/NavigationItemResponse"
             },
             "title": "Navigation",
             "type": "array"
@@ -21733,6 +21792,17 @@
             "title": "Settings",
             "type": "array"
           },
+          "settingsPath": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Settingspath"
+          },
           "shellSlots": {
             "default": [],
             "items": {
@@ -21742,9 +21812,9 @@
             "type": "array"
           },
           "source": {
-            "default": "legacy",
+            "default": "platform",
             "enum": [
-              "legacy",
+              "core",
               "platform"
             ],
             "title": "Source",
@@ -21760,6 +21830,14 @@
               }
             ],
             "title": "Surface"
+          },
+          "toolTypes": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Tooltypes",
+            "type": "array"
           }
         },
         "required": [
@@ -22274,27 +22352,43 @@
         "title": "MyBrief",
         "type": "object"
       },
-      "NavigationItem": {
-        "additionalProperties": false,
-        "description": "A shell location with an explicit right; no frontend component code.",
+      "NavigationItemResponse": {
+        "description": "A navigation item with its section resolved, so the sidebar reads no table of its own.",
         "properties": {
           "label": {
-            "pattern": "\\S",
             "title": "Label",
             "type": "string"
           },
+          "order": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order"
+          },
           "path": {
-            "pattern": "\\S",
             "title": "Path",
             "type": "string"
           },
           "right": {
-            "pattern": "\\S",
             "title": "Right",
             "type": "string"
           },
+          "section": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NavigationSectionResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "slot": {
-            "pattern": "\\S",
             "title": "Slot",
             "type": "string"
           }
@@ -22305,7 +22399,48 @@
           "path",
           "right"
         ],
-        "title": "NavigationItem",
+        "title": "NavigationItemResponse",
+        "type": "object"
+      },
+      "NavigationSectionResponse": {
+        "description": "A sidebar section as the core defines it: what the sidebar draws and where.",
+        "properties": {
+          "icon": {
+            "enum": [
+              "wrench",
+              "book-open",
+              "database",
+              "cube"
+            ],
+            "title": "Icon",
+            "type": "string"
+          },
+          "id": {
+            "enum": [
+              "tools",
+              "library",
+              "data",
+              "model"
+            ],
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "order": {
+            "title": "Order",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "icon",
+          "order"
+        ],
+        "title": "NavigationSectionResponse",
         "type": "object"
       },
       "NetworkGroup": {
@@ -22813,6 +22948,42 @@
         "title": "OAuthConnectRequest",
         "type": "object"
       },
+      "OAuthDecisionRequest": {
+        "additionalProperties": false,
+        "description": "``POST /api/v1/oauth/requests/{handle}/decision`` — allow or deny.\n\nThe restriction is the one a personal token takes: reading is always on, and\neverything else starts on. It is ignored for a denial.",
+        "properties": {
+          "decision": {
+            "enum": [
+              "allow",
+              "deny"
+            ],
+            "title": "Decision",
+            "type": "string"
+          },
+          "restriction": {
+            "$ref": "#/components/schemas/TokenRestrictionSchema"
+          }
+        },
+        "required": [
+          "decision"
+        ],
+        "title": "OAuthDecisionRequest",
+        "type": "object"
+      },
+      "OAuthDecisionResponse": {
+        "description": "Where to send the browser next: back to the client, with a code or an error.\n\nBuilt by the server from the redirect that was checked when the request\narrived. The screen follows it and composes nothing.",
+        "properties": {
+          "redirectUrl": {
+            "title": "Redirecturl",
+            "type": "string"
+          }
+        },
+        "required": [
+          "redirectUrl"
+        ],
+        "title": "OAuthDecisionResponse",
+        "type": "object"
+      },
       "OAuthDisconnectResponse": {
         "description": "``DELETE /deployment/github/oauth`` — disconnect acknowledgement.",
         "properties": {
@@ -22823,6 +22994,81 @@
           }
         },
         "title": "OAuthDisconnectResponse",
+        "type": "object"
+      },
+      "OAuthRequestView": {
+        "description": "``GET /api/v1/oauth/requests/{handle}`` — what the consent screen shows.\n\nEvery field is something the person is deciding on: who asks (the client and\nthe host its answer goes to), for which workspace and environment, as whom,\nand until when. The person's rights are not in here: the token never carries\nits own, it acts with theirs as they are at each call.",
+        "properties": {
+          "accessDays": {
+            "title": "Accessdays",
+            "type": "integer"
+          },
+          "accessEndsAt": {
+            "title": "Accessendsat",
+            "type": "string"
+          },
+          "blockedReason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blockedreason"
+          },
+          "canAuthorize": {
+            "title": "Canauthorize",
+            "type": "boolean"
+          },
+          "clientLabel": {
+            "title": "Clientlabel",
+            "type": "string"
+          },
+          "clientName": {
+            "title": "Clientname",
+            "type": "string"
+          },
+          "environment": {
+            "title": "Environment",
+            "type": "string"
+          },
+          "person": {
+            "title": "Person",
+            "type": "string"
+          },
+          "redirectHost": {
+            "title": "Redirecthost",
+            "type": "string"
+          },
+          "redirectLoopback": {
+            "title": "Redirectloopback",
+            "type": "boolean"
+          },
+          "requestExpiresAt": {
+            "title": "Requestexpiresat",
+            "type": "string"
+          },
+          "workspaceName": {
+            "title": "Workspacename",
+            "type": "string"
+          }
+        },
+        "required": [
+          "clientName",
+          "clientLabel",
+          "redirectHost",
+          "redirectLoopback",
+          "workspaceName",
+          "environment",
+          "person",
+          "accessDays",
+          "accessEndsAt",
+          "requestExpiresAt",
+          "canAuthorize"
+        ],
+        "title": "OAuthRequestView",
         "type": "object"
       },
       "OAuthScaffoldConnectRequest": {
@@ -24650,7 +24896,7 @@
           },
           "items": {
             "items": {
-              "$ref": "#/components/schemas/src__schemas__knowledge__TreeNode"
+              "$ref": "#/components/schemas/src__modules__cortex__schemas__knowledge__TreeNode"
             },
             "title": "Items",
             "type": "array"
@@ -25024,6 +25270,38 @@
         "title": "PersonRef",
         "type": "object"
       },
+      "PersonalTokenEligibility": {
+        "description": "Whether this person may make a personal token, and when not, why.",
+        "properties": {
+          "allowed": {
+            "title": "Allowed",
+            "type": "boolean"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "not_available",
+                  "platform_room",
+                  "support_seat",
+                  "directory_sign_in",
+                  "token_limit"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "required": [
+          "allowed"
+        ],
+        "title": "PersonalTokenEligibility",
+        "type": "object"
+      },
       "PersonalTokenItem": {
         "description": "A token in the list — metadata only, never the secret.",
         "properties": {
@@ -25041,6 +25319,20 @@
           "createdAt": {
             "title": "Createdat",
             "type": "string"
+          },
+          "effectiveReads": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ReadPairSchema"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effectivereads"
           },
           "expiresAt": {
             "title": "Expiresat",
@@ -25072,6 +25364,11 @@
           "name": {
             "title": "Name",
             "type": "string"
+          },
+          "readsReduced": {
+            "default": false,
+            "title": "Readsreduced",
+            "type": "boolean"
           },
           "restriction": {
             "$ref": "#/components/schemas/TokenRestrictionSchema"
@@ -28129,6 +28426,33 @@
           "version"
         ],
         "title": "ReadFromEntry",
+        "type": "object"
+      },
+      "ReadPairSchema": {
+        "description": "One level a token reads up to, and for which audiences — a pair of a clearance.",
+        "properties": {
+          "audienceIds": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Audienceids",
+            "type": "array"
+          },
+          "maxLevel": {
+            "enum": [
+              "public",
+              "internal",
+              "confidential"
+            ],
+            "title": "Maxlevel",
+            "type": "string"
+          }
+        },
+        "required": [
+          "maxLevel"
+        ],
+        "title": "ReadPairSchema",
         "type": "object"
       },
       "ReasonBody": {
@@ -44788,6 +45112,55 @@
         "title": "_ToolCallShape",
         "type": "object"
       },
+      "src__modules__cortex__schemas__knowledge__TreeNode": {
+        "description": "One node of the tree (§4.4): a domain (or a group above it) or a topic,\nwith how many facts in its subtree the reader may see.",
+        "properties": {
+          "factCount": {
+            "title": "Factcount",
+            "type": "integer"
+          },
+          "hasChildren": {
+            "title": "Haschildren",
+            "type": "boolean"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "$ref": "#/components/schemas/LabelView"
+          },
+          "layer": {
+            "title": "Layer",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "layer",
+          "name",
+          "summary",
+          "label",
+          "factCount",
+          "hasChildren"
+        ],
+        "title": "TreeNode",
+        "type": "object"
+      },
       "src__modules__insights__schemas__dashboard__DashboardSummary": {
         "description": "A dashboard in a list — without its layout.",
         "properties": {
@@ -44914,55 +45287,6 @@
           "label",
           "published",
           "built"
-        ],
-        "title": "TreeNode",
-        "type": "object"
-      },
-      "src__schemas__knowledge__TreeNode": {
-        "description": "One node of the tree (§4.4): a domain (or a group above it) or a topic,\nwith how many facts in its subtree the reader may see.",
-        "properties": {
-          "factCount": {
-            "title": "Factcount",
-            "type": "integer"
-          },
-          "hasChildren": {
-            "title": "Haschildren",
-            "type": "boolean"
-          },
-          "id": {
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
-          },
-          "label": {
-            "$ref": "#/components/schemas/LabelView"
-          },
-          "layer": {
-            "title": "Layer",
-            "type": "integer"
-          },
-          "name": {
-            "title": "Name",
-            "type": "string"
-          },
-          "summary": {
-            "title": "Summary",
-            "type": "string"
-          },
-          "type": {
-            "title": "Type",
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "type",
-          "layer",
-          "name",
-          "summary",
-          "label",
-          "factCount",
-          "hasChildren"
         ],
         "title": "TreeNode",
         "type": "object"
@@ -63734,6 +64058,33 @@
         ]
       }
     },
+    "/api/v1/me/mcp-access": {
+      "get": {
+        "description": "What the MCP-access screen shows before a token exists: the address, and whether this\nperson may make a token (and when not, why). Nothing secret; the caller's own seat only.",
+        "operationId": "get_my_mcp_access_api_v1_me_mcp_access_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/McpAccessResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get My Mcp Access",
+        "tags": [
+          "me"
+        ]
+      }
+    },
     "/api/v1/me/settings/{module_id}": {
       "get": {
         "operationId": "personal_settings_api_v1_me_settings__module_id__get",
@@ -66371,6 +66722,112 @@
         "summary": "Mark Notification Read",
         "tags": [
           "notifications"
+        ]
+      }
+    },
+    "/api/v1/oauth/requests/{request_handle}": {
+      "get": {
+        "description": "What the consent screen shows. Decides nothing, however often it is read.",
+        "operationId": "describe_request_api_v1_oauth_requests__request_handle__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_handle",
+            "required": true,
+            "schema": {
+              "title": "Request Handle",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthRequestView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Describe Request",
+        "tags": [
+          "oauth"
+        ]
+      }
+    },
+    "/api/v1/oauth/requests/{request_handle}/decision": {
+      "post": {
+        "description": "Allow or deny. The browser is sent on to the client, with a code or an error.",
+        "operationId": "decide_request_api_v1_oauth_requests__request_handle__decision_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_handle",
+            "required": true,
+            "schema": {
+              "title": "Request Handle",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OAuthDecisionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthDecisionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Decide Request",
+        "tags": [
+          "oauth"
         ]
       }
     },
