@@ -229,6 +229,10 @@
     "class": "dicht",
     "why": "delete: configuration without an approval step"
   },
+  "DELETE /api/v1/trash/{kind}/{item_id}": {
+    "class": "dicht",
+    "why": "purge"
+  },
   "DELETE /api/v1/users/{user_id}": {
     "class": "dicht",
     "why": "delete: configuration without an approval step"
@@ -258,6 +262,22 @@
     "why": "no authentication of its own: a token never reaches the gate"
   },
   "GET /": {
+    "class": "dicht",
+    "why": "no authentication of its own: a token never reaches the gate"
+  },
+  "GET /.well-known/oauth-authorization-server": {
+    "class": "dicht",
+    "why": "no authentication of its own: a token never reaches the gate"
+  },
+  "GET /.well-known/oauth-protected-resource": {
+    "class": "dicht",
+    "why": "no authentication of its own: a token never reaches the gate"
+  },
+  "GET /.well-known/oauth-protected-resource/mcp": {
+    "class": "dicht",
+    "why": "no authentication of its own: a token never reaches the gate"
+  },
+  "GET /.well-known/{rest:path}": {
     "class": "dicht",
     "why": "no authentication of its own: a token never reaches the gate"
   },
@@ -699,6 +719,10 @@
   "GET /api/v1/knowledge/tree/{node_id}/related": {
     "class": "lezen"
   },
+  "GET /api/v1/me/mcp-access": {
+    "class": "dicht",
+    "why": "a token never manages tokens"
+  },
   "GET /api/v1/me/settings/{module_id}": {
     "class": "dicht",
     "why": "(forbid_service_token_for_personal_reads); the person resolves their own settings in the browser"
@@ -765,6 +789,10 @@
   "GET /api/v1/notifications/unread-count": {
     "class": "lezen"
   },
+  "GET /api/v1/oauth/requests/{request_handle}": {
+    "class": "dicht",
+    "why": "a token never grants a token: the consent screen is a person's, with a session"
+  },
   "GET /api/v1/output-schemas": {
     "class": "lezen"
   },
@@ -807,6 +835,10 @@
     "why": "credentials, secrets, platform, deployment, configuration"
   },
   "GET /api/v1/platform/sign-in": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "GET /api/v1/platform/trash-retention": {
     "class": "dicht",
     "why": "credentials, secrets, platform, deployment, configuration"
   },
@@ -1156,6 +1188,12 @@
   "GET /api/v1/tools/{tool_id}/versions/{version}": {
     "class": "lezen"
   },
+  "GET /api/v1/trash": {
+    "class": "lezen"
+  },
+  "GET /api/v1/trash/summary": {
+    "class": "lezen"
+  },
   "GET /api/v1/usage/days": {
     "class": "lezen"
   },
@@ -1266,6 +1304,10 @@
     "class": "dicht",
     "why": "scope[\"route\"] \u2014 carries the path it was declared with."
   },
+  "GET /oauth/authorize": {
+    "class": "dicht",
+    "why": "no authentication of its own: a token never reaches the gate"
+  },
   "PATCH /api/v1/admin/wake-tasks/{task_id}": {
     "class": "dicht",
     "why": "credentials, secrets, platform, deployment, configuration"
@@ -1372,6 +1414,10 @@
     "why": "credentials, secrets, platform, deployment, configuration"
   },
   "PATCH /api/v1/platform/sign-in": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "PATCH /api/v1/platform/trash-retention": {
     "class": "dicht",
     "why": "credentials, secrets, platform, deployment, configuration"
   },
@@ -1525,6 +1571,14 @@
     "class": "dicht",
     "why": "restore: configuration without an approval step"
   },
+  "POST /api/v1/agents/{entity_id}/archive": {
+    "class": "dicht",
+    "why": "archive: a delete by another name, without an approval step (Levenscyclus)"
+  },
+  "POST /api/v1/agents/{entity_id}/unarchive": {
+    "class": "dicht",
+    "why": "archive: a delete by another name, without an approval step (Levenscyclus)"
+  },
   "POST /api/v1/applications": {
     "class": "configuratie"
   },
@@ -1568,6 +1622,14 @@
   "POST /api/v1/applications/{application_id}/versions/{version_id}/restore-deleted": {
     "class": "dicht",
     "why": "restore: configuration without an approval step"
+  },
+  "POST /api/v1/applications/{entity_id}/archive": {
+    "class": "dicht",
+    "why": "archive: a delete by another name, without an approval step (Levenscyclus)"
+  },
+  "POST /api/v1/applications/{entity_id}/unarchive": {
+    "class": "dicht",
+    "why": "archive: a delete by another name, without an approval step (Levenscyclus)"
   },
   "POST /api/v1/audiences": {
     "class": "dicht",
@@ -1767,9 +1829,25 @@
     "class": "dicht",
     "why": "restore: configuration without an approval step"
   },
+  "POST /api/v1/dashboards/{entity_id}/archive": {
+    "class": "dicht",
+    "why": "archive: a delete by another name, without an approval step (Levenscyclus)"
+  },
+  "POST /api/v1/dashboards/{entity_id}/unarchive": {
+    "class": "dicht",
+    "why": "archive: a delete by another name, without an approval step (Levenscyclus)"
+  },
   "POST /api/v1/data-sources": {
     "class": "dicht",
     "why": "no draft: saved directly"
+  },
+  "POST /api/v1/data-sources/{entity_id}/archive": {
+    "class": "dicht",
+    "why": "archive: a delete by another name, without an approval step (Levenscyclus)"
+  },
+  "POST /api/v1/data-sources/{entity_id}/unarchive": {
+    "class": "dicht",
+    "why": "archive: a delete by another name, without an approval step (Levenscyclus)"
   },
   "POST /api/v1/data-sources/{source_id}/explore": {
     "class": "actie"
@@ -1786,6 +1864,14 @@
   },
   "POST /api/v1/data-tables": {
     "class": "configuratie"
+  },
+  "POST /api/v1/data-tables/{entity_id}/archive": {
+    "class": "dicht",
+    "why": "archive: a delete by another name, without an approval step (Levenscyclus)"
+  },
+  "POST /api/v1/data-tables/{entity_id}/unarchive": {
+    "class": "dicht",
+    "why": "archive: a delete by another name, without an approval step (Levenscyclus)"
   },
   "POST /api/v1/data-tables/{table_id}/discard-draft": {
     "class": "configuratie"
@@ -1927,6 +2013,14 @@
   "POST /api/v1/flows": {
     "class": "configuratie"
   },
+  "POST /api/v1/flows/{entity_id}/archive": {
+    "class": "dicht",
+    "why": "archive: a delete by another name, without an approval step (Levenscyclus)"
+  },
+  "POST /api/v1/flows/{entity_id}/unarchive": {
+    "class": "dicht",
+    "why": "archive: a delete by another name, without an approval step (Levenscyclus)"
+  },
   "POST /api/v1/flows/{flow_id}/clone": {
     "class": "configuratie"
   },
@@ -2063,6 +2157,14 @@
   "POST /api/v1/measures/validate": {
     "class": "lezen"
   },
+  "POST /api/v1/measures/{entity_id}/archive": {
+    "class": "dicht",
+    "why": "archive: a delete by another name, without an approval step (Levenscyclus)"
+  },
+  "POST /api/v1/measures/{entity_id}/unarchive": {
+    "class": "dicht",
+    "why": "archive: a delete by another name, without an approval step (Levenscyclus)"
+  },
   "POST /api/v1/measures/{measure_id}/discard-draft": {
     "class": "configuratie"
   },
@@ -2100,8 +2202,20 @@
     "class": "dicht",
     "why": "personal state"
   },
+  "POST /api/v1/oauth/requests/{request_handle}/decision": {
+    "class": "dicht",
+    "why": "a token never grants a token: the consent screen is a person's, with a session"
+  },
   "POST /api/v1/output-schemas": {
     "class": "configuratie"
+  },
+  "POST /api/v1/output-schemas/{entity_id}/archive": {
+    "class": "dicht",
+    "why": "archive: a delete by another name, without an approval step (Levenscyclus)"
+  },
+  "POST /api/v1/output-schemas/{entity_id}/unarchive": {
+    "class": "dicht",
+    "why": "archive: a delete by another name, without an approval step (Levenscyclus)"
   },
   "POST /api/v1/output-schemas/{schema_id}/discard-draft": {
     "class": "configuratie"
@@ -2175,6 +2289,14 @@
   "POST /api/v1/policies": {
     "class": "configuratie"
   },
+  "POST /api/v1/policies/{entity_id}/archive": {
+    "class": "dicht",
+    "why": "archive: a delete by another name, without an approval step (Levenscyclus)"
+  },
+  "POST /api/v1/policies/{entity_id}/unarchive": {
+    "class": "dicht",
+    "why": "archive: a delete by another name, without an approval step (Levenscyclus)"
+  },
   "POST /api/v1/policies/{policy_id}/discard-draft": {
     "class": "configuratie"
   },
@@ -2206,6 +2328,14 @@
   },
   "POST /api/v1/prompt-snippets": {
     "class": "configuratie"
+  },
+  "POST /api/v1/prompt-snippets/{entity_id}/archive": {
+    "class": "dicht",
+    "why": "archive: a delete by another name, without an approval step (Levenscyclus)"
+  },
+  "POST /api/v1/prompt-snippets/{entity_id}/unarchive": {
+    "class": "dicht",
+    "why": "archive: a delete by another name, without an approval step (Levenscyclus)"
   },
   "POST /api/v1/prompt-snippets/{snippet_id}/clone": {
     "class": "configuratie"
@@ -2275,6 +2405,14 @@
   "POST /api/v1/queries": {
     "class": "configuratie"
   },
+  "POST /api/v1/queries/{entity_id}/archive": {
+    "class": "dicht",
+    "why": "archive: a delete by another name, without an approval step (Levenscyclus)"
+  },
+  "POST /api/v1/queries/{entity_id}/unarchive": {
+    "class": "dicht",
+    "why": "archive: a delete by another name, without an approval step (Levenscyclus)"
+  },
   "POST /api/v1/queries/{query_id}/discard-draft": {
     "class": "configuratie"
   },
@@ -2309,6 +2447,14 @@
   },
   "POST /api/v1/reference-docs": {
     "class": "configuratie"
+  },
+  "POST /api/v1/reference-docs/{entity_id}/archive": {
+    "class": "dicht",
+    "why": "archive: a delete by another name, without an approval step (Levenscyclus)"
+  },
+  "POST /api/v1/reference-docs/{entity_id}/unarchive": {
+    "class": "dicht",
+    "why": "archive: a delete by another name, without an approval step (Levenscyclus)"
   },
   "POST /api/v1/reference-docs/{ref_id}/discard-draft": {
     "class": "configuratie"
@@ -2421,6 +2567,14 @@
   },
   "POST /api/v1/skills": {
     "class": "configuratie"
+  },
+  "POST /api/v1/skills/{entity_id}/archive": {
+    "class": "dicht",
+    "why": "archive: a delete by another name, without an approval step (Levenscyclus)"
+  },
+  "POST /api/v1/skills/{entity_id}/unarchive": {
+    "class": "dicht",
+    "why": "archive: a delete by another name, without an approval step (Levenscyclus)"
   },
   "POST /api/v1/skills/{skill_id}/discard-draft": {
     "class": "configuratie"
@@ -2543,6 +2697,14 @@
   "POST /api/v1/tools/validate-code": {
     "class": "lezen"
   },
+  "POST /api/v1/tools/{entity_id}/archive": {
+    "class": "dicht",
+    "why": "archive: a delete by another name, without an approval step (Levenscyclus)"
+  },
+  "POST /api/v1/tools/{entity_id}/unarchive": {
+    "class": "dicht",
+    "why": "archive: a delete by another name, without an approval step (Levenscyclus)"
+  },
   "POST /api/v1/tools/{tool_id}/discard-draft": {
     "class": "configuratie"
   },
@@ -2611,6 +2773,14 @@
   "POST /api/v1/workflows/validate": {
     "class": "lezen"
   },
+  "POST /api/v1/workflows/{entity_id}/archive": {
+    "class": "dicht",
+    "why": "archive: a delete by another name, without an approval step (Levenscyclus)"
+  },
+  "POST /api/v1/workflows/{entity_id}/unarchive": {
+    "class": "dicht",
+    "why": "archive: a delete by another name, without an approval step (Levenscyclus)"
+  },
   "POST /api/v1/workflows/{workflow_id}/components/duplicate": {
     "class": "configuratie"
   },
@@ -2673,6 +2843,10 @@
     "why": "webhook triggers"
   },
   "POST /mcp": {
+    "class": "dicht",
+    "why": "no authentication of its own: a token never reaches the gate"
+  },
+  "POST /oauth/token": {
     "class": "dicht",
     "why": "no authentication of its own: a token never reaches the gate"
   },

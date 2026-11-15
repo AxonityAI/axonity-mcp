@@ -11,6 +11,37 @@ diff in review.
 
 ## Provenance
 
+- **Levenscyclus R3 capture on backend `6ddef5eac` (2026-11-15), not released:**
+  a WHOLE dump with the backend's own `scripts/dump_openapi.py` and
+  `scripts/dump_token_route_classes.py`, run read-only on a `git archive` of the
+  CLEAN commit `6ddef5eacb4fe939b40b3949c612f4c02a197f67` (Flow
+  `af-levenscyclus`, `git status` empty), using that worktree's venv. Safety:
+  `env -i` with only PATH/HOME/TMPDIR and a database URL at a closed port,
+  dotenv off (`Settings.model_config["env_file"] = None`), `python -B -I`, `src`
+  verified to load from the archive. No server, database or tenant.
+  - `openapi.snapshot.json`: **2,663,735 bytes**, SHA-256
+    `7c933b014ab830a82a88a0dc3c09279cf4f1a38f67e743bcaac0cbe72d8814ad`.
+    Against the snapshot on `main` (`6fd5753`): 788 -> 826 operations, 38 added,
+    none removed, 24 with a different contract. Added: `POST
+    /{kind}/{entity_id}/archive` and `/unarchive` on fifteen kinds (30), `GET
+    /trash`, `GET /trash/summary`, `DELETE /trash/{kind}/{item_id}`, `GET` and
+    `PATCH /platform/trash-retention`, and three that arrived from Flow `main`
+    and not from Levenscyclus (`GET /me/mcp-access`, `GET
+    /oauth/requests/{request_handle}`, `POST
+    /oauth/requests/{request_handle}/decision`). Changed: `archived` on fifteen
+    list routes, an optional `RestoreEntityRequest` body (`name`) on nine
+    restore routes; `status` left the update bodies of ten kinds (the create
+    bodies of six of them) and the list rows of those ten and of workflow.
+  - `token-route-classes.snapshot.json`: **93,812 bytes**, SHA-256
+    `252aaaa6e22537019de29c677fd4936872fe9dbb610c9e8e60f5e0ea7c6827bd`;
+    `src/generated/tokenRouteClasses.ts` regenerated from it. 856 rows (812
+    before). Archive and unarchive are `dicht` ("a delete by another name,
+    without an approval step"), `GET /trash` and `GET /trash/summary` are
+    `lezen`, `DELETE /trash/...` and both platform retention routes are `dicht`.
+  - `src/generated/listFilters.ts` regenerated: `archived` on fifteen lists, and
+    `status` left `list_data_tables`. `node scripts/check-contract-drift.mjs
+    --fresh <this dump>` answers "matches axonity-flow. 826 operations".
+
 - **R1 capture on backend `2f75397eb` (2026-11-14), not released; replaces the
   two R1 entries below:** a WHOLE dump with the backend's own
   `scripts/dump_openapi.py` and `scripts/dump_token_route_classes.py`, run

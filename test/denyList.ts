@@ -286,6 +286,29 @@ export const FORBIDDEN: Rule[] = [
     label: "oversight work lists (a colleague's own)",
     path: /\/api\/v1\/knowledge\/(attention|oversight\/(doubtful|expiring|tips|scope))$/,
   },
+
+  // ---- Levenscyclus R3 and the personal-token routes that came with main ----
+
+  // What a person's token may do through the hosted /mcp is read at
+  // `GET /me/mcp-access`: the same table row (`dicht`, "a token never manages
+  // tokens") as the routes above, one door further in.
+  { label: "a person's MCP access (a token never manages tokens)", path: /\/api\/v1\/me\/mcp-access$/ },
+  // The OAuth consent screen is a person's, with a session: a request waits for
+  // a person to grant it, and a token that could answer would be granting
+  // itself access. The table row says it: "a token never grants a token".
+  { label: "OAuth consent (a token never grants a token)", path: /\/api\/v1\/oauth\/requests\/[^/]+(\/decision)?$/ },
+  // Deleting from the Trash for good (axonity-flow `DELETE /trash/{kind}/{id}`,
+  // Levenscyclus R3) is irreversible and `require_admin` — a service token is
+  // always role="member", so a tool here would only ever 403 — and the plan for
+  // this surface says not to offer it (MCP-UPDATE.md: "`DELETE
+  // /trash/{kind}/{id}` (definitief, alleen admin) niet aanbieden"). Seeing the
+  // Trash (`list_trash`, `trash_summary`) and restoring from it
+  // (`restore_<entity>`) are tools; this is the one act no recovery follows.
+  {
+    label: "delete permanently from the Trash (admin-only, irreversible)",
+    path: /\/api\/v1\/trash\/[^/]+\/[^/]+$/,
+    methods: ["DELETE"],
+  },
 ];
 
 export function forbids(method: string, path: string): boolean {
