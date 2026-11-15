@@ -627,12 +627,26 @@ paged the same way — `{ items, nextCursor, pageSize, hasMore }`, walked with
 `cursor`. It stopped answering with a bare array when the backend converted the
 route; the `offset` it used to take is no longer read.
 
+A run row in both lists carries `ownerAgentId` (the agent that owns the run's
+workflow; null when there is none) and `currentStepName` (the step the run is in,
+for an active run; null otherwise).
+
 ### Approvals
 
-`list_publish_approvals({ status?, limit?, offset? })` and
+`list_publish_approvals({ status?, view?, limit?, offset? })` and
 `get_publish_approval({ approvalId })` — how you find out whether a
 `request_publish_*` was approved or rejected. Approving and rejecting are
 human-only actions in Axonity.
+
+**Approvals are read per person.** `view` is `mine` unless you ask for `all`:
+`mine` is the requests you sent through your own tokens (a service token sees only
+the ones it sent itself), `all` is every request of the workspace and is for
+administrators — anyone else gets a 403, and a service token never is one.
+`list_publish_releases` takes the same `view`. Opening one request by id works for
+your own and, for an administrator, any; someone else's is a 404. Each request
+says `origin` (`mcp`, `agent` or `screen`), `requestedByName`, `canDecide`
+(through a token always false: a token never approves or rejects) and `version`
+(the version approving it publishes; null when there is none to name).
 
 `request_publish_release({ workflowId, changeSummary? })` proposes a **release**:
 a workflow *and everything its run needs* — the agents it runs (each with its
