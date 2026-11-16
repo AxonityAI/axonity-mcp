@@ -165,6 +165,10 @@ describe("registered surface stays inside its authority boundary", () => {
     // Firing a webhook by its token is out; the trigger ROWS stay ours, and the
     // rule is anchored so the three trigger families are not caught by it.
     expect(forbids("POST", "/api/v1/triggers/tok-1")).toBe(true);
+    // The header form of the same door (axonity-flow#2379, `POST /triggers`):
+    // the secret travels in `X-Axonity-Webhook-Token`, so it is excluded for the
+    // same reason, and the table says "no authentication of its own".
+    expect(forbids("POST", "/api/v1/triggers")).toBe(true);
     expect(forbids("GET", "/api/v1/workflows/w-1/webhook-triggers")).toBe(false);
     expect(forbids("POST", "/api/v1/webhook-triggers/wh-1/rotate")).toBe(false);
     expect(forbids("PATCH", "/api/v1/conditional-triggers/ct-1")).toBe(false);

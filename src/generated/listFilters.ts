@@ -34,6 +34,13 @@ export const LIST_FILTERS: Record<string, ListFilter[]> = {
       description:
         "Only workflows linked to this capability. Capability ids come from read_company.",
     },
+    {
+      arg: "archived",
+      query: "archived",
+      type: "string",
+      description:
+        "Which items to list: 'exclude' (default) leaves archived items out, 'only' lists only the archived ones (the Archived view), 'include' lists both.",
+    },
   ],
   "agent": [
     {
@@ -42,6 +49,31 @@ export const LIST_FILTERS: Record<string, ListFilter[]> = {
       type: "boolean",
       description:
         "Include the platform's own system agents (the Builder team) alongside the tenant's. Defaults to false. They are readable, not yours to edit — useful when a workflow step names one and you are wondering what it is.",
+    },
+    {
+      arg: "archived",
+      query: "archived",
+      type: "string",
+      description:
+        "Which items to list: 'exclude' (default) leaves archived items out, 'only' lists only the archived ones (the Archived view), 'include' lists both.",
+    },
+  ],
+  "tool": [
+    {
+      arg: "archived",
+      query: "archived",
+      type: "string",
+      description:
+        "Which items to list: 'exclude' (default) leaves archived items out, 'only' lists only the archived ones (the Archived view), 'include' lists both.",
+    },
+  ],
+  "skill": [
+    {
+      arg: "archived",
+      query: "archived",
+      type: "string",
+      description:
+        "Which items to list: 'exclude' (default) leaves archived items out, 'only' lists only the archived ones (the Archived view), 'include' lists both.",
     },
   ],
   "policy": [
@@ -59,6 +91,13 @@ export const LIST_FILTERS: Record<string, ListFilter[]> = {
       description:
         "Only items owned by this entity — the agent or workflow id the scope points at. Pair it with `scope`.",
     },
+    {
+      arg: "archived",
+      query: "archived",
+      type: "string",
+      description:
+        "Which items to list: 'exclude' (default) leaves archived items out, 'only' lists only the archived ones (the Archived view), 'include' lists both.",
+    },
   ],
   "reference_doc": [
     {
@@ -75,6 +114,22 @@ export const LIST_FILTERS: Record<string, ListFilter[]> = {
       description:
         "Only items owned by this entity — the agent or workflow id the scope points at. Pair it with `scope`.",
     },
+    {
+      arg: "archived",
+      query: "archived",
+      type: "string",
+      description:
+        "Which items to list: 'exclude' (default) leaves archived items out, 'only' lists only the archived ones (the Archived view), 'include' lists both.",
+    },
+  ],
+  "output_schema": [
+    {
+      arg: "archived",
+      query: "archived",
+      type: "string",
+      description:
+        "Which items to list: 'exclude' (default) leaves archived items out, 'only' lists only the archived ones (the Archived view), 'include' lists both.",
+    },
   ],
   "prompt_snippet": [
     {
@@ -83,6 +138,22 @@ export const LIST_FILTERS: Record<string, ListFilter[]> = {
       type: "boolean",
       description:
         "Return the tenant's soft-deleted rows instead of the live ones. `list_deleted_prompt_snippets` asks the dedicated route for the same thing and is usually clearer.",
+    },
+    {
+      arg: "archived",
+      query: "archived",
+      type: "string",
+      description:
+        "Which items to list: 'exclude' (default) leaves archived items out, 'only' lists only the archived ones (the Archived view), 'include' lists both.",
+    },
+  ],
+  "flow": [
+    {
+      arg: "archived",
+      query: "archived",
+      type: "string",
+      description:
+        "Which items to list: 'exclude' (default) leaves archived items out, 'only' lists only the archived ones (the Archived view), 'include' lists both.",
     },
   ],
   "data_table": [
@@ -94,11 +165,11 @@ export const LIST_FILTERS: Record<string, ListFilter[]> = {
         "Only the table with exactly this name. A name is unique within the workspace and is what a tool grant and a decision rule refer to, so this answers 'does it already exist' in one call. Matching is exact, never a substring.",
     },
     {
-      arg: "status",
-      query: "status",
+      arg: "archived",
+      query: "archived",
       type: "string",
       description:
-        "Only tables with this lifecycle status: active (in use) or archived (kept, not offered). A value outside the two is refused rather than silently ignored.",
+        "Which items to list: 'exclude' (default) leaves archived items out, 'only' lists only the archived ones (the Archived view), 'include' lists both.",
     },
     {
       arg: "isDynamic",
@@ -114,6 +185,22 @@ export const LIST_FILTERS: Record<string, ListFilter[]> = {
       description:
         "Only tables filled this way: author, workflow, query or source (the rows stay in a data source). A value outside the four is refused rather than silently ignored.",
     },
+    {
+      arg: "databaseId",
+      query: "databaseId",
+      type: "string",
+      description:
+        "Only the tables that live in this database.",
+    },
+  ],
+  "table_database": [
+    {
+      arg: "kind",
+      query: "kind",
+      type: "string",
+      description:
+        "Only the databases of this kind.",
+    },
   ],
   "data_source": [
     {
@@ -122,6 +209,13 @@ export const LIST_FILTERS: Record<string, ListFilter[]> = {
       type: "boolean",
       description:
         "true: only sources that are switched on. false: only the ones switched off. Omit for both.",
+    },
+    {
+      arg: "archived",
+      query: "archived",
+      type: "string",
+      description:
+        "Which items to list: 'exclude' (default) leaves archived items out, 'only' lists only the archived ones (the Archived view), 'include' lists both.",
     },
   ],
   "table_relationship": [
@@ -133,6 +227,15 @@ export const LIST_FILTERS: Record<string, ListFilter[]> = {
         "Only relationships that touch this table, on either side. The way to answer \"what does this table join to\" without walking every page.",
     },
   ],
+  "dashboard": [
+    {
+      arg: "archived",
+      query: "archived",
+      type: "string",
+      description:
+        "Which items to list: 'exclude' (default) leaves archived items out, 'only' lists only the archived ones (the Archived view), 'include' lists both.",
+    },
+  ],
   "measure": [
     {
       arg: "tableId",
@@ -140,6 +243,13 @@ export const LIST_FILTERS: Record<string, ListFilter[]> = {
       type: "string",
       description:
         "Only the measures that read this table — what a table page shows.",
+    },
+    {
+      arg: "archived",
+      query: "archived",
+      type: "string",
+      description:
+        "Which items to list: 'exclude' (default) leaves archived items out, 'only' lists only the archived ones (the Archived view), 'include' lists both.",
     },
   ],
   "application": [
@@ -150,6 +260,13 @@ export const LIST_FILTERS: Record<string, ListFilter[]> = {
       description:
         "Only the application with exactly this name.",
     },
+    {
+      arg: "archived",
+      query: "archived",
+      type: "string",
+      description:
+        "Which items to list: 'exclude' (default) leaves archived items out, 'only' lists only the archived ones (the Archived view), 'include' lists both.",
+    },
   ],
   "query": [
     {
@@ -158,6 +275,13 @@ export const LIST_FILTERS: Record<string, ListFilter[]> = {
       type: "string",
       description:
         "Only the queries that read this source.",
+    },
+    {
+      arg: "archived",
+      query: "archived",
+      type: "string",
+      description:
+        "Which items to list: 'exclude' (default) leaves archived items out, 'only' lists only the archived ones (the Archived view), 'include' lists both.",
     },
   ],
 };

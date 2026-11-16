@@ -232,6 +232,7 @@ export function registerApprovalTools(
                 "flow",
                 "data_table",
                 "application",
+                "table_database",
                 "measure",
                 "query",
                 "company",

@@ -139,6 +139,21 @@ describe("the README carries no claim #107 corrected", () => {
 });
 
 
+describe("the README's count of decided operations is the snapshot's", () => {
+  it("says as many operations as the pinned snapshot has", () => {
+    const snapshot = JSON.parse(
+      readFileSync(fileURLToPath(new URL("./fixtures/openapi.snapshot.json", import.meta.url)), "utf8"),
+    ) as { paths: Record<string, Record<string, unknown>> };
+    const methods = ["get", "post", "put", "patch", "delete"];
+    const operations = Object.values(snapshot.paths).flatMap((ops) =>
+      Object.keys(ops).filter((m) => methods.includes(m)),
+    ).length;
+    const claimed = README.match(/partitions all (\d+) operations/);
+    expect(claimed, "the README says how many operations it partitions").not.toBeNull();
+    expect(Number(claimed![1])).toBe(operations);
+  });
+});
+
 /**
  * Review of 4347f84: the README says of the to-do list and the wake-tasks what
  * the tools now say — list_todo_steps is not "the same question" as

@@ -6,8 +6,9 @@
  * `agentInvocations`, and the trace carries the step-by-step tool calls. Those
  * are the evidence an agent reasons over.
  *
- * Runs are also the only thing in the product with a real archive state —
- * entities have soft-delete, runs have archive/unarchive.
+ * Runs have archive/unarchive of their own (`archive_run`, below). The authored
+ * entities have the same act since Levenscyclus (`archive_<entity>` in
+ * `register.ts`), a different route and a different answer.
  *
  * READING A RUN NEED NOT COST THE WHOLE RUN (axonity-mcp#57). `read_run`
  * returns the document; `read_run_outline` returns its table of contents, whose

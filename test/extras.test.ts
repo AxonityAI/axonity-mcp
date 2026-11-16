@@ -1,7 +1,11 @@
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+
 import { describe, expect, it, vi } from "vitest";
 
 import type { AxonityClient } from "../src/client.js";
 import {
+  IDENTITY_FIELDS,
   registerAttachTools,
   registerConnectorTools,
   registerPersonaTools,
@@ -359,7 +363,6 @@ describe("link read-backs return identity, not bodies", () => {
       id: "sk-1",
       name: "Skill sk-1",
       description: "Reads a Minggo offer",
-      status: "published",
       source: "tenant",
       linkSource: "link",
     });
@@ -369,6 +372,35 @@ describe("link read-backs return identity, not bodies", () => {
     expect(body.skills[0].bodyMd).toBeUndefined();
     expect(body.agentId).toBe("ag-1"); // envelope preserved
     expect(body.bodiesOmitted).toMatch(/verbosity: "full"/);
+  });
+
+  it("projects only fields the backend still sends on these five routes", () => {
+    type Schema = { properties?: Record<string, { items?: { $ref?: string } }> };
+    const snapshot = JSON.parse(
+      readFileSync(fileURLToPath(new URL("./fixtures/openapi.snapshot.json", import.meta.url)), "utf8"),
+    ) as {
+      paths: Record<string, { get?: { responses: Record<string, { content: Record<string, { schema: { $ref?: string } }> }> } }>;
+      components: { schemas: Record<string, Schema> };
+    };
+    const schema = (ref: string) => snapshot.components.schemas[ref.split("/").pop()!];
+    const routes = [
+      "/api/v1/agents/{agent_id}/skills-v2",
+      "/api/v1/agents/{agent_id}/policies",
+      "/api/v1/agents/{agent_id}/reference-docs",
+      "/api/v1/workflows/{workflow_id}/skills-v2",
+      "/api/v1/workflows/{workflow_id}/reference-docs",
+    ];
+    const sent = new Set<string>();
+    for (const route of routes) {
+      const envelope = schema(snapshot.paths[route].get!.responses["200"].content["application/json"].schema.$ref!);
+      const rows = Object.values(envelope.properties!).find((p) => p.items?.$ref)!;
+      for (const key of Object.keys(schema(rows.items!.$ref!).properties!)) sent.add(key);
+    }
+    // A field in the projection that no route sends is a field that never arrives.
+    expect([...IDENTITY_FIELDS].filter((f) => !sent.has(f))).toEqual([]);
+    // `status` left the rows with Levenscyclus: `archivedAt` says the state now.
+    expect(sent.has("status")).toBe(false);
+    expect(IDENTITY_FIELDS).not.toContain("status");
   });
 
   it("costs what the links cost — a 14-agent audit fits in the budget", async () => {

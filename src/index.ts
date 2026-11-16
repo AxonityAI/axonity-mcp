@@ -60,12 +60,14 @@ import { registerComponentTools } from "./tools/components.js";
 import { registerConceptTools } from "./tools/concepts.js";
 import { registerMeasureInfluenceTools } from "./tools/measureInfluences.js";
 import { registerKnowledgeGraphTools } from "./tools/knowledgeGraph.js";
+import { registerModelTools } from "./tools/model.js";
 import { registerModuleTools } from "./tools/modules.js";
 import { registerOperationsTools } from "./tools/operations.js";
 import { registerPromptPlacementTools } from "./tools/promptPlacement.js";
 import { registerQueryTools } from "./tools/queries.js";
 import { LIST_FILTERS } from "./generated/listFilters.js";
 import { type EntityDef, registerEntityTools } from "./tools/register.js";
+import { registerTrashTools } from "./tools/trash.js";
 import { registerRunTools } from "./tools/runs.js";
 import { registerRunInputFileTools } from "./tools/runInputFiles.js";
 import { registerSecretTools } from "./tools/secrets.js";
@@ -148,6 +150,39 @@ const BREAKS_MEASURE_NOTE =
   "change takes away — a column, the table, or the relationship a part " +
   "reaches a dimension over. The refusal names the measures: repair them " +
   "first (update_measure, then publish), then retry.";
+
+/**
+ * The database (axonity-flow #2444, R0b). Every sentence is the schema's own
+ * field description or a refusal in `services/table_database_service.py` and
+ * `domain/table_databases.py`.
+ */
+const DATABASE_NOTE =
+  "A DATABASE is a named group of tables. `kind` is `data_model` (tables of " +
+  "one subject that join; the default), `shared` (tables other databases use " +
+  "— the conformed dimensions, such as a calendar or the countries) or " +
+  "`workspace` (tables the platform keeps for the workspace itself, no data " +
+  "model). `name` is unique in the workspace, and so is `slug`, the handle a " +
+  "person types and a configuration file is named by: lowercase letters, " +
+  "digits and single hyphens; left out on create it is derived from the " +
+  "name. `owner` is who answers for it, a role or a person, as text. " +
+  "`status` is `active` (the default) or `archived`.";
+
+const DATABASE_UPDATE_NOTE =
+  "A new name keeps the old slug unless `slug` is sent. A system database " +
+  "(one the platform ships) is locked: an edit of it is refused. A database " +
+  "is archived by sending `status: \"archived\"`; it has no archive_ or " +
+  "unarchive_ tool and no `archivedAt` (ENTITY-LIFECYCLE-CONTRACT.md §4.9), " +
+  "and nothing refuses an edit of an archived database. A table is not " +
+  "moved here: a database holds no list of its tables, the table says " +
+  "which one it is in — update_data_table with `databaseId`, or " +
+  "`clearDatabase: true`.";
+
+const DATABASE_DELETE_NOTE =
+  "Only an EMPTY database is deleted: one that still holds live tables is " +
+  "refused with a 409 (\"This database still holds N tables. Move the " +
+  "tables to another database first; the tables stay.\") — move them with " +
+  "update_data_table (`databaseId`, or `clearDatabase: true` to take one out " +
+  "of every database), then delete. A system database is refused too.";
 
 const DATE_TABLE_NOTE =
   "THE DATE TABLE — `dateTable: true` marks the ONE table of the workspace " +
@@ -376,6 +411,8 @@ const QUERY_NOTE =
 export const ENTITIES: EntityDef[] = [
   {
     singular: "workflow",
+    archivable: true,
+    archiveGuard: "in_use",
     basePath: "/api/v1/workflows",
     updateMethod: "PATCH",
     label: "workflows (business processes)",
@@ -385,6 +422,9 @@ export const ENTITIES: EntityDef[] = [
   },
   {
     singular: "agent",
+    archivable: true,
+    archiveGuard: "in_use",
+    statusRetired: true,
     basePath: "/api/v1/agents",
     updateMethod: "PUT",
     label: "agents",
@@ -395,6 +435,9 @@ export const ENTITIES: EntityDef[] = [
   },
   {
     singular: "tool",
+    archivable: true,
+    archiveGuard: "in_use",
+    statusRetired: true,
     basePath: "/api/v1/tools",
     updateMethod: "PUT",
     label: "tools (functions, connectors, validators, evaluators)",
@@ -405,6 +448,9 @@ export const ENTITIES: EntityDef[] = [
   },
   {
     singular: "skill",
+    archivable: true,
+    restoreRename: true,
+    statusRetired: true,
     basePath: "/api/v1/skills",
     updateMethod: "PUT",
     label: "skills (reusable know-how for agents)",
@@ -414,6 +460,9 @@ export const ENTITIES: EntityDef[] = [
   },
   {
     singular: "policy",
+    archivable: true,
+    restoreRename: true,
+    statusRetired: true,
     basePath: "/api/v1/policies",
     updateMethod: "PUT",
     label: "policies (rules and guardrails for agents)",
@@ -425,6 +474,9 @@ export const ENTITIES: EntityDef[] = [
   },
   {
     singular: "reference_doc",
+    archivable: true,
+    restoreRename: true,
+    statusRetired: true,
     basePath: "/api/v1/reference-docs",
     updateMethod: "PUT",
     label: "reference docs (background knowledge for agents)",
@@ -435,6 +487,10 @@ export const ENTITIES: EntityDef[] = [
   },
   {
     singular: "output_schema",
+    archivable: true,
+    archiveGuard: "in_use",
+    restoreRename: true,
+    statusRetired: true,
     basePath: "/api/v1/output-schemas",
     updateMethod: "PUT",
     label: "output schemas (reusable step/agent output contracts)",
@@ -444,6 +500,8 @@ export const ENTITIES: EntityDef[] = [
   },
   {
     singular: "prompt_snippet",
+    archivable: true,
+    archiveGuard: "locked",
     basePath: "/api/v1/prompt-snippets",
     updateMethod: "PATCH",
     label: "prompt snippets (reusable prompt fragments)",
@@ -451,6 +509,7 @@ export const ENTITIES: EntityDef[] = [
   },
   {
     singular: "flow",
+    archivable: true,
     basePath: "/api/v1/flows",
     updateMethod: "PATCH",
     label: "flows (reusable workflow fragments)",
@@ -465,6 +524,10 @@ export const ENTITIES: EntityDef[] = [
     // field a blind `fields` bag can wipe) — hence the two entries below and
     // the explicit row tools in `tools/dataTables.ts`.
     singular: "data_table",
+    archivable: true,
+    archiveGuard: "in_use",
+    restoreRename: true,
+    statusRetired: true,
     basePath: "/api/v1/data-tables",
     updateMethod: "PUT",
     plural: "data_tables",
@@ -486,6 +549,10 @@ export const ENTITIES: EntityDef[] = [
       "its place. " +
       "`clearGrain: true` takes away what one row is; it is refused on a source " +
       "table, which must say it. " +
+      "`databaseId` files the table in one of the workspace's databases (an id " +
+      "that is not a live database of this workspace is refused); " +
+      "`clearDatabase: true` takes the table out of its database, and wins over " +
+      "`databaseId` when both are sent. " +
       "`clearTimeAxis: true` takes the time axis away; on a date table that " +
       "carries calendars only together with `calendars: []` or " +
       "`dateTable: false` (which takes the calendars with it) in the same " +
@@ -502,11 +569,40 @@ export const ENTITIES: EntityDef[] = [
       LABEL_UPDATE_NOTE,
   },
   {
+    // A database is a named group of tables (axonity-flow #2444, R0b, epic
+    // #2429). Its routes have the same order and spelling as a table's, so the
+    // family comes from the registrar. It is the one versioned kind that
+    // Levenscyclus did not bring onto the archive: no `archivedAt`, no archive
+    // route, no door to the Trash — it is archived with its own `status`
+    // (`ENTITY-LIFECYCLE-CONTRACT.md` §4.9), hence no `archivable` here and
+    // `noTrashDoor`. `test/tableDatabases.test.ts` holds each sentence below to
+    // the schema.
+    singular: "table_database",
+    noTrashDoor: true,
+    basePath: "/api/v1/table-databases",
+    updateMethod: "PUT",
+    plural: "table_databases",
+    label: "databases (the named groups the tables of a workspace live in)",
+    createExample: ["name", "kind"],
+    deleteVersionParam: "expectedVersion",
+    listPaging: { defaultPageSize: 20, maxPageSize: 200 },
+    listNote:
+      "Archived databases are in the list: a database is archived with its " +
+      "`status`, and each row carries it (`active` or `archived`).",
+    createNote: DATABASE_NOTE,
+    deleteNote: DATABASE_DELETE_NOTE,
+    updateWarning: DATABASE_NOTE + "\n\n" + DATABASE_UPDATE_NOTE,
+  },
+  {
     // A measure was a field on a table; the semantic model (axonity-flow#1881
     // S12, #1841) made it an entity of its own, in the same order and spelling
     // as a table's routes — so the whole family, versions and publish request
     // included, comes from the registrars with no code of its own.
     singular: "measure",
+    archivable: true,
+    archiveGuard: "in_use",
+    restoreRename: true,
+    statusRetired: true,
     basePath: "/api/v1/measures",
     updateMethod: "PUT",
     label: "measures (the agreed definition of one number in the model)",
@@ -545,6 +641,9 @@ export const ENTITIES: EntityDef[] = [
     // the registrars. Running it once, and who holds its tool, are in
     // tools/queries.ts.
     singular: "query",
+    archivable: true,
+    restoreRename: true,
+    statusRetired: true,
     basePath: "/api/v1/queries",
     updateMethod: "PUT",
     plural: "queries",
@@ -573,6 +672,9 @@ export const ENTITIES: EntityDef[] = [
     // family comes from the registrars. What is not generic (the executors it
     // runs on, what it has learned) is in tools/applications.ts.
     singular: "application",
+    archivable: true,
+    restoreRename: true,
+    statusRetired: true,
     basePath: "/api/v1/applications",
     updateMethod: "PUT",
     label: "applications (programs an agent operates through an executor, with their limits)",
@@ -604,6 +706,9 @@ export const ENTITIES: EntityDef[] = [
   // on the shared cursor.
   {
     singular: "data_source",
+    archivable: true,
+    archiveGuard: "in_use",
+    restoreRename: true,
     basePath: "/api/v1/data-sources",
     updateMethod: "PUT",
     label: "data sources (warehouses the workspace may read, e.g. BigQuery)",
@@ -656,6 +761,7 @@ export const ENTITIES: EntityDef[] = [
   },
   {
     singular: "dashboard",
+    archivable: true,
     basePath: "/api/v1/dashboards",
     updateMethod: "PUT",
     label: "dashboards (tiles of measures over the workspace's model)",
@@ -719,6 +825,11 @@ const VERSIONED: VersionedEntity[] = [
   {
     singular: "data_table",
     basePath: "/api/v1/data-tables",
+    publishedPath: "versions",
+  },
+  {
+    singular: "table_database",
+    basePath: "/api/v1/table-databases",
     publishedPath: "versions",
   },
   { singular: "measure", basePath: "/api/v1/measures", publishedPath: "versions" },
@@ -801,6 +912,8 @@ export function registerAll(
   registerApplicationTools(server as McpServer, client);
   registerAccessTools(server as McpServer, client);
   registerKnowledgeGraphTools(server as McpServer, client);
+  registerTrashTools(server as McpServer, client);
+  registerModelTools(server as McpServer, client);
 }
 
 /** How the server introduces itself, on either transport. */

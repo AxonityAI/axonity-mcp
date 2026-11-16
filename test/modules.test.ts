@@ -280,6 +280,22 @@ describe("the real R1 backend module contract", () => {
       }
     }
   });
+
+  // The enumeration above checks the REQUIRED keys only, so a field the backend
+  // added with a default (`humanOnly`, `group`, `choiceLabels`: Mail, R2.2)
+  // went unnamed. Every property the schema declares is named.
+  it("names every property a setting field and a nested value field can carry", () => {
+    const { tool } = registered();
+    const schemas = moduleSnapshot.components.schemas;
+    const text = tool("read_module_settings_schema").description;
+    for (const key of Object.keys(schemas.HttpSettingField.properties)) {
+      expect(text, `HttpSettingField.${key}`).toContain(key);
+    }
+    const nested = text.split("fields and item describe nested")[1] ?? "";
+    for (const key of Object.keys(schemas.HttpSettingValueField.properties)) {
+      expect(nested, `HttpSettingValueField.${key}`).toContain(key);
+    }
+  });
 });
 
 
@@ -387,5 +403,20 @@ describe("who may write module settings, and where the tools stop", () => {
 
   it("the written description names the Run actions choice a personal token also needs", () => {
     expect(write()).toMatch(/Run actions/);
+  });
+
+  // `human_only` (Mail's mailboxes, R2.2): no token of any kind writes such a
+  // setting, a personal one of an administrator included, so the sentence that
+  // says an administrator's token may write "including admin-classified
+  // fields" cannot stand alone. Sources: `domain/module_settings.py`
+  // `may_write_setting` (a machine principal with `human_only` is refused before
+  // any role is looked at) and `modules/manifest_schema.py` (`human_only`).
+  it("says a setting marked humanOnly is written by a person only, whatever the token", () => {
+    expect(write()).toMatch(/humanOnly/);
+    expect(write()).toMatch(/person in Axonity/i);
+    expect(write()).toMatch(/no token/i);
+    expect(registered().tool("read_module_settings_schema").description).toMatch(
+      /humanOnly[^.]*(person|human)/i,
+    );
   });
 });

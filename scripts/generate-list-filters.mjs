@@ -48,6 +48,7 @@ const LIST_ROUTES = {
   prompt_snippet: "/api/v1/prompt-snippets",
   flow: "/api/v1/flows",
   data_table: "/api/v1/data-tables",
+  table_database: "/api/v1/table-databases",
   data_source: "/api/v1/data-sources",
   table_relationship: "/api/v1/table-relationships",
   dashboard: "/api/v1/dashboards",
