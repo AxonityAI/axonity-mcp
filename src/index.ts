@@ -515,6 +515,10 @@ export const ENTITIES: EntityDef[] = [
       "its place. " +
       "`clearGrain: true` takes away what one row is; it is refused on a source " +
       "table, which must say it. " +
+      "`databaseId` files the table in one of the workspace's databases (an id " +
+      "that is not a live database of this workspace is refused); " +
+      "`clearDatabase: true` takes the table out of its database, and wins over " +
+      "`databaseId` when both are sent. " +
       "`clearTimeAxis: true` takes the time axis away; on a date table that " +
       "carries calendars only together with `calendars: []` or " +
       "`dateTable: false` (which takes the calendars with it) in the same " +

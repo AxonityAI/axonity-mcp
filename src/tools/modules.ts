@@ -81,12 +81,18 @@ export function registerModuleTools(server: McpServer, client: AxonityClient): v
     "read_module_settings_schema",
     "Read the module's live setting-field schema before changing settings. Returns " +
       "{moduleId, fields, rights}. fields is a list of {key, kind, label, description, " +
-      "levels, right, lockable, perEnvironment, staysHome, agentReadsText, to, " +
-      "rolesCombine, default, hasDefault, choiceOptions, fields, item}. kind and " +
+      "group, levels, right, lockable, perEnvironment, staysHome, humanOnly, " +
+      "agentReadsText, to, rolesCombine, default, hasDefault, choiceOptions, " +
+      "choiceLabels, fields, item}. kind and " +
       "label describe the value type and human name; hasDefault distinguishes an " +
-      "absent default from JSON null. fields and item describe nested object/list " +
-      "values with {name, kind, label, description, required, choiceOptions, to, " +
-      "fields, item}. rights is a list of {id, role}. The server filters what " +
+      "absent default from JSON null. group is the heading a screen shows the " +
+      "setting under, and choiceLabels the label it shows for an option (the " +
+      "stored value is always the option, never the label). humanOnly is true on a " +
+      "setting only a person at a screen writes: no token of any kind writes it, " +
+      "a personal token included; reading it is unchanged. fields and item describe " +
+      "nested object/list " +
+      "values with {name, kind, label, description, required, choiceOptions, " +
+      "choiceLabels, to, fields, item}. rights is a list of {id, role}. The server filters what " +
       "this caller may discover; this " +
       "reads the schema, not personal setting values. Use its field definitions to " +
       "choose valid values instead of assuming module-specific keys.",
@@ -119,7 +125,9 @@ export function registerModuleTools(server: McpServer, client: AxonityClient): v
       "or a personal token whose owner is an administrator of this workspace; a personal " +
       "token writes with that person's rights, needs the token's 'Run actions' choice, and " +
       "the save is recorded under that person. " +
-      "Either can write permitted workspace fields, including admin-classified fields. " +
+      "Either can write permitted workspace fields, including admin-classified fields, " +
+      "except a field the schema marks humanOnly: no token writes that one, a personal " +
+      "token of an administrator included, and a person changes it in Axonity. " +
       "Only the workspace level is written here: installation, role and personal settings " +
       "are changed by a person in Axonity in the browser, never through a token. " +
       "A stale revision is refused: reread settings before deciding what to save. " +

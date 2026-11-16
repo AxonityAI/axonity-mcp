@@ -410,6 +410,8 @@ describe("list filters are generated, not kept (M4)", () => {
       "archived",
       "is_dynamic",
       "filled_by",
+      // Camel-cased on the wire already, like the other lists' `tableId`.
+      "databaseId",
     ]);
     expect(table.prompt_snippet.map((f) => f.query)).toEqual(["deleted", "archived"]);
   });

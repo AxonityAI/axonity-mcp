@@ -107,7 +107,7 @@ backend applies it before the rows come back:
 `list_output_schemas({ archived? })`,
 `list_prompt_snippets({ deleted?, archived? })`,
 `list_flows({ archived? })`,
-`list_data_tables({ name?, archived?, isDynamic?, filledBy? })`,
+`list_data_tables({ name?, archived?, isDynamic?, filledBy?, databaseId? })`,
 `list_data_sources({ enabled?, archived? })`,
 `list_table_relationships({ tableId? })`,
 `list_measures({ tableId?, archived? })`,
@@ -826,7 +826,7 @@ These are enforced by the backend, not merely by convention:
   schema; `test/conformance.test.ts` fails if a route or documented enum
   diverges (see `test/fixtures/README.md`).
 - **Every backend route is decided, and the build says so.**
-  `test/completeness.test.ts` partitions all 826 operations in the pinned
+  `test/completeness.test.ts` partitions all 849 operations in the pinned
   snapshot into *covered by a tool* or *excluded by a rule that carries a
   written reason*, and fails on anything in neither. A route nobody has decided
   about is indistinguishable from one somebody is still working on, which is
