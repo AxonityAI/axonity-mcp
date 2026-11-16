@@ -52,7 +52,7 @@ approval of each call is the guard.
 
 ## Tools
 
-510 tools total. `axonity_conventions` (read this first) covers the authoring
+531 tools total. `axonity_conventions` (read this first) covers the authoring
 rules — drafts vs live, optimistic locking, per-entity fields, delete/restore,
 and how to tell a retryable error from one that will never succeed.
 `axonity_semantic_conventions` is its counterpart for one job only: building a
@@ -67,8 +67,9 @@ was kept here. A conformance test asserts their absence.
 
 ### The generic entity family
 
-Thirteen entities — **workflow, agent, tool, skill, policy, reference_doc,
-output_schema, prompt_snippet, flow, data_table, measure, query, application** —
+Fourteen entities — **workflow, agent, tool, skill, policy, reference_doc,
+output_schema, prompt_snippet, flow, data_table, measure, query, application,
+table_database** —
 share one shape,
 though not every entity gets every verb (see the per-entity notes below for the
 exceptions):
@@ -82,12 +83,12 @@ exceptions):
 | `delete_<entity>` | Soft-delete. **Recoverable** — see `restore_<entity>`. |
 | `restore_<entity>` | Undo a delete. No version check. Takes an optional `name` on the nine entities whose name is unique (see *Archive and the Trash*). |
 | `list_deleted_<plural>` | Restore candidates. |
-| `archive_<entity>` / `unarchive_<entity>` | Archived is its own act, not a delete: out of use and out of the lists, back as it was. Only a draft can be archived. Fifteen entities: every one above and the three below except `table_relationship` — see *Archive and the Trash*. |
+| `archive_<entity>` / `unarchive_<entity>` | Archived is its own act, not a delete: out of use and out of the lists, back as it was. Only a draft can be archived. Fifteen entities: every one above except `table_database`, and the three below except `table_relationship` — see *Archive and the Trash*. |
 | `discard_<entity>_draft` | Reset the draft to the last published state. |
 | `request_publish_<entity>` | Ask for a draft to be published — creates a pending approval; never publishes. |
 
-Exception: `list_data_tables` (like `list_measures`, `list_queries` and
-`list_applications`) answers **one page**, not the whole library — see Tables
+Exception: `list_data_tables` (like `list_measures`, `list_queries`,
+`list_applications` and `list_table_databases`) answers **one page**, not the whole library — see Tables
 below.
 
 Three more entities use the same verbs **without** the draft ones —
@@ -108,6 +109,7 @@ backend applies it before the rows come back:
 `list_prompt_snippets({ deleted?, archived? })`,
 `list_flows({ archived? })`,
 `list_data_tables({ name?, archived?, isDynamic?, filledBy?, databaseId? })`,
+`list_table_databases({ kind? })`,
 `list_data_sources({ enabled?, archived? })`,
 `list_table_relationships({ tableId? })`,
 `list_measures({ tableId?, archived? })`,
@@ -326,7 +328,8 @@ across these routes — the tool parameter names say which.
   lifecycle is the generic family above; three things are not, and each is a
   way to be quietly wrong:
   - `list_data_tables` is **paged** (20 by default, 200 max), like
-    `list_measures`, `list_queries` and `list_applications`, because a tenant's
+    `list_measures`, `list_queries`, `list_applications` and
+    `list_table_databases`, because a tenant's
     reference data has no ceiling. Page one
     is not the library — follow `nextCursor` while `hasMore`, or narrow with
     `name`, which is exact and unique per workspace.
@@ -341,6 +344,19 @@ across these routes — the tool parameter names say which.
     would yield), `toolId` (whether a row exists) and `isLive` (whether a run
     can reach it) separately — an author who ticked "may add rows" and has not
     published has granted nothing yet.
+- **Databases and the model** (`table_database`, axonity-flow #2444): a
+  database is a named group of tables (`kind` `data_model`, `shared` or
+  `workspace`), and a table says which one it is in (`update_data_table` with
+  `databaseId`, or `clearDatabase: true`; `list_data_tables` takes `databaseId`):
+  a database holds no list of its tables. It is the one versioned kind that is
+  **not** on the archive of *Archive and the Trash* yet
+  (`ENTITY-LIFECYCLE-CONTRACT.md` §4.9): no `archive_*` tool, no `archivedAt`, no
+  place in the Trash. It is archived by sending `status: "archived"` with
+  `update_table_database`, an archived one stays in `list_table_databases` with
+  its `status`, and only an empty database can be deleted (a 409 names how many
+  tables it still holds). `read_model_gaps` and `read_model_overview` read the
+  five fixed checks over the model and what exists in each layer, counted when
+  asked; they belong to the Insights module.
 - **The semantic model** (`data_source`, `query`, `data_table`,
   `table_relationship`, `measure`, concepts and their links, `dashboard`): a
   workspace connects a warehouse such as BigQuery, named queries read it,

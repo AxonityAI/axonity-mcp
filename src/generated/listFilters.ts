@@ -193,6 +193,15 @@ export const LIST_FILTERS: Record<string, ListFilter[]> = {
         "Only the tables that live in this database.",
     },
   ],
+  "table_database": [
+    {
+      arg: "kind",
+      query: "kind",
+      type: "string",
+      description:
+        "Only the databases of this kind.",
+    },
+  ],
   "data_source": [
     {
       arg: "enabled",

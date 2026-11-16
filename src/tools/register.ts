@@ -217,6 +217,15 @@ export interface EntityDef {
    * body is strict and has no `status`.
    */
   statusRetired?: boolean;
+  /**
+   * Deleting this kind does NOT put it in the Trash: `GET /trash` does not
+   * list it and `list_trash` never shows it. Only `table_database`
+   * (`ENTITY-LIFECYCLE-CONTRACT.md` §4.9, until its owner converts it); the
+   * backend names it in `KINDS_WITHOUT_A_TRASH_DOOR`.
+   */
+  noTrashDoor?: boolean;
+  /** Appended to `list_<entity>`'s description when the rows say something the generic text does not. */
+  listNote?: string;
 }
 
 export function registerEntityTools(
@@ -240,6 +249,7 @@ export function registerEntityTools(
         ? ` Archived items are left out unless \`archived\` is \`include\` or \`only\`; ` +
           `each row carries \`archivedAt\`, null while the ${singular} is in use.`
         : "") +
+      (def.listNote ? ` ${def.listNote}` : "") +
       (listFilters.length > 0
         ? ` Narrow it with ${listFilters
             .map((f) => `\`${f.arg}\``)
@@ -391,8 +401,11 @@ export function registerEntityTools(
       `delete_${singular}`,
       `Delete a ${singular}. Destructive, but RECOVERABLE — it is soft-deleted ` +
         `and can be brought back with restore_${singular} (it will not appear in ` +
-        `list_${plural} until then; it goes to the Trash, see list_trash). Read it ` +
-        `first for its version. A 409 here ` +
+        `list_${plural} until then; ` +
+        (def.noTrashDoor
+          ? `it is not in the Trash — list_deleted_${plural} shows it). `
+          : `it goes to the Trash, see list_trash). `) +
+        `Read it first for its version. A 409 here ` +
         `may be a stale version (re-read and retry) or a reference conflict ` +
         `(something published still uses it — re-reading will not help; the ` +
         `error tells you which).` +

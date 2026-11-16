@@ -247,6 +247,9 @@ has run cleanly once, at its current version.
   first, with who deleted it and what it was carried by) and \`trash_summary\`
   (how many of each, and the installation's \"Empty the trash after\"). Deleting
   permanently is an administrator's act in Axonity; there is no tool for it.
+  One kind is not in it: \`table_database\`. Deleting an (empty) database does
+  not show in \`list_trash\`; \`list_deleted_table_databases\` does, and
+  \`restore_table_database\` brings it back.
 - The same applies one level down, to version HISTORY:
   \`delete_*_version\` removes one entry from history (the current draft and
   published version are protected and can't be targeted this way);
@@ -269,8 +272,10 @@ has run cleanly once, at its current version.
   unpublishes it in Axonity. Archiving touches no version. Do not archive by
   sending a \`status\` to \`update_*\`: \`agent\`, \`tool\`, \`skill\`, \`policy\`,
   \`reference_doc\`, \`output_schema\`, \`data_table\`, \`measure\`, \`query\` and
-  \`application\` refuse it. Runs have an archive of their own
-  (\`archive_run\` / \`unarchive_run\`, see below).
+  \`application\` refuse it. A \`table_database\` is the exception: it has no
+  archive tool and no \`archivedAt\`, and it IS archived by sending
+  \`status: "archived"\` with \`update_table_database\`. Runs have an archive of
+  their own (\`archive_run\` / \`unarchive_run\`, see below).
 
 ## Per entity — what to create, and what "complete" means
 
@@ -1108,8 +1113,8 @@ value across from one of the others, and do not guess. Every column needs a
 \`description\`: an agent reads it to know what the column is for, and a save
 without one is refused.
 
-**\`list_data_tables\` is PAGED**, like \`list_measures\`, \`list_queries\` and
-\`list_applications\` — a tenant's reference data has no ceiling. Page one is not the library. Follow
+**\`list_data_tables\` is PAGED**, like \`list_measures\`, \`list_queries\`,
+\`list_applications\` and \`list_table_databases\` — a tenant's reference data has no ceiling. Page one is not the library. Follow
 \`nextCursor\` while \`hasMore\` is true, or better, narrow in the query:
 \`name\` is exact and unique per workspace, so "does one called X already
 exist" is a single call rather than a walk. The page carries \`rowCount\`, never

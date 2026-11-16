@@ -60,6 +60,7 @@ import { registerComponentTools } from "./tools/components.js";
 import { registerConceptTools } from "./tools/concepts.js";
 import { registerMeasureInfluenceTools } from "./tools/measureInfluences.js";
 import { registerKnowledgeGraphTools } from "./tools/knowledgeGraph.js";
+import { registerModelTools } from "./tools/model.js";
 import { registerModuleTools } from "./tools/modules.js";
 import { registerOperationsTools } from "./tools/operations.js";
 import { registerPromptPlacementTools } from "./tools/promptPlacement.js";
@@ -149,6 +150,39 @@ const BREAKS_MEASURE_NOTE =
   "change takes away — a column, the table, or the relationship a part " +
   "reaches a dimension over. The refusal names the measures: repair them " +
   "first (update_measure, then publish), then retry.";
+
+/**
+ * The database (axonity-flow #2444, R0b). Every sentence is the schema's own
+ * field description or a refusal in `services/table_database_service.py` and
+ * `domain/table_databases.py`; the source per sentence is in the team file.
+ */
+const DATABASE_NOTE =
+  "A DATABASE is a named group of tables. `kind` is `data_model` (tables of " +
+  "one subject that join; the default), `shared` (tables other databases use " +
+  "— the conformed dimensions, such as a calendar or the countries) or " +
+  "`workspace` (tables the platform keeps for the workspace itself, no data " +
+  "model). `name` is unique in the workspace, and so is `slug`, the handle a " +
+  "person types and a configuration file is named by: lowercase letters, " +
+  "digits and single hyphens; left out on create it is derived from the " +
+  "name. `owner` is who answers for it, a role or a person, as text. " +
+  "`status` is `active` (the default) or `archived`.";
+
+const DATABASE_UPDATE_NOTE =
+  "A new name keeps the old slug unless `slug` is sent. A system database " +
+  "(one the platform ships) is locked: an edit of it is refused. A database " +
+  "is archived by sending `status: \"archived\"`; it has no archive_ or " +
+  "unarchive_ tool and no `archivedAt` (ENTITY-LIFECYCLE-CONTRACT.md §4.9), " +
+  "and nothing refuses an edit of an archived database. A table is not " +
+  "moved here: a database holds no list of its tables, the table says " +
+  "which one it is in — update_data_table with `databaseId`, or " +
+  "`clearDatabase: true`.";
+
+const DATABASE_DELETE_NOTE =
+  "Only an EMPTY database is deleted: one that still holds live tables is " +
+  "refused with a 409 (\"This database still holds N tables. Move the " +
+  "tables to another database first; the tables stay.\") — move them with " +
+  "update_data_table (`databaseId`, or `clearDatabase: true` to take one out " +
+  "of every database), then delete. A system database is refused too.";
 
 const DATE_TABLE_NOTE =
   "THE DATE TABLE — `dateTable: true` marks the ONE table of the workspace " +
@@ -535,6 +569,31 @@ export const ENTITIES: EntityDef[] = [
       LABEL_UPDATE_NOTE,
   },
   {
+    // A database is a named group of tables (axonity-flow #2444, R0b, epic
+    // #2429). Its routes have the same order and spelling as a table's, so the
+    // family comes from the registrar. It is the one versioned kind that
+    // Levenscyclus did not bring onto the archive: no `archivedAt`, no archive
+    // route, no door to the Trash — it is archived with its own `status`
+    // (`ENTITY-LIFECYCLE-CONTRACT.md` §4.9), hence no `archivable` here and
+    // `noTrashDoor`. `test/tableDatabases.test.ts` holds each sentence below to
+    // the schema.
+    singular: "table_database",
+    noTrashDoor: true,
+    basePath: "/api/v1/table-databases",
+    updateMethod: "PUT",
+    plural: "table_databases",
+    label: "databases (the named groups the tables of a workspace live in)",
+    createExample: ["name", "kind"],
+    deleteVersionParam: "expectedVersion",
+    listPaging: { defaultPageSize: 20, maxPageSize: 200 },
+    listNote:
+      "Archived databases are in the list: a database is archived with its " +
+      "`status`, and each row carries it (`active` or `archived`).",
+    createNote: DATABASE_NOTE,
+    deleteNote: DATABASE_DELETE_NOTE,
+    updateWarning: DATABASE_NOTE + "\n\n" + DATABASE_UPDATE_NOTE,
+  },
+  {
     // A measure was a field on a table; the semantic model (axonity-flow#1881
     // S12, #1841) made it an entity of its own, in the same order and spelling
     // as a table's routes — so the whole family, versions and publish request
@@ -768,6 +827,11 @@ const VERSIONED: VersionedEntity[] = [
     basePath: "/api/v1/data-tables",
     publishedPath: "versions",
   },
+  {
+    singular: "table_database",
+    basePath: "/api/v1/table-databases",
+    publishedPath: "versions",
+  },
   { singular: "measure", basePath: "/api/v1/measures", publishedPath: "versions" },
   { singular: "query", basePath: "/api/v1/queries", publishedPath: "versions" },
   {
@@ -849,6 +913,7 @@ export function registerAll(
   registerAccessTools(server as McpServer, client);
   registerKnowledgeGraphTools(server as McpServer, client);
   registerTrashTools(server as McpServer, client);
+  registerModelTools(server as McpServer, client);
 }
 
 /** How the server introduces itself, on either transport. */
