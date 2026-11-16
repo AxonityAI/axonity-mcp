@@ -21943,7 +21943,7 @@
           "navigation": {
             "default": [],
             "items": {
-              "$ref": "#/components/schemas/NavigationItem"
+              "$ref": "#/components/schemas/NavigationItemResponse"
             },
             "title": "Navigation",
             "type": "array"
@@ -21971,6 +21971,17 @@
             "title": "Settings",
             "type": "array"
           },
+          "settingsPath": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Settingspath"
+          },
           "shellSlots": {
             "default": [],
             "items": {
@@ -21980,9 +21991,9 @@
             "type": "array"
           },
           "source": {
-            "default": "legacy",
+            "default": "platform",
             "enum": [
-              "legacy",
+              "core",
               "platform"
             ],
             "title": "Source",
@@ -21998,6 +22009,14 @@
               }
             ],
             "title": "Surface"
+          },
+          "toolTypes": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Tooltypes",
+            "type": "array"
           }
         },
         "required": [
@@ -22512,27 +22531,43 @@
         "title": "MyBrief",
         "type": "object"
       },
-      "NavigationItem": {
-        "additionalProperties": false,
-        "description": "A shell location with an explicit right; no frontend component code.",
+      "NavigationItemResponse": {
+        "description": "A navigation item with its section resolved, so the sidebar reads no table of its own.",
         "properties": {
           "label": {
-            "pattern": "\\S",
             "title": "Label",
             "type": "string"
           },
+          "order": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order"
+          },
           "path": {
-            "pattern": "\\S",
             "title": "Path",
             "type": "string"
           },
           "right": {
-            "pattern": "\\S",
             "title": "Right",
             "type": "string"
           },
+          "section": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NavigationSectionResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "slot": {
-            "pattern": "\\S",
             "title": "Slot",
             "type": "string"
           }
@@ -22543,7 +22578,48 @@
           "path",
           "right"
         ],
-        "title": "NavigationItem",
+        "title": "NavigationItemResponse",
+        "type": "object"
+      },
+      "NavigationSectionResponse": {
+        "description": "A sidebar section as the core defines it: what the sidebar draws and where.",
+        "properties": {
+          "icon": {
+            "enum": [
+              "wrench",
+              "book-open",
+              "database",
+              "cube"
+            ],
+            "title": "Icon",
+            "type": "string"
+          },
+          "id": {
+            "enum": [
+              "tools",
+              "library",
+              "data",
+              "model"
+            ],
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "order": {
+            "title": "Order",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "icon",
+          "order"
+        ],
+        "title": "NavigationSectionResponse",
         "type": "object"
       },
       "NetworkGroup": {
@@ -25038,7 +25114,7 @@
           },
           "items": {
             "items": {
-              "$ref": "#/components/schemas/src__schemas__knowledge__TreeNode"
+              "$ref": "#/components/schemas/src__modules__cortex__schemas__knowledge__TreeNode"
             },
             "title": "Items",
             "type": "array"
@@ -45486,6 +45562,55 @@
         "title": "_ToolCallShape",
         "type": "object"
       },
+      "src__modules__cortex__schemas__knowledge__TreeNode": {
+        "description": "One node of the tree (§4.4): a domain (or a group above it) or a topic,\nwith how many facts in its subtree the reader may see.",
+        "properties": {
+          "factCount": {
+            "title": "Factcount",
+            "type": "integer"
+          },
+          "hasChildren": {
+            "title": "Haschildren",
+            "type": "boolean"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "$ref": "#/components/schemas/LabelView"
+          },
+          "layer": {
+            "title": "Layer",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "layer",
+          "name",
+          "summary",
+          "label",
+          "factCount",
+          "hasChildren"
+        ],
+        "title": "TreeNode",
+        "type": "object"
+      },
       "src__modules__insights__schemas__dashboard__DashboardSummary": {
         "description": "A dashboard in a list — without its layout.",
         "properties": {
@@ -45624,55 +45749,6 @@
           "label",
           "published",
           "built"
-        ],
-        "title": "TreeNode",
-        "type": "object"
-      },
-      "src__schemas__knowledge__TreeNode": {
-        "description": "One node of the tree (§4.4): a domain (or a group above it) or a topic,\nwith how many facts in its subtree the reader may see.",
-        "properties": {
-          "factCount": {
-            "title": "Factcount",
-            "type": "integer"
-          },
-          "hasChildren": {
-            "title": "Haschildren",
-            "type": "boolean"
-          },
-          "id": {
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
-          },
-          "label": {
-            "$ref": "#/components/schemas/LabelView"
-          },
-          "layer": {
-            "title": "Layer",
-            "type": "integer"
-          },
-          "name": {
-            "title": "Name",
-            "type": "string"
-          },
-          "summary": {
-            "title": "Summary",
-            "type": "string"
-          },
-          "type": {
-            "title": "Type",
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "type",
-          "layer",
-          "name",
-          "summary",
-          "label",
-          "factCount",
-          "hasChildren"
         ],
         "title": "TreeNode",
         "type": "object"

@@ -125,6 +125,14 @@ export const FORBIDDEN: Rule[] = [
   // `token_route_classes.py`), so a tool here would only be refused. Letting a
   // token mint, list or revoke tokens would also let it widen its own reach.
   { label: "personal tokens (a token never manages tokens)", path: /\/api\/v1\/me\/tokens(\/|$)/ },
+  // The same backend group holds `GET /me/mcp-access` — what a person may put
+  // on a personal token, which only the screen that mints one reads
+  // (`# a token never manages tokens`, same table).
+  { label: "personal token eligibility (a token never manages tokens)", path: /\/api\/v1\/me\/mcp-access$/ },
+  // OAuth consent for the hosted /mcp (axonity-flow R4): the request and its
+  // decision are a person's, with a session. The table's reason is "a token
+  // never grants a token: the consent screen is a person's, with a session".
+  { label: "OAuth consent (a token never grants a token)", path: /\/api\/v1\/oauth\/requests\/[^/]+(\/decision)?$/ },
   { label: "deployment", path: /\/deployment(\/|$)/ },
   // `/config/secrets` lives behind this rule and stays closed to every verb —
   // it is the deploy-time surface, not the tenant's secret catalogue.
@@ -287,16 +295,8 @@ export const FORBIDDEN: Rule[] = [
     path: /\/api\/v1\/knowledge\/(attention|oversight\/(doubtful|expiring|tips|scope))$/,
   },
 
-  // ---- Levenscyclus R3 and the personal-token routes that came with main ----
+  // ---- Levenscyclus R3 ----
 
-  // What a person's token may do through the hosted /mcp is read at
-  // `GET /me/mcp-access`: the same table row (`dicht`, "a token never manages
-  // tokens") as the routes above, one door further in.
-  { label: "a person's MCP access (a token never manages tokens)", path: /\/api\/v1\/me\/mcp-access$/ },
-  // The OAuth consent screen is a person's, with a session: a request waits for
-  // a person to grant it, and a token that could answer would be granting
-  // itself access. The table row says it: "a token never grants a token".
-  { label: "OAuth consent (a token never grants a token)", path: /\/api\/v1\/oauth\/requests\/[^/]+(\/decision)?$/ },
   // Deleting from the Trash for good (axonity-flow `DELETE /trash/{kind}/{id}`,
   // Levenscyclus R3) is irreversible and `require_admin` — a service token is
   // always role="member", so a tool here would only ever 403 — and the plan for
