@@ -154,7 +154,7 @@ const BREAKS_MEASURE_NOTE =
 /**
  * The database (axonity-flow #2444, R0b). Every sentence is the schema's own
  * field description or a refusal in `services/table_database_service.py` and
- * `domain/table_databases.py`; the source per sentence is in the team file.
+ * `domain/table_databases.py`.
  */
 const DATABASE_NOTE =
   "A DATABASE is a named group of tables. `kind` is `data_model` (tables of " +

@@ -188,7 +188,7 @@ export interface EntityDef {
    */
   publishNote?: string;
   /**
-   * Archive is its own act on this kind (Levenscyclus, DECISIONS.md 1):
+   * Archive is its own act on this kind (Levenscyclus R3):
    * `archive_<entity>` and `unarchive_<entity>`, and `archived` on the list.
    * True exactly where the backend mounts `POST <basePath>/{entity_id}/archive`;
    * `test/lifecycle.test.ts` reads the pinned schema and fails when the two
@@ -436,8 +436,9 @@ export function registerEntityTools(
             `again with \`name\`, 1 to 255 characters; a name another item already ` +
             `has is refused too ("Choose a different name."). \`name\` is not ` +
             `applied to a ${singular} that is already live (\`restored: false\`).` +
-            // Both sentences are held by backend tests; the source per sentence is in
-            // af-levenscyclus.md (R3 stap n). A kind without versions has no draft.
+            // Both sentences are held by backend tests
+            // (`tests/routes/test_restore_with_a_new_name.py`). A kind without
+            // versions has no draft.
             (publishable
               ? ` The new name lands on the working draft (one is made if there is ` +
                 `none); the published version stays as it was until a new publication.`
@@ -535,15 +536,15 @@ export function registerEntityTools(
 }
 
 /**
- * `archive_<entity>` and `unarchive_<entity>` (DECISIONS.md 1).
+ * `archive_<entity>` and `unarchive_<entity>` (Levenscyclus R3).
  *
  * Archived is an explicit choice beside Draft and Published: out of use and out
  * of the lists, back exactly as it was when unarchived. Both routes are
  * `POST <basePath>/{id}/archive|unarchive` with no body and answer
  * `{ id, archived, changed, archivedAt }`.
  *
- * What the descriptions say is what the backend validates, each sentence with
- * its source in the team file (R3 stap j): the three refusals are checked in
+ * What the descriptions say is what the backend validates: the three refusals
+ * are checked in
  * `services/archive_ops.py` (`set_archived`), once for every kind.
  */
 function registerArchiveTools(
@@ -552,15 +553,23 @@ function registerArchiveTools(
   def: EntityDef,
 ): void {
   const { singular, basePath } = def;
+  // A kind with no versions (data_source, dashboard) has no draft and no
+  // publication: `refuse_published_item` reads `published_versions` and finds
+  // no row for it, so the refusal and the words about versions are not true
+  // there (review S1 of #120).
+  const versioned = def.publishable !== false;
 
   server.tool(
     `archive_${singular}`,
     `Archive a ${singular}: out of use — no run reads it — and out of the lists, ` +
-      `until unarchive_${singular} brings it back. The versions and the ` +
-      `publication are not touched, and no version is needed. Only a draft can ` +
-      `be archived: a published ${singular} is refused ("Unpublish it first"), ` +
-      `and a person unpublishes it in Axonity — no tool does. One the platform ` +
-      `ships is refused too.` +
+      `until unarchive_${singular} brings it back. ` +
+      (versioned
+        ? `The versions and the publication are not touched, and no version is ` +
+          `needed. Only a draft can be archived: a published ${singular} is ` +
+          `refused ("Unpublish it first"), and a person unpublishes it in ` +
+          `Axonity — no tool does.`
+        : `No version is needed.`) +
+      ` One the platform ships is refused too.` +
       (def.archiveGuard === "in_use"
         ? ` While something still uses it, it is refused in the same words as ` +
           `delete_${singular}.`
@@ -577,8 +586,9 @@ function registerArchiveTools(
 
   server.tool(
     `unarchive_${singular}`,
-    `Unarchive a ${singular}: back in use, in the state it had (draft or ` +
-      `published). Never refused for what uses it. Unarchiving one that is not ` +
+    `Unarchive a ${singular}: back in use, ` +
+      (versioned ? `in the state it had (draft or published)` : `as it was`) +
+      `. Never refused for what uses it. Unarchiving one that is not ` +
       `archived is not an error: it answers \`changed: false\`. A ${singular} in ` +
       `the Trash is not found here: restore_${singular} it first. Answers ` +
       `{ id, archived, changed, archivedAt }.`,

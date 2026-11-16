@@ -374,7 +374,7 @@ describe("link read-backs return identity, not bodies", () => {
     expect(body.bodiesOmitted).toMatch(/verbosity: "full"/);
   });
 
-  it("projects only fields the backend still sends on these six routes", () => {
+  it("projects only fields the backend still sends on these five routes", () => {
     type Schema = { properties?: Record<string, { items?: { $ref?: string } }> };
     const snapshot = JSON.parse(
       readFileSync(fileURLToPath(new URL("./fixtures/openapi.snapshot.json", import.meta.url)), "utf8"),

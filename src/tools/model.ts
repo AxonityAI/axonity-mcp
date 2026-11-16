@@ -8,8 +8,7 @@
  * (`routes/modules.py` `module_required`). What a count covers is what the
  * caller may read (the routes take the reader context), so two callers can see
  * different numbers. Each sentence is the schema's own description
- * (`modules/insights/schemas/model.py`, pinned in the snapshot); the source per
- * sentence is in the team file (af-levenscyclus.md, "MCP-PR R3").
+ * (`modules/insights/schemas/model.py`, pinned in the snapshot).
  *
  * Reads only, no parameter: there is nothing to narrow.
  */

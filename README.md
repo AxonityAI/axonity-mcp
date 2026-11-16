@@ -83,7 +83,7 @@ exceptions):
 | `delete_<entity>` | Soft-delete. **Recoverable** — see `restore_<entity>`. |
 | `restore_<entity>` | Undo a delete. No version check. Takes an optional `name` on the nine entities whose name is unique (see *Archive and the Trash*). |
 | `list_deleted_<plural>` | Restore candidates. |
-| `archive_<entity>` / `unarchive_<entity>` | Archived is its own act, not a delete: out of use and out of the lists, back as it was. Only a draft can be archived. Fifteen entities: every one above except `table_database`, and the three below except `table_relationship` — see *Archive and the Trash*. |
+| `archive_<entity>` / `unarchive_<entity>` | Archived is its own act, not a delete: out of use and out of the lists, back as it was. On a kind with versions only a draft can be archived. Fifteen entities: every one above except `table_database`, and the three below except `table_relationship` — see *Archive and the Trash*. |
 | `discard_<entity>_draft` | Reset the draft to the last published state. |
 | `request_publish_<entity>` | Ask for a draft to be published — creates a pending approval; never publishes. |
 
@@ -178,8 +178,8 @@ prompt_snippet, flow, data_table, measure, query, application, data_source and
 dashboard. The routes are `POST /{entity}/{id}/archive` and `/unarchive`, with
 no body and no version, and answer `{ id, archived, changed, archivedAt }`;
 doing it twice is `changed: false`, not an error. What the backend refuses is
-said in the tool: a published item (a person unpublishes it in Axonity — no tool
-does), one the platform ships, and, on the kinds whose delete has the same
+said in the tool: a published item of a kind with versions (a person unpublishes it in Axonity — no
+tool does), one the platform ships, and, on the kinds whose delete has the same
 guard, one that is still in use, in the words delete uses. An archived item is
 out of use (no run reads it), cannot be edited until it is unarchived, and is
 left out of every `list_<plural>` unless `archived` is `include` or `only`;

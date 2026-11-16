@@ -2,9 +2,9 @@
  * The Database entity (axonity-flow #2444, R0b, epic #2429) and the two reads
  * over the model: `GET /model/gaps` and `GET /model/overview`.
  *
- * Covered by Jonathan on 16/11 ("Dekken in deze PR"), because the snapshot of
- * Flow `main` after Levenscyclus R3 holds twenty routes of them and
- * `completeness.test.ts` allows no route without a decision.
+ * Covered here because the snapshot of Flow `main` after Levenscyclus R3 holds
+ * twenty routes of them and `completeness.test.ts` allows no route without a
+ * decision.
  *
  * A database is the one versioned kind that Levenscyclus did NOT bring onto the
  * archive of §7 (`ENTITY-LIFECYCLE-CONTRACT.md` §4.9): it has no `archivedAt`,
@@ -18,6 +18,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
+import { LIST_FILTERS } from "../src/generated/listFilters.js";
 import { ENTITIES, registerAll } from "../src/index.js";
 
 const snapshot = JSON.parse(
@@ -123,9 +124,12 @@ describe("the list is a page, and every parameter arrives", () => {
     expect(client.get).toHaveBeenCalledWith(BASE, { kind: "shared", limit: 5, cursor: "c1" });
   });
 
-  it("takes the filters the route declares and no other", () => {
+  it("takes the filters the route declares and no other, from the generator", () => {
     const op = snapshot.paths[BASE].get as { parameters: { name: string }[] };
-    expect(op.parameters.map((p) => p.name).sort()).toEqual(["cursor", "kind", "limit"]);
+    const declared = op.parameters.map((p) => p.name).filter((n) => n !== "limit" && n !== "cursor");
+    expect(declared).toEqual(["kind"]);
+    // The tool's filters are the generated table's, not a second list.
+    expect(LIST_FILTERS.table_database.map((f) => f.query)).toEqual(declared);
   });
 
   it("says it is a page, that archived databases are in it and that each row has a status", () => {
@@ -209,6 +213,29 @@ describe("writes", () => {
     const { descriptions } = surface();
     expect(descriptions.get("delete_skill")!).toMatch(/Trash, see list_trash/);
     expect(descriptions.get("delete_data_table")!).toMatch(/Trash, see list_trash/);
+  });
+});
+
+// The only text that says how a table gets into a database: `update_data_table`
+// takes a blind `fields` bag, so without these sentences an agent cannot know
+// the two fields exist (review S2 of #120). The fields are read from the schema.
+describe("update_data_table says how a table moves into a database", () => {
+  const update = schemas.UpdateDataTableRequest as {
+    properties: Record<string, unknown>;
+  };
+
+  it("the schema has the two fields this guards", () => {
+    expect(Object.keys(update.properties)).toEqual(
+      expect.arrayContaining(["databaseId", "clearDatabase"]),
+    );
+  });
+
+  it("names `databaseId` and `clearDatabase`, and that the clear wins", () => {
+    const d = surface().descriptions.get("update_data_table")!;
+    expect(d).toMatch(/`databaseId` files the table in one of the workspace's databases/);
+    expect(d).toMatch(/`clearDatabase: true` takes the table out of its database/);
+    expect(d).toMatch(/wins over `databaseId` when both are sent/);
+    expect(d).toMatch(/not a live database of this workspace is refused/);
   });
 });
 

@@ -10,8 +10,7 @@
  *   - Every parameter reaches the wire (Zod drops an unknown key without a
  *     word, so each one is asserted to arrive).
  *   - The sentences an agent reads say what the backend validates; each one is
- *     pinned by a phrase from the backend's own message, with its source in
- *     `af-levenscyclus.md` (R3 stap j).
+ *     pinned by a phrase from the backend's own message.
  */
 
 import { readFileSync } from "node:fs";
@@ -327,10 +326,27 @@ describe("archive: what the backend refuses, said before the call", () => {
     const { descriptions } = surface();
     for (const e of archiveKinds) {
       const d = descriptions.get(`archive_${e.singular}`)!;
-      expect(d, e.singular).toMatch(/Only a draft can be archived/);
-      expect(d, e.singular).toMatch(/a person unpublishes it in Axonity/);
       expect(d, e.singular).toMatch(/changed: false/);
       expect(d, e.singular).toContain(`unarchive_${e.singular}`);
+      // The publication refusal is only true for a kind that has one: a kind
+      // with no versions (data_source, dashboard) is never "published", so the
+      // backend's `refuse_published_item` has nothing to find (review S1).
+      if (e.publishable !== false) {
+        expect(d, e.singular).toMatch(/Only a draft can be archived/);
+        expect(d, e.singular).toMatch(/a person unpublishes it in Axonity/);
+      }
+    }
+  });
+
+  it("a kind without versions claims no draft, no publication and no unpublishing (review S1)", () => {
+    const { descriptions } = surface();
+    const unversioned = archiveKinds.filter((e) => e.publishable === false);
+    expect(unversioned.map((e) => e.singular).sort()).toEqual(["dashboard", "data_source"]);
+    for (const e of unversioned) {
+      for (const tool of [`archive_${e.singular}`, `unarchive_${e.singular}`]) {
+        const d = descriptions.get(tool)!;
+        expect(d, tool).not.toMatch(/publication|published|Unpublish|unpublishes|draft|versions/i);
+      }
     }
   });
 
@@ -348,16 +364,21 @@ describe("archive: what the backend refuses, said before the call", () => {
     const { descriptions } = surface();
     for (const e of archiveKinds) {
       expect(descriptions.get(`unarchive_${e.singular}`)!, e.singular).toMatch(
-        /back in use, in the state it had/,
+        /back in use, (in the state it had|as it was)/,
       );
     }
   });
 
   it("archiving touches the marker only, not the version history", () => {
     const { descriptions } = surface();
-    for (const e of archiveKinds) {
+    for (const e of archiveKinds.filter((x) => x.publishable !== false)) {
       expect(descriptions.get(`archive_${e.singular}`)!, e.singular).toMatch(
         /versions and the publication are not touched/,
+      );
+    }
+    for (const e of archiveKinds) {
+      expect(descriptions.get(`archive_${e.singular}`)!, e.singular).toMatch(
+        /no version is needed/i,
       );
     }
   });

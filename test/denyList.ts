@@ -303,9 +303,8 @@ export const FORBIDDEN: Rule[] = [
 
   // Deleting from the Trash for good (axonity-flow `DELETE /trash/{kind}/{id}`,
   // Levenscyclus R3) is irreversible and `require_admin` — a service token is
-  // always role="member", so a tool here would only ever 403 — and the plan for
-  // this surface says not to offer it (MCP-UPDATE.md: "`DELETE
-  // /trash/{kind}/{id}` (definitief, alleen admin) niet aanbieden"). Seeing the
+  // always role="member", so a tool here would only ever 403 — so it is not
+  // offered. Seeing the
   // Trash (`list_trash`, `trash_summary`) and restoring from it
   // (`restore_<entity>`) are tools; this is the one act no recovery follows.
   {

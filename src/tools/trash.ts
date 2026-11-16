@@ -1,16 +1,14 @@
 /**
- * The Trash — one list of everything deleted, of every kind (Levenscyclus,
- * DECISIONS.md 3).
+ * The Trash — one list of everything deleted, of every kind (Levenscyclus R3).
  *
  * `delete_<entity>` puts an item in the Trash; `restore_<entity>` takes it out.
  * These two tools are how an agent SEES what is in there. Deleting
  * permanently (`DELETE /api/v1/trash/{kind}/{item_id}`) is deliberately not
- * here: it is irreversible and `require_admin` on the backend, and the update
- * of the connector's surface (MCP-UPDATE.md) says not to offer it. The rule
- * that records it is in `test/denyList.ts`.
+ * here: it is irreversible and `require_admin` on the backend (a token is never
+ * an administrator), so it is not offered. The rule that records it is in
+ * `test/denyList.ts`.
  *
- * What each sentence says is what the backend answers, with its source in the
- * team file (R3 stap j): the shapes are `TrashItem` and `TrashSummaryResponse`
+ * What each sentence says is what the backend answers: the shapes are `TrashItem` and `TrashSummaryResponse`
  * in `backend/src/schemas/trash.py`, the routes `backend/src/routes/trash.py`.
  */
 
