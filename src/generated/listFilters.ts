@@ -185,6 +185,13 @@ export const LIST_FILTERS: Record<string, ListFilter[]> = {
       description:
         "Only tables filled this way: author, workflow, query or source (the rows stay in a data source). A value outside the four is refused rather than silently ignored.",
     },
+    {
+      arg: "databaseId",
+      query: "databaseId",
+      type: "string",
+      description:
+        "Only the tables that live in this database.",
+    },
   ],
   "data_source": [
     {

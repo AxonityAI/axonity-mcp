@@ -209,6 +209,14 @@
     "class": "dicht",
     "why": "delete: configuration without an approval step"
   },
+  "DELETE /api/v1/table-databases/{database_id}": {
+    "class": "dicht",
+    "why": "delete: configuration without an approval step"
+  },
+  "DELETE /api/v1/table-databases/{database_id}/versions/{version_id}": {
+    "class": "dicht",
+    "why": "delete: configuration without an approval step"
+  },
   "DELETE /api/v1/table-relationships/{relationship_id}": {
     "class": "dicht",
     "why": "delete: configuration without an approval step"
@@ -770,6 +778,12 @@
   "GET /api/v1/measures/{measure_id}/versions/{version}": {
     "class": "lezen"
   },
+  "GET /api/v1/model/gaps": {
+    "class": "lezen"
+  },
+  "GET /api/v1/model/overview": {
+    "class": "lezen"
+  },
   "GET /api/v1/modules": {
     "class": "lezen"
   },
@@ -1087,6 +1101,27 @@
     "class": "lezen"
   },
   "GET /api/v1/system-tools/functions": {
+    "class": "lezen"
+  },
+  "GET /api/v1/table-databases": {
+    "class": "lezen"
+  },
+  "GET /api/v1/table-databases/deleted": {
+    "class": "lezen"
+  },
+  "GET /api/v1/table-databases/{database_id}": {
+    "class": "lezen"
+  },
+  "GET /api/v1/table-databases/{database_id}/versions": {
+    "class": "lezen"
+  },
+  "GET /api/v1/table-databases/{database_id}/versions/deleted": {
+    "class": "lezen"
+  },
+  "GET /api/v1/table-databases/{database_id}/versions/published": {
+    "class": "lezen"
+  },
+  "GET /api/v1/table-databases/{database_id}/versions/{version}": {
     "class": "lezen"
   },
   "GET /api/v1/table-relationships": {
@@ -1441,6 +1476,9 @@
     "class": "configuratie"
   },
   "PATCH /api/v1/skills/{skill_id}/versions/major/{major_version}": {
+    "class": "configuratie"
+  },
+  "PATCH /api/v1/table-databases/{database_id}/versions/major/{major_version}": {
     "class": "configuratie"
   },
   "PATCH /api/v1/tenant-settings/concurrent-run-cap": {
@@ -2605,6 +2643,38 @@
     "class": "dicht",
     "why": "restore: configuration without an approval step"
   },
+  "POST /api/v1/table-databases": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/table-databases/{database_id}/discard-draft": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/table-databases/{database_id}/restore": {
+    "class": "dicht",
+    "why": "restore: configuration without an approval step"
+  },
+  "POST /api/v1/table-databases/{database_id}/versions": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/table-databases/{database_id}/versions/ensure": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/table-databases/{database_id}/versions/publish/{major_version}": {
+    "class": "dicht",
+    "why": "direct publish: only the approval request"
+  },
+  "POST /api/v1/table-databases/{database_id}/versions/unpublish": {
+    "class": "dicht",
+    "why": "direct publish: only the approval request"
+  },
+  "POST /api/v1/table-databases/{database_id}/versions/{version_id}/restore": {
+    "class": "dicht",
+    "why": "restore: configuration without an approval step"
+  },
+  "POST /api/v1/table-databases/{database_id}/versions/{version_id}/restore-deleted": {
+    "class": "dicht",
+    "why": "restore: configuration without an approval step"
+  },
   "POST /api/v1/table-relationships": {
     "class": "dicht",
     "why": "no draft: saved directly"
@@ -2739,6 +2809,10 @@
   "POST /api/v1/tools/{tool_id}/versions/{version_id}/restore-deleted": {
     "class": "dicht",
     "why": "restore: configuration without an approval step"
+  },
+  "POST /api/v1/triggers": {
+    "class": "dicht",
+    "why": "no authentication of its own: a token never reaches the gate"
   },
   "POST /api/v1/triggers/{token}": {
     "class": "dicht",
@@ -2985,6 +3059,9 @@
     "why": "credentials, secrets, platform, deployment, configuration"
   },
   "PUT /api/v1/skills/{skill_id}": {
+    "class": "configuratie"
+  },
+  "PUT /api/v1/table-databases/{database_id}": {
     "class": "configuratie"
   },
   "PUT /api/v1/table-relationships/{relationship_id}": {

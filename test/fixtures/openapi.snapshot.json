@@ -1180,6 +1180,7 @@
               "output_schema",
               "data_table",
               "application",
+              "table_database",
               "measure",
               "query",
               "company"
@@ -3114,7 +3115,7 @@
         "type": "object"
       },
       "BulkDeleteResultItem": {
-        "description": "Result for a single workflow in a bulk delete operation.",
+        "description": "Result for a single workflow in a bulk delete operation.\n\nA deleted workflow carries the module settings that named it (B85).",
         "properties": {
           "error": {
             "anyOf": [
@@ -3130,6 +3131,13 @@
           "id": {
             "title": "Id",
             "type": "string"
+          },
+          "settingUsages": {
+            "items": {
+              "$ref": "#/components/schemas/SettingUsageResponse"
+            },
+            "title": "Settingusages",
+            "type": "array"
           },
           "success": {
             "title": "Success",
@@ -4312,6 +4320,29 @@
           }
         },
         "title": "CompleteStepRequest",
+        "type": "object"
+      },
+      "ConceptCounts": {
+        "properties": {
+          "byKind": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "description": "Concepts per kind: concept, state, metric, rule.",
+            "title": "Bykind",
+            "type": "object"
+          },
+          "total": {
+            "description": "Concepts written.",
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "byKind"
+        ],
+        "title": "ConceptCounts",
         "type": "object"
       },
       "ConceptCreate": {
@@ -6790,6 +6821,7 @@
               "output_schema",
               "data_table",
               "application",
+              "table_database",
               "measure",
               "query",
               "company"
@@ -8332,6 +8364,80 @@
         "title": "CreateSkillV2Request",
         "type": "object"
       },
+      "CreateTableDatabaseRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "default": "",
+            "description": "What the database is for: which tables belong here.",
+            "title": "Description",
+            "type": "string"
+          },
+          "kind": {
+            "default": "data_model",
+            "description": "What sort of database: `data_model` (tables of one subject that join), `shared` (tables other databases use — the conformed dimensions, such as a calendar or the countries) or `workspace` (tables the platform keeps for the workspace itself, no data model).",
+            "enum": [
+              "data_model",
+              "shared",
+              "workspace"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "description": "What the database is called. Unique in the workspace.",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "owner": {
+            "default": "",
+            "description": "Who answers for this database: a role or a person, as text. Empty when nobody is named yet.",
+            "title": "Owner",
+            "type": "string"
+          },
+          "slug": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The handle a person types and a configuration file is named by: lowercase letters, digits and single hyphens. Unique in the workspace. Left out on create: derived from the name.",
+            "title": "Slug"
+          },
+          "source": {
+            "default": "human",
+            "description": "Who authored this: human, agent, or framework.",
+            "enum": [
+              "human",
+              "agent",
+              "framework"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "status": {
+            "default": "active",
+            "description": "Lifecycle status of the database.",
+            "enum": [
+              "active",
+              "archived"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "CreateTableDatabaseRequest",
+        "type": "object"
+      },
       "CreateTargetSchema": {
         "description": "An organization the caller may create a config repo under.\n\nDERIVED server-side from the tenant's VERIFIED installation bindings (#549\nF1) — the UI offers these, it does not invent them. Only accounts whose\ninstallation actually carries repository-creation access appear, so every\noption shown will work. The installation id is deliberately NOT exposed: it\nis an internal handle the client never needs and never gets to choose.",
         "properties": {
@@ -9823,6 +9929,18 @@
             "title": "Createdat",
             "type": "string"
           },
+          "databaseId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The database this table lives in, or null when it is not grouped yet. A table lives in at most one database; moving it is an edit of the table and takes effect at once, outside the table's versions.",
+            "title": "Databaseid"
+          },
           "dateTable": {
             "default": false,
             "description": "Whether this is the workspace's date table.",
@@ -9985,6 +10103,19 @@
             ],
             "description": "When it fills and how the rows are written, or null when it fills only on request.",
             "title": "Rhythm"
+          },
+          "role": {
+            "default": "none",
+            "description": "What part this table plays in the model, derived and never stored: `date` (the workspace's date table), `workspace` (a table the platform designs), `fact` (it has a time axis, or it points at another table many-to-one), `dimension` (another table points at it many-to-one) or `none`.",
+            "enum": [
+              "fact",
+              "dimension",
+              "date",
+              "workspace",
+              "none"
+            ],
+            "title": "Role",
+            "type": "string"
           },
           "rowCount": {
             "anyOf": [
@@ -10267,6 +10398,18 @@
             "title": "Createdat",
             "type": "string"
           },
+          "databaseId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The database this table lives in, or null when it is not grouped yet. A table lives in at most one database; moving it is an edit of the table and takes effect at once, outside the table's versions.",
+            "title": "Databaseid"
+          },
           "dateTable": {
             "default": false,
             "description": "Whether this is the workspace's date table.",
@@ -10417,6 +10560,19 @@
             ],
             "description": "When it fills and how the rows are written, or null when it fills only on request.",
             "title": "Rhythm"
+          },
+          "role": {
+            "default": "none",
+            "description": "What part this table plays in the model, derived and never stored: `date` (the workspace's date table), `workspace` (a table the platform designs), `fact` (it has a time axis, or it points at another table many-to-one), `dimension` (another table points at it many-to-one) or `none`.",
+            "enum": [
+              "fact",
+              "dimension",
+              "date",
+              "workspace",
+              "none"
+            ],
+            "title": "Role",
+            "type": "string"
           },
           "rowCount": {
             "anyOf": [
@@ -11030,8 +11186,15 @@
         "type": "object"
       },
       "DeleteSecretResponse": {
-        "description": "Response after deleting a secret.",
+        "description": "Response after deleting a secret, with the module settings that named it (B85).",
         "properties": {
+          "settingUsages": {
+            "items": {
+              "$ref": "#/components/schemas/SettingUsageResponse"
+            },
+            "title": "Settingusages",
+            "type": "array"
+          },
           "success": {
             "default": true,
             "title": "Success",
@@ -11050,6 +11213,17 @@
           }
         },
         "title": "DeleteSkillV2Response",
+        "type": "object"
+      },
+      "DeleteTableDatabaseResponse": {
+        "properties": {
+          "success": {
+            "default": true,
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "title": "DeleteTableDatabaseResponse",
         "type": "object"
       },
       "DeleteToolResponse": {
@@ -11096,8 +11270,15 @@
         "type": "object"
       },
       "DeleteWorkflowResponse": {
-        "description": "Response after deleting a workflow.",
+        "description": "Response after deleting a workflow, with the module settings that named it (B85).",
         "properties": {
+          "settingUsages": {
+            "items": {
+              "$ref": "#/components/schemas/SettingUsageResponse"
+            },
+            "title": "Settingusages",
+            "type": "array"
+          },
           "success": {
             "default": true,
             "title": "Success",
@@ -12940,7 +13121,7 @@
         "type": "object"
       },
       "EnvironmentWebhook": {
-        "description": "One webhook of THIS workspace, as its screen needs it.\n\nNever carries the address. The public endpoint is\n``POST /api/v1/triggers/<token>``, so the URL and the credential are the\nsame string — a list that included it would have leaked every address of\nthe workspace into proxy logs and devtools the moment the screen loaded.",
+        "description": "One webhook of THIS workspace, as its screen needs it.\n\nNever carries the secret. The public endpoint is\n``POST /api/v1/triggers`` with the token in a header (#2379), so the\naddress and the credential are no longer the same string — a list that\nincluded the path would not have leaked anything, but the header form is\nwhat new webhooks answer on, so that is what the screen shows.",
         "properties": {
           "addressRecoverable": {
             "title": "Addressrecoverable",
@@ -15697,6 +15878,7 @@
               "prompt_snippet",
               "output_schema",
               "data_table",
+              "table_database",
               "application",
               "measure",
               "query",
@@ -15974,6 +16156,96 @@
           "code"
         ],
         "title": "FunctionEntry",
+        "type": "object"
+      },
+      "GapCheck": {
+        "description": "What one fixed check found.",
+        "properties": {
+          "code": {
+            "description": "Which check: table_query_missing, measure_draft, measure_no_concept, no_influences or source_table_unverified.",
+            "enum": [
+              "table_query_missing",
+              "measure_draft",
+              "measure_no_concept",
+              "no_influences",
+              "source_table_unverified"
+            ],
+            "title": "Code",
+            "type": "string"
+          },
+          "count": {
+            "description": "How many things the check found, all of them.",
+            "title": "Count",
+            "type": "integer"
+          },
+          "fires": {
+            "description": "Whether the check fires: it found something — or, for no_influences, it found nothing. A check that does not fire is not shown as a gap.",
+            "title": "Fires",
+            "type": "boolean"
+          },
+          "of": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How many things the check looked at, where the screen says 'x of y' (the measures, for measure_no_concept); null elsewhere.",
+            "title": "Of"
+          },
+          "sample": {
+            "description": "The names of the first three things found, in name order.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Sample",
+            "type": "array"
+          },
+          "target": {
+            "description": "The screen where a person fixes it: tables, measures, measure_tree or source_tables.",
+            "enum": [
+              "tables",
+              "measures",
+              "measure_tree",
+              "source_tables"
+            ],
+            "title": "Target",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "target",
+          "count",
+          "fires"
+        ],
+        "title": "GapCheck",
+        "type": "object"
+      },
+      "GapsResponse": {
+        "description": "The five fixed checks over the model, worked out now.",
+        "properties": {
+          "checks": {
+            "description": "Every check, in the order the screen lists them, firing or not.",
+            "items": {
+              "$ref": "#/components/schemas/GapCheck"
+            },
+            "title": "Checks",
+            "type": "array"
+          },
+          "firing": {
+            "description": "How many of the checks fire.",
+            "title": "Firing",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "checks",
+          "firing"
+        ],
+        "title": "GapsResponse",
         "type": "object"
       },
       "GenerateInvoiceRequest": {
@@ -17024,6 +17296,21 @@
             "title": "Agentreadstext",
             "type": "boolean"
           },
+          "choiceLabels": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "pattern": "\\S",
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Choicelabels"
+          },
           "choiceOptions": {
             "anyOf": [
               {
@@ -17061,9 +17348,26 @@
             ],
             "title": "Fields"
           },
+          "group": {
+            "anyOf": [
+              {
+                "pattern": "\\S",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Group"
+          },
           "hasDefault": {
             "readOnly": true,
             "title": "Hasdefault",
+            "type": "boolean"
+          },
+          "humanOnly": {
+            "default": false,
+            "title": "Humanonly",
             "type": "boolean"
           },
           "item": {
@@ -17185,6 +17489,21 @@
         "additionalProperties": false,
         "description": "Recursive aliases of canonical value metadata, without a second schema.",
         "properties": {
+          "choiceLabels": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "pattern": "\\S",
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Choicelabels"
+          },
           "choiceOptions": {
             "anyOf": [
               {
@@ -17308,6 +17627,32 @@
           "imported"
         ],
         "title": "ImportResult",
+        "type": "object"
+      },
+      "InfluenceCounts": {
+        "properties": {
+          "active": {
+            "description": "Influences that hold now.",
+            "title": "Active",
+            "type": "integer"
+          },
+          "planned": {
+            "description": "Influences marked planned: a link still missing.",
+            "title": "Planned",
+            "type": "integer"
+          },
+          "total": {
+            "description": "Written influences between measures.",
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "active",
+          "planned"
+        ],
+        "title": "InfluenceCounts",
         "type": "object"
       },
       "InheritSetting": {
@@ -19437,6 +19782,38 @@
           "personalToken"
         ],
         "title": "McpAccessResponse",
+        "type": "object"
+      },
+      "MeasureCounts": {
+        "properties": {
+          "base": {
+            "description": "Measures that read a table themselves.",
+            "title": "Base",
+            "type": "integer"
+          },
+          "derived": {
+            "description": "Measures built on other measures.",
+            "title": "Derived",
+            "type": "integer"
+          },
+          "published": {
+            "description": "Measures with a live published version.",
+            "title": "Published",
+            "type": "integer"
+          },
+          "total": {
+            "description": "Live measures.",
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "base",
+          "derived",
+          "published"
+        ],
+        "title": "MeasureCounts",
         "type": "object"
       },
       "MeasureDefinitionPayload": {
@@ -21963,6 +22340,14 @@
             ],
             "title": "Parent"
           },
+          "retiredSecretKeys": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Retiredsecretkeys",
+            "type": "array"
+          },
           "settings": {
             "default": [],
             "items": {
@@ -23640,6 +24025,53 @@
         "title": "OversightScope",
         "type": "object"
       },
+      "OverviewResponse": {
+        "description": "What exists in each layer of the model, counted now.",
+        "properties": {
+          "concepts": {
+            "$ref": "#/components/schemas/ConceptCounts"
+          },
+          "dataSources": {
+            "description": "Connected data sources.",
+            "title": "Datasources",
+            "type": "integer"
+          },
+          "databases": {
+            "description": "Live databases: the groups tables live in.",
+            "title": "Databases",
+            "type": "integer"
+          },
+          "influences": {
+            "$ref": "#/components/schemas/InfluenceCounts"
+          },
+          "measures": {
+            "$ref": "#/components/schemas/MeasureCounts"
+          },
+          "queries": {
+            "description": "Live queries the reader may read.",
+            "title": "Queries",
+            "type": "integer"
+          },
+          "relationships": {
+            "$ref": "#/components/schemas/RelationshipCounts"
+          },
+          "tables": {
+            "$ref": "#/components/schemas/TableCounts"
+          }
+        },
+        "required": [
+          "dataSources",
+          "queries",
+          "tables",
+          "relationships",
+          "measures",
+          "influences",
+          "concepts",
+          "databases"
+        ],
+        "title": "OverviewResponse",
+        "type": "object"
+      },
       "OwnedWorkflowResponse": {
         "description": "A workflow the agent owns, with what wakes it.",
         "properties": {
@@ -24961,6 +25393,42 @@
         "title": "Page[RunSummary]",
         "type": "object"
       },
+      "Page_TableDatabaseResponse_": {
+        "properties": {
+          "hasMore": {
+            "default": false,
+            "title": "Hasmore",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/TableDatabaseResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          },
+          "pageSize": {
+            "title": "Pagesize",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "pageSize"
+        ],
+        "title": "Page[TableDatabaseResponse]",
+        "type": "object"
+      },
       "Page_TableRelationshipDetail_": {
         "properties": {
           "hasMore": {
@@ -25384,7 +25852,7 @@
         "type": "object"
       },
       "PatchWorkflowResponse": {
-        "description": "Response after patching a workflow.",
+        "description": "Response after patching a workflow.\n\n``setting_usages``: after a rename, the module settings that still name\nthis workflow (B85, ``services/setting_usages``); empty otherwise.",
         "properties": {
           "context": {
             "anyOf": [
@@ -25400,6 +25868,13 @@
             "additionalProperties": true,
             "title": "Document",
             "type": "object"
+          },
+          "settingUsages": {
+            "items": {
+              "$ref": "#/components/schemas/SettingUsageResponse"
+            },
+            "title": "Settingusages",
+            "type": "array"
           },
           "version": {
             "title": "Version",
@@ -25784,6 +26259,7 @@
               "prompt-snippet",
               "output-schema",
               "data-table",
+              "database",
               "application",
               "measure",
               "query",
@@ -27299,6 +27775,7 @@
               "output_schema",
               "data_table",
               "application",
+              "table_database",
               "measure",
               "query",
               "company"
@@ -29325,6 +29802,26 @@
           "name"
         ],
         "title": "RelatedNode",
+        "type": "object"
+      },
+      "RelationshipCounts": {
+        "properties": {
+          "total": {
+            "description": "Live relationships between tables.",
+            "title": "Total",
+            "type": "integer"
+          },
+          "verified": {
+            "description": "How many of them are verified against the data.",
+            "title": "Verified",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "verified"
+        ],
+        "title": "RelationshipCounts",
         "type": "object"
       },
       "ReleaseApprovalItem": {
@@ -33951,6 +34448,7 @@
               "reference_doc",
               "output_schema",
               "data_table",
+              "table_database",
               "measure",
               "query",
               "application",
@@ -34561,6 +35059,58 @@
           "locked"
         ],
         "title": "SettingSource",
+        "type": "object"
+      },
+      "SettingUsageResponse": {
+        "description": "One module setting that names the entity, or one anonymous notice.\n\nA setting the caller may see is named by its module and key (and its\nlevel). A setting the caller may not see — another person's, or one only\nan administrator reads — is one notice, ``private``, without module, key\nor count (B29 of #1826). Nothing here blocks the rename or the delete:\nthe entity's action happened, and this says what still names it.",
+        "properties": {
+          "key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Key"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "level": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Level"
+          },
+          "moduleId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Moduleid"
+          },
+          "private": {
+            "default": false,
+            "title": "Private",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "label"
+        ],
+        "title": "SettingUsageResponse",
         "type": "object"
       },
       "SettingsPlanFieldSchema": {
@@ -36705,6 +37255,173 @@
         "title": "TableColumnPayload",
         "type": "object"
       },
+      "TableCounts": {
+        "properties": {
+          "byFilledBy": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "description": "Tables per word that fills them: author, workflow, query, source.",
+            "title": "Byfilledby",
+            "type": "object"
+          },
+          "total": {
+            "description": "Live tables the reader may read.",
+            "title": "Total",
+            "type": "integer"
+          },
+          "ungrouped": {
+            "description": "Tables that live in no database yet.",
+            "title": "Ungrouped",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "byFilledBy",
+          "ungrouped"
+        ],
+        "title": "TableCounts",
+        "type": "object"
+      },
+      "TableDatabaseResponse": {
+        "description": "One database as the Databases screen and its Settings tab draw it.",
+        "properties": {
+          "createdAt": {
+            "title": "Createdat",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "draftMajorVersion": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The working draft's major version, or null when there is none.",
+            "title": "Draftmajorversion"
+          },
+          "draftVersionName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the working draft is called.",
+            "title": "Draftversionname"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "isSystem": {
+            "title": "Issystem",
+            "type": "boolean"
+          },
+          "kind": {
+            "description": "What sort of database: `data_model` (tables of one subject that join), `shared` (tables other databases use — the conformed dimensions, such as a calendar or the countries) or `workspace` (tables the platform keeps for the workspace itself, no data model).",
+            "enum": [
+              "data_model",
+              "shared",
+              "workspace"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "owner": {
+            "description": "Who answers for this database: a role or a person, as text. Empty when nobody is named yet.",
+            "title": "Owner",
+            "type": "string"
+          },
+          "publishedMajorVersion": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The live major version, or null when it has never been published.",
+            "title": "Publishedmajorversion"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "source": {
+            "enum": [
+              "human",
+              "agent",
+              "framework"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "sourceTableCount": {
+            "default": 0,
+            "description": "How many of those tables are source tables: their rows stay in a data source.",
+            "title": "Sourcetablecount",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "active",
+              "archived"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "tableCount": {
+            "default": 0,
+            "description": "How many live tables live in this database, counting only the tables the reader may read.",
+            "title": "Tablecount",
+            "type": "integer"
+          },
+          "tenantId": {
+            "title": "Tenantid",
+            "type": "string"
+          },
+          "updatedAt": {
+            "title": "Updatedat",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "tenantId",
+          "name",
+          "slug",
+          "description",
+          "owner",
+          "kind",
+          "source",
+          "isSystem",
+          "status",
+          "version",
+          "createdAt",
+          "updatedAt"
+        ],
+        "title": "TableDatabaseResponse",
+        "type": "object"
+      },
       "TableRelationshipCreate": {
         "description": "POST /api/v1/table-relationships.",
         "properties": {
@@ -37936,10 +38653,18 @@
         "type": "object"
       },
       "TokenIssuedResponse": {
-        "description": "One-time token disclosure response from create + rotate.",
+        "description": "One-time token disclosure response from create + rotate.\n\n#2379 — beside the plaintext secret (shown once, never stored) the\nresponse names the ONE form the secret is accepted in: the header-form\naddress plus the header that carries it. The address itself contains\nno credential, so it is safe to render next to the token.",
         "properties": {
+          "address": {
+            "title": "Address",
+            "type": "string"
+          },
           "plaintextToken": {
             "title": "Plaintexttoken",
+            "type": "string"
+          },
+          "tokenHeader": {
+            "title": "Tokenheader",
             "type": "string"
           },
           "trigger": {
@@ -37948,7 +38673,9 @@
         },
         "required": [
           "trigger",
-          "plaintextToken"
+          "plaintextToken",
+          "tokenHeader",
+          "address"
         ],
         "title": "TokenIssuedResponse",
         "type": "object"
@@ -40108,6 +40835,12 @@
             "description": "Replaces the whole set of calendars when sent.",
             "title": "Calendars"
           },
+          "clearDatabase": {
+            "default": false,
+            "description": "True takes the table out of its database.",
+            "title": "Cleardatabase",
+            "type": "boolean"
+          },
           "clearExternal": {
             "default": false,
             "description": "True takes the place in a source away — for a table handed back to Flow.",
@@ -40153,6 +40886,19 @@
             ],
             "description": "Replaces the whole design when sent.",
             "title": "Columns"
+          },
+          "databaseId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Move the table into this database of the workspace. Send clearDatabase to take it out of every database.",
+            "title": "Databaseid"
           },
           "dateTable": {
             "anyOf": [
@@ -41734,6 +42480,13 @@
             "title": "Name",
             "type": "string"
           },
+          "settingUsages": {
+            "items": {
+              "$ref": "#/components/schemas/SettingUsageResponse"
+            },
+            "title": "Settingusages",
+            "type": "array"
+          },
           "valueKeys": {
             "items": {
               "type": "string"
@@ -41856,6 +42609,106 @@
           "expectedVersion"
         ],
         "title": "UpdateSkillV2Request",
+        "type": "object"
+      },
+      "UpdateTableDatabaseRequest": {
+        "additionalProperties": false,
+        "description": "A partial edit. Only the keys actually sent with a value are applied.",
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the database is for.",
+            "title": "Description"
+          },
+          "expectedVersion": {
+            "description": "Version the edit is based on; a stale value is rejected with HTTP 409 (optimistic locking).",
+            "title": "Expectedversion",
+            "type": "integer"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "data_model",
+                  "shared",
+                  "workspace"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What sort of database: `data_model` (tables of one subject that join), `shared` (tables other databases use — the conformed dimensions, such as a calendar or the countries) or `workspace` (tables the platform keeps for the workspace itself, no data model).",
+            "title": "Kind"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the database is called. Unique in the workspace.",
+            "title": "Name"
+          },
+          "owner": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Who answers for this database: a role or a person, as text. Empty when nobody is named yet.",
+            "title": "Owner"
+          },
+          "slug": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The handle. Unique in the workspace. A new name keeps the old slug unless this is sent.",
+            "title": "Slug"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "active",
+                  "archived"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Lifecycle status of the database.",
+            "title": "Status"
+          }
+        },
+        "required": [
+          "expectedVersion"
+        ],
+        "title": "UpdateTableDatabaseRequest",
         "type": "object"
       },
       "UpdateToolRequest": {
@@ -56803,6 +57656,25 @@
               "description": "Only tables filled this way: author, workflow, query or source (the rows stay in a data source). A value outside the four is refused rather than silently ignored.",
               "title": "Filled By"
             }
+          },
+          {
+            "description": "Only the tables that live in this database.",
+            "in": "query",
+            "name": "databaseId",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only the tables that live in this database.",
+              "title": "Databaseid"
+            }
           }
         ],
         "responses": {
@@ -67494,6 +68366,60 @@
         "summary": "Get Measure Version",
         "tags": [
           "measures"
+        ]
+      }
+    },
+    "/api/v1/model/gaps": {
+      "get": {
+        "description": "The five fixed checks over the model, worked out now, firing or not.",
+        "operationId": "get_model_gaps_api_v1_model_gaps_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GapsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Model Gaps",
+        "tags": [
+          "model"
+        ]
+      }
+    },
+    "/api/v1/model/overview": {
+      "get": {
+        "description": "What exists in each layer of the model, counted now.",
+        "operationId": "get_model_overview_api_v1_model_overview_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OverviewResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Model Overview",
+        "tags": [
+          "model"
         ]
       }
     },
@@ -80219,7 +81145,7 @@
     },
     "/api/v1/secrets/{secret_id}": {
       "delete": {
-        "description": "Soft-delete a secret with optimistic locking.",
+        "description": "Soft-delete a secret with optimistic locking.\n\nThe answer names the module settings that used it (B85), asked before the\ndelete while the secret is still readable. Deleting one that a setting\nonly an administrator changes uses is an administrator's (T6,\n``SecretService.delete_secret``).",
         "operationId": "delete_secret_api_v1_secrets__secret_id__delete",
         "parameters": [
           {
@@ -82017,6 +82943,1155 @@
         "summary": "List System Tool Functions",
         "tags": [
           "system-tools"
+        ]
+      }
+    },
+    "/api/v1/table-databases": {
+      "get": {
+        "description": "One page of this workspace's databases, newest first (B-NB8).",
+        "operationId": "list_table_databases_api_v1_table_databases_get",
+        "parameters": [
+          {
+            "description": "Page size (max 200).",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Page size (max 200).",
+              "title": "Limit"
+            }
+          },
+          {
+            "description": "Opaque continuation cursor from a previous response's nextCursor. Omit for the first page.",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Opaque continuation cursor from a previous response's nextCursor. Omit for the first page.",
+              "title": "Cursor"
+            }
+          },
+          {
+            "description": "Only the databases of this kind.",
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "data_model",
+                    "shared",
+                    "workspace"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only the databases of this kind.",
+              "title": "Kind"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_TableDatabaseResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Table Databases",
+        "tags": [
+          "table-databases"
+        ]
+      },
+      "post": {
+        "description": "Create a database, draft and publishable from the moment it exists.",
+        "operationId": "create_table_database_api_v1_table_databases_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTableDatabaseRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TableDatabaseResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Table Database",
+        "tags": [
+          "table-databases"
+        ]
+      }
+    },
+    "/api/v1/table-databases/deleted": {
+      "get": {
+        "description": "Soft-deleted databases that can still be restored.",
+        "operationId": "list_deleted_table_databases_api_v1_table_databases_deleted_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeletedEntityListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Deleted Table Databases",
+        "tags": [
+          "table-databases"
+        ]
+      }
+    },
+    "/api/v1/table-databases/{database_id}": {
+      "delete": {
+        "description": "Remove an empty database, keeping it restorable. One with tables: 409.",
+        "operationId": "delete_table_database_api_v1_table_databases__database_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "database_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Database Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "expectedVersion",
+            "required": true,
+            "schema": {
+              "title": "Expectedversion",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteTableDatabaseResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Table Database",
+        "tags": [
+          "table-databases"
+        ]
+      },
+      "get": {
+        "description": "One database, with its counts.",
+        "operationId": "get_table_database_api_v1_table_databases__database_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "database_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Database Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TableDatabaseResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Table Database",
+        "tags": [
+          "table-databases"
+        ]
+      },
+      "put": {
+        "description": "Apply a partial edit under the optimistic lock.",
+        "operationId": "update_table_database_api_v1_table_databases__database_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "database_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Database Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTableDatabaseRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TableDatabaseResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Table Database",
+        "tags": [
+          "table-databases"
+        ]
+      }
+    },
+    "/api/v1/table-databases/{database_id}/discard-draft": {
+      "post": {
+        "description": "Discard working-draft edits, reverting to what is published.",
+        "operationId": "discard_table_database_draft_api_v1_table_databases__database_id__discard_draft_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "database_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Database Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiscardDraftResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Discard Table Database Draft",
+        "tags": [
+          "table-databases"
+        ]
+      }
+    },
+    "/api/v1/table-databases/{database_id}/restore": {
+      "post": {
+        "description": "Un-delete a database. Idempotent; takes no expected version.",
+        "operationId": "restore_table_database_api_v1_table_databases__database_id__restore_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "database_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Database Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RestoreEntityResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Restore Table Database",
+        "tags": [
+          "table-databases"
+        ]
+      }
+    },
+    "/api/v1/table-databases/{database_id}/versions": {
+      "get": {
+        "description": "The version history of one database.",
+        "operationId": "list_table_database_versions_api_v1_table_databases__database_id__versions_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "database_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Database Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "type",
+            "required": false,
+            "schema": {
+              "default": "all",
+              "enum": [
+                "checkpoint",
+                "major",
+                "all"
+              ],
+              "title": "Type",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VersionListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Table Database Versions",
+        "tags": [
+          "table-databases"
+        ]
+      },
+      "post": {
+        "description": "Create a named version using Save As semantics.",
+        "operationId": "create_table_database_major_version_api_v1_table_databases__database_id__versions_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "database_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Database Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMajorVersionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MajorVersionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Table Database Major Version",
+        "tags": [
+          "table-databases"
+        ]
+      }
+    },
+    "/api/v1/table-databases/{database_id}/versions/deleted": {
+      "get": {
+        "description": "Removed versions that can still be restored.",
+        "operationId": "list_deleted_table_database_versions_api_v1_table_databases__database_id__versions_deleted_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "database_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Database Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeletedVersionListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Deleted Table Database Versions",
+        "tags": [
+          "table-databases"
+        ]
+      }
+    },
+    "/api/v1/table-databases/{database_id}/versions/ensure": {
+      "post": {
+        "description": "Ensure a working draft version exists (idempotent).",
+        "operationId": "ensure_table_database_draft_version_api_v1_table_databases__database_id__versions_ensure_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "database_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Database Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnsureDraftVersionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Ensure Table Database Draft Version",
+        "tags": [
+          "table-databases"
+        ]
+      }
+    },
+    "/api/v1/table-databases/{database_id}/versions/major/{major_version}": {
+      "patch": {
+        "description": "Rename a major version.",
+        "operationId": "rename_table_database_version_api_v1_table_databases__database_id__versions_major__major_version__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "database_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Database Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "major_version",
+            "required": true,
+            "schema": {
+              "title": "Major Version",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RenameVersionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RenameVersionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Rename Table Database Version",
+        "tags": [
+          "table-databases"
+        ]
+      }
+    },
+    "/api/v1/table-databases/{database_id}/versions/publish/{major_version}": {
+      "post": {
+        "description": "Publish a major version.\n\nClosed to service tokens: an external agent asks for a publish through\nthe approval queue, it never publishes directly (#676).",
+        "operationId": "publish_table_database_version_api_v1_table_databases__database_id__versions_publish__major_version__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "database_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Database Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "major_version",
+            "required": true,
+            "schema": {
+              "title": "Major Version",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Publish Table Database Version",
+        "tags": [
+          "table-databases"
+        ]
+      }
+    },
+    "/api/v1/table-databases/{database_id}/versions/published": {
+      "get": {
+        "description": "The published version and its document, or null.",
+        "operationId": "get_table_database_published_version_api_v1_table_databases__database_id__versions_published_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "database_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Database Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/PublishedVersionInfo"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Get Table Database Published Version Api V1 Table Databases  Database Id  Versions Published Get"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Table Database Published Version",
+        "tags": [
+          "table-databases"
+        ]
+      }
+    },
+    "/api/v1/table-databases/{database_id}/versions/unpublish": {
+      "post": {
+        "description": "Withdraw the published version, back to a draft.",
+        "operationId": "unpublish_table_database_api_v1_table_databases__database_id__versions_unpublish_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "database_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Database Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnpublishResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Unpublish Table Database",
+        "tags": [
+          "table-databases"
+        ]
+      }
+    },
+    "/api/v1/table-databases/{database_id}/versions/{version_id}": {
+      "delete": {
+        "description": "Delete one snapshot from a database's version history, keeping it restorable.",
+        "operationId": "delete_table_database_version_api_v1_table_databases__database_id__versions__version_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "database_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Database Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteVersionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Table Database Version",
+        "tags": [
+          "table-databases"
+        ]
+      }
+    },
+    "/api/v1/table-databases/{database_id}/versions/{version_id}/restore": {
+      "post": {
+        "description": "Roll a database back to an earlier snapshot. Its tables do not move.",
+        "operationId": "restore_table_database_version_api_v1_table_databases__database_id__versions__version_id__restore_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "database_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Database Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RestoreVersionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RestoreResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Restore Table Database Version",
+        "tags": [
+          "table-databases"
+        ]
+      }
+    },
+    "/api/v1/table-databases/{database_id}/versions/{version_id}/restore-deleted": {
+      "post": {
+        "description": "Un-delete one version, without making it live.",
+        "operationId": "restore_deleted_table_database_version_api_v1_table_databases__database_id__versions__version_id__restore_deleted_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "database_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Database Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RestoreDeletedVersionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Restore Deleted Table Database Version",
+        "tags": [
+          "table-databases"
+        ]
+      }
+    },
+    "/api/v1/table-databases/{database_id}/versions/{version}": {
+      "get": {
+        "description": "One version's stored snapshot.",
+        "operationId": "get_table_database_version_api_v1_table_databases__database_id__versions__version__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "database_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Database Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version",
+            "required": true,
+            "schema": {
+              "title": "Version",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VersionDetailResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Table Database Version",
+        "tags": [
+          "table-databases"
         ]
       }
     },
@@ -85989,9 +88064,33 @@
         ]
       }
     },
+    "/api/v1/triggers": {
+      "post": {
+        "description": "Fire a workflow run from an external webhook, secret in the header.\n\nThe one form new webhooks get (#2379): the per-trigger plaintext secret\nissued at create / rotate time travels in the ``X-Axonity-Webhook-Token``\nheader — never in the URL, which ends up in proxy/access logs.",
+        "operationId": "trigger_run_via_webhook_header_api_v1_triggers_post",
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Trigger Run Via Webhook Header Api V1 Triggers Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Trigger Run Via Webhook Header",
+        "tags": [
+          "triggers"
+        ]
+      }
+    },
     "/api/v1/triggers/{token}": {
       "post": {
-        "description": "Fire a workflow run from an external webhook (V7 §1.7).\n\nReturns ``{ \"run_id\": \"<uuid>\", \"status\": \"<status>\" }`` on success.\nToken is the per-trigger plaintext secret issued at create / rotate\ntime — sha256-hashed before lookup.\n\nStatus codes\n  201 — run created\n  404 — token does not resolve (forged, deleted, or beyond grace)\n  410 — trigger is disabled\n  422 — payload fails the trigger's expected_input_schema\n  429 — tenant has hit its concurrency cap (wires once #208.0 lands)",
+        "description": "LEGACY (#2379) — fire via the secret in the URL path.\n\nKept working for pre-#2379 webhooks until :data:`LEGACY_PATH_SUNSET`,\naudit-marked on every fire. Webhooks created after #2379 refuse this\nform (header only), and after the sunset everyone does.",
         "operationId": "trigger_run_via_webhook_api_v1_triggers__token__post",
         "parameters": [
           {
@@ -86909,7 +89008,7 @@
     },
     "/api/v1/webhook-triggers/{webhook_id}/rotate": {
       "post": {
-        "description": "Rotate the webhook's secret.  Old token honoured for 24h grace.",
+        "description": "Rotate the webhook's secret.  Old token honoured for 24h grace.\n\n#2379 — the rotated token is issued with the header-form address; the\nlegacy path form keeps working only for rows that still allow it and\nonly until the announced sunset.",
         "operationId": "rotate_webhook_token_api_v1_webhook_triggers__webhook_id__rotate_post",
         "parameters": [
           {
@@ -89937,7 +92036,7 @@
         ]
       },
       "post": {
-        "description": "Create a webhook trigger and return its plaintext token ONCE.\n\nThe plaintext is shown to the designer one time only.  Subsequent\nlist / get calls only expose the hash (and never echo it).",
+        "description": "Create a webhook trigger and return its plaintext token ONCE.\n\nThe plaintext is shown to the designer one time only.  Subsequent\nlist / get calls only expose the hash (and never echo it).  #2379: a\nwebhook created now answers on the header form ONLY — the response\npairs the token with the header-form address, never a secret-in-path URL.",
         "operationId": "create_webhook_trigger_api_v1_workflows__workflow_id__webhook_triggers_post",
         "parameters": [
           {

@@ -238,7 +238,11 @@ export const FORBIDDEN: Rule[] = [
   // connector deliberately never stores one, so a tool that spends one would
   // require it to. `start_workflow_run` is the way to test a workflow from
   // here, and it names the trigger it means.
-  { label: "fire a webhook by its token", path: /\/api\/v1\/triggers\/[^/]+$/ },
+  // `POST /triggers` is the same door with the secret in the
+  // `X-Axonity-Webhook-Token` header (axonity-flow#2379, the form new webhooks
+  // get); the backend's table closes it too: "no authentication of its own: a
+  // token never reaches the gate".
+  { label: "fire a webhook by its token", path: /\/api\/v1\/triggers(\/[^/]+)?$/ },
   // ---- axonity-mcp#86 — executors ----------------------------------------
 
   // Registering an executor MINTS ITS TOKEN, and the response is the one
