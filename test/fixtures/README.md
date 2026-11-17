@@ -11,39 +11,97 @@ diff in review.
 
 ## Provenance
 
-- **Agent-first R4 delta on the R3 capture (2026-11-15), not released; NOT a
-  whole dump — to be re-recorded whole when axonity-flow's R4 is merged.** Flow
-  `af-r4-navigatie` at `98b435dddbe66300545772c47c7539b47a65fff1` is based on
-  `5ac0e287e`, which lags `main` (R3 of #1826 moved Cortex into a module and
-  changed the module schemas), so a whole dump of it would take R3's changes out
-  of the pin. Instead: the backend's own `scripts/dump_openapi.py` and
-  `scripts/dump_token_route_classes.py` were run read-only on a `git archive` of
-  `98b435ddd` and on one of its merge-base `5ac0e287e` (`env -i`, dotenv off, a
-  database URL at a closed port, `python -B -I`, `src` verified to load from the
-  archive; no server, database or tenant), and what R4 changed between the two
-  was applied to the R3 pin. For every operation and schema touched, the pin was
-  first checked to equal the dump of `5ac0e287e` (all did), so nothing of R3's was
-  overwritten. The result equals the dump of `98b435ddd` everywhere except the
-  seven R3 module schemas, which keep R3's version.
-  - `openapi.snapshot.json`: **2,599,925 bytes**, SHA-256
-    `b16e719d15261502a8d083ae5223977a959e8c95de14c368a295fa8d8fb12381`.
-    791 -> 793 operations, none removed. Added: `GET /knowledge/oversight/waiting`
-    (`OversightWaiting`), `GET /library/summary` (`LibrarySummary`,
-    `LibraryKindSummary`). Changed, nine operations: `view` (`mine` | `all`,
-    default `mine`) on `GET /publish-approvals` and `GET /publish-approvals/release`;
-    new route descriptions on the single reads and on approve and reject of both
-    kinds and on `GET /publish-approvals/pending-count`. Changed schemas:
-    `PublishApprovalItem`, `ReleaseApprovalSummary`, `ReleaseApprovalItem` (`origin`,
-    `requestedByName`, `canDecide`, `version`), `PendingApprovalCount`
-    (`allPending`), `RunSummary` (`ownerAgentId`, `currentStepName`).
-  - `token-route-classes.snapshot.json`: **88,459 bytes**, SHA-256
-    `64ca5361fe9023b552566cf0ccbfab679165e3eac2c10dba06621fb4e0f16df6`; 821 -> 823
-    rows (both new routes `lezen`); `src/generated/tokenRouteClasses.ts`
-    regenerated from it. `src/generated/listFilters.ts` regenerated: unchanged.
-  - The levenscyclus (R3) capture waits in its own branch and was not merged when
-    this was recorded; whichever of the two is merged second re-records.
+- **R4 integration checkpoint (2026-11-17), not a final R4 capture:** the
+  OpenAPI snapshot temporarily equals MCP `main` at `fb1b14e` (the Flow
+  `b16da7d0e` capture described below), while the existing R4 tools and merged
+  token-route table retain their changes. The previous R4 delta from Flow
+  `98b435dddbe66300545772c47c7539b47a65fff1` covered the per-person approval
+  views, request provenance and version, run owner/current-step fields, and
+  the oversight/library summary routes. It is not the current OpenAPI pin.
+  Refresh both snapshots with a whole canonical dump from the approved final
+  R4 Flow commit before claiming contract conformance or shipping this branch.
 
-- **R3 capture on backend `783becc90` (2026-11-15), not released:** a WHOLE dump
+- **Capture on Flow `main` at `b16da7d0e` (2026-11-16, after the merge of #2458, Levenscyclus R3), not released; replaces the two entries below:**
+  a WHOLE dump with the backend's own `scripts/dump_openapi.py` and
+  `scripts/dump_token_route_classes.py`, run read-only on the checkout of that
+  commit (`git status` empty under `backend/`; the checkout was read, nothing
+  was written to it). Safety: `env -i` with only PATH/HOME/TMPDIR,
+  `ENVIRONMENT=development` (an unset `ENVIRONMENT` counts as deployed and
+  the settings then refuse the in-repo JWT default; the dev-only routes are
+  pruned by the script itself),
+  a database URL at a closed port, dotenv off
+  (`Settings.model_config["env_file"] = None`), `python -B -I`, `src` verified
+  to load from the checkout. No server, database or tenant.
+  - `openapi.snapshot.json`: **2,727,230 bytes**, SHA-256
+    `b211df1b80b9d007c24b3b6136645272608ea10f95d3fb201f43fdc5a5d4628b`.
+    **849 operations.** Against the snapshot of the Levenscyclus capture on
+    `6ddef5eac` (826): 23 added, none removed, one changed
+    (`GET /data-tables` gained `databaseId`). Against the snapshot on `main`
+    before this one, `783becc90` (791): 58 added, none removed, 24 changed.
+    - From Levenscyclus R3 (35 added): `POST /{kind}/{entity_id}/archive` and
+      `/unarchive` on fifteen kinds (30), `GET /trash`, `GET /trash/summary`,
+      `DELETE /trash/{kind}/{item_id}`, `GET` and `PATCH
+      /platform/trash-retention`. Changed: `archived` on fifteen list routes, an
+      optional `RestoreEntityRequest` body (`name`) on nine restore routes;
+      `status` left the update bodies of ten kinds and the list rows of those
+      ten and of workflow.
+    - From the Database entity (R0b, axonity-flow#2444, 20 added): `POST|GET
+      /table-databases`, `/table-databases/{database_id}` with its versions,
+      publication, restore and discard routes, and `GET /model/gaps` and
+      `GET /model/overview`; `DataTableResponse` and `UpdateDataTableRequest` gained
+      `databaseId`, `role` and `clearDatabase`; `CreateApprovalRequest.entityType`
+      gained `table_database`. These are not Levenscyclus: see the PR text.
+    - From the module Mail and the settings of #1826 (no new operation):
+      `HttpSettingField` gained `group`, `humanOnly` and `choiceLabels`,
+      `HttpSettingValueField` `choiceLabels`, `ModuleResponse`
+      `retiredSecretKeys`, and `settingUsages` is carried by the answers of
+      workflow rename/delete and secret rename/delete.
+    - Also from Flow `main`: `POST /triggers` (the header form of the webhook door;
+      `POST /triggers/{token}` stays as the legacy form), `GET /me/mcp-access`, `GET
+      /oauth/requests/{request_handle}` and `POST
+      /oauth/requests/{request_handle}/decision`; the last three and the two
+      webhook forms are excluded in `test/denyList.ts` with the backend table's
+      own reasons.
+  - `token-route-classes.snapshot.json`: **96,287 bytes**, SHA-256
+    `d0d4fbdf927136b53b632fe8d74d7f1ca0271868709dc01d4175c394a0721baf`;
+    `src/generated/tokenRouteClasses.ts` regenerated from it. **879 rows**
+    (821 before; 856 on the Levenscyclus capture).
+  - `src/generated/listFilters.ts` regenerated: `databaseId` on `list_data_tables`.
+    `node scripts/check-contract-drift.mjs --fresh <this dump>` answers
+    "matches axonity-flow. 849 operations".
+
+- **Levenscyclus R3 capture on backend `6ddef5eac` (2026-11-15), not released; replaced by the entry above:**
+  a WHOLE dump with the backend's own `scripts/dump_openapi.py` and
+  `scripts/dump_token_route_classes.py`, run read-only on a `git archive` of the
+  CLEAN commit `6ddef5eacb4fe939b40b3949c612f4c02a197f67` (Flow
+  `af-levenscyclus`, `git status` empty), using that worktree's venv. Safety:
+  `env -i` with only PATH/HOME/TMPDIR and a database URL at a closed port,
+  dotenv off (`Settings.model_config["env_file"] = None`), `python -B -I`, `src`
+  verified to load from the archive. No server, database or tenant.
+  - `openapi.snapshot.json`: **2,663,735 bytes**, SHA-256
+    `7c933b014ab830a82a88a0dc3c09279cf4f1a38f67e743bcaac0cbe72d8814ad`.
+    Against the snapshot on `main` (`6fd5753`): 788 -> 826 operations, 38 added,
+    none removed, 24 with a different contract. Added: `POST
+    /{kind}/{entity_id}/archive` and `/unarchive` on fifteen kinds (30), `GET
+    /trash`, `GET /trash/summary`, `DELETE /trash/{kind}/{item_id}`, `GET` and
+    `PATCH /platform/trash-retention`, and three that arrived from Flow `main`
+    and not from Levenscyclus (`GET /me/mcp-access`, `GET
+    /oauth/requests/{request_handle}`, `POST
+    /oauth/requests/{request_handle}/decision`). Changed: `archived` on fifteen
+    list routes, an optional `RestoreEntityRequest` body (`name`) on nine
+    restore routes; `status` left the update bodies of ten kinds (the create
+    bodies of six of them) and the list rows of those ten and of workflow.
+  - `token-route-classes.snapshot.json`: **93,812 bytes**, SHA-256
+    `252aaaa6e22537019de29c677fd4936872fe9dbb610c9e8e60f5e0ea7c6827bd`;
+    `src/generated/tokenRouteClasses.ts` regenerated from it. 856 rows (812
+    before). Archive and unarchive are `dicht` ("a delete by another name,
+    without an approval step"), `GET /trash` and `GET /trash/summary` are
+    `lezen`, `DELETE /trash/...` and both platform retention routes are `dicht`.
+  - `src/generated/listFilters.ts` regenerated: `archived` on fifteen lists, and
+    `status` left `list_data_tables`. `node scripts/check-contract-drift.mjs
+    --fresh <this dump>` answers "matches axonity-flow. 826 operations".
+
+- **R3 capture on backend `783becc90` (2026-11-15), not released; replaced by the entry above:** a WHOLE dump
   with the backend's own `scripts/dump_openapi.py` and
   `scripts/dump_token_route_classes.py`, run read-only on a `git archive` of the
   clean commit `783becc9055c0124ab9b37034deb116fd8a028ce` (Flow

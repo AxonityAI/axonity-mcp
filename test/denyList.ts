@@ -238,7 +238,11 @@ export const FORBIDDEN: Rule[] = [
   // connector deliberately never stores one, so a tool that spends one would
   // require it to. `start_workflow_run` is the way to test a workflow from
   // here, and it names the trigger it means.
-  { label: "fire a webhook by its token", path: /\/api\/v1\/triggers\/[^/]+$/ },
+  // `POST /triggers` is the same door with the secret in the
+  // `X-Axonity-Webhook-Token` header (axonity-flow#2379, the form new webhooks
+  // get); the backend's table closes it too: "no authentication of its own: a
+  // token never reaches the gate".
+  { label: "fire a webhook by its token", path: /\/api\/v1\/triggers(\/[^/]+)?$/ },
   // ---- axonity-mcp#86 — executors ----------------------------------------
 
   // Registering an executor MINTS ITS TOKEN, and the response is the one
@@ -301,6 +305,20 @@ export const FORBIDDEN: Rule[] = [
   {
     label: "oversight work lists (a colleague's own) and their badge",
     path: /\/api\/v1\/knowledge\/(attention|oversight\/(doubtful|expiring|tips|scope|waiting))$/,
+  },
+
+  // ---- Levenscyclus R3 ----
+
+  // Deleting from the Trash for good (axonity-flow `DELETE /trash/{kind}/{id}`,
+  // Levenscyclus R3) is irreversible and `require_admin` — a service token is
+  // always role="member", so a tool here would only ever 403 — so it is not
+  // offered. Seeing the
+  // Trash (`list_trash`, `trash_summary`) and restoring from it
+  // (`restore_<entity>`) are tools; this is the one act no recovery follows.
+  {
+    label: "delete permanently from the Trash (admin-only, irreversible)",
+    path: /\/api\/v1\/trash\/[^/]+\/[^/]+$/,
+    methods: ["DELETE"],
   },
 ];
 

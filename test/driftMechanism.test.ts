@@ -382,26 +382,42 @@ describe("list filters are generated, not kept (M4)", () => {
     // And #86: `name` on applications, the same one line.
     // And #91: `dataSourceId` on queries, one line; and `filled_by` on data
     // tables arrived with the refreshed schema and no line at all.
+    // Levenscyclus R3 (`archived` on every list of an archivable kind) is that
+    // argument once more: fifteen routes took one parameter, and the five kinds
+    // that had no filter before (dashboard, flow, output_schema, skill, tool)
+    // arrived here with no line written. `status` on tables left: the backend
+    // refuses a status now, archived is `archived`.
     expect(Object.keys(table).sort()).toEqual([
       "agent",
       "application",
+      "dashboard",
       "data_source",
       "data_table",
+      "flow",
       "measure",
+      "output_schema",
       "policy",
       "prompt_snippet",
       "query",
       "reference_doc",
+      "skill",
+      "table_database",
       "table_relationship",
+      "tool",
       "workflow",
     ]);
+    // The Database entity (#2444): one LIST_ROUTES line, and its `kind` filter
+    // arrives from the schema with no further line.
+    expect(table.table_database.map((f) => f.query)).toEqual(["kind"]);
     expect(table.data_table.map((f) => f.query)).toEqual([
       "name",
-      "status",
+      "archived",
       "is_dynamic",
       "filled_by",
+      // Camel-cased on the wire already, like the other lists' `tableId`.
+      "databaseId",
     ]);
-    expect(table.prompt_snippet.map((f) => f.query)).toEqual(["deleted"]);
+    expect(table.prompt_snippet.map((f) => f.query)).toEqual(["deleted", "archived"]);
   });
 
   it("translates the route's spelling to a camelCase argument", () => {
