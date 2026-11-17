@@ -11,14 +11,14 @@ diff in review.
 
 ## Provenance
 
-- **Whole R4 capture on Flow `7f53a8edd301262550257ea7906b2fd89c1569a9`
+- **Whole R4 capture on Flow `d5d618cd46228a3a13e02b49f2e28ac20e325f60`
   (2026-11-17), not released:** replaces the temporary MCP-main integration pin
   and the earlier selective R4 delta. Both canonical backend exporters ran
   directly through the shared task queue on that clean, frozen Flow checkout;
   HEAD and clean status were checked before and after. Both exports are
-  byte-identical to the first whole R4 capture on `2c5bd4f4d`; the final
-  Home lifecycle and approval-authority fixes changed no OpenAPI or token-route
-  contract. The working directory
+  byte-identical to the first whole R4 capture on `2c5bd4f4d` and the
+  confirmation on `7f53a8edd`. The final lifecycle, badge and approval-authority
+  fixes changed no OpenAPI or token-route contract. The working directory
   was an empty MCP-owned export directory, with no `.env` there or in the Flow
   root/backend. `env -i`, `ENVIRONMENT=development`, explicit dummy database
   and migration URLs at `127.0.0.1:1`, and `python -I -B` kept the export

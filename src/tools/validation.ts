@@ -153,8 +153,8 @@ export function registerValidationTools(
 
 /**
  * What a request says about itself, and whose requests a list shows (agent-first
- * R4, axonity-flow `af-r4-navigatie`). One text each, used by every tool that
- * reads an approval, so the four cannot come to say different things.
+ * R4, axonity-flow `af-r4-navigatie`). Shared fields use one text; version
+ * freshness follows the read: release lists use the saved verdict.
  *
  * Every sentence is held to the backend. Sources, in axonity-flow `backend/src`:
  *  - `mine` / `all`, the 403, a service token's own: `domain/approval_visibility.py`
@@ -173,7 +173,9 @@ export function registerValidationTools(
  *  - `status`: both services require pending status for a new decision;
  *  - `version`: `services/entity_publish_gateway.py:describe` (`publishes_version`),
  *    `services/publish_approval_service.py:_version_named` and, for a release,
- *    `domain/approval_version.py:release_version`.
+ *    `domain/approval_version.py:release_version`;
+ *    `ReleaseApprovalService._to_summary` uses the saved verdict dated by
+ *    `readinessAsOf`, while `_to_item` recomputes a pending release.
  * `test/approvalsSeenPerPerson.test.ts` holds the names and enum values to the
  * pinned OpenAPI snapshot.
  */
@@ -196,13 +198,21 @@ const WHAT_A_REQUEST_SAYS =
   "checks while rejection remains allowed. To make a new decision, `status` must be `pending`; " +
   "neither authority flag is a pending-status check or a guarantee of publication. " +
   "Both are always false through a token: a token never approves or rejects, " +
-  "an administrator's included. " +
+  "an administrator's included. ";
+
+const CURRENT_REQUEST_VERSION =
   "`version` is, for a request still pending, the version approving it " +
   "publishes as of now (null when there is no working draft, and for a flow, " +
   "which has no versions); for a decided one, the version it recorded (a " +
   "workflow, agent or tool records none). On a release it is the version of the " +
   "release's own workflow, and only when approving the release publishes that " +
   "workflow.";
+
+const SAVED_RELEASE_VERSION =
+  "`version` comes from the saved verdict as of `readinessAsOf`, not from the " +
+  "current draft. It is the release's own workflow version recorded there, " +
+  "or null when that verdict names none. Read get_publish_release for the " +
+  "current version of a pending release.";
 
 const ONLY_YOUR_OWN_OR_ADMIN =
   "\n\nYou can open your own MCP request; an administrator can open any. " +
@@ -236,6 +246,7 @@ export function registerApprovalTools(
       "are human-only actions in Axonity; no tool can do them. " +
       WHOSE_REQUESTS +
       WHAT_A_REQUEST_SAYS +
+      CURRENT_REQUEST_VERSION +
       "\n\nReadiness is recomputed WHEN YOU READ, not frozen at request time: " +
       "`readiness` is the verdict right now, `readinessAtRequest` is what the " +
       "requester saw, and `readinessChanged` says whether it moved. So a blocker " +
@@ -266,7 +277,8 @@ export function registerApprovalTools(
       "This is how you check whether a blocker (for a tool, typically " +
       "`dry_run_required`) has since been cleared." +
       ONLY_YOUR_OWN_OR_ADMIN +
-      WHAT_A_REQUEST_SAYS,
+      WHAT_A_REQUEST_SAYS +
+      CURRENT_REQUEST_VERSION,
     { approvalId: z.string().describe("The approval's id, from request_publish_* or list_publish_approvals.") },
     async ({ approvalId }) =>
       guard(async () =>
@@ -411,6 +423,7 @@ export function registerApprovalTools(
       "human-only actions in Axonity; no tool can take them. " +
       WHOSE_REQUESTS +
       WHAT_A_REQUEST_SAYS +
+      SAVED_RELEASE_VERSION +
       "\n\nTHE RESPONSE IS ONE PAGE: { items, nextCursor, pageSize, hasMore }. " +
       "Follow nextCursor until it is null. " +
       "\n\nRows carry COUNTS (\"6 changed of 162\"), not the closure, and the " +
@@ -458,7 +471,8 @@ export function registerApprovalTools(
       "\n\nApproving publishes every member in dependency order, all-or-nothing, " +
       "and only a human can do it in Axonity." +
       ONLY_YOUR_OWN_OR_ADMIN +
-      WHAT_A_REQUEST_SAYS,
+      WHAT_A_REQUEST_SAYS +
+      CURRENT_REQUEST_VERSION,
     {
       releaseId: z
         .string()

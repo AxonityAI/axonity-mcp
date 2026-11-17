@@ -182,6 +182,24 @@ describe("what a request says about itself (A2, A5a, A5b, H3b)", () => {
     expect(description).not.toContain("whether approving it would succeed");
   });
 
+  it("the release list dates its saved version and points to the detail for the current pending version", async () => {
+    const { tools } = await connected();
+    const description = tools.get("list_publish_releases")!.description ?? "";
+    expect(description).toContain("`version` comes from the saved verdict as of `readinessAsOf`");
+    expect(description).toContain("get_publish_release for the current version of a pending release");
+    expect(description).not.toContain("publishes as of now");
+  });
+
+  it.each(["list_publish_approvals", "get_publish_approval", "get_publish_release"])(
+    "%s still describes the current pending version",
+    async (tool) => {
+      const { tools } = await connected();
+      const description = tools.get(tool)!.description ?? "";
+      expect(description).toContain("publishes as of now");
+      expect(description).not.toContain("`version` comes from the saved verdict");
+    },
+  );
+
   it("hands the new fields to the agent unchanged (the answer is forwarded whole)", async () => {
     const { client, backend } = await connected();
     const item = {
