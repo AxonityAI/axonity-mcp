@@ -151,18 +151,106 @@ export function registerValidationTools(
   );
 }
 
+/**
+ * What a request says about itself, and whose requests a list shows (agent-first
+ * R4, axonity-flow `af-r4-navigatie`). Shared fields use one text; version
+ * freshness follows the read: release lists use the saved verdict.
+ *
+ * Every sentence is held to the backend. Sources, in axonity-flow `backend/src`:
+ *  - `mine` / `all`, the 403, a service token's own: `domain/approval_visibility.py`
+ *    (`own_requests`, `visible_requests`, `ALL_IS_FOR_ADMINISTRATORS`) and the
+ *    route's `view` description (`routes/publish_approvals.py`, `_VIEW`);
+ *    a service token is `role="member"` (`auth/dependencies.py`,
+ *    `_resolve_service_token`), so it is never an administrator;
+ *  - `origin`: `domain/approval_visibility.py:origin_of`;
+ *  - `requestedByName`: `services/publish_approval_service.py:_requester_names`
+ *    (a person's name, an agent's name; a service token and a deleted agent
+ *    have none);
+ *  - `canDecide`: `_why_not_approve` -> `domain/approval_authority.py:may_decide`
+ *    (a token never decides, an administrator's included);
+ *  - `canReject`: `domain/approval_authority.py:may_decide`; approval-only
+ *    clearance and credential-routing checks do not prevent rejection;
+ *  - `status`: both services require pending status for a new decision;
+ *  - `version`: `services/entity_publish_gateway.py:describe` (`publishes_version`,
+ *    with `get_max_major_version` fallback for named-major publishing kinds),
+ *    `services/publish_approval_service.py:_version_named` and, for a release,
+ *    `domain/approval_version.py:release_version`;
+ *    `ReleaseApprovalService._to_summary` uses the saved verdict dated by
+ *    `readinessAsOf`, while `_to_item` recomputes a pending release.
+ * `test/approvalsSeenPerPerson.test.ts` holds the names and enum values to the
+ * pinned OpenAPI snapshot.
+ */
+const WHOSE_REQUESTS =
+  "\n\nWHOSE REQUESTS YOU SEE: `view` is `mine` unless you ask for `all`. `mine` " +
+  "is the requests you sent through your own tokens, and for a service token " +
+  "only the ones that token sent itself, so every row of `mine` has `origin: " +
+  "mcp`. `all` is every request of the workspace, whatever it came through: " +
+  "administrators only, anyone else gets a 403, and a service token is never an " +
+  "administrator.";
+
+const WHAT_A_REQUEST_SAYS =
+  "\n\nEACH REQUEST SAYS WHERE IT CAME FROM AND WHETHER YOU MAY DECIDE IT: " +
+  "`origin` is `mcp` (sent through a token), `agent` (proposed by an internal " +
+  "agent) or `screen` (requested at a screen). `requestedByName` is the person " +
+  "who asked, or the agent's name when `origin` is `agent`; it is null for a " +
+  "service token and for an agent that has since been deleted. `canDecide` is " +
+  "your authority to approve; `canReject` is your authority to reject. These " +
+  "are separate: approval can be blocked by clearance or credential-routing " +
+  "checks while rejection remains allowed. To make a new decision, `status` must be `pending`; " +
+  "neither authority flag is a pending-status check or a guarantee of publication. " +
+  "Both are always false through a token: a token never approves or rejects, " +
+  "an administrator's included. ";
+
+const CURRENT_REQUEST_VERSION =
+  "`version` is, for a request still pending, the version approving it " +
+  "publishes as of now. For a single-entity request whose kind publishes a " +
+  "named major version (such as a skill), a missing working draft falls back to " +
+  "the newest named major version. It is null when no publish-target version " +
+  "is named, including a flow, which has no versions. For a decided request, " +
+  "it is the version it recorded (a workflow, agent or tool records none). " +
+  "On a release it is the version of the " +
+  "release's own workflow, and only when approving the release publishes that " +
+  "workflow.";
+
+const SAVED_RELEASE_VERSION =
+  "`version` comes from the saved verdict as of `readinessAsOf`, not from the " +
+  "current draft. It is the release's own workflow version recorded there, " +
+  "or null when that verdict names none. Read get_publish_release for the " +
+  "current version of a pending release.";
+
+const ONLY_YOUR_OWN_OR_ADMIN =
+  "\n\nYou can open your own MCP request; an administrator can open any. " +
+  "Someone else's request is a 404, as is an id that does not exist.";
+
+/**
+ * `view` of the two approval lists. The values are the route's; there is no
+ * default here on purpose: the backend defaults to `mine`, once, and a second
+ * default in this file would be a copy that can part from it.
+ */
+const VIEW = z
+  .enum(["mine", "all"])
+  .optional()
+  .describe(
+    "`mine` (the backend's default): the requests you sent through your own " +
+      "tokens. `all`: every request of the workspace — administrators only, " +
+      "anyone else gets a 403.",
+  );
+
 export function registerApprovalTools(
   server: McpServer,
   client: AxonityClient,
 ): void {
   server.tool(
     "list_publish_approvals",
-    "List this tenant's publish approvals and their status — how you find out " +
+    "List the publish approvals you may see, with their status — how you find out " +
       "whether a request_publish_* was approved or rejected. Optionally filter " +
       "by status, and page through with limit/offset: the answer carries " +
       "`total` and `hasMore`, so raise `offset` by `limit` until `hasMore` is " +
       "false. Approving and rejecting " +
       "are human-only actions in Axonity; no tool can do them. " +
+      WHOSE_REQUESTS +
+      WHAT_A_REQUEST_SAYS +
+      CURRENT_REQUEST_VERSION +
       "\n\nReadiness is recomputed WHEN YOU READ, not frozen at request time: " +
       "`readiness` is the verdict right now, `readinessAtRequest` is what the " +
       "requester saw, and `readinessChanged` says whether it moved. So a blocker " +
@@ -172,12 +260,15 @@ export function registerApprovalTools(
         .enum(["pending", "approved", "rejected"])
         .optional()
         .describe("Filter by status. Omit for all."),
+      view: VIEW,
       limit: z.number().int().min(1).max(200).optional().describe("Default 50."),
       offset: z.number().int().min(0).optional().describe("Default 0."),
     },
-    async ({ status, limit, offset }) =>
+    async ({ status, view, limit, offset }) =>
       guard(async () =>
-        jsonResult(await client.get("/api/v1/publish-approvals", { status, limit, offset })),
+        jsonResult(
+          await client.get("/api/v1/publish-approvals", { status, view, limit, offset }),
+        ),
       ),
   );
 
@@ -188,7 +279,10 @@ export function registerApprovalTools(
       "read, so it reflects the entity as it stands NOW; `readinessAtRequest` " +
       "keeps what the requester saw and `readinessChanged` flags a difference. " +
       "This is how you check whether a blocker (for a tool, typically " +
-      "`dry_run_required`) has since been cleared.",
+      "`dry_run_required`) has since been cleared." +
+      ONLY_YOUR_OWN_OR_ADMIN +
+      WHAT_A_REQUEST_SAYS +
+      CURRENT_REQUEST_VERSION,
     { approvalId: z.string().describe("The approval's id, from request_publish_* or list_publish_approvals.") },
     async ({ approvalId }) =>
       guard(async () =>
@@ -326,11 +420,14 @@ export function registerApprovalTools(
 
   server.tool(
     "list_publish_releases",
-    "List this tenant's RELEASE approvals — the read-back for " +
+    "List the RELEASE approvals you may see — the read-back for " +
       "request_publish_release, which had none: the connector could propose a " +
       "release and then had no way to see what became of it. Newest first, " +
       "optionally filtered by status. Approving and rejecting a release are " +
       "human-only actions in Axonity; no tool can take them. " +
+      WHOSE_REQUESTS +
+      WHAT_A_REQUEST_SAYS +
+      SAVED_RELEASE_VERSION +
       "\n\nTHE RESPONSE IS ONE PAGE: { items, nextCursor, pageSize, hasMore }. " +
       "Follow nextCursor until it is null. " +
       "\n\nRows carry COUNTS (\"6 changed of 162\"), not the closure, and the " +
@@ -343,6 +440,7 @@ export function registerApprovalTools(
         .optional()
         .describe("Filter by status. Omit for all."),
       limit: z.number().int().optional().describe("Page size. Default 20, max 200."),
+      view: VIEW,
       cursor: z
         .string()
         .optional()
@@ -351,11 +449,12 @@ export function registerApprovalTools(
             "Omit for the first page. Do not parse or construct one.",
         ),
     },
-    async ({ status, limit, cursor }) =>
+    async ({ status, view, limit, cursor }) =>
       guard(async () =>
         jsonResult(
           await client.get("/api/v1/publish-approvals/release", {
             status,
+            view,
             limit,
             cursor,
           }),
@@ -374,7 +473,10 @@ export function registerApprovalTools(
       "joining or leaving an agent. `ready` and the counts stay the whole " +
       "release's. " +
       "\n\nApproving publishes every member in dependency order, all-or-nothing, " +
-      "and only a human can do it in Axonity.",
+      "and only a human can do it in Axonity." +
+      ONLY_YOUR_OWN_OR_ADMIN +
+      WHAT_A_REQUEST_SAYS +
+      CURRENT_REQUEST_VERSION,
     {
       releaseId: z
         .string()

@@ -52,7 +52,7 @@ approval of each call is the guard.
 
 ## Tools
 
-531 tools total. `axonity_conventions` (read this first) covers the authoring
+533 tools total. `axonity_conventions` (read this first) covers the authoring
 rules — drafts vs live, optimistic locking, per-entity fields, delete/restore,
 and how to tell a retryable error from one that will never succeed.
 `axonity_semantic_conventions` is its counterpart for one job only: building a
@@ -81,9 +81,9 @@ exceptions):
 | `create_<entity>` | Create a new **draft**. |
 | `update_<entity>` | Update a draft (`expectedVersion` in the body; 409 on a stale write). |
 | `delete_<entity>` | Soft-delete. **Recoverable** — see `restore_<entity>`. |
-| `restore_<entity>` | Undo a delete. No version check. Takes an optional `name` on the nine entities whose name is unique (see *Archive and the Trash*). |
+| `restore_<entity>` | Undo a delete. No version check. Takes an optional `name` on the ten entities whose name is unique (see *Archive and the Trash*). |
 | `list_deleted_<plural>` | Restore candidates. |
-| `archive_<entity>` / `unarchive_<entity>` | Archived is its own act, not a delete: out of use and out of the lists, back as it was. On a kind with versions only a draft can be archived. Fifteen entities: every one above except `table_database`, and the three below except `table_relationship` — see *Archive and the Trash*. |
+| `archive_<entity>` / `unarchive_<entity>` | Archived is its own act, not a delete: out of use and out of the lists, back as it was. On a kind with versions only a draft can be archived. Sixteen entities: every one above, and the three below except `table_relationship` — see *Archive and the Trash*. |
 | `discard_<entity>_draft` | Reset the draft to the last published state. |
 | `request_publish_<entity>` | Ask for a draft to be published — creates a pending approval; never publishes. |
 
@@ -109,7 +109,7 @@ backend applies it before the rows come back:
 `list_prompt_snippets({ deleted?, archived? })`,
 `list_flows({ archived? })`,
 `list_data_tables({ name?, archived?, isDynamic?, filledBy?, databaseId? })`,
-`list_table_databases({ kind? })`,
+`list_table_databases({ kind?, archived? })`,
 `list_data_sources({ enabled?, archived? })`,
 `list_table_relationships({ tableId? })`,
 `list_measures({ tableId?, archived? })`,
@@ -348,12 +348,12 @@ across these routes — the tool parameter names say which.
   database is a named group of tables (`kind` `data_model`, `shared` or
   `workspace`), and a table says which one it is in (`update_data_table` with
   `databaseId`, or `clearDatabase: true`; `list_data_tables` takes `databaseId`):
-  a database holds no list of its tables. It is the one versioned kind that is
-  **not** on the archive of *Archive and the Trash* yet
-  (`ENTITY-LIFECYCLE-CONTRACT.md` §4.9): no `archive_*` tool, no `archivedAt`, no
-  place in the Trash. It is archived by sending `status: "archived"` with
-  `update_table_database`, an archived one stays in `list_table_databases` with
-  its `status`, and only an empty database can be deleted (a 409 names how many
+  a database holds no list of its tables. Like the other versioned kinds it
+  uses `archive_table_database` / `unarchive_table_database`, carries `archivedAt`,
+  and goes to the Trash when deleted (`ENTITY-LIFECYCLE-CONTRACT.md` §4.9).
+  Archived databases are excluded from the list by default; pass `archived`
+  to include them or list only archived ones. Restore can take a new `name`.
+  Only an empty database can be archived or deleted (a 409 names how many
   tables it still holds). `read_model_gaps` and `read_model_overview` read the
   five fixed checks over the model and what exists in each layer, counted when
   asked; they belong to the Insights module.
@@ -680,12 +680,29 @@ paged the same way — `{ items, nextCursor, pageSize, hasMore }`, walked with
 `cursor`. It stopped answering with a bare array when the backend converted the
 route; the `offset` it used to take is no longer read.
 
+A run row in both lists carries `ownerAgentId` (the agent that owns the run's
+workflow; null when there is none) and `currentStepName` (the step the run is in,
+for an active run; null otherwise).
+
 ### Approvals
 
-`list_publish_approvals({ status?, limit?, offset? })` and
+`list_publish_approvals({ status?, view?, limit?, offset? })` and
 `get_publish_approval({ approvalId })` — how you find out whether a
 `request_publish_*` was approved or rejected. Approving and rejecting are
 human-only actions in Axonity.
+
+**Approvals are read per person.** `view` is `mine` unless you ask for `all`:
+`mine` is the requests you sent through your own tokens (a service token sees only
+the ones it sent itself), `all` is every request of the workspace and is for
+administrators — anyone else gets a 403, and a service token never is one.
+`list_publish_releases` takes the same `view`. Opening one request by id works for
+your own and, for an administrator, any; someone else's is a 404. Each request
+says `origin` (`mcp`, `agent` or `screen`), `requestedByName`, `canDecide`
+(your authority to approve), `canReject` (your authority to reject), and `version`
+(the version approving it publishes; null when there is none to name).
+Both authority flags are always false through a token: a token never approves
+or rejects. A new decision also requires `status: "pending"`; the flags are
+not status checks or a guarantee that publication will succeed.
 
 `request_publish_release({ workflowId, changeSummary? })` proposes a **release**:
 a workflow *and everything its run needs* — the agents it runs (each with its
@@ -841,14 +858,18 @@ These are enforced by the backend, not merely by convention:
   connector states are pinned to a vendored snapshot of the backend OpenAPI
   schema; `test/conformance.test.ts` fails if a route or documented enum
   diverges (see `test/fixtures/README.md`).
-- **Every backend route is decided, and the build says so.**
-  `test/completeness.test.ts` partitions all 849 operations in the pinned
-  snapshot into *covered by a tool* or *excluded by a rule that carries a
-  written reason*, and fails on anything in neither. A route nobody has decided
-  about is indistinguishable from one somebody is still working on, which is
-  what made "is this connector finished?" a question you could only answer with
-  an audit. It is now a build status: a new backend route arrives as a red build
-  asking **cover it, or exclude it with a reason?**
+- **Every backend route is accounted for, and the build says so.**
+  `test/completeness.test.ts` partitions all 853 operations in the pinned
+  snapshot using four classifiers. For tenant-API routes it checks for
+  *covered by a tool* or *excluded by a rule that carries a
+  written reason*, with an explicit temporary exception for the unresolved
+  product decisions listed in `OPEN_FOR_DECISION_79`. Those routes, including
+  Library summary, are not implemented tools or completed exclusion decisions;
+  the test also checks that this pending list remains unresolved. Probes,
+  login routes and other endpoints outside the tenant API are classified
+  separately by `NOT_THE_API` / `isOutsideTheApi`. An operation matching none
+  of these four classifiers fails the build, so an unclassified route cannot
+  silently disappear from the parity check.
 
 **One known exception, not enforced:** a framework-provided `flow` is meant to
 be read-only to a tenant, but the backend does not actually block

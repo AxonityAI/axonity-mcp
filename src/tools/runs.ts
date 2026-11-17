@@ -157,6 +157,21 @@ const HOSTED_TRIGGER_INPUT_FILE =
   "this connector runs on the Axonity server, so a path would name a file " +
   "there, not on your machine.";
 
+/**
+ * Two fields every run row carries since agent-first R4 (axonity-flow
+ * `af-r4-navigatie`, `RunSummary.ownerAgentId` and `.currentStepName`). One
+ * text for both list tools. Sources, in axonity-flow `backend/src`:
+ * `schemas/run.py` (`CoreRunSummary.owner_agent_id`, `.current_step_name`, the
+ * comments on both) and `repositories/run_repository.py:current_step_names`.
+ */
+const WHOSE_AND_WHERE_A_ROW_IS =
+  "\n\nA ROW ALSO SAYS WHOSE IT IS AND WHAT IT IS ON: `ownerAgentId` is the " +
+  "agent that owns the run's workflow (null when the workflow has no owner, or " +
+  "the owner is deleted or belongs to another workspace), and `currentStepName` " +
+  "is the step the run is in — of the steps still open (running, or parked " +
+  "waiting) the one that started first; null for a run that has ended or has " +
+  "no open step.";
+
 export function registerRunTools(
   server: McpServer,
   client: AxonityClient,
@@ -305,7 +320,8 @@ export function registerRunTools(
       "Dashboard Analyst is a run of kind `conversation`; this tool asks the " +
       "route for workflow runs only. list_conversations lists the chats — " +
       "across dashboards on this same route (kind=conversation, with the same " +
-      "status and date filters), or for one dashboard.",
+      "status and date filters), or for one dashboard." +
+      WHOSE_AND_WHERE_A_ROW_IS,
     {
       status: z
         .string()
@@ -379,7 +395,8 @@ export function registerRunTools(
       "in the query, so \"which launches failed?\" is one page rather than a " +
       "walk through every page keeping the failures. A status this backend " +
       "does not know is a 422 naming the ones it does — this connector " +
-      "deliberately keeps no copy of that list.",
+      "deliberately keeps no copy of that list." +
+      WHOSE_AND_WHERE_A_ROW_IS,
     {
       workflowId: z.string().describe("The workflow's id."),
       status: z

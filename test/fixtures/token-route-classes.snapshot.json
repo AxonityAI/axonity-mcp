@@ -703,6 +703,9 @@
   "GET /api/v1/knowledge/oversight/tips": {
     "class": "lezen"
   },
+  "GET /api/v1/knowledge/oversight/waiting": {
+    "class": "lezen"
+  },
   "GET /api/v1/knowledge/search": {
     "class": "lezen"
   },
@@ -725,6 +728,9 @@
     "class": "lezen"
   },
   "GET /api/v1/knowledge/tree/{node_id}/related": {
+    "class": "lezen"
+  },
+  "GET /api/v1/library/summary": {
     "class": "lezen"
   },
   "GET /api/v1/me/mcp-access": {
@@ -2674,6 +2680,14 @@
   "POST /api/v1/table-databases/{database_id}/versions/{version_id}/restore-deleted": {
     "class": "dicht",
     "why": "restore: configuration without an approval step"
+  },
+  "POST /api/v1/table-databases/{entity_id}/archive": {
+    "class": "dicht",
+    "why": "archive: a delete by another name, without an approval step (Levenscyclus)"
+  },
+  "POST /api/v1/table-databases/{entity_id}/unarchive": {
+    "class": "dicht",
+    "why": "archive: a delete by another name, without an approval step (Levenscyclus)"
   },
   "POST /api/v1/table-relationships": {
     "class": "dicht",
