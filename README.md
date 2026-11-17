@@ -858,14 +858,15 @@ These are enforced by the backend, not merely by convention:
   connector states are pinned to a vendored snapshot of the backend OpenAPI
   schema; `test/conformance.test.ts` fails if a route or documented enum
   diverges (see `test/fixtures/README.md`).
-- **Every backend route is decided, and the build says so.**
+- **Every backend route is accounted for, and the build says so.**
   `test/completeness.test.ts` partitions all 853 operations in the pinned
   snapshot into *covered by a tool* or *excluded by a rule that carries a
-  written reason*, and fails on anything in neither. A route nobody has decided
-  about is indistinguishable from one somebody is still working on, which is
-  what made "is this connector finished?" a question you could only answer with
-  an audit. It is now a build status: a new backend route arrives as a red build
-  asking **cover it, or exclude it with a reason?**
+  written reason*, with an explicit temporary exception for the unresolved
+  product decisions listed in `OPEN_FOR_DECISION_79`. Those routes, including
+  Library summary, are not implemented tools or completed exclusion decisions;
+  the test also checks that this pending list remains unresolved. An operation
+  outside all three sets fails the build, so an unclassified route cannot
+  silently disappear from the parity check.
 
 **One known exception, not enforced:** a framework-provided `flow` is meant to
 be read-only to a tenant, but the backend does not actually block
