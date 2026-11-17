@@ -90,7 +90,7 @@ describe("which kinds are archivable is what the backend mounts", () => {
     const routes = paths.filter((p) => p.endsWith("/{entity_id}/archive"));
     const covered = archiveKinds.map((e) => `${e.basePath}/{entity_id}/archive`);
     expect(routes.sort()).toEqual(covered.sort());
-    expect(archiveKinds.length).toBe(15);
+    expect(archiveKinds.length).toBe(16);
   });
 
   it("each of them has archive_ and unarchive_, and no other kind has", () => {
@@ -158,7 +158,7 @@ describe("every list of an archivable kind takes `archived`", () => {
 });
 
 describe("restore takes a new name on exactly the kinds whose name is unique", () => {
-  it("the nine kinds are read from the routes that take a body", () => {
+  it("the ten kinds are read from the routes that take a body", () => {
     expect(renamingKinds.map((e) => e.singular).sort()).toEqual([
       "application",
       "data_source",
@@ -169,6 +169,7 @@ describe("restore takes a new name on exactly the kinds whose name is unique", (
       "query",
       "reference_doc",
       "skill",
+      "table_database",
     ]);
   });
 
@@ -263,10 +264,10 @@ describe("a restored item that was archived is still archived", () => {
 });
 
 describe("update: an archived item is not edited, and `status` is not written", () => {
-  /** The ten kinds whose update body had a writable `status` (the plan's list). */
-  const TEN = [
+  /** The kinds whose update body had a writable `status`, including main #2470. */
+  const STATUS_RETIRED = [
     "agent", "application", "data_table", "measure", "output_schema",
-    "policy", "query", "reference_doc", "skill", "tool",
+    "policy", "query", "reference_doc", "skill", "table_database", "tool",
   ];
 
   /** An update body that refuses unknown keys and has no `status`. */
@@ -282,15 +283,15 @@ describe("update: an archived item is not edited, and `status` is not written", 
     );
   };
 
-  it("each of the ten has a strict update body without a status", () => {
-    for (const k of TEN) {
+  it("each retired kind has a strict update body without a status", () => {
+    for (const k of STATUS_RETIRED) {
       const e = ENTITIES.find((x) => x.singular === k)!;
       expect(refusesStatus(e), k).toBe(true);
     }
   });
 
-  it("the registration flags exactly those ten", () => {
-    expect(ENTITIES.filter((e) => e.statusRetired).map((e) => e.singular).sort()).toEqual(TEN);
+  it("the registration flags exactly those kinds", () => {
+    expect(ENTITIES.filter((e) => e.statusRetired).map((e) => e.singular).sort()).toEqual(STATUS_RETIRED);
   });
 
   it("every archivable kind's update says an archived item is refused", () => {
@@ -302,9 +303,9 @@ describe("update: an archived item is not edited, and `status` is not written", 
     }
   });
 
-  it("the ten say where the status went", () => {
+  it("the retired kinds say where the status went", () => {
     const { descriptions } = surface();
-    for (const k of TEN) {
+    for (const k of STATUS_RETIRED) {
       const d = descriptions.get(`update_${k}`)!;
       expect(d, k).toMatch(/`status` is refused/);
       expect(d, k).toContain(`archive_${k}`);
@@ -313,7 +314,7 @@ describe("update: an archived item is not edited, and `status` is not written", 
 
   it("the others never mention a status", () => {
     const { descriptions } = surface();
-    for (const e of ENTITIES.filter((x) => !TEN.includes(x.singular))) {
+    for (const e of ENTITIES.filter((x) => !STATUS_RETIRED.includes(x.singular))) {
       expect(descriptions.get(`update_${e.singular}`)!, e.singular).not.toMatch(
         /`status` is refused/,
       );
@@ -352,7 +353,7 @@ describe("archive: what the backend refuses, said before the call", () => {
 
   it("only the kinds whose delete has a guard promise the in-use refusal", () => {
     const { descriptions } = surface();
-    const inUse = ["agent", "workflow", "tool", "output_schema", "data_table", "measure", "data_source"];
+    const inUse = ["agent", "workflow", "tool", "output_schema", "data_table", "table_database", "measure", "data_source"];
     for (const e of archiveKinds) {
       const d = descriptions.get(`archive_${e.singular}`)!;
       expect(/same words as delete_/.test(d), e.singular).toBe(inUse.includes(e.singular));

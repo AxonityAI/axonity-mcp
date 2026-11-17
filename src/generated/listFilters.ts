@@ -201,6 +201,13 @@ export const LIST_FILTERS: Record<string, ListFilter[]> = {
       description:
         "Only the databases of this kind.",
     },
+    {
+      arg: "archived",
+      query: "archived",
+      type: "string",
+      description:
+        "Which items to list: 'exclude' (default) leaves archived items out, 'only' lists only the archived ones (the Archived view), 'include' lists both.",
+    },
   ],
   "data_source": [
     {

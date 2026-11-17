@@ -247,9 +247,6 @@ has run cleanly once, at its current version.
   first, with who deleted it and what it was carried by) and \`trash_summary\`
   (how many of each, and the installation's \"Empty the trash after\"). Deleting
   permanently is an administrator's act in Axonity; there is no tool for it.
-  One kind is not in it: \`table_database\`. Deleting an (empty) database does
-  not show in \`list_trash\`; \`list_deleted_table_databases\` does, and
-  \`restore_table_database\` brings it back.
 - The same applies one level down, to version HISTORY:
   \`delete_*_version\` removes one entry from history (the current draft and
   published version are protected and can't be targeted this way);
@@ -259,12 +256,12 @@ has run cleanly once, at its current version.
 - \`restore_*\` can itself 409 if a live entity now holds the same name/slot —
   the error names the conflicting one. On \`skill\`, \`policy\`,
   \`reference_doc\`, \`output_schema\`, \`application\`, \`data_table\`,
-  \`measure\`, \`query\` and \`data_source\`, whose name is unique, pass
+  \`measure\`, \`query\`, \`data_source\` and \`table_database\`, whose name is unique, pass
   \`name\` to restore it under another one.
 - Deleting is not archiving. **Archived** is its own act, beside Draft and
   Published: \`archive_*\` / \`unarchive_*\` on \`workflow\`, \`agent\`, \`tool\`,
   \`skill\`, \`policy\`, \`reference_doc\`, \`output_schema\`, \`prompt_snippet\`,
-  \`flow\`, \`data_table\`, \`measure\`, \`query\`, \`application\`,
+  \`flow\`, \`data_table\`, \`table_database\`, \`measure\`, \`query\`, \`application\`,
   \`data_source\` and \`dashboard\`. An archived item is out of use — no run
   reads it — and out of \`list_*\` unless \`archived\` is \`include\` or \`only\`;
   its row says \`archivedAt\`. It is not edited until it is unarchived. On a
@@ -272,10 +269,8 @@ has run cleanly once, at its current version.
   until a person unpublishes it in Axonity, and archiving touches no version
   (a data source and a dashboard have no versions, so none of that applies to them). Do not archive by
   sending a \`status\` to \`update_*\`: \`agent\`, \`tool\`, \`skill\`, \`policy\`,
-  \`reference_doc\`, \`output_schema\`, \`data_table\`, \`measure\`, \`query\` and
-  \`application\` refuse it. A \`table_database\` is the exception: it has no
-  archive tool and no \`archivedAt\`, and it IS archived by sending
-  \`status: "archived"\` with \`update_table_database\`. Runs have an archive of
+  \`reference_doc\`, \`output_schema\`, \`data_table\`, \`measure\`, \`query\`,
+  \`application\` and \`table_database\` refuse it. Runs have an archive of
   their own (\`archive_run\` / \`unarchive_run\`, see below).
 
 ## Per entity — what to create, and what "complete" means

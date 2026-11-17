@@ -8420,16 +8420,6 @@
             ],
             "title": "Source",
             "type": "string"
-          },
-          "status": {
-            "default": "active",
-            "description": "Lifecycle status of the database.",
-            "enum": [
-              "active",
-              "archived"
-            ],
-            "title": "Status",
-            "type": "string"
           }
         },
         "required": [
@@ -19497,6 +19487,54 @@
         "title": "LessonView",
         "type": "object"
       },
+      "LibraryKindSummary": {
+        "description": "One tile of the hub: how many of a kind there are, and how many never went live.",
+        "properties": {
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "neverPublished": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Neverpublished"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "kind",
+          "total",
+          "neverPublished"
+        ],
+        "title": "LibraryKindSummary",
+        "type": "object"
+      },
+      "LibrarySummary": {
+        "description": "A row per kind of the Library, in the order of the hub — a fixed, short list.",
+        "properties": {
+          "kinds": {
+            "items": {
+              "$ref": "#/components/schemas/LibraryKindSummary"
+            },
+            "title": "Kinds",
+            "type": "array"
+          }
+        },
+        "required": [
+          "kinds"
+        ],
+        "title": "LibrarySummary",
+        "type": "object"
+      },
       "LoginRequest": {
         "description": "Email + password login payload.",
         "properties": {
@@ -22934,6 +22972,11 @@
             ],
             "title": "Order"
           },
+          "overview": {
+            "default": false,
+            "title": "Overview",
+            "type": "boolean"
+          },
           "path": {
             "title": "Path",
             "type": "string"
@@ -24023,6 +24066,20 @@
           "isAdmin"
         ],
         "title": "OversightScope",
+        "type": "object"
+      },
+      "OversightWaiting": {
+        "description": "How many cases of *Oversight* wait for this colleague's decision (R4 · A3).\n\nOne number, for the badge of *Approvals*: what is in *Decision needed*, in\n*Waiting for a person* and the *Doubtful cases* held by them. Not the lists.",
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "count"
+        ],
+        "title": "OversightWaiting",
         "type": "object"
       },
       "OverviewResponse": {
@@ -25889,7 +25946,7 @@
         "type": "object"
       },
       "PendingApprovalCount": {
-        "description": "What is waiting for a decision — the sidebar badge's number.\n\nCounts exactly what the Approvals inbox lists: pending publish requests\nplus pending releases. ``total`` is their sum, computed here so no caller\nadds them up its own way.",
+        "description": "What is waiting for a decision — the sidebar badge's number.\n\nCounts exactly what the *My approvals* inbox lists — the caller's own MCP\nrequests: pending publish requests plus pending releases. ``total`` is\ntheir sum, computed here so no caller adds them up its own way. The same for\nan administrator: the number is a person's own, and the workspace-wide count\nshown nowhere was dropped (teamstand 14/11; the *All approvals* view lists\nthe rows).",
         "properties": {
           "approvals": {
             "title": "Approvals",
@@ -27717,6 +27774,14 @@
       "PublishApprovalItem": {
         "description": "An approval as shown in the inbox / returned to the requester.",
         "properties": {
+          "canDecide": {
+            "title": "Candecide",
+            "type": "boolean"
+          },
+          "canReject": {
+            "title": "Canreject",
+            "type": "boolean"
+          },
           "changeSummary": {
             "anyOf": [
               {
@@ -27799,6 +27864,15 @@
             ],
             "title": "Label"
           },
+          "origin": {
+            "enum": [
+              "mcp",
+              "agent",
+              "screen"
+            ],
+            "title": "Origin",
+            "type": "string"
+          },
           "provenance": {
             "anyOf": [
               {
@@ -27835,6 +27909,17 @@
             "title": "Requestedbykind",
             "type": "string"
           },
+          "requestedByName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requestedbyname"
+          },
           "requestedVia": {
             "anyOf": [
               {
@@ -27857,6 +27942,17 @@
             ],
             "title": "Status",
             "type": "string"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
           }
         },
         "required": [
@@ -27867,6 +27963,9 @@
           "status",
           "readiness",
           "requestedByKind",
+          "origin",
+          "canDecide",
+          "canReject",
           "createdAt"
         ],
         "title": "PublishApprovalItem",
@@ -29837,6 +29936,14 @@
             "title": "Blockers",
             "type": "array"
           },
+          "canDecide": {
+            "title": "Candecide",
+            "type": "boolean"
+          },
+          "canReject": {
+            "title": "Canreject",
+            "type": "boolean"
+          },
           "changeSummary": {
             "anyOf": [
               {
@@ -29890,6 +29997,15 @@
             "title": "Members",
             "type": "array"
           },
+          "origin": {
+            "enum": [
+              "mcp",
+              "agent",
+              "screen"
+            ],
+            "title": "Origin",
+            "type": "string"
+          },
           "readinessAsOf": {
             "title": "Readinessasof",
             "type": "string"
@@ -29901,6 +30017,17 @@
           "requestedByKind": {
             "title": "Requestedbykind",
             "type": "string"
+          },
+          "requestedByName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requestedbyname"
           },
           "requestedVia": {
             "anyOf": [
@@ -29930,6 +30057,17 @@
             "title": "Totalcount",
             "type": "integer"
           },
+          "version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          },
           "workflowId": {
             "title": "Workflowid",
             "type": "string"
@@ -29947,6 +30085,9 @@
           "ready",
           "readinessAsOf",
           "requestedByKind",
+          "origin",
+          "canDecide",
+          "canReject",
           "createdAt"
         ],
         "title": "ReleaseApprovalItem",
@@ -29959,6 +30100,14 @@
             "default": 0,
             "title": "Blockercount",
             "type": "integer"
+          },
+          "canDecide": {
+            "title": "Candecide",
+            "type": "boolean"
+          },
+          "canReject": {
+            "title": "Canreject",
+            "type": "boolean"
           },
           "changeSummary": {
             "anyOf": [
@@ -30006,6 +30155,15 @@
             "title": "Id",
             "type": "string"
           },
+          "origin": {
+            "enum": [
+              "mcp",
+              "agent",
+              "screen"
+            ],
+            "title": "Origin",
+            "type": "string"
+          },
           "readinessAsOf": {
             "title": "Readinessasof",
             "type": "string"
@@ -30017,6 +30175,17 @@
           "requestedByKind": {
             "title": "Requestedbykind",
             "type": "string"
+          },
+          "requestedByName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requestedbyname"
           },
           "requestedVia": {
             "anyOf": [
@@ -30046,6 +30215,17 @@
             "title": "Totalcount",
             "type": "integer"
           },
+          "version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          },
           "workflowId": {
             "title": "Workflowid",
             "type": "string"
@@ -30063,6 +30243,9 @@
           "ready",
           "readinessAsOf",
           "requestedByKind",
+          "origin",
+          "canDecide",
+          "canReject",
           "createdAt"
         ],
         "title": "ReleaseApprovalSummary",
@@ -32540,6 +32723,17 @@
             ],
             "title": "Createdbyname"
           },
+          "currentStepName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currentstepname"
+          },
           "dashboardId": {
             "anyOf": [
               {
@@ -32579,6 +32773,17 @@
             "default": 0,
             "title": "Notachievedsteps",
             "type": "integer"
+          },
+          "ownerAgentId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owneragentid"
           },
           "question": {
             "anyOf": [
@@ -37287,6 +37492,19 @@
       "TableDatabaseResponse": {
         "description": "One database as the Databases screen and its Settings tab draw it.",
         "properties": {
+          "archivedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the database was archived, or null while it is in use. Archived is a choice beside Draft and Published: out of use, out of the lists.",
+            "title": "Archivedat"
+          },
           "createdAt": {
             "title": "Createdat",
             "type": "string"
@@ -37377,14 +37595,6 @@
             "title": "Sourcetablecount",
             "type": "integer"
           },
-          "status": {
-            "enum": [
-              "active",
-              "archived"
-            ],
-            "title": "Status",
-            "type": "string"
-          },
           "tableCount": {
             "default": 0,
             "description": "How many live tables live in this database, counting only the tables the reader may read.",
@@ -37414,7 +37624,6 @@
           "kind",
           "source",
           "isSystem",
-          "status",
           "version",
           "createdAt",
           "updatedAt"
@@ -42687,22 +42896,6 @@
             ],
             "description": "The handle. Unique in the workspace. A new name keeps the old slug unless this is sent.",
             "title": "Slug"
-          },
-          "status": {
-            "anyOf": [
-              {
-                "enum": [
-                  "active",
-                  "archived"
-                ],
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Lifecycle status of the database.",
-            "title": "Status"
           }
         },
         "required": [
@@ -65426,6 +65619,33 @@
         ]
       }
     },
+    "/api/v1/knowledge/oversight/waiting": {
+      "get": {
+        "description": "How many cases wait for YOUR decision: the questions about two facts and the\nfacts waiting for a person, of an audience you maintain, and the doubtful cases\nyou hold. A count only: *Expiring*, *Tips from weak sources* and *Archived* ask\nno decision, and an administrator does not count the cases nobody holds.",
+        "operationId": "oversight_waiting_api_v1_knowledge_oversight_waiting_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OversightWaiting"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Oversight Waiting",
+        "tags": [
+          "knowledge"
+        ]
+      }
+    },
     "/api/v1/knowledge/search": {
       "get": {
         "description": "The search bar (#2101): starts the platform run 'Search knowledge' with the\nquestion. The answer is the run's; the person reads it when the run is done.",
@@ -66120,6 +66340,33 @@
         "summary": "List Related",
         "tags": [
           "knowledge"
+        ]
+      }
+    },
+    "/api/v1/library/summary": {
+      "get": {
+        "description": "Per kind of the Library: ``total`` (what its list shows you) and\n``neverPublished`` (of the workspace's own items, those without a live\npublication; ``null`` for kinds that are not published).\n\nWithout deleted or archived items, without the items of a module that is\noff, and without what your clearance does not let you read. The core's own kinds\ncome first, then a row for each kind a module that is on offers (Knowledge: the\nfacts of the graph); a module that is off gives no row. ``secrets`` is a\nrow only for a person at a screen: a token may not list the secrets, so it is\nnot told how many there are either.",
+        "operationId": "library_summary_api_v1_library_summary_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LibrarySummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Library Summary",
+        "tags": [
+          "library"
         ]
       }
     },
@@ -74728,7 +74975,7 @@
     },
     "/api/v1/publish-approvals": {
       "get": {
-        "description": "List the tenant's approvals, optionally filtered by status. Paginated.",
+        "description": "List the approvals you may see, optionally filtered by status. Paginated.\n\n``view=mine`` (default): your own MCP requests. ``view=all``: the whole\nworkspace's, with each request's ``origin`` — administrators only.",
         "operationId": "list_approvals_api_v1_publish_approvals_get",
         "parameters": [
           {
@@ -74750,6 +74997,22 @@
                 }
               ],
               "title": "Status"
+            }
+          },
+          {
+            "description": "mine = the requests you sent through one of your own tokens; all = every request of the workspace, whatever it came through (administrators only, 403 otherwise).",
+            "in": "query",
+            "name": "view",
+            "required": false,
+            "schema": {
+              "default": "mine",
+              "description": "mine = the requests you sent through one of your own tokens; all = every request of the workspace, whatever it came through (administrators only, 403 otherwise).",
+              "enum": [
+                "mine",
+                "all"
+              ],
+              "title": "View",
+              "type": "string"
             }
           },
           {
@@ -74997,7 +75260,7 @@
     },
     "/api/v1/publish-approvals/pending-count": {
       "get": {
-        "description": "How much waits for a decision: pending requests plus pending releases.\n\nTwo COUNTs and nothing else, so the sidebar badge can re-ask on every\nrealtime signal without loading either queue.",
+        "description": "How much waits for YOU: your own pending requests plus pending releases.\n\nCOUNTs and nothing else, so the sidebar badge can re-ask on every realtime\nsignal without loading either queue. ``total`` is *My approvals*, for an\nadministrator too.",
         "operationId": "pending_count_api_v1_publish_approvals_pending_count_get",
         "responses": {
           "200": {
@@ -75024,7 +75287,7 @@
     },
     "/api/v1/publish-approvals/release": {
       "get": {
-        "description": "One page of the tenant's release queue, newest first (B-NB8).\n\nRows carry the counts — \"6 changed of 162\" — not the closure itself, and\nthe verdict each shows is the one recorded at request time (see\n``readinessAsOf``). Open a release to read its members and get the verdict\nrecomputed as of now (#793).\n\nFollow ``nextCursor``; never an offset (see :mod:`src.repositories.paging`).\n``status`` narrows the query ahead of the page cut.",
+        "description": "One page of the release queue you may see, newest first (B-NB8).\n\n``view=mine`` (default): your own MCP requests. ``view=all``: every\nrelease of the workspace with its ``origin`` — administrators only.\n\nRows carry the counts — \"6 changed of 162\" — not the closure itself, and\nthe verdict each shows is the one recorded at request time (see\n``readinessAsOf``). Open a release to read its members and get the verdict\nrecomputed as of now (#793).\n\nFollow ``nextCursor``; never an offset (see :mod:`src.repositories.paging`).\n``status`` narrows the query ahead of the page cut.",
         "operationId": "list_releases_api_v1_publish_approvals_release_get",
         "parameters": [
           {
@@ -75046,6 +75309,22 @@
                 }
               ],
               "title": "Status"
+            }
+          },
+          {
+            "description": "mine = the requests you sent through one of your own tokens; all = every request of the workspace, whatever it came through (administrators only, 403 otherwise).",
+            "in": "query",
+            "name": "view",
+            "required": false,
+            "schema": {
+              "default": "mine",
+              "description": "mine = the requests you sent through one of your own tokens; all = every request of the workspace, whatever it came through (administrators only, 403 otherwise).",
+              "enum": [
+                "mine",
+                "all"
+              ],
+              "title": "View",
+              "type": "string"
             }
           },
           {
@@ -75165,7 +75444,7 @@
     },
     "/api/v1/publish-approvals/release/{release_id}": {
       "get": {
-        "description": "Get one release, its readiness recomputed as of now (#793).\n\nRead with the caller's clearance: a part or a knowledge item above it is\nleft out, not named. An administrator reads everything.",
+        "description": "Get one release, its readiness recomputed as of now (#793).\n\nYour own MCP request, or any for an administrator; someone else's is 404.\nRead with the caller's clearance: a part or a knowledge item above it is\nleft out, not named. An administrator reads everything.",
         "operationId": "get_release_api_v1_publish_approvals_release__release_id__get",
         "parameters": [
           {
@@ -75214,7 +75493,7 @@
     },
     "/api/v1/publish-approvals/release/{release_id}/approve": {
       "post": {
-        "description": "Approve a release → publish its whole closure in dependency order,\nall-or-nothing. Admin-only.",
+        "description": "Approve a release → publish its whole closure in dependency order,\nall-or-nothing. An administrator, or the person whose own token asked for\nit. A release you may not see is 404, not 403; one you see but may not\ndecide (a member, for a release they cannot read in full) is 403.",
         "operationId": "approve_release_api_v1_publish_approvals_release__release_id__approve_post",
         "parameters": [
           {
@@ -75263,7 +75542,7 @@
     },
     "/api/v1/publish-approvals/release/{release_id}/reject": {
       "post": {
-        "description": "Reject a pending release → nothing is published. Admin-only.",
+        "description": "Reject a pending release → nothing is published. An administrator, or\nthe person whose own token asked for it. A release you may not see is 404,\nnot 403.",
         "operationId": "reject_release_api_v1_publish_approvals_release__release_id__reject_post",
         "parameters": [
           {
@@ -75312,7 +75591,7 @@
     },
     "/api/v1/publish-approvals/{approval_id}": {
       "get": {
-        "description": "Get a single approval — lets an agent poll one request, not the queue.",
+        "description": "Get a single approval — lets an agent poll one request, not the queue.\n\nYour own MCP request, or any for an administrator; someone else's is 404.",
         "operationId": "get_approval_api_v1_publish_approvals__approval_id__get",
         "parameters": [
           {
@@ -75361,7 +75640,7 @@
     },
     "/api/v1/publish-approvals/{approval_id}/approve": {
       "post": {
-        "description": "Approve a pending request → performs the real publish. Admin-only.",
+        "description": "Approve a pending request → performs the real publish. An administrator,\nor the person whose own token sent it. A request you may not see is 404,\nnot 403; one you see but may not decide (a member, for something they\nmay not read) is 403.",
         "operationId": "approve_approval_api_v1_publish_approvals__approval_id__approve_post",
         "parameters": [
           {
@@ -75410,7 +75689,7 @@
     },
     "/api/v1/publish-approvals/{approval_id}/reject": {
       "post": {
-        "description": "Reject a pending request → nothing is published. Admin-only.",
+        "description": "Reject a pending request → nothing is published. An administrator, or\nthe person whose own token sent it. A request you may not see is 404,\nnot 403.",
         "operationId": "reject_approval_api_v1_publish_approvals__approval_id__reject_post",
         "parameters": [
           {
@@ -83009,6 +83288,23 @@
               "description": "Only the databases of this kind.",
               "title": "Kind"
             }
+          },
+          {
+            "description": "Which items to list: 'exclude' (default) leaves archived items out, 'only' lists only the archived ones (the Archived view), 'include' lists both.",
+            "in": "query",
+            "name": "archived",
+            "required": false,
+            "schema": {
+              "default": "exclude",
+              "description": "Which items to list: 'exclude' (default) leaves archived items out, 'only' lists only the archived ones (the Archived view), 'include' lists both.",
+              "enum": [
+                "exclude",
+                "include",
+                "only"
+              ],
+              "title": "Archived",
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -83329,7 +83625,7 @@
     },
     "/api/v1/table-databases/{database_id}/restore": {
       "post": {
-        "description": "Un-delete a database. Idempotent; takes no expected version.",
+        "description": "Un-delete a database. Idempotent; takes no expected version.\n\n``name`` brings it back under a new name when its own was taken while it\nsat in the Trash.",
         "operationId": "restore_table_database_api_v1_table_databases__database_id__restore_post",
         "parameters": [
           {
@@ -83343,6 +83639,23 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/RestoreEntityRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "content": {
@@ -84090,6 +84403,104 @@
           }
         ],
         "summary": "Get Table Database Version",
+        "tags": [
+          "table-databases"
+        ]
+      }
+    },
+    "/api/v1/table-databases/{entity_id}/archive": {
+      "post": {
+        "description": "Archive: out of use and out of the lists; versions untouched.\n\nOnly a draft can be archived. Idempotent — archiving an archived item\nsucceeds with ``changed=false``.",
+        "operationId": "archive_table_database_api_v1_table_databases__entity_id__archive_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArchiveEntityResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Archive Table Database",
+        "tags": [
+          "table-databases"
+        ]
+      }
+    },
+    "/api/v1/table-databases/{entity_id}/unarchive": {
+      "post": {
+        "description": "Unarchive: back in use, in the state it had (Draft or Published).",
+        "operationId": "unarchive_table_database_api_v1_table_databases__entity_id__unarchive_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArchiveEntityResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Unarchive Table Database",
         "tags": [
           "table-databases"
         ]

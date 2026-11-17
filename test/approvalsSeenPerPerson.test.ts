@@ -17,7 +17,7 @@ import { forbids } from "./denyList.js";
  *   - `GET /publish-approvals` and `GET /publish-approvals/release` take `view`
  *     (`mine` by default, `all` for administrators), and answer only what the
  *     caller may see;
- *   - the three item shapes carry `origin`, `requestedByName`, `canDecide` and
+ *   - the three item shapes carry `origin`, `requestedByName`, `canDecide`, `canReject` and
  *     `version`;
  *   - a run row carries `ownerAgentId` and `currentStepName`.
  *
@@ -134,9 +134,9 @@ describe("`view` on the two approval lists (A2)", () => {
 });
 
 describe("what a request says about itself (A2, A5a, A5b, H3b)", () => {
-  it.each(ITEMS)("%s carries origin, requestedByName, canDecide and version in the pinned snapshot", (name) => {
+  it.each(ITEMS)("%s carries origin, requestedByName, canDecide, canReject and version in the pinned snapshot", (name) => {
     const properties = snapshot.components.schemas[name]?.properties ?? {};
-    for (const field of ["origin", "requestedByName", "canDecide", "version"]) {
+    for (const field of ["origin", "requestedByName", "canDecide", "canReject", "version"]) {
       expect(properties[field], `${name}.${field}`).toBeDefined();
     }
     expect(properties.origin.enum).toEqual(["mcp", "agent", "screen"]);
@@ -147,10 +147,10 @@ describe("what a request says about itself (A2, A5a, A5b, H3b)", () => {
     "get_publish_approval",
     "list_publish_releases",
     "get_publish_release",
-  ])("%s names the four fields and the three origins", async (tool) => {
+  ])("%s names the five fields and the three origins", async (tool) => {
     const { tools } = await connected();
     const description = tools.get(tool)!.description ?? "";
-    for (const field of ["origin", "requestedByName", "canDecide", "version"]) {
+    for (const field of ["origin", "requestedByName", "canDecide", "canReject", "version"]) {
       expect(description, `${tool} never names \`${field}\``).toContain(`\`${field}\``);
     }
     for (const origin of ["mcp", "agent", "screen"]) {
@@ -168,6 +168,20 @@ describe("what a request says about itself (A2, A5a, A5b, H3b)", () => {
     expect(tools.get(tool)!.description ?? "").toMatch(/token never/i);
   });
 
+  it.each([
+    "list_publish_approvals",
+    "get_publish_approval",
+    "list_publish_releases",
+    "get_publish_release",
+  ])("%s separates approval authority, rejection authority and pending status", async (tool) => {
+    const { tools } = await connected();
+    const description = tools.get(tool)!.description ?? "";
+    expect(description).toContain("`canDecide` is your authority to approve");
+    expect(description).toContain("`canReject` is your authority to reject");
+    expect(description).toContain("`status` must be `pending`");
+    expect(description).not.toContain("whether approving it would succeed");
+  });
+
   it("hands the new fields to the agent unchanged (the answer is forwarded whole)", async () => {
     const { client, backend } = await connected();
     const item = {
@@ -175,6 +189,8 @@ describe("what a request says about itself (A2, A5a, A5b, H3b)", () => {
       origin: "agent",
       requestedByName: "Agent Smith",
       canDecide: false,
+      canReject: false,
+      status: "pending",
       version: 4,
     };
     backend.get.mockResolvedValueOnce({ approvals: [item], total: 1, hasMore: false });

@@ -11,15 +11,38 @@ diff in review.
 
 ## Provenance
 
-- **R4 integration checkpoint (2026-11-17), not a final R4 capture:** the
-  OpenAPI snapshot temporarily equals MCP `main` at `fb1b14e` (the Flow
-  `b16da7d0e` capture described below), while the existing R4 tools and merged
-  token-route table retain their changes. The previous R4 delta from Flow
-  `98b435dddbe66300545772c47c7539b47a65fff1` covered the per-person approval
-  views, request provenance and version, run owner/current-step fields, and
-  the oversight/library summary routes. It is not the current OpenAPI pin.
-  Refresh both snapshots with a whole canonical dump from the approved final
-  R4 Flow commit before claiming contract conformance or shipping this branch.
+- **Whole R4 capture on Flow `7f53a8edd301262550257ea7906b2fd89c1569a9`
+  (2026-11-17), not released:** replaces the temporary MCP-main integration pin
+  and the earlier selective R4 delta. Both canonical backend exporters ran
+  directly through the shared task queue on that clean, frozen Flow checkout;
+  HEAD and clean status were checked before and after. Both exports are
+  byte-identical to the first whole R4 capture on `2c5bd4f4d`; the final
+  Home lifecycle and approval-authority fixes changed no OpenAPI or token-route
+  contract. The working directory
+  was an empty MCP-owned export directory, with no `.env` there or in the Flow
+  root/backend. `env -i`, `ENVIRONMENT=development`, explicit dummy database
+  and migration URLs at `127.0.0.1:1`, and `python -I -B` kept the export
+  independent of ambient configuration. No server startup, database connection
+  or tenant call; the exporters only import the app/table and serialize them.
+  - `openapi.snapshot.json`: **2,741,105 bytes**, SHA-256
+    `1341f55686eef5ba74d0a1ae7355d3bf150df5a4fc9e98dacc7a4e0e92b05364`.
+    **849 -> 853 operations**, none removed. R4 adds
+    `GET /knowledge/oversight/waiting` and `GET /library/summary`, `view` on
+    both approval lists, request `origin`, `requestedByName`, `canDecide`,
+    `canReject` and `version`, and run-row `ownerAgentId`/`currentStepName`.
+    `canDecide` describes approval authority, `canReject` rejection authority;
+    neither replaces the separate pending-status check. `NavigationItemResponse`
+    also gains `overview`. The pending count stays personal; no `allPending`.
+    From Flow main: database archive/unarchive routes, `archived` on its list,
+    a restore `name` body, `archivedAt` replacing `status` in its row, and
+    `status` removed from create/update bodies.
+  - `token-route-classes.snapshot.json`: **96,765 bytes**, SHA-256
+    `ff0dc53ad969f15cfbbb3e57372f5bd7a2d39c11b892d0e011e56f1b65d14de8`.
+    **879 -> 883 rows** from the main pin (881 after the R4/main merge): the
+    two R4 reads are `lezen`, the two database archive routes are `dicht`.
+    `src/generated/tokenRouteClasses.ts` regenerated.
+  - `src/generated/listFilters.ts` regenerated: `archived` on
+    `list_table_databases`. Existing R4 approval views and run fields remain.
 
 - **Capture on Flow `main` at `b16da7d0e` (2026-11-16, after the merge of #2458, Levenscyclus R3), not released; replaces the two entries below:**
   a WHOLE dump with the backend's own `scripts/dump_openapi.py` and

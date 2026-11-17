@@ -408,7 +408,7 @@ describe("list filters are generated, not kept (M4)", () => {
     ]);
     // The Database entity (#2444): one LIST_ROUTES line, and its `kind` filter
     // arrives from the schema with no further line.
-    expect(table.table_database.map((f) => f.query)).toEqual(["kind"]);
+    expect(table.table_database.map((f) => f.query)).toEqual(["kind", "archived"]);
     expect(table.data_table.map((f) => f.query)).toEqual([
       "name",
       "archived",

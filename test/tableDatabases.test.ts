@@ -6,12 +6,9 @@
  * twenty routes of them and `completeness.test.ts` allows no route without a
  * decision.
  *
- * A database is the one versioned kind that Levenscyclus did NOT bring onto the
- * archive of §7 (`ENTITY-LIFECYCLE-CONTRACT.md` §4.9): it has no `archivedAt`,
- * no archive or unarchive route and no door to the Trash; it is archived with
- * its own `status`. So these tests read the pinned schema and say the same: the
- * family comes from the registrar (one `EntityDef`), no `archive_*` tool exists
- * for it, and its sentences do not borrow the archive's.
+ * Main #2470 brings databases onto the shared archive/Trash lifecycle.
+ * The tests pin its registrar flags and real Zod-to-wire parameters to that
+ * backend contract, including archived filtering and rename on restore.
  */
 
 import { readFileSync } from "node:fs";
@@ -72,20 +69,18 @@ const BASE = "/api/v1/table-databases";
 const def = () => ENTITIES.find((e) => e.singular === "table_database");
 
 describe("the Database entity comes from the registrar", () => {
-  it("is one EntityDef on the routes the schema has, with no archive of its own", () => {
+  it("is one EntityDef on the shared lifecycle routes the schema has", () => {
     const e = def();
     expect(e, "table_database in ENTITIES").toBeDefined();
     expect(e!.basePath).toBe(BASE);
-    // §4.9: no marker, no archive route, no Trash door — and the test says so
-    // from the schema, so the day the backend adds them this fails loudly.
-    expect(`${BASE}/{entity_id}/archive` in snapshot.paths).toBe(false);
-    expect(`${BASE}/{database_id}/archive` in snapshot.paths).toBe(false);
-    expect(e!.archivable).toBeFalsy();
-    expect(e!.statusRetired).toBeFalsy();
-    expect(e!.restoreRename).toBeFalsy();
+    expect(`${BASE}/{entity_id}/archive` in snapshot.paths).toBe(true);
+    expect(e!.archivable).toBe(true);
+    expect(e!.statusRetired).toBe(true);
+    expect(e!.restoreRename).toBe(true);
+    expect(e!.noTrashDoor).toBeFalsy();
   });
 
-  it("registers the whole family and no archive tool", () => {
+  it("registers the whole family with the shared archive tools", () => {
     const { descriptions } = surface();
     for (const name of [
       "list_table_databases",
@@ -100,8 +95,8 @@ describe("the Database entity comes from the registrar", () => {
     ]) {
       expect(descriptions.has(name), name).toBe(true);
     }
-    expect(descriptions.has("archive_table_database")).toBe(false);
-    expect(descriptions.has("unarchive_table_database")).toBe(false);
+    expect(descriptions.has("archive_table_database")).toBe(true);
+    expect(descriptions.has("unarchive_table_database")).toBe(true);
   });
 
   it("has version tools on the published path the schema has", () => {
@@ -113,34 +108,35 @@ describe("the Database entity comes from the registrar", () => {
 });
 
 describe("the list is a page, and every parameter arrives", () => {
-  it("forwards kind, limit and cursor to the route", async () => {
+  it("forwards archived, kind, limit and cursor through Zod to the route", async () => {
     const { handlers, client, shapes } = surface();
     expect(Object.keys(shapes.get("list_table_databases")!).sort()).toEqual([
+      "archived",
       "cursor",
       "kind",
       "limit",
     ]);
-    await handlers.get("list_table_databases")!({ kind: "shared", limit: 5, cursor: "c1" });
-    expect(client.get).toHaveBeenCalledWith(BASE, { kind: "shared", limit: 5, cursor: "c1" });
+    const args = { archived: "only", kind: "shared", limit: 5, cursor: "c1" };
+    await handlers.get("list_table_databases")!(z.object(shapes.get("list_table_databases")!).parse(args));
+    expect(client.get).toHaveBeenCalledWith(BASE, args);
   });
 
   it("takes the filters the route declares and no other, from the generator", () => {
     const op = snapshot.paths[BASE].get as { parameters: { name: string }[] };
     const declared = op.parameters.map((p) => p.name).filter((n) => n !== "limit" && n !== "cursor");
-    expect(declared).toEqual(["kind"]);
+    expect(declared).toEqual(["kind", "archived"]);
     // The tool's filters are the generated table's, not a second list.
     expect(LIST_FILTERS.table_database.map((f) => f.query)).toEqual(declared);
   });
 
-  it("says it is a page, that archived databases are in it and that each row has a status", () => {
+  it("says it is a page, with archived items excluded by default and an archive marker", () => {
     const d = surface().descriptions.get("list_table_databases")!;
     expect(d).toMatch(/ONE PAGE/);
     expect(d).toMatch(/hasMore/);
     expect(d).toMatch(/archived/i);
-    expect(d).toMatch(/`status`/);
-    // Not the archive's sentence: there is no `archivedAt` on a database.
-    expect(d).not.toMatch(/archivedAt/);
-    expect(d).not.toMatch(/`archived` is `include`/);
+    expect(d).not.toMatch(/`status`/);
+    expect(d).toMatch(/archivedAt/);
+    expect(d).toMatch(/`archived` is `include`/);
   });
 });
 
@@ -168,20 +164,18 @@ describe("writes", () => {
     expect(client.del).toHaveBeenCalledWith(`${BASE}/d-1`, { expectedVersion: 2 });
   });
 
-  it("create and update name the kinds, and `status` as the way to archive", () => {
+  it("create and update name the kinds without offering retired status", () => {
     const { descriptions } = surface();
     const kinds = schemas.CreateTableDatabaseRequest.properties!.kind.enum!;
     expect(kinds).toEqual(["data_model", "shared", "workspace"]);
     for (const tool of ["create_table_database", "update_table_database"]) {
       const d = descriptions.get(tool)!;
       for (const k of kinds) expect(d, `${tool} names ${k}`).toContain(k);
-      expect(d, tool).toMatch(/`status`/);
-      expect(d, tool).toMatch(/`archived`/);
+      expect(d, tool).not.toContain('`status` is `active`');
     }
-    const statuses = schemas.UpdateTableDatabaseRequest.properties!.status as unknown as {
-      anyOf: { enum?: string[] }[];
-    };
-    expect(statuses.anyOf.find((x) => x.enum)!.enum).toEqual(["active", "archived"]);
+    expect(schemas.CreateTableDatabaseRequest.properties!.status).toBeUndefined();
+    expect(schemas.UpdateTableDatabaseRequest.properties!.status).toBeUndefined();
+    expect(descriptions.get("update_table_database")).toContain("`status` is refused");
   });
 
   it("says a database holds no list of tables: a table moves on the table", () => {
@@ -197,16 +191,21 @@ describe("writes", () => {
     expect(surface().descriptions.get("update_table_database")!).toMatch(/system database/i);
   });
 
-  it("delete says only an empty database goes, and is not the Trash", () => {
+  it("delete says only an empty database goes, and goes to the Trash", () => {
     const d = surface().descriptions.get("delete_table_database")!;
     expect(d).toMatch(/empty/i);
     expect(d).toMatch(/409/);
     expect(d).toMatch(/update_data_table/);
-    // §4.9: not a Trash kind, so no promise that list_trash shows it.
-    expect(d).not.toMatch(/goes to the Trash/);
-    expect(d).toMatch(/not in the Trash/);
-    expect(d).toMatch(/list_deleted_table_databases/);
+    expect(d).toMatch(/Trash, see list_trash/);
+    expect(d).not.toMatch(/not in the Trash/);
     expect(d).toMatch(/restore_table_database/);
+  });
+
+  it("forwards a restore name through Zod without dropping it", async () => {
+    const { handlers, shapes, client } = surface();
+    const args = z.object(shapes.get("restore_table_database")!).parse({ id: "d-1", name: "Restored database" });
+    await handlers.get("restore_table_database")!(args);
+    expect(client.post).toHaveBeenCalledWith(`${BASE}/d-1/restore`, { name: "Restored database" });
   });
 
   it("the other kinds still say their delete goes to the Trash", () => {

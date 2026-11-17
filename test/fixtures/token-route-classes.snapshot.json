@@ -1343,7 +1343,7 @@
   },
   "GET /modules/{module_id}/settings": {
     "class": "dicht",
-    "why": "scope[\"route\"] — carries the path it was declared with."
+    "why": "scope[\"route\"] \u2014 carries the path it was declared with."
   },
   "GET /oauth/authorize": {
     "class": "dicht",
@@ -1514,7 +1514,7 @@
   },
   "PATCH /modules/{module_id}/settings": {
     "class": "dicht",
-    "why": "scope[\"route\"] — carries the path it was declared with."
+    "why": "scope[\"route\"] \u2014 carries the path it was declared with."
   },
   "POST /api/v1/_test/install-stub-provider": {
     "class": "dicht",
@@ -2680,6 +2680,14 @@
   "POST /api/v1/table-databases/{database_id}/versions/{version_id}/restore-deleted": {
     "class": "dicht",
     "why": "restore: configuration without an approval step"
+  },
+  "POST /api/v1/table-databases/{entity_id}/archive": {
+    "class": "dicht",
+    "why": "archive: a delete by another name, without an approval step (Levenscyclus)"
+  },
+  "POST /api/v1/table-databases/{entity_id}/unarchive": {
+    "class": "dicht",
+    "why": "archive: a delete by another name, without an approval step (Levenscyclus)"
   },
   "POST /api/v1/table-relationships": {
     "class": "dicht",

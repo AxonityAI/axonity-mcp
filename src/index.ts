@@ -164,15 +164,11 @@ const DATABASE_NOTE =
   "model). `name` is unique in the workspace, and so is `slug`, the handle a " +
   "person types and a configuration file is named by: lowercase letters, " +
   "digits and single hyphens; left out on create it is derived from the " +
-  "name. `owner` is who answers for it, a role or a person, as text. " +
-  "`status` is `active` (the default) or `archived`.";
+  "name. `owner` is who answers for it, a role or a person, as text.";
 
 const DATABASE_UPDATE_NOTE =
   "A new name keeps the old slug unless `slug` is sent. A system database " +
-  "(one the platform ships) is locked: an edit of it is refused. A database " +
-  "is archived by sending `status: \"archived\"`; it has no archive_ or " +
-  "unarchive_ tool and no `archivedAt` (ENTITY-LIFECYCLE-CONTRACT.md §4.9), " +
-  "and nothing refuses an edit of an archived database. A table is not " +
+  "(one the platform ships) is locked: an edit of it is refused. A table is not " +
   "moved here: a database holds no list of its tables, the table says " +
   "which one it is in — update_data_table with `databaseId`, or " +
   "`clearDatabase: true`.";
@@ -569,16 +565,13 @@ export const ENTITIES: EntityDef[] = [
       LABEL_UPDATE_NOTE,
   },
   {
-    // A database is a named group of tables (axonity-flow #2444, R0b, epic
-    // #2429). Its routes have the same order and spelling as a table's, so the
-    // family comes from the registrar. It is the one versioned kind that
-    // Levenscyclus did not bring onto the archive: no `archivedAt`, no archive
-    // route, no door to the Trash — it is archived with its own `status`
-    // (`ENTITY-LIFECYCLE-CONTRACT.md` §4.9), hence no `archivable` here and
-    // `noTrashDoor`. `test/tableDatabases.test.ts` holds each sentence below to
-    // the schema.
+    // Main #2470 brought databases onto the shared lifecycle (§4.9).
+    // The same registrar and guards apply; no separate archive implementation.
     singular: "table_database",
-    noTrashDoor: true,
+    archivable: true,
+    archiveGuard: "in_use",
+    restoreRename: true,
+    statusRetired: true,
     basePath: "/api/v1/table-databases",
     updateMethod: "PUT",
     plural: "table_databases",
@@ -586,9 +579,6 @@ export const ENTITIES: EntityDef[] = [
     createExample: ["name", "kind"],
     deleteVersionParam: "expectedVersion",
     listPaging: { defaultPageSize: 20, maxPageSize: 200 },
-    listNote:
-      "Archived databases are in the list: a database is archived with its " +
-      "`status`, and each row carries it (`active` or `archived`).",
     createNote: DATABASE_NOTE,
     deleteNote: DATABASE_DELETE_NOTE,
     updateWarning: DATABASE_NOTE + "\n\n" + DATABASE_UPDATE_NOTE,

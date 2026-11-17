@@ -774,6 +774,8 @@ export const TOKEN_ROUTE_CLASSES: Readonly<Record<string, TokenRoute>> = {
   "POST /api/v1/table-databases/{database_id}/versions/unpublish": { class: "dicht", why: "direct publish: only the approval request" },
   "POST /api/v1/table-databases/{database_id}/versions/{version_id}/restore": { class: "dicht", why: "restore: configuration without an approval step" },
   "POST /api/v1/table-databases/{database_id}/versions/{version_id}/restore-deleted": { class: "dicht", why: "restore: configuration without an approval step" },
+  "POST /api/v1/table-databases/{entity_id}/archive": { class: "dicht", why: "archive: a delete by another name, without an approval step (Levenscyclus)" },
+  "POST /api/v1/table-databases/{entity_id}/unarchive": { class: "dicht", why: "archive: a delete by another name, without an approval step (Levenscyclus)" },
   "POST /api/v1/table-relationships": { class: "dicht", why: "no draft: saved directly" },
   "POST /api/v1/table-relationships/{relationship_id}/restore": { class: "dicht", why: "restore: configuration without an approval step" },
   "POST /api/v1/task-queue/dismiss-bulk": { class: "actie_beheerder" },

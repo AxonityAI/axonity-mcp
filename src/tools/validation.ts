@@ -168,6 +168,9 @@ export function registerValidationTools(
  *    have none);
  *  - `canDecide`: `_why_not_approve` -> `domain/approval_authority.py:may_decide`
  *    (a token never decides, an administrator's included);
+ *  - `canReject`: `domain/approval_authority.py:may_decide`; approval-only
+ *    clearance and credential-routing checks do not prevent rejection;
+ *  - `status`: both services require pending status for a new decision;
  *  - `version`: `services/entity_publish_gateway.py:describe` (`publishes_version`),
  *    `services/publish_approval_service.py:_version_named` and, for a release,
  *    `domain/approval_version.py:release_version`.
@@ -188,8 +191,12 @@ const WHAT_A_REQUEST_SAYS =
   "agent) or `screen` (requested at a screen). `requestedByName` is the person " +
   "who asked, or the agent's name when `origin` is `agent`; it is null for a " +
   "service token and for an agent that has since been deleted. `canDecide` is " +
-  "whether approving it would succeed for YOU, and through a token it is always " +
-  "false: a token never approves or rejects, an administrator's included. " +
+  "your authority to approve; `canReject` is your authority to reject. These " +
+  "are separate: approval can be blocked by clearance or credential-routing " +
+  "checks while rejection remains allowed. To make a new decision, `status` must be `pending`; " +
+  "neither authority flag is a pending-status check or a guarantee of publication. " +
+  "Both are always false through a token: a token never approves or rejects, " +
+  "an administrator's included. " +
   "`version` is, for a request still pending, the version approving it " +
   "publishes as of now (null when there is no working draft, and for a flow, " +
   "which has no versions); for a decided one, the version it recorded (a " +
