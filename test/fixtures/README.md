@@ -12,7 +12,7 @@ diff in review.
 ## Provenance
 
 - **R7a, 2026-11-17.** The complete OpenAPI and token-route tables come from
-  Flow `06f4358585fb02e333c10bda890c8c0e5962e5f9`. Both fixtures match the
+  Flow `05cdf496b633c1c83c939d4f7b99c14d29ca0c0c`. Both fixtures match the
   output of that checkout’s canonical exporters byte for byte. The checkout
   was clean before and after capture. The export used an isolated Python
   process, explicit development settings and unreachable database URLs.

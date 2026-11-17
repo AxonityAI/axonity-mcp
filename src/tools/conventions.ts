@@ -770,8 +770,9 @@ the new tenant too, and a human fills the real value there.
     \`edgeType\`. Only that edge's destination changes. Its id, condition,
     type and order are preserved.
   - \`add_trigger\` does the same for a trigger: \`parameters\` and \`outputs\`
-    go in that call. This is what makes a callable workflow declarable in one
-    mutation, since a trigger's parameter list IS its signature.
+    go in that call. For a callable workflow, declare shared inputs with
+    \`set_workflow_inputs\`. The invocation trigger adds parameters with new names.
+    A shared input takes precedence when both declare the same name.
   - \`add_edge\` takes the document's own \`from\`/\`to\` as well as
     \`fromStepId\`/\`toStepId\`, and keeps an \`id\` you supply.
   - An unknown or misspelled key is a 422 naming it, not a silent drop — so
