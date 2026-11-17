@@ -171,7 +171,8 @@ export function registerValidationTools(
  *  - `canReject`: `domain/approval_authority.py:may_decide`; approval-only
  *    clearance and credential-routing checks do not prevent rejection;
  *  - `status`: both services require pending status for a new decision;
- *  - `version`: `services/entity_publish_gateway.py:describe` (`publishes_version`),
+ *  - `version`: `services/entity_publish_gateway.py:describe` (`publishes_version`,
+ *    with `get_max_major_version` fallback for named-major publishing kinds),
  *    `services/publish_approval_service.py:_version_named` and, for a release,
  *    `domain/approval_version.py:release_version`;
  *    `ReleaseApprovalService._to_summary` uses the saved verdict dated by
@@ -202,9 +203,12 @@ const WHAT_A_REQUEST_SAYS =
 
 const CURRENT_REQUEST_VERSION =
   "`version` is, for a request still pending, the version approving it " +
-  "publishes as of now (null when there is no working draft, and for a flow, " +
-  "which has no versions); for a decided one, the version it recorded (a " +
-  "workflow, agent or tool records none). On a release it is the version of the " +
+  "publishes as of now. For a single-entity request whose kind publishes a " +
+  "named major version (such as a skill), a missing working draft falls back to " +
+  "the newest named major version. It is null when no publish-target version " +
+  "is named, including a flow, which has no versions. For a decided request, " +
+  "it is the version it recorded (a workflow, agent or tool records none). " +
+  "On a release it is the version of the " +
   "release's own workflow, and only when approving the release publishes that " +
   "workflow.";
 

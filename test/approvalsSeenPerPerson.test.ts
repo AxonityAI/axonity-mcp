@@ -191,11 +191,15 @@ describe("what a request says about itself (A2, A5a, A5b, H3b)", () => {
   });
 
   it.each(["list_publish_approvals", "get_publish_approval", "get_publish_release"])(
-    "%s still describes the current pending version",
+    "%s describes the current target with the named-major fallback and preserves unversioned/release semantics",
     async (tool) => {
       const { tools } = await connected();
       const description = tools.get(tool)!.description ?? "";
       expect(description).toContain("publishes as of now");
+      expect(description).not.toContain("null when there is no working draft");
+      expect(description).toContain("falls back to the newest named major version");
+      expect(description).toContain("a flow, which has no versions");
+      expect(description).toContain("release's own workflow");
       expect(description).not.toContain("`version` comes from the saved verdict");
     },
   );
