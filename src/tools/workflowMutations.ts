@@ -284,6 +284,10 @@ export async function catalogVerdict(
   }
 }
 
+const STEP_OWNER_FIELDS =
+  "The backend returns 422 for config.ownerAgentId on a Run a workflow step (type `subprocess`) and for " +
+  "config.iteration.ownerAgentId or config.group.ownerAgentId on any step.";
+
 export function registerWorkflowMutations(
   server: McpServer,
   client: AxonityClient,
@@ -319,12 +323,15 @@ export function registerWorkflowMutations(
       "\n- add_step builds a COMPLETE step in ONE call: { name, position: " +
       "{after|before: <stepId>, …} } are required, and id, type, typeId, config, " +
       "contract, inputs, outputs and edgeType are all accepted alongside them. No " +
-      "follow-up update_step is needed merely to fill the step in." +
+      "follow-up update_step is needed merely to fill the step in. To fill an existing " +
+      "empty decision branch, include decisionBranchEdgeId next to position.after: [decisionId]. " +
+      "Omit edgeType. The chosen edge keeps its id, condition, type and order. " +
+      "An invalid or occupied branch is refused." +
       "\n- add_trigger does the same for a trigger: its `parameters` and " +
       "`outputs` go in the SAME call, typed exactly as update_trigger types " +
       "them, so the one-call and two-call routes cannot store different shapes. " +
-      "This matters most for a callable workflow, whose parameter list IS its " +
-      "signature — there is nowhere else to declare it." +
+      "Declare shared workflow inputs with set_workflow_inputs. The callable " +
+      "interface also includes parameters declared on its Called by another agent trigger." +
       "\n- add_edge accepts the document's own from/to as well as " +
       "fromStepId/toStepId, and HONOURS an id you supply rather than replacing it, " +
       "so ids stay diffable against an environment you are reproducing." +
@@ -334,6 +341,7 @@ export function registerWorkflowMutations(
       "the run payload keys it) and a value — a constant with no value is a " +
       "publish-blocking `constant_without_value`, and 0, \"\", false and [] all " +
       "count as values." +
+      "\n- " + STEP_OWNER_FIELDS + " Omit settings.ownerAgentId on create_group and update_group." +
       "\n- Payloads are STRICT: an unknown or misspelled key is a 422 that names " +
       "it, never a silent drop. Read the error instead of assuming a value landed. " +
       "The SHAPE of a payload's nested fields — what a trigger parameter, a " +
@@ -407,6 +415,7 @@ export function registerWorkflowMutations(
       "catalog-checked verdict of validate_workflow on the stored workflow), " +
       "not the stored document; pass returnDocument: true or call read_workflow " +
       "for that." +
+      "\n\n" + STEP_OWNER_FIELDS +
       "\n\nDOCUMENT METADATA: name and description in the document ARE stored — " +
       "they sync onto the workflow's own columns, an omitted key leaves the " +
       "stored value alone, and an explicit \"\" clears it. stageId, " +

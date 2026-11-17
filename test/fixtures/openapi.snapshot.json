@@ -3359,7 +3359,7 @@
         "type": "object"
       },
       "CallableWorkflowItem": {
-        "description": "A workflow as seen by the picker on a sub-process step.\n\nNon-callable workflows are LISTED, not filtered out, each with the reason.\nHiding them makes an author hunt for a workflow that is right there and\nsay \"where is it?\"; showing it disabled says \"here, and here is what to\nfix\" — which is a two-second answer instead of a support question.",
+        "description": "A workflow as seen by the picker on a Run a workflow step.\n\nNon-callable workflows are LISTED, not filtered out, each with the reason.\nHiding them makes an author hunt for a workflow that is right there and\nsay \"where is it?\"; showing it disabled says \"here, and here is what to\nfix\" — which is a two-second answer instead of a support question.",
         "properties": {
           "blockedReason": {
             "anyOf": [
@@ -3414,6 +3414,18 @@
             "title": "Outcomes",
             "type": "array"
           },
+          "ownerAgentId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Owner of the published workflow, when set.",
+            "title": "Owneragentid"
+          },
           "parameters": {
             "default": [],
             "items": {
@@ -3448,7 +3460,8 @@
         "required": [
           "id",
           "name",
-          "callable"
+          "callable",
+          "ownerAgentId"
         ],
         "title": "CallableWorkflowItem",
         "type": "object"
@@ -31433,7 +31446,7 @@
         "type": "object"
       },
       "RunCaller": {
-        "description": "The process that called this one, when another process did (#1375).\n\nA sub-process invocation appears on the called workflow's own runs\nlist, where it would otherwise be indistinguishable from a run someone\nstarted by hand. That difference matters to an operator deciding\nwhether to re-run it: you do not re-run a step of somebody else's\nprocess, you re-run that process.\n\n``run_id`` is the caller's run, so the row can link back to it — the\ninvocation's real context is inside there.",
+        "description": "The process that called this one, when another process did (#1375).\n\nA Run a workflow invocation appears on the called workflow's own runs\nlist, where it would otherwise be indistinguishable from a run someone\nstarted by hand. That difference matters to an operator deciding\nwhether to re-run it: you do not re-run a step of somebody else's\nprocess, you re-run that process.\n\n``run_id`` is the caller's run, so the row can link back to it — the\ninvocation's real context is inside there.",
         "properties": {
           "runId": {
             "title": "Runid",
@@ -45472,7 +45485,7 @@
           },
           "calledByCount": {
             "default": 0,
-            "description": "How many OTHER workflows name this one as a sub-process target (config.targetWorkflowId), counted across the whole tenant. A self-call does not count. Reported whether or not the workflow is a part, because 'who depends on this' is worth knowing before you change a process that several others call.",
+            "description": "How many OTHER workflows name this one as a Run a workflow target (config.targetWorkflowId), counted across the whole tenant. A self-call does not count. Reported whether or not the workflow is a part, because 'who depends on this' is worth knowing before you change a process that several others call.",
             "title": "Calledbycount",
             "type": "integer"
           },
@@ -45542,7 +45555,7 @@
           },
           "isPart": {
             "default": false,
-            "description": "True when this workflow is a PART of another one: something else calls it as a sub-process AND nothing starts it on its own (no schedule, webhook or condition; a manual trigger does not count, that is how a part is tested). Derived on every read from the documents and the trigger set - there is no stored flag. The list hides parts by default; both halves are required, so a part-shaped workflow nobody calls yet stays visible.",
+            "description": "True when this workflow is a PART of another one: something else calls it through Run a workflow AND nothing starts it on its own (no schedule, webhook or condition; a manual trigger does not count, that is how a part is tested). Derived on every read from the documents and the trigger set - there is no stored flag. The list hides parts by default; both halves are required, so a part-shaped workflow nobody calls yet stays visible.",
             "title": "Ispart",
             "type": "boolean"
           },
@@ -89714,7 +89727,7 @@
     },
     "/api/v1/workflows/callable": {
       "get": {
-        "description": "Workflows a sub-process step may call, and why the others may not.",
+        "description": "Workflows a Run a workflow step may call, and why the others may not.",
         "operationId": "list_callable_workflows_api_v1_workflows_callable_get",
         "parameters": [
           {

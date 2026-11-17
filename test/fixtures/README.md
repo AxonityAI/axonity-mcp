@@ -11,6 +11,21 @@ diff in review.
 
 ## Provenance
 
+- **R7a, 2026-11-17.** The complete OpenAPI and token-route tables come from
+  Flow `06f4358585fb02e333c10bda890c8c0e5962e5f9`. Both fixtures match the
+  output of that checkout’s canonical exporters byte for byte. The checkout
+  was clean before and after capture. The export used an isolated Python
+  process, explicit development settings and unreachable database URLs.
+  Dotenv was disabled before the application import.
+  - OpenAPI has 853 operations, 2,741,466 bytes, SHA-256
+    `ebe9c0e0816d725444e352f0b54a4ba187da868518edf05de9449b1764b4bac7`.
+    Every `CallableWorkflowItem` carries a required, nullable `ownerAgentId`.
+    The callable route, callable row, run caller and workflow list use the
+    **Run a workflow** label. The live mutation payloads, including
+    `add_step.decisionBranchEdgeId`, come from `get_workflow_authoring_spec`.
+  - Token-route classes have 883 rows, 96,765 bytes, SHA-256
+    `ff0dc53ad969f15cfbbb3e57372f5bd7a2d39c11b892d0e011e56f1b65d14de8`.
+
 - **Whole R4 capture on Flow `d5d618cd46228a3a13e02b49f2e28ac20e325f60`
   (2026-11-17), not released:** replaces the temporary MCP-main integration pin
   and the earlier selective R4 delta. Both canonical backend exporters ran

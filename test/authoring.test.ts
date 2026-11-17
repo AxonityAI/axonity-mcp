@@ -327,6 +327,16 @@ describe("tool descriptions state the contract the platform enforces", () => {
     return descriptions;
   }
 
+  it.each(["apply_workflow_mutations", "replace_workflow_document"])(
+    "%s explains which step owner fields the backend refuses",
+    (tool) => {
+      const text = describedTools(registerWorkflowMutations)[tool];
+      for (const field of ["config.ownerAgentId", "config.iteration.ownerAgentId", "config.group.ownerAgentId"]) {
+        expect(text).toContain(field);
+      }
+    },
+  );
+
   it("apply_workflow_mutations names the real add_step / add_edge payloads", () => {
     const text = describedTools(registerWorkflowMutations).apply_workflow_mutations;
 
@@ -342,6 +352,9 @@ describe("tool descriptions state the contract the platform enforces", () => {
     expect(text).toMatch(/fromStepId/);
     expect(text).toMatch(/from\/to/);
     expect(text).toMatch(/HONOURS an id/);
+    expect(text).toContain("decisionBranchEdgeId");
+    expect(text).toContain("position.after");
+    expect(text).toMatch(/condition, type and order/);
   });
 
   it("apply_workflow_mutations states both invariants AND that they report themselves", () => {

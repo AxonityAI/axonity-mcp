@@ -590,7 +590,7 @@ export function registerAttachTools(
  *
  * It was never queryable because these are not rows in a join table: they are
  * keys inside a JSON document, and per entity in more than one place — an agent
- * is a step OWNER and the `ownerAgentId` of a subprocess step; a tool appears in
+ * can be the workflow owner or an assigned agent on a step; a tool appears in
  * a step contract, in a plan activity, and on an automation step's config. The
  * backend answers through one reader for exactly that reason.
  */
@@ -617,7 +617,7 @@ export function registerDependencyTools(
         .enum(["tool", "agent", "flow", "output_schema", "workflow"])
         .describe(
           "What kind of thing you are about to change. `workflow` answers " +
-            "which workflows CALL this one as a sub-process.",
+            "which workflows call this one with a Run a workflow step.",
         ),
       entityId: z.string().describe("That entity's id."),
     },

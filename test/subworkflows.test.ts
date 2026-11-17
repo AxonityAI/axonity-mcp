@@ -1,9 +1,11 @@
+import { readFileSync } from "node:fs";
+
 import { describe, expect, it, vi } from "vitest";
 
 import type { AxonityClient } from "../src/client.js";
 import { registerConventions } from "../src/tools/conventions.js";
-import { placementClient } from "./placementStub.js";
 import { registerSubworkflowTools } from "../src/tools/subworkflows.js";
+import { placementClient } from "./placementStub.js";
 
 type Handler = (args: Record<string, unknown>) => Promise<ToolResult>;
 interface ToolResult {
@@ -39,6 +41,16 @@ function fakeClient(response: unknown = { ok: true }) {
 }
 
 describe("an agent can find what a sub-process step may call", () => {
+  it("pins the published owner as a required nullable field of every callable row", () => {
+    const snapshot = JSON.parse(
+      readFileSync(new URL("./fixtures/openapi.snapshot.json", import.meta.url), "utf8"),
+    );
+    const schema = snapshot.components.schemas.CallableWorkflowItem;
+    expect(schema.required).toContain("ownerAgentId");
+    const types = schema.properties.ownerAgentId.anyOf.map((branch: { type: string }) => branch.type);
+    expect(types.sort()).toEqual(["null", "string"]);
+  });
+
   it("reads the callable catalogue", async () => {
     const { server, handlers } = fakeServer();
     const client = fakeClient([
@@ -66,10 +78,14 @@ describe("an agent can find what a sub-process step may call", () => {
     // those rows client-side would turn "here is what to fix" back into "where
     // is my workflow?", which is the question the route exists to answer.
     const rows = [
-      { id: "w1", name: "Ready", callable: true, parameters: [], outcomes: [] },
+      {
+        id: "w1", name: "Ready", ownerAgentId: "649a9427-c149-4201-a1b3-e011cd770180",
+        callable: true, parameters: [], outcomes: [],
+      },
       {
         id: "w2",
         name: "Draft only",
+        ownerAgentId: null,
         callable: false,
         blockedReason: "Never published — there is no version to run yet",
       },
@@ -98,6 +114,10 @@ describe("an agent can find what a sub-process step may call", () => {
     // ORDER: this tool is how you pick, the validator only judges afterwards.
     expect(description).toMatch(/validate_workflow/);
     expect(description).toMatch(/BEFORE/);
+    expect(description).toContain("Run a workflow");
+    expect(description).toContain("Called by another agent");
+    expect(description).toContain("ownerAgentId");
+    expect(description).toMatch(/null/);
     expect(description).toMatch(/blockedReason/);
     expect(
       description,
@@ -116,10 +136,17 @@ describe("the authoring guide carries the subworkflow contract", () => {
     registerConventions(server as never, placementClient());
     const text = (await handlers.get("axonity_conventions")!()).content[0].text;
 
+    expect(text).not.toContain("targetWorkflowId, ownerAgentId");
+    expect(text).toContain("A callable workflow may have no inputs.");
     for (const needle of [
       "subprocess-invocation",
       "targetWorkflowId",
-      "ownerAgentId",
+      "Run a workflow",
+      "Called by another agent",
+      "config.ownerAgentId",
+      "config.iteration.ownerAgentId",
+      "config.group.ownerAgentId",
+      "decisionBranchEdgeId",
       // Writing this and believing it works is the obvious mistake: the engine
       // ignores it and the arrow decides instead.
       "IGNORED",

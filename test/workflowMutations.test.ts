@@ -1,3 +1,6 @@
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { describe, expect, it, vi } from "vitest";
 
 import type { AxonityClient } from "../src/client.js";
@@ -94,6 +97,33 @@ describe("toMutationBody", () => {
 });
 
 describe("apply_workflow_mutations", () => {
+  it("forwards the chosen empty decision edge and owner-free step through the MCP schema", async () => {
+    const backend = versioningClient(7);
+    const server = new McpServer({ name: "mutations", version: "1" });
+    registerWorkflowMutations(server, backend as unknown as AxonityClient);
+    const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
+    const client = new Client({ name: "author", version: "1" });
+    await server.connect(serverSide);
+    await client.connect(clientSide);
+    try {
+      const payload = {
+        id: "call", name: "Run checks", type: "subprocess", config: { targetWorkflowId: "checks" },
+        position: { after: ["decision"] }, decisionBranchEdgeId: "branch-2",
+      };
+      const result = await client.callTool({
+        name: "apply_workflow_mutations",
+        arguments: { id: "wf", expectedVersion: 7, mutations: [{ type: "add_step", payload }] },
+      });
+      expect(result.isError).toBeFalsy();
+      expect(mutationCalls(backend)).toEqual([
+        ["/api/v1/workflows/wf/mutations", { type: "add_step", payload, expectedVersion: 7 }],
+      ]);
+    } finally {
+      await client.close();
+      await server.close();
+    }
+  });
+
   it("sends one request per mutation in the backend's single-mutation shape", async () => {
     const client = versioningClient(1);
     await apply(client)({

@@ -1,5 +1,5 @@
 /**
- * Finding the workflows a sub-process step may call.
+ * Finding the workflows a Run a workflow step may call.
  *
  * Workflows can call each other (axonity-flow#898). Both halves of that live in
  * the workflow DOCUMENT and are therefore already authorable over this
@@ -28,14 +28,16 @@ export function registerSubworkflowTools(
 ): void {
   server.tool(
     "list_callable_workflows",
-    "List the workflows a sub-process step may call, each with its INTERFACE: " +
+    "List targets for a Run a workflow step. Each row includes `ownerAgentId`, the " +
+      "published workflow owner's id or null. Use it to choose an owner, then a workflow. " +
+      "Each row describes its interface: " +
       "`parameters` (what to bind the calling step's inputs to, matched by name) " +
       "and `outcomes` (the callee's end steps and the fields each carries — " +
       "which end was reached is itself part of the answer). A workflow that " +
       "cannot be called is listed too, with `callable: false` and a " +
       "`blockedReason` — usually that it has never been published, or has no " +
-      "`subprocess-invocation` trigger. " +
-      "\n\nCall this BEFORE authoring a sub-process step. `validate_workflow` " +
+      "Called by another agent (`subprocess-invocation`) trigger. " +
+      "\n\nCall this BEFORE authoring a Run a workflow step. `validate_workflow` " +
       "does check the target now — a missing one, a self-call, a target that is " +
       "deleted, unpublished or not callable each have their own issue code — " +
       "but it can only tell you AFTERWARDS that the workflow you picked was " +
