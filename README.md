@@ -859,13 +859,15 @@ These are enforced by the backend, not merely by convention:
   schema; `test/conformance.test.ts` fails if a route or documented enum
   diverges (see `test/fixtures/README.md`).
 - **Every backend route is accounted for, and the build says so.**
-  `test/completeness.test.ts` partitions all 853 operations in the pinned
-  snapshot into *covered by a tool* or *excluded by a rule that carries a
+  For tenant-API routes in the pinned snapshot of 853 operations,
+  `test/completeness.test.ts` checks for *covered by a tool* or *excluded by a rule that carries a
   written reason*, with an explicit temporary exception for the unresolved
   product decisions listed in `OPEN_FOR_DECISION_79`. Those routes, including
   Library summary, are not implemented tools or completed exclusion decisions;
-  the test also checks that this pending list remains unresolved. An operation
-  outside all three sets fails the build, so an unclassified route cannot
+  the test also checks that this pending list remains unresolved. Probes,
+  login routes and other endpoints outside the tenant API are classified
+  separately by `NOT_THE_API` / `isOutsideTheApi`. An operation matching none
+  of these four classifiers fails the build, so an unclassified route cannot
   silently disappear from the parity check.
 
 **One known exception, not enforced:** a framework-provided `flow` is meant to
