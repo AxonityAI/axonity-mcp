@@ -76,6 +76,14 @@ async function guideText(): Promise<string> {
 // ---------------------------------------------------------------------------
 
 describe("the three false instructions are gone (M2)", () => {
+  it("the add_trigger instructions preserve shared inputs in a callable workflow's signature", async () => {
+    const guide = await guideText();
+    const instructions = guide.match(/^  - `add_trigger`[\s\S]*?(?=^  - )/m)?.[0] ?? "";
+    expect(instructions).toContain("set_workflow_inputs");
+    expect(instructions).toMatch(/invocation trigger adds parameters with new names/i);
+    expect(instructions).not.toMatch(/parameter list IS its signature/i);
+  });
+
   it("(a) does not tell an agent that add_trigger needs a second call", async () => {
     // What shipped: "give it a trigger with typeId: subprocess-invocation
     // (add_trigger) whose `parameters` are what a caller must pass". Against

@@ -765,10 +765,14 @@ the new tenant too, and a human fills the real value there.
   - \`add_step\` builds a whole step in ONE call — \`name\` and \`position\` are
     required, and \`id\`, \`type\`, \`config\`, \`contract\`, \`inputs\` and
     \`outputs\` are accepted next to them. No follow-up \`update_step\` is needed
-    just to fill the step in.
+    just to fill the step in. To fill one existing empty decision branch, send
+    \`decisionBranchEdgeId\` beside \`position: { after: [decisionId] }\`. Omit
+    \`edgeType\`. Only that edge's destination changes. Its id, condition,
+    type and order are preserved.
   - \`add_trigger\` does the same for a trigger: \`parameters\` and \`outputs\`
-    go in that call. This is what makes a callable workflow declarable in one
-    mutation, since a trigger's parameter list IS its signature.
+    go in that call. For a callable workflow, declare shared inputs with
+    \`set_workflow_inputs\`. The invocation trigger adds parameters with new names.
+    A shared input takes precedence when both declare the same name.
   - \`add_edge\` takes the document's own \`from\`/\`to\` as well as
     \`fromStepId\`/\`toStepId\`, and keeps an \`id\` you supply.
   - An unknown or misspelled key is a 422 naming it, not a silent drop — so
@@ -843,7 +847,7 @@ a document to find out what the platform did.
   \`catalogChecked\` — a green structural verdict is the easiest thing to
   over-read.
 - Read the \`issues\` rather than only \`launchable\`: the validator now reports
-  a sub-process call with no target, one pointing at itself, one whose target
+  a Run a workflow step with no target, one pointing at itself, one whose target
   is deleted or was never published or has no invocation trigger, a constant
   with no value, and a trigger drawn on the canvas that nothing is wired to.
   Some of those are warnings and still let a workflow publish — read the
@@ -954,12 +958,11 @@ a document to find out what the platform did.
 - A run's archive is reversible (\`archive_run\` / \`unarchive_run\`);
   \`bulk_delete_runs\` is not.
 
-## Subworkflows — one workflow calling another
+## Run a workflow
 Both halves live in the workflow DOCUMENT, so both are ordinary
 \`apply_workflow_mutations\` work. There is no separate "link" route.
-- **To make a workflow callable**, it needs TWO things: a trigger with
-  \`typeId: "subprocess-invocation"\` (\`add_trigger\`), which is what makes it
-  callable at all, and a declared SIGNATURE.
+- Add a **Called by another agent** trigger with \`add_trigger\` and
+  \`typeId: "subprocess-invocation"\`. A callable workflow may have no inputs.
 - **The signature belongs to the PROCESS, not to the trigger.** Declare it with
   \`set_workflow_inputs\` — one list, carried by every start, and the same list
   a caller of any kind fills in. A trigger's own \`parameters\` are what THAT
@@ -982,10 +985,20 @@ Both halves live in the workflow DOCUMENT, so both are ordinary
   a draft-only workflow comes back \`callable: false\` with "Never published".
   Authoring the caller first and publishing the callee later is a run-time
   failure waiting to happen.
-- **To call it**, add a step with \`type: "subprocess"\` and
-  \`config: { targetWorkflowId, ownerAgentId }\` — both required, both workflow/
-  agent ids. Bind the step's \`inputs\` by NAME to the callee's \`parameters\`;
-  that is the whole mapping, there is no separate argument block.
+- For a fixed target, add a **Run a workflow** step with \`type: "subprocess"\`
+  and \`config: { targetWorkflowId }\`. For a dynamic target, use
+  \`targetWorkflowFrom\` with \`allowedTargets\` or \`allowedTargetsFrom\`.
+  Bind the step's \`inputs\` by NAME to the callee's \`parameters\`.
+- Each item runs on the owner of the published target it actually calls.
+  \`list_callable_workflows\` includes this owner as \`ownerAgentId\` on every row.
+  If an older target has no owner, the caller's pinned workflow supplies one.
+  The call fails if both lack an owner.
+- Saving a Run a workflow step with \`config.ownerAgentId\`, or any step with
+  \`config.iteration.ownerAgentId\` or \`config.group.ownerAgentId\`, returns
+  422. Omit these fields, including \`settings.ownerAgentId\` on
+  \`create_group\` and \`update_group\`. Repeated automation steps and groups
+  run their items on the owner of their own pinned workflow. A repeating
+  agent step uses its assigned agent first and otherwise the workflow owner.
 - \`config.waitForCompletion\` is **IGNORED** if you write it. Drawing a step
   after this one already means "after", so waiting is implied. The one thing the
   graph cannot say is fire-and-forget: \`config.fireAndForget: true\`, and then

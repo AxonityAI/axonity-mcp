@@ -290,15 +290,14 @@ across these routes — the tool parameter names say which.
   `request_publish_company` (takes no id — the
   server resolves your tenant's one company; direct company publish is closed to
   service tokens).
-- **Subworkflows**: `list_callable_workflows` — which workflows a `subprocess`
-  step may call, each with its `parameters` and `outcomes`, and a
-  `blockedReason` for the ones that cannot (never published, or no
-  `subprocess-invocation` trigger). Authoring both halves is ordinary
-  `apply_workflow_mutations` work — a callable workflow's signature goes into
-  the `add_trigger` call itself. `validate_workflow` **does** check a subprocess
-  target now (missing, self-call, deleted, unpublished, not callable), but
-  `list_callable_workflows` is still what you run first: it is how you pick a
-  target and read the interface you are binding to.
+- **Run a workflow**. `list_callable_workflows` returns each target's published
+  `ownerAgentId` (or null), `parameters`, `outcomes`, and a `blockedReason`
+  for unavailable targets. Add the **Called by another agent** trigger
+  (`subprocess-invocation`) to the target, declare its shared inputs with
+  `set_workflow_inputs`, and publish it. For a fixed target, send an `add_step`
+  payload with `type: "subprocess"` and `config: { targetWorkflowId }`.
+  The child runs on the published target's owner, falling back to the caller's
+  pinned owner for an older ownerless target.
 - **The deploy, the tenant and its queues** (read-only): `read_deploy_contract`
   (what this backend actually mounts — read it when a call fails in a way that
   smells like a version mismatch), `list_users` (where an `ownerId` comes from),
