@@ -93,6 +93,9 @@ const NOTES = {
     "Return the tenant's soft-deleted rows instead of the live ones. " +
     "`list_deleted_prompt_snippets` asks the dedicated route for the same thing " +
     "and is usually clearer.",
+  conversational:
+    "true: only the agents a conversation can be started with now, by the rule " +
+    "a start applies. Omit for every agent.",
   enabled:
     "true: only sources that are switched on. false: only the ones switched " +
     "off. Omit for both.",

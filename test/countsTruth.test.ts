@@ -366,7 +366,7 @@ describe("the create_<entity> example fields are fields of that create body (rev
     const schemas = snapshot.components.schemas;
     const { shapes } = tools();
     const checked: string[] = [];
-    for (const e of ENTITIES.filter((x) => x.creatable !== false)) {
+    for (const e of ENTITIES.filter((x) => x.creatable !== false && !x.ownTools?.includes("create"))) {
       const shape = shapes.get(`create_${e.singular}`);
       if (!shape) continue;
       const described =

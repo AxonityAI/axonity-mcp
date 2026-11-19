@@ -29,6 +29,18 @@ export interface Rule {
 export const WRITE_METHODS = ["POST", "PUT", "PATCH", "DELETE"];
 
 export const FORBIDDEN: Rule[] = [
+  // The Flow-App (axonity-flow#1826 A1, main #2488) is an installed application
+  // a person reviews and approves at a screen: the backend's own token table
+  // closes every one of its routes, reads included, with "of a person at a
+  // screen" (`token_route_classes.py`). There is no approved design for an
+  // agent to author or switch one, so no tool here would be anything but a
+  // refusal. Recorded rather than left to be rediscovered by whoever wonders
+  // why the pinned schema has routes the connector does not call.
+  { label: "Flow-App (a person at a screen)", path: /\/flow-apps(\/|$)/ },
+  // Hidden tables are `require_platform_admin` (main #2472): a workspace does
+  // not see them, so neither does a token (token table: "a workspace does not
+  // see them, so neither does a token").
+  { label: "hidden data tables (platform admin)", path: /\/data-tables\/hidden(\/|$)/ },
   // Module settings R1 (axonity-flow#1826): these exact personal operations
   // use forbid_service_token_for_personal_reads in routes/module_settings.py
   // (personal_settings, patch_personal_settings and resolved_settings).

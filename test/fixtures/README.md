@@ -11,6 +11,31 @@ diff in review.
 
 ## Provenance
 
+- **Tools (R9 of agent-first), 2026-11-19, not released.** The complete OpenAPI
+  and token-route tables come from Flow `f866f787a8f7ff769cd24133b8d921cf479e4280`
+  (branch `af-r9-tools`, PR #2489, main `4c1bfa5ad` merged in). Both fixtures are
+  the output of that checkout's canonical exporters (`scripts/dump_openapi.py`,
+  `scripts/dump_token_route_classes.py`) run with `env -i`,
+  `ENVIRONMENT=development`, unreachable database URLs and `python -B -I`; the
+  checkout was clean before and after, and no server, database or tenant was
+  touched. Not Flow `main`: the Tools backend is not merged yet, so this pin is
+  re-taken on main after the merge.
+  - OpenAPI has 892 operations (853 -> 892, none removed), 2,843,788 bytes,
+    SHA-256 `330134f7f379dc43c7f15d7dac8a8e142edad8a25b7bef0caf6259b0937bce32`.
+    The Tools surface: the toolbox lifecycle (versions, restore, discard-draft,
+    archive/unarchive, `GET /toolboxes/{id}`, `/toolboxes/deleted`,
+    `/toolboxes/{id}/agents`), `GET /secrets/{id}/used-by`,
+    `GET /tools/{id}/used-by`, `toolboxIds` on the agent bodies and rows, and on
+    the rows `holds`/`usedBy`/`usedByCount`/`lastUsedAt` (secret) and
+    `needsSecret`/`dryRunStale` (tool). The rest of the delta is from Flow main
+    and was not in the previous pin: the Flow-App family (`/flow-apps`,
+    `/platform/flow-app-*`, main #2488), `GET /data-tables/hidden*` (main #2472)
+    and the `conversational` filter of `GET /agents`.
+  - Token-route classes have 922 rows, 102,293 bytes, SHA-256
+    `09021b4ddccdf15574b6cf4ef34593873ff95dc76d4f266eb4a0b466643fbd09`.
+    `src/generated/tokenRouteClasses.ts` and `src/generated/listFilters.ts`
+    are regenerated.
+
 - **R7a, 2026-11-17.** The complete OpenAPI and token-route tables come from
   Flow `82580d70d41f33379b8dc690909fba9761e8e718`. Both fixtures match the
   output of that checkout’s canonical exporters byte for byte. The checkout

@@ -200,7 +200,7 @@ has run cleanly once, at its current version.
   (see Wiring, mechanism B).
 - "Complete" is your job, not the backend's. A create succeeds with only the
   required fields set; it does not tell you the entity is USABLE. An agent with
-  no \`toolIds\` runs with no tools; a connector tool with an empty
+  no \`toolIds\` or \`toolboxIds\` runs with no tools; a connector tool with an empty
   \`implementation\` has no endpoint to call; a workflow with steps but no
   trigger never fires. After creating, check the entity has everything its
   purpose needs — see the per-entity and wiring sections.
@@ -256,13 +256,13 @@ has run cleanly once, at its current version.
 - \`restore_*\` can itself 409 if a live entity now holds the same name/slot —
   the error names the conflicting one. On \`skill\`, \`policy\`,
   \`reference_doc\`, \`output_schema\`, \`application\`, \`data_table\`,
-  \`measure\`, \`query\`, \`data_source\` and \`table_database\`, whose name is unique, pass
+  \`measure\`, \`query\`, \`data_source\`, \`table_database\` and \`toolbox\`, whose name is unique, pass
   \`name\` to restore it under another one.
 - Deleting is not archiving. **Archived** is its own act, beside Draft and
   Published: \`archive_*\` / \`unarchive_*\` on \`workflow\`, \`agent\`, \`tool\`,
   \`skill\`, \`policy\`, \`reference_doc\`, \`output_schema\`, \`prompt_snippet\`,
   \`flow\`, \`data_table\`, \`table_database\`, \`measure\`, \`query\`, \`application\`,
-  \`data_source\` and \`dashboard\`. An archived item is out of use — no run
+  \`toolbox\`, \`data_source\` and \`dashboard\`. An archived item is out of use — no run
   reads it — and out of \`list_*\` unless \`archived\` is \`include\` or \`only\`;
   its row says \`archivedAt\`. It is not edited until it is unarchived. On a
   kind with versions only a draft can be archived: a published one is refused
@@ -384,8 +384,8 @@ made any time before you attach them.
   or names; a schema outside the list is refused) and \`defaultOutputSchemaId\`
   (the one used when a caller names none; left out: the first). The GATES on
   an output live in the output_schema (see Validators), not on the agent.
-- Wiring fields — see the Wiring section: \`toolIds\`, \`systemToolIds\`,
-  \`delegationTargetIds\`.
+- Wiring fields — see the Wiring section: \`toolIds\`, \`toolboxIds\`,
+  \`systemToolIds\`, \`delegationTargetIds\`.
 - \`capabilityId\` (its team): one capability of the company model — a key of
   \`document.capabilities\` in \`read_company\`; left out, no team. Taken by
   \`create_agent\`; on an existing agent change it with \`set_agent_team\`
@@ -393,8 +393,8 @@ made any time before you attach them.
   on the agent's record, not in a version: it holds at once, with no publish.
 - Anything else is refused: the body is strict, so a field the platform
   retired (axonity-flow#2176) is a 422 that names it, not a silent drop.
-- Complete check: an agent with no \`toolIds\`/\`systemToolIds\` has no tools and
-  can only reason/talk. If it is meant to DO something, give it the tools.
+- Complete check: an agent with no \`toolIds\`/\`toolboxIds\`/\`systemToolIds\`
+  has no tools and can only reason/talk. If it is meant to DO something, give it the tools.
 
 ### workflow  (\`create_workflow\`, then edit the document)
 - \`create_workflow\` makes a STUB (name, description) with an empty document.
@@ -583,7 +583,10 @@ each link uses.
 **A) Set a field on the entity (via create/update)** — an id or id-array that
 lives in the entity body:
 - tool → agent: add the tool's id to the agent's \`toolIds\`. This is how an
-  agent gets a (non-system) tool. There is no attach_tool_to_agent route.
+  agent gets a single (non-system) tool. There is no attach_tool_to_agent route.
+- toolbox → agent: add the box's id to the agent's \`toolboxIds\` and the agent
+  holds a WHOLE toolbox: every tool the box's PUBLISHED version names, read at
+  each run. \`toolIds\` and \`toolboxIds\` are two lists; an agent may have both.
 - system tool → agent: add the catalog id to \`systemToolIds\`. Get ids from
   \`list_system_tools\`. No grant/revoke tool — you set the array via
   \`update_agent\`. \`toolIds\` and \`systemToolIds\` are DIFFERENT lists; a
@@ -1138,15 +1141,31 @@ the rows; the rows come from \`read_data_table\`.
   in the box and absent from your list is evicted. To add one tool, read the
   box's contents first, or use \`assign_tool_toolbox\`, which cannot evict
   anything by accident. A tool is in at most one box.
-- A toolbox NEVER changes what an agent may call. An agent is linked to
-  individual tools (\`agent.toolIds\`), never to a box; there is no route that
-  grants a whole box, and "give this agent the Carerix toolbox" is a bulk write
-  of individual links. What the box decides is how a tool is ADVERTISED: a boxed
-  tool with \`surfacing: "inherit"\` is found via discover_tools instead of
-  riding in every prompt. Read \`effectiveSurfacing\` on the tool to answer "is
-  it in the prompt?"; \`surfacing\` is the raw stored choice.
-- Deleting a toolbox does NOT delete its tools — they survive, ungrouped. The
-  box itself has no restore.
+- An agent can hold a WHOLE toolbox: put the box's id in the agent's
+  \`toolboxIds\` (\`create_agent\` / \`update_agent\`) and it gets every tool the
+  box's published version names, with no need to list them in \`toolIds\` and
+  no new publication of the agent when the box changes. \`list_toolbox_agents\`
+  says who holds a box. A tool can be granted singly (\`toolIds\`) or through a
+  box, and the box also decides how a tool is ADVERTISED: a boxed tool with
+  \`surfacing: "inherit"\` is found via discover_tools instead of riding in
+  every prompt. Read \`effectiveSurfacing\` on the tool to answer "is it in the
+  prompt?"; \`surfacing\` is the raw stored choice.
+- A toolbox is versioned like a skill: a draft, a publication a person approves,
+  version history (\`list_toolbox_versions\`, \`restore_toolbox_version\`,
+  \`discard_toolbox_draft\`), archive and the Trash. Only what an agent
+  that holds the box GETS waits for the publication: it keeps the tools of the
+  box's published version until \`request_publish_toolbox\` is approved. The
+  filing itself is live: \`set_toolbox_tools\` and \`assign_tool_toolbox\` move
+  tools at once, so the count, how a tool is advertised, the name and
+  description \`discover_tools\` shows, and the shared credential a tool
+  inherits change immediately. The publish is refused while a tool
+  in the box has no published version or is archived. Restoring a version or
+  discarding the draft moves tools at once too.
+- Deleting a toolbox does NOT delete its tools — it goes to the Trash, they read
+  as ungrouped, and \`restore_toolbox\` (with \`name\` when its own was taken)
+  brings it back with the tools it held. Both \`delete_toolbox\` and
+  \`archive_toolbox\` are refused while an agent holds the box, naming the agents
+  (\`list_toolbox_agents\` asks beforehand).
 - Platform-shipped tools cannot be moved. The \`Axonity\`, \`Checks\` and
   \`Branching\` boxes hold locked tools; the API refuses and NAMES the tool it
   refused. Read that name to your human instead of bisecting the selection.

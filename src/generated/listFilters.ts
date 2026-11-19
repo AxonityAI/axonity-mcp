@@ -57,6 +57,13 @@ export const LIST_FILTERS: Record<string, ListFilter[]> = {
       description:
         "Which items to list: 'exclude' (default) leaves archived items out, 'only' lists only the archived ones (the Archived view), 'include' lists both.",
     },
+    {
+      arg: "conversational",
+      query: "conversational",
+      type: "boolean",
+      description:
+        "true: only the agents a conversation can be started with now, by the rule a start applies. Omit for every agent.",
+    },
   ],
   "tool": [
     {

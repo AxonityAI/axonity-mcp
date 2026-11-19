@@ -87,10 +87,15 @@ const pluralOf = (e: { singular: string; plural?: string }) => e.plural ?? `${e.
 
 describe("which kinds are archivable is what the backend mounts", () => {
   it("every archive route of the schema belongs to a kind the connector covers", () => {
-    const routes = paths.filter((p) => p.endsWith("/{entity_id}/archive"));
+    // The Flow-App (axonity-flow #1826 A1) archives on the shared door too, but
+    // the whole family is closed to this connector by a deny rule
+    // (`test/denyList.ts`, "Flow-App"): it is a person's, at a screen.
+    const routes = paths.filter(
+      (p) => p.endsWith("/{entity_id}/archive") && !p.startsWith("/api/v1/flow-apps/"),
+    );
     const covered = archiveKinds.map((e) => `${e.basePath}/{entity_id}/archive`);
     expect(routes.sort()).toEqual(covered.sort());
-    expect(archiveKinds.length).toBe(16);
+    expect(archiveKinds.length).toBe(17);
   });
 
   it("each of them has archive_ and unarchive_, and no other kind has", () => {
@@ -158,7 +163,7 @@ describe("every list of an archivable kind takes `archived`", () => {
 });
 
 describe("restore takes a new name on exactly the kinds whose name is unique", () => {
-  it("the ten kinds are read from the routes that take a body", () => {
+  it("the eleven kinds are read from the routes that take a body", () => {
     expect(renamingKinds.map((e) => e.singular).sort()).toEqual([
       "application",
       "data_source",
@@ -170,6 +175,7 @@ describe("restore takes a new name on exactly the kinds whose name is unique", (
       "reference_doc",
       "skill",
       "table_database",
+      "toolbox",
     ]);
   });
 
@@ -353,7 +359,7 @@ describe("archive: what the backend refuses, said before the call", () => {
 
   it("only the kinds whose delete has a guard promise the in-use refusal", () => {
     const { descriptions } = surface();
-    const inUse = ["agent", "workflow", "tool", "output_schema", "data_table", "table_database", "measure", "data_source"];
+    const inUse = ["agent", "workflow", "tool", "output_schema", "data_table", "table_database", "measure", "data_source", "toolbox"];
     for (const e of archiveKinds) {
       const d = descriptions.get(`archive_${e.singular}`)!;
       expect(/same words as delete_/.test(d), e.singular).toBe(inUse.includes(e.singular));

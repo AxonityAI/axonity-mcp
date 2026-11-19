@@ -52,12 +52,18 @@ export interface VersionedEntity {
    * `"versions"` → `/{id}/versions/published` (skill, policy, reference_doc)
    */
   publishedPath: "entity" | "versions";
+  /**
+   * Replaces the generic closing sentence of `restore_<entity>_version` ("It
+   * changes only the draft …") for a kind whose restore also moves something
+   * live.
+   */
+  restoreNote?: string;
 }
 
 export function registerVersionTools(
   server: McpServer,
   client: AxonityClient,
-  { singular, basePath, publishedPath }: VersionedEntity,
+  { singular, basePath, publishedPath, restoreNote }: VersionedEntity,
 ): void {
   server.tool(
     `list_${singular}_versions`,
@@ -103,9 +109,10 @@ export function registerVersionTools(
     `restore_${singular}_version`,
     `Roll a ${singular}'s DRAFT back to an earlier version. Takes the versionId ` +
       `(a UUID from list_${singular}_versions), NOT the checkpoint number. The ` +
-      `current draft is snapshotted first, so this is itself undoable. It ` +
-      `changes only the draft — what is live stays live until a human approves a ` +
-      `new publish.`,
+      `current draft is snapshotted first, so this is itself undoable. ` +
+      (restoreNote ??
+        `It changes only the draft — what is live stays live until a human ` +
+          `approves a new publish.`),
     {
       id: z.string().describe(`The ${singular}'s id.`),
       versionId: z.string().describe("The version row's UUID."),
