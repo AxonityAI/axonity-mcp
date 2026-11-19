@@ -847,8 +847,10 @@ a document to find out what the platform did.
 
 ## Validating: two questions, two calls
 - \`validate_workflow({ workflowId })\` checks the workflow as SAVED against the
-  tenant catalog — whether the agents, tools and methods the steps reference
-  exist and are published — plus its own wiring (its triggers and the knowledge
+  tenant catalog — whether the agents and tools the steps reference exist and
+  are published, and whether the methods exist (a method that is only a draft
+  passes: the runtime reads only the published version, so publish it before
+  the workflow runs) — plus its own wiring (its triggers and the knowledge
   attached to it). This is the "can this run?" answer. It needs a token with
   the \`author\` scope.
 - \`validate_workflow({ document })\` judges the document against the same

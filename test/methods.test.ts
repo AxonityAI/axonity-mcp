@@ -291,6 +291,8 @@ describe("the old names still work for one release, as an alias that says so", (
       expect(text.startsWith("DEPRECATED"), old).toBe(true);
       expect(text, old).toContain(`\`${now}\``);
       expect(text, old).toContain("next release");
+      // K1: the call is the same, the answer carries the current field names.
+      expect(text, old).toContain("current names of its fields");
     }
   });
 
@@ -500,5 +502,31 @@ describe("the guide (axonity_conventions) speaks of methods", () => {
   it("says once that the old names are an alias for this release", async () => {
     const text = await guide();
     expect(text).toMatch(/`create_flow`[^.]*alias/s);
+  });
+});
+
+describe("validate_workflow says what the backend checks for a method: that it exists, not that it is published", () => {
+  // Source: Flow backend/src/services/workflow_validator.py (S1.9, `catalog_flow_unknown`
+  // only when the id is not in `catalog.method_ids`) and workflow_service.py (`method_ids`
+  // = every visible method, drafts included). `published_*_ids` exist for agents and tools only.
+  const WRONG = /methods[^.]*exist and are published|and methods[^.]*published/;
+
+  it("the tool description does not claim a method is checked for publication", () => {
+    const { descriptions } = surface();
+    const t = descriptions.get("validate_workflow")!;
+    expect(t).not.toMatch(WRONG);
+    expect(t).toContain("agents and tools");
+    expect(t).toContain("a method that is only a draft passes");
+  });
+
+  it("the guide says the same", async () => {
+    const handlers = new Map<string, () => Promise<Result>>();
+    registerConventions(
+      { tool: (n: string, _d: string, _s: unknown, h: () => Promise<Result>) => handlers.set(n, h) } as never,
+      placementClient(),
+    );
+    const text = (await handlers.get("axonity_conventions")!()).content[0].text.replace(/\s+/g, " ");
+    expect(text).not.toMatch(WRONG);
+    expect(text).toContain("a method that is only a draft passes");
   });
 });

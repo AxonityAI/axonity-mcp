@@ -27,7 +27,7 @@ export function formerName(name: string, current: string, former: string): strin
 /** The notice an old tool name carries in front of its description. */
 export function deprecationNotice(current: string): string {
   return (
-    `DEPRECATED — the old name of \`${current}\`, which does exactly this. ` +
+    `DEPRECATED — the old name of \`${current}\`, which does exactly this; the answer uses the current names of its fields. ` +
     `It still works in this release and is removed in the next release: ` +
     `call \`${current}\` instead. `
   );

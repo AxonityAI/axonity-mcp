@@ -30,8 +30,9 @@ export function registerValidationTools(
       "triggers and the knowledge attached to it). This is the real 'can this " +
       "run?'. It needs a token with the `author` scope." +
       "\n- document → validates the document you pass, as it stands, against " +
-      "the SAME catalog: whether the agents, tools and methods its steps reference " +
-      "exist and are published. It saves nothing, and a read-only token may " +
+      "the SAME catalog: whether the agents and tools its steps reference exist " +
+      "and are published, and whether the methods exist (a method that is only a draft passes: " +
+      "the runtime reads only the published version, so publish it before the workflow runs). It saves nothing, and a read-only token may " +
       "call it. Without the workflow's id the checks about one workflow's own " +
       "wiring — its triggers and the knowledge attached to it — are skipped, so " +
       "for a workflow that exists, validate it by workflowId once it is saved. " +
