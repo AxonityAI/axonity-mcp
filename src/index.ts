@@ -389,6 +389,23 @@ const TOOLBOX_PUBLISH_NOTE =
   "archived. Unarchive it first, or take it out of the box.\"): publish or " +
   "unarchive those first.";
 
+/**
+ * Restore and discard on a box put the membership back through `tools.toolbox_id`
+ * (`ToolboxService.restore_version` / `discard_draft`), so tools move at once,
+ * with the live consequences a filing has: how they are advertised and which
+ * shared credential they inherit.
+ */
+const TOOLBOX_RESTORE_NOTE =
+  "For a toolbox it also puts the membership back at once: tools move in or " +
+  "out of the box immediately, which changes how they are advertised and " +
+  "which shared credential they inherit, while what an agent holding the box " +
+  "gets stays on the published version until a human approves a new publish.";
+
+const TOOLBOX_DISCARD_NOTE =
+  "For a toolbox this puts the membership back at once: tools move in or out " +
+  "of the box immediately, with the same live effect on how they are " +
+  "advertised and which shared credential they inherit.";
+
 const WORKFLOW_CLEARANCE_NOTE =
   "WHAT THE PROCESS MAY READ. " +
   CLEARANCE_SHAPE +
@@ -493,6 +510,7 @@ export const ENTITIES: EntityDef[] = [
     deleteVersionParam: "expected_version",
     ownTools: ["list", "create", "update", "delete"],
     publishNote: TOOLBOX_PUBLISH_NOTE,
+    discardNote: TOOLBOX_DISCARD_NOTE,
   },
   {
     singular: "skill",
@@ -846,7 +864,12 @@ const VERSIONED: VersionedEntity[] = [
   { singular: "workflow", basePath: "/api/v1/workflows", publishedPath: "entity" },
   { singular: "agent", basePath: "/api/v1/agents", publishedPath: "entity" },
   { singular: "tool", basePath: "/api/v1/tools", publishedPath: "entity" },
-  { singular: "toolbox", basePath: "/api/v1/toolboxes", publishedPath: "versions" },
+  {
+    singular: "toolbox",
+    basePath: "/api/v1/toolboxes",
+    publishedPath: "versions",
+    restoreNote: TOOLBOX_RESTORE_NOTE,
+  },
   { singular: "skill", basePath: "/api/v1/skills", publishedPath: "versions" },
   { singular: "policy", basePath: "/api/v1/policies", publishedPath: "versions" },
   {

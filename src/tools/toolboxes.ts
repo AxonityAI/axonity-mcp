@@ -18,10 +18,15 @@
  *    append: a tool in the box and absent from the list is evicted. Adding one
  *    tool means reading the box first — or using `assign_tool_toolbox`, which
  *    moves exactly one and takes `null` to ungroup.
- * 2. **Name, description and membership are a DRAFT until the box is
- *    published** (`ToolboxSchema.draftMajorVersion`): what an agent that holds
- *    the box gets is the box's published version, and publishing goes through
- *    an approval a person decides (`request_publish_toolbox`).
+ * 2. **Only what an agent holding the box GETS waits for the publication.**
+ *    The tools it receives at run start come from the box's published version
+ *    (`expand_toolbox_grants`), and publishing goes through an approval a
+ *    person decides (`request_publish_toolbox`). The rest is read LIVE from the
+ *    rows: membership (a column on `tools`), `toolCount`, how a tool is
+ *    advertised, the name and description `discover_tools` shows, and the
+ *    shared credential a tool inherits. Backend: `token_route_classes.py`
+ *    ("even its draft changes behaviour"), `ToolboxRepository.set_membership`,
+ *    `get_advert_state`, `resolve_tool_auth_config`.
  * 3. **An agent can hold a whole box** (`agent.toolboxIds`), as well as single
  *    tools (`agent.toolIds`). The box also decides how a tool is ADVERTISED: a
  *    boxed tool with `surfacing: "inherit"` is found via `discover_tools`
@@ -57,8 +62,8 @@ export function registerToolboxTools(server: McpServer, client: AxonityClient): 
       "name, description, toolCount, hasAuthConfig, version, " +
       "`publishedMajorVersion` (the version that is live: what an agent that " +
       "holds the box gets; null while nothing is published), " +
-      "`draftMajorVersion` (the working draft, where name, description and " +
-      "membership changes land; null when there is none), `heldByCount` (how " +
+      "`draftMajorVersion` (the working draft; null when there is " +
+      "none), `heldByCount` (how " +
       "many agents hold the box whole), `isPlatform` (shipped by the platform, " +
       "read-only) and `archivedAt`. " +
       "Archived items are left out unless `archived` is `include` or `only`; " +
@@ -95,9 +100,10 @@ export function registerToolboxTools(server: McpServer, client: AxonityClient): 
 
   server.tool(
     "create_toolbox",
-    "Create a toolbox, as a DRAFT: it is publishable from the moment it exists " +
-      "and goes live, for the agents that will hold it, through " +
-      "request_publish_toolbox. Both `name` and `description` are REQUIRED — the " +
+    "Create a toolbox. It is a versioned item with a working draft, " +
+      "publishable from the moment it exists; the box is visible and filable at " +
+      "once, and what an agent that holds it gets (its tools) comes from the " +
+      "published version, through request_publish_toolbox. Both `name` and `description` are REQUIRED — the " +
       "description is not politeness: it is the line an agent reads in the " +
       "discover_tools advert to decide whether to look inside the box, so it " +
       "must say what the tools DO. An empty one is rejected. " +
@@ -120,9 +126,10 @@ export function registerToolboxTools(server: McpServer, client: AxonityClient): 
 
   server.tool(
     "update_toolbox",
-    "Rename or re-describe a toolbox. The change lands on the box's working " +
-      "DRAFT and goes live with request_publish_toolbox; what an agent that " +
-      "holds the box gets is unchanged until then. Read it first with " +
+    "Rename or re-describe a toolbox. The new name and description are read " +
+      "live: discover_tools shows them at once, without a publication. What " +
+      "an agent that holds the box gets (its tools) comes from the published " +
+      "version and changes only with request_publish_toolbox. Read it first with " +
       "list_toolboxes for its `version`; a stale `expectedVersion` is a 409 — " +
       "re-read and retry rather than force. Pass only what you are changing; an " +
       "omitted field is left alone. Renaming to a name another box holds is a " +
@@ -192,10 +199,12 @@ export function registerToolboxTools(server: McpServer, client: AxonityClient): 
     "DECLARE exactly which tools this toolbox holds. This REPLACES the " +
       "membership — a tool currently in the box and absent from `toolIds` is " +
       "evicted and left ungrouped. It does not add. " +
-      "\n\nMEMBERSHIP IS A DRAFT UNTIL THE BOX IS PUBLISHED: the change lands " +
-      "on the box's working draft (and on the draft of any other box a tool " +
-      "leaves), and agents that hold the box keep the tools of its published " +
-      "version until request_publish_toolbox is approved. At most " +
+      "\n\nTHE FILING IS LIVE, WHAT AN AGENT GETS IS NOT: the membership moves " +
+      "at once (a tool that leaves another box leaves it at once too), so " +
+      "toolCount, how each tool is advertised in discover_tools and the shared " +
+      "credential a tool inherits change immediately. Agents that hold the box " +
+      "keep the tools of its published version until request_publish_toolbox " +
+      "is approved. At most " +
       "500 tools in one call; an archived box is not edited. " +
       "\n\nTo ADD one tool, either read the box's current contents and send " +
       "them plus the new one, or use assign_tool_toolbox, which moves a single " +
@@ -229,10 +238,12 @@ export function registerToolboxTools(server: McpServer, client: AxonityClient): 
       "already means 'leave this field alone', so there would be no way to say " +
       "'ungroup'. Here `toolboxId` is required and an explicit null MEANS " +
       "ungroup. " +
-      "\n\nIt is a change to the BOXES, not to the tool: both boxes involved " +
-      "(the one it leaves and the one it joins) get a working draft with the " +
-      "new membership, and nothing an agent that holds a box gets changes until " +
-      "request_publish_toolbox is approved for each. An archived tool is not " +
+      "\n\nIt is a change to the BOXES, not to the tool, and the filing is live: " +
+      "how the tool is advertised and which shared credential it inherits " +
+      "change at once. Both boxes involved (the one it leaves and the one it " +
+      "joins) get a working draft with the new membership, and what an agent " +
+      "that holds a box gets does not change until request_publish_toolbox " +
+      "is approved for each. An archived tool is not " +
       "moved, and neither is a tool into or out of an archived box. " +
       "A platform-shipped tool cannot be moved; the API names it in the " +
       "refusal.",

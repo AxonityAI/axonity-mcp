@@ -140,15 +140,37 @@ describe("a toolbox has the whole lifecycle, and every tool calls a route the ba
 describe("what an agent reads about a toolbox says what the backend does", () => {
   const { descriptions } = surface();
 
-  it("create and the membership writes land on a draft that a person approves", () => {
-    // Source: ToolboxSchema.draftMajorVersion ("Changing the name, the
-    // description or which tools the box holds lands on this draft; it goes live
-    // when the box is published") and ToolboxSchema.publishedMajorVersion ("the
-    // version that is live: what an agent holding this box gets").
+  it("only what an agent holding the box gets waits for the publication; the filing is live", () => {
+    // Source: ToolboxSchema.publishedMajorVersion ("what an agent holding this
+    // box gets") for the part that waits; for the part that does not,
+    // token_route_classes.py ("read live from the rows, so even its draft
+    // changes behaviour"), ToolboxRepository.set_membership (UPDATE tools SET
+    // toolbox_id), tool_repository.get_advert_state and
+    // toolbox_auth.resolve_tool_auth_config ("Read LIVE from the tool row").
     for (const tool of ["create_toolbox", "update_toolbox", "set_toolbox_tools", "assign_tool_toolbox"]) {
-      expect(descriptions.get(tool), tool).toMatch(/draft/i);
       expect(descriptions.get(tool), tool).toContain("request_publish_toolbox");
     }
+    for (const tool of ["set_toolbox_tools", "assign_tool_toolbox"]) {
+      expect(descriptions.get(tool), tool).toMatch(/at once|immediately/i);
+      expect(descriptions.get(tool), tool).toMatch(/advertised/);
+      expect(descriptions.get(tool), tool).toMatch(/shared credential/);
+    }
+    expect(descriptions.get("update_toolbox")).toMatch(/read\s+live/);
+    expect(descriptions.get("set_toolbox_tools")).not.toMatch(/IS A DRAFT UNTIL/);
+    for (const tool of ["create_toolbox", "update_toolbox", "set_toolbox_tools", "assign_tool_toolbox"]) {
+      expect(descriptions.get(tool), tool).not.toMatch(/goes live with request_publish/);
+    }
+  });
+
+  it("restore and discard on a box say that tools move at once, not 'only the draft'", () => {
+    // Source: ToolboxService.restore_version / discard_draft put the membership
+    // back through tools.toolbox_id.
+    expect(descriptions.get("restore_toolbox_version")).not.toMatch(/changes only the draft/);
+    expect(descriptions.get("restore_toolbox_version")).toMatch(/membership back at once/);
+    expect(descriptions.get("discard_toolbox_draft")).toMatch(/membership back at once/);
+    // A kind without that effect keeps the generic sentence.
+    expect(descriptions.get("restore_skill_version")).toMatch(/changes only the draft/);
+    expect(descriptions.get("discard_skill_draft")).not.toMatch(/membership/);
   });
 
   it("assign_tool_toolbox no longer claims that grouping needs no publication", () => {
@@ -294,11 +316,13 @@ describe("the guide tells the new truth about toolboxes", () => {
     return (await handlers.get("axonity_conventions")!({})).content[0].text;
   }
 
-  it("a box can be given whole, is versioned, and membership is a draft until published", async () => {
+  it("a box can be given whole, is versioned, and only what an agent gets waits for publication", async () => {
     const text = await guide();
     expect(text).toMatch(/hold a WHOLE toolbox/);
     expect(text).toContain("toolboxIds");
-    expect(text).toMatch(/membership is a DRAFT until the box is published/);
+    expect(text).toMatch(/Only what an agent\s+that holds the box GETS waits for the publication/);
+    expect(text).toMatch(/filing itself is live/);
+    expect(text).not.toMatch(/membership is a DRAFT until the box is published/);
     expect(text).toContain("request_publish_toolbox");
   });
 

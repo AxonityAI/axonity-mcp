@@ -1152,13 +1152,15 @@ the rows; the rows come from \`read_data_table\`.
   prompt?"; \`surfacing\` is the raw stored choice.
 - A toolbox is versioned like a skill: a draft, a publication a person approves,
   version history (\`list_toolbox_versions\`, \`restore_toolbox_version\`,
-  \`discard_toolbox_draft\`), archive and the Trash. Name, description and
-  membership is a DRAFT until the box is published: \`set_toolbox_tools\` and
-  \`assign_tool_toolbox\` change the draft of each box involved, and an agent
-  that holds the box keeps the tools of its published version until
-  \`request_publish_toolbox\` is approved. The publish is refused while a tool
-  in the box has no published version or is archived. The shared credential is
-  the exception: it is not versioned and applies at once.
+  \`discard_toolbox_draft\`), archive and the Trash. Only what an agent
+  that holds the box GETS waits for the publication: it keeps the tools of the
+  box's published version until \`request_publish_toolbox\` is approved. The
+  filing itself is live: \`set_toolbox_tools\` and \`assign_tool_toolbox\` move
+  tools at once, so the count, how a tool is advertised, the name and
+  description \`discover_tools\` shows, and the shared credential a tool
+  inherits change immediately. The publish is refused while a tool
+  in the box has no published version or is archived. Restoring a version or
+  discarding the draft moves tools at once too.
 - Deleting a toolbox does NOT delete its tools — it goes to the Trash, they read
   as ungrouped, and \`restore_toolbox\` (with \`name\` when its own was taken)
   brings it back with the tools it held. Both \`delete_toolbox\` and

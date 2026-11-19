@@ -188,6 +188,11 @@ export interface EntityDef {
    */
   publishNote?: string;
   /**
+   * Appended to `discard_<entity>_draft`'s description for a kind whose
+   * discard also moves something live.
+   */
+  discardNote?: string;
+  /**
    * Archive is its own act on this kind (Levenscyclus R3):
    * `archive_<entity>` and `unarchive_<entity>`, and `archived` on the list.
    * True exactly where the backend mounts `POST <basePath>/{entity_id}/archive`;
@@ -504,7 +509,8 @@ export function registerEntityTools(
         `discard_${singular}_draft`,
         `Discard uncommitted draft edits on a ${singular}, resetting it to its ` +
           `last published state. Fails if it has never been published — there is ` +
-          `no published state to fall back to.`,
+          `no published state to fall back to.` +
+          (def.discardNote ? ` ${def.discardNote}` : ""),
         { id: z.string().describe(`The ${singular}'s id.`) },
         async ({ id }) =>
           guard(async () =>

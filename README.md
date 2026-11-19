@@ -255,8 +255,10 @@ across these routes — the tool parameter names say which.
   tool made without one is ungrouped. Four things worth knowing before you
   write: `set_toolbox_tools` **declares** the membership (anything you leave
   out is evicted — `assign_tool_toolbox` moves a single tool and takes `null`
-  to ungroup); name, description and membership are a **draft** until the box is
-  published, through an approval a person decides; an agent can hold a **whole
+  to ungroup); only what an agent holding the box **gets** waits for the publication
+  (through an approval a person decides); the filing itself is live, so the
+  count, how a tool is advertised, the name and description, and the shared
+  credential a tool inherits change at once; an agent can hold a **whole
   box** (`toolboxIds` on `create_agent` / `update_agent`) and gets the tools of
   the box's published version; and deleting a box leaves its tools alive,
   ungrouped, and sends the box to the Trash (`restore_toolbox`) — it is refused
