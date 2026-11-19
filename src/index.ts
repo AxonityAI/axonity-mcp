@@ -356,6 +356,39 @@ const AGENT_CLEARANCE_NOTE =
   "Inside a workflow the agent never reads more than the workflow's own " +
   "clearance.";
 
+/**
+ * An agent holds a whole box (DECISIONS.md 11). Each sentence is the backend's:
+ * `expand_toolbox_grants` (which version of the box counts, what is left out),
+ * `AgentService._validate_toolbox_ids` (refused by name) and
+ * `AgentService.archived_box_blockers` (an archived box blocks the publish).
+ */
+const AGENT_TOOLBOX_NOTE =
+  "WHOLE TOOLBOXES. `toolboxIds` gives the agent every tool a toolbox holds, " +
+  "without naming each one in `toolIds`. What it gets is the published " +
+  "version of the box, read at each run: a tool put in the box reaches the " +
+  "agent on its next run once the BOX is published, with no new publication " +
+  "of the agent, and a tool put in but not yet published reaches nobody. An " +
+  "id that is not a live toolbox of this workspace is refused (\"These " +
+  "toolboxes do not exist in this workspace\"), not dropped. An archived box " +
+  "the agent holds blocks its publication. Sending `toolboxIds` replaces the " +
+  "list; `[]` empties it. Who holds a box: list_toolbox_agents.";
+
+const TOOL_LIST_NOTE =
+  "`needsSecret` is true when the tool's own credential names a secret; a " +
+  "credential inherited from its toolbox is not counted here. `dryRunStale` is " +
+  "true when the tool is live, carries authored code, and that code has " +
+  "changed since its last clean dry-run: the live version keeps running, and " +
+  "the next publish needs a new dry-run. Who uses a tool: read_tool_used_by.";
+
+/** From `publish_readiness.toolbox_member_blockers`, the sentence a publish says. */
+const TOOLBOX_PUBLISH_NOTE =
+  "Publishing a box makes what it holds live for every agent that holds it " +
+  "whole (list_toolbox_agents). It is refused while a tool in the box has no " +
+  "published version (\"Tool '…' in this box has no published version. " +
+  "Publish it first, or take it out of the box.\") or is archived (\"… is " +
+  "archived. Unarchive it first, or take it out of the box.\"): publish or " +
+  "unarchive those first.";
+
 const WORKFLOW_CLEARANCE_NOTE =
   "WHAT THE PROCESS MAY READ. " +
   CLEARANCE_SHAPE +
@@ -426,8 +459,8 @@ export const ENTITIES: EntityDef[] = [
     label: "agents",
     createExample: ["name", "persona"],
     deleteVersionParam: "expectedVersion",
-    createNote: AGENT_CLEARANCE_NOTE,
-    updateWarning: AGENT_CLEARANCE_NOTE,
+    createNote: AGENT_CLEARANCE_NOTE + "\n\n" + AGENT_TOOLBOX_NOTE,
+    updateWarning: AGENT_CLEARANCE_NOTE + "\n\n" + AGENT_TOOLBOX_NOTE,
   },
   {
     singular: "tool",
@@ -441,6 +474,25 @@ export const ENTITIES: EntityDef[] = [
     // authConfig too — they get the same credential guard as create_connector.
     guardFields: assertPlaceholderCredentials,
     deleteVersionParam: "expectedVersion",
+    listNote: TOOL_LIST_NOTE,
+  },
+  {
+    // A box is a versioned kind since Tools (R9 of agent-first, DECISIONS.md 18):
+    // draft, publication through approval, archive, the Trash. What the generic
+    // registrar says about those is generated here; list, create, update and
+    // delete are `tools/toolboxes.ts`, which types the fields and keeps the
+    // lock's spelling. Not a `statusRetired` kind: a box never had a `status`.
+    singular: "toolbox",
+    plural: "toolboxes",
+    archivable: true,
+    archiveGuard: "in_use",
+    restoreRename: true,
+    basePath: "/api/v1/toolboxes",
+    updateMethod: "PUT",
+    label: "toolboxes (the groups a workspace's tools are filed in, and what an agent can hold whole)",
+    deleteVersionParam: "expected_version",
+    ownTools: ["list", "create", "update", "delete"],
+    publishNote: TOOLBOX_PUBLISH_NOTE,
   },
   {
     singular: "skill",
@@ -794,6 +846,7 @@ const VERSIONED: VersionedEntity[] = [
   { singular: "workflow", basePath: "/api/v1/workflows", publishedPath: "entity" },
   { singular: "agent", basePath: "/api/v1/agents", publishedPath: "entity" },
   { singular: "tool", basePath: "/api/v1/tools", publishedPath: "entity" },
+  { singular: "toolbox", basePath: "/api/v1/toolboxes", publishedPath: "versions" },
   { singular: "skill", basePath: "/api/v1/skills", publishedPath: "versions" },
   { singular: "policy", basePath: "/api/v1/policies", publishedPath: "versions" },
   {

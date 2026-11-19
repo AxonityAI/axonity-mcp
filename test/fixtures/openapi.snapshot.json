@@ -1053,6 +1053,20 @@
             ],
             "title": "Toolids"
           },
+          "toolboxIds": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Toolboxids"
+          },
           "updatedAt": {
             "title": "Updatedat",
             "type": "string"
@@ -1181,6 +1195,7 @@
               "data_table",
               "application",
               "table_database",
+              "toolbox",
               "measure",
               "query",
               "company"
@@ -2459,6 +2474,41 @@
           "batchId"
         ],
         "title": "BatchProgress",
+        "type": "object"
+      },
+      "BlockRequest": {
+        "additionalProperties": false,
+        "description": "Stop this code everywhere in the installation.",
+        "properties": {
+          "reason": {
+            "description": "Why. Read in every workspace's audit.",
+            "maxLength": 65536,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "BlockRequest",
+        "type": "object"
+      },
+      "BlockResponse": {
+        "properties": {
+          "bundleSha256": {
+            "title": "Bundlesha256",
+            "type": "string"
+          },
+          "versionsChanged": {
+            "title": "Versionschanged",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "bundleSha256",
+          "versionsChanged"
+        ],
+        "title": "BlockResponse",
         "type": "object"
       },
       "Body_upload_attachment_api_v1_conversation_attachments_post": {
@@ -6564,6 +6614,22 @@
             ],
             "description": "IDs of Tool entities this agent may call (wires to `tool`).",
             "title": "Toolids"
+          },
+          "toolboxIds": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 64,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "IDs of Toolbox entities this agent holds WHOLE (wires to `toolbox`): it gets every tool in each box's PUBLISHED version when a run starts, so a tool put in the box and published reaches it without publishing the agent again.",
+            "title": "Toolboxids"
           }
         },
         "required": [
@@ -6835,6 +6901,7 @@
               "data_table",
               "application",
               "table_database",
+              "toolbox",
               "measure",
               "query",
               "company"
@@ -10138,7 +10205,8 @@
               {
                 "enum": [
                   "platform",
-                  "workspace"
+                  "workspace",
+                  "module"
                 ],
                 "type": "string"
               },
@@ -10146,7 +10214,7 @@
                 "type": "null"
               }
             ],
-            "description": "For a table whose design the platform fixes: whose rows these are. 'workspace' — the rows may be added, changed and removed here while the design stays the platform's; 'platform' — nothing here is editable. Null for every other table.",
+            "description": "For a table whose design the platform fixes: whose rows these are. 'workspace' — the rows may be added, changed and removed here while the design stays the platform's; 'platform' — nothing here is editable; 'module' — the module that owns the table writes and publishes its rows, nothing here is editable. Null for every other table.",
             "title": "Rowsownedby"
           },
           "source": {
@@ -10595,7 +10663,8 @@
               {
                 "enum": [
                   "platform",
-                  "workspace"
+                  "workspace",
+                  "module"
                 ],
                 "type": "string"
               },
@@ -10603,7 +10672,7 @@
                 "type": "null"
               }
             ],
-            "description": "For a table whose design the platform fixes: whose rows these are. 'workspace' — the rows may be added, changed and removed here while the design stays the platform's; 'platform' — nothing here is editable. Null for every other table.",
+            "description": "For a table whose design the platform fixes: whose rows these are. 'workspace' — the rows may be added, changed and removed here while the design stays the platform's; 'platform' — nothing here is editable; 'module' — the module that owns the table writes and publishes its rows, nothing here is editable. Null for every other table.",
             "title": "Rowsownedby"
           },
           "source": {
@@ -11006,6 +11075,27 @@
         "title": "DecisionPassage",
         "type": "object"
       },
+      "DecisionRequest": {
+        "additionalProperties": false,
+        "description": "Axonity's decision. A rejection must say why: the builder reads it.",
+        "properties": {
+          "reason": {
+            "anyOf": [
+              {
+                "maxLength": 65536,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why. Required to reject.",
+            "title": "Reason"
+          }
+        },
+        "title": "DecisionRequest",
+        "type": "object"
+      },
       "DeleteAgentResponse": {
         "description": "Response after deleting an agent.",
         "properties": {
@@ -11106,6 +11196,17 @@
           "expectedVersion"
         ],
         "title": "DeleteFileRequest",
+        "type": "object"
+      },
+      "DeleteFlowAppResponse": {
+        "properties": {
+          "success": {
+            "default": true,
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "title": "DeleteFlowAppResponse",
         "type": "object"
       },
       "DeleteFlowResponse": {
@@ -11242,7 +11343,7 @@
         "type": "object"
       },
       "DeleteToolboxResponse": {
-        "description": "DELETE /api/v1/toolboxes/{id}.",
+        "description": "DELETE /api/v1/toolboxes/{id} — the box is in the Trash.",
         "properties": {
           "deleted": {
             "default": true,
@@ -14612,6 +14713,34 @@
         "title": "FileResponse",
         "type": "object"
       },
+      "FileSchema": {
+        "properties": {
+          "contentType": {
+            "title": "Contenttype",
+            "type": "string"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "sha256": {
+            "title": "Sha256",
+            "type": "string"
+          },
+          "size": {
+            "title": "Size",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "path",
+          "sha256",
+          "contentType",
+          "size"
+        ],
+        "title": "FileSchema",
+        "type": "object"
+      },
       "FillStatus": {
         "description": "What the last fill of this table did. Never part of a version.\n\nA table that cannot say how old its rows are shows a failed overnight\nfill as yesterday's truth — a confident figure with no reason to doubt\nit.",
         "properties": {
@@ -14895,6 +15024,276 @@
           "grain"
         ],
         "title": "FindingPeriod",
+        "type": "object"
+      },
+      "FlowAppResponse": {
+        "description": "An app of this workspace.",
+        "properties": {
+          "archivedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Archivedat"
+          },
+          "audienceIds": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Audienceids",
+            "type": "array"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "latestVersion": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FlowAppVersionResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The version a deploy declared most recently."
+          },
+          "liveVersion": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FlowAppVersionResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The version that is live now: approved, accepted, not blocked."
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "title": "Updatedat",
+            "type": "string"
+          },
+          "version": {
+            "description": "Optimistic lock; send it as expectedVersion when deleting the app and when setting its availability (on or off, and its audiences).",
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "name",
+          "enabled",
+          "audienceIds",
+          "version",
+          "createdAt",
+          "updatedAt"
+        ],
+        "title": "FlowAppResponse",
+        "type": "object"
+      },
+      "FlowAppVersionResponse": {
+        "description": "One declared version of an app, as its workspace sees it.",
+        "properties": {
+          "acceptanceRequired": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Whether it asks for a right the live version does not cover; null until Axonity decides.",
+            "title": "Acceptancerequired"
+          },
+          "acceptedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Acceptedat"
+          },
+          "addedRights": {
+            "description": "The rights this version asks for beyond the version that is live now.",
+            "items": {
+              "$ref": "#/components/schemas/RightSchema"
+            },
+            "title": "Addedrights",
+            "type": "array"
+          },
+          "appId": {
+            "format": "uuid",
+            "title": "Appid",
+            "type": "string"
+          },
+          "blockReason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blockreason"
+          },
+          "blockedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blockedat"
+          },
+          "builtBy": {
+            "description": "Who built it, as the manifest says.",
+            "title": "Builtby",
+            "type": "string"
+          },
+          "bundleRef": {
+            "title": "Bundleref",
+            "type": "string"
+          },
+          "bundleSha256": {
+            "title": "Bundlesha256",
+            "type": "string"
+          },
+          "commitSha": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Commitsha"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "decidedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decidedat"
+          },
+          "decisionReason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decisionreason"
+          },
+          "failure": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why the bundle was refused, when the status is failed.",
+            "title": "Failure"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "isLive": {
+            "title": "Islive",
+            "type": "boolean"
+          },
+          "lastDeployedAt": {
+            "format": "date-time",
+            "title": "Lastdeployedat",
+            "type": "string"
+          },
+          "manifestSha256": {
+            "title": "Manifestsha256",
+            "type": "string"
+          },
+          "rights": {
+            "items": {
+              "$ref": "#/components/schemas/RightSchema"
+            },
+            "title": "Rights",
+            "type": "array"
+          },
+          "status": {
+            "enum": [
+              "fetching",
+              "failed",
+              "awaiting_approval",
+              "approved",
+              "rejected"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "appId",
+          "status",
+          "bundleSha256",
+          "manifestSha256",
+          "builtBy",
+          "bundleRef",
+          "isLive",
+          "lastDeployedAt",
+          "createdAt"
+        ],
+        "title": "FlowAppVersionResponse",
         "type": "object"
       },
       "FlowCloneRequest": {
@@ -15808,6 +16207,7 @@
               "delegates",
               "knowledge",
               "toolbox",
+              "credential",
               "brief_profile"
             ],
             "title": "Where",
@@ -16532,6 +16932,20 @@
               }
             ],
             "title": "Toolids"
+          },
+          "toolboxIds": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Toolboxids"
           },
           "updatedAt": {
             "title": "Updatedat",
@@ -22453,6 +22867,14 @@
             },
             "title": "Tooltypes",
             "type": "array"
+          },
+          "triggerTypes": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Triggertypes",
+            "type": "array"
           }
         },
         "required": [
@@ -24995,6 +25417,78 @@
         "title": "Page[FindingItem]",
         "type": "object"
       },
+      "Page_FlowAppResponse_": {
+        "properties": {
+          "hasMore": {
+            "default": false,
+            "title": "Hasmore",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/FlowAppResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          },
+          "pageSize": {
+            "title": "Pagesize",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "pageSize"
+        ],
+        "title": "Page[FlowAppResponse]",
+        "type": "object"
+      },
+      "Page_FlowAppVersionResponse_": {
+        "properties": {
+          "hasMore": {
+            "default": false,
+            "title": "Hasmore",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/FlowAppVersionResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          },
+          "pageSize": {
+            "title": "Pagesize",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "pageSize"
+        ],
+        "title": "Page[FlowAppVersionResponse]",
+        "type": "object"
+      },
       "Page_InvoiceSummary_": {
         "properties": {
           "hasMore": {
@@ -25209,6 +25703,42 @@
           "pageSize"
         ],
         "title": "Page[NotificationOut]",
+        "type": "object"
+      },
+      "Page_PlatformFlowAppVersionSummary_": {
+        "properties": {
+          "hasMore": {
+            "default": false,
+            "title": "Hasmore",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PlatformFlowAppVersionSummary"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          },
+          "pageSize": {
+            "title": "Pagesize",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "pageSize"
+        ],
+        "title": "Page[PlatformFlowAppVersionSummary]",
         "type": "object"
       },
       "Page_PublishApprovalItem_": {
@@ -26334,7 +26864,8 @@
               "measure",
               "query",
               "toolbox",
-              "method"
+              "method",
+              "app"
             ],
             "title": "Kind",
             "type": "string"
@@ -26702,6 +27233,407 @@
           "change"
         ],
         "title": "PlannedFileSchema",
+        "type": "object"
+      },
+      "PlatformFlowAppVersionDetail": {
+        "description": "What the one who decides reads: the manifest, every right, the files, the live version.",
+        "properties": {
+          "acceptanceRequired": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Whether it asks for a right the live version does not cover; null until Axonity decides.",
+            "title": "Acceptancerequired"
+          },
+          "acceptedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Acceptedat"
+          },
+          "addedRights": {
+            "description": "What it asks for beyond the version live now (everything when none is live).",
+            "items": {
+              "$ref": "#/components/schemas/RightSchema"
+            },
+            "title": "Addedrights",
+            "type": "array"
+          },
+          "appId": {
+            "format": "uuid",
+            "title": "Appid",
+            "type": "string"
+          },
+          "appName": {
+            "title": "Appname",
+            "type": "string"
+          },
+          "appSlug": {
+            "title": "Appslug",
+            "type": "string"
+          },
+          "blockReason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blockreason"
+          },
+          "blockedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blockedat"
+          },
+          "builtBy": {
+            "description": "Who built it, as the manifest says.",
+            "title": "Builtby",
+            "type": "string"
+          },
+          "bundleRef": {
+            "title": "Bundleref",
+            "type": "string"
+          },
+          "bundleSha256": {
+            "title": "Bundlesha256",
+            "type": "string"
+          },
+          "commitSha": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Commitsha"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "decidedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decidedat"
+          },
+          "decisionReason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decisionreason"
+          },
+          "failure": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why the bundle was refused, when the status is failed.",
+            "title": "Failure"
+          },
+          "files": {
+            "items": {
+              "$ref": "#/components/schemas/FileSchema"
+            },
+            "title": "Files",
+            "type": "array"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "isLive": {
+            "title": "Islive",
+            "type": "boolean"
+          },
+          "lastDeployedAt": {
+            "format": "date-time",
+            "title": "Lastdeployedat",
+            "type": "string"
+          },
+          "liveVersionId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Liveversionid"
+          },
+          "manifest": {
+            "additionalProperties": true,
+            "description": "The manifest as declared (flow-app/v1).",
+            "title": "Manifest",
+            "type": "object"
+          },
+          "manifestSha256": {
+            "title": "Manifestsha256",
+            "type": "string"
+          },
+          "rights": {
+            "items": {
+              "$ref": "#/components/schemas/RightSchema"
+            },
+            "title": "Rights",
+            "type": "array"
+          },
+          "status": {
+            "enum": [
+              "fetching",
+              "failed",
+              "awaiting_approval",
+              "approved",
+              "rejected"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "workspaceId": {
+            "format": "uuid",
+            "title": "Workspaceid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "appId",
+          "status",
+          "bundleSha256",
+          "manifestSha256",
+          "builtBy",
+          "bundleRef",
+          "isLive",
+          "lastDeployedAt",
+          "createdAt",
+          "workspaceId",
+          "appSlug",
+          "appName",
+          "manifest"
+        ],
+        "title": "PlatformFlowAppVersionDetail",
+        "type": "object"
+      },
+      "PlatformFlowAppVersionSummary": {
+        "description": "A version in Axonity's queue: the workspace and the app it belongs to are named.",
+        "properties": {
+          "acceptanceRequired": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Whether it asks for a right the live version does not cover; null until Axonity decides.",
+            "title": "Acceptancerequired"
+          },
+          "acceptedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Acceptedat"
+          },
+          "appId": {
+            "format": "uuid",
+            "title": "Appid",
+            "type": "string"
+          },
+          "appName": {
+            "title": "Appname",
+            "type": "string"
+          },
+          "appSlug": {
+            "title": "Appslug",
+            "type": "string"
+          },
+          "blockReason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blockreason"
+          },
+          "blockedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blockedat"
+          },
+          "builtBy": {
+            "description": "Who built it, as the manifest says.",
+            "title": "Builtby",
+            "type": "string"
+          },
+          "bundleRef": {
+            "title": "Bundleref",
+            "type": "string"
+          },
+          "bundleSha256": {
+            "title": "Bundlesha256",
+            "type": "string"
+          },
+          "commitSha": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Commitsha"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "decidedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decidedat"
+          },
+          "decisionReason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decisionreason"
+          },
+          "failure": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why the bundle was refused, when the status is failed.",
+            "title": "Failure"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "isLive": {
+            "title": "Islive",
+            "type": "boolean"
+          },
+          "lastDeployedAt": {
+            "format": "date-time",
+            "title": "Lastdeployedat",
+            "type": "string"
+          },
+          "manifestSha256": {
+            "title": "Manifestsha256",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "fetching",
+              "failed",
+              "awaiting_approval",
+              "approved",
+              "rejected"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "workspaceId": {
+            "format": "uuid",
+            "title": "Workspaceid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "appId",
+          "status",
+          "bundleSha256",
+          "manifestSha256",
+          "builtBy",
+          "bundleRef",
+          "isLive",
+          "lastDeployedAt",
+          "createdAt",
+          "workspaceId",
+          "appSlug",
+          "appName"
+        ],
+        "title": "PlatformFlowAppVersionSummary",
         "type": "object"
       },
       "PlatformMemberItem": {
@@ -27854,6 +28786,7 @@
               "data_table",
               "application",
               "table_database",
+              "toolbox",
               "measure",
               "query",
               "company"
@@ -31189,6 +32122,33 @@
         "title": "RhythmPayload",
         "type": "object"
       },
+      "RightSchema": {
+        "description": "One right: a verb on a thing of a kind.",
+        "properties": {
+          "kind": {
+            "description": "What kind of thing: workflow, agent, table or measure.",
+            "title": "Kind",
+            "type": "string"
+          },
+          "thing": {
+            "description": "The thing's name as the configuration spells it (a slug).",
+            "title": "Thing",
+            "type": "string"
+          },
+          "verb": {
+            "description": "What the app may do with it, e.g. start, read, add, converse.",
+            "title": "Verb",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "thing",
+          "verb"
+        ],
+        "title": "RightSchema",
+        "type": "object"
+      },
       "RightVersionBody": {
         "description": "The right version of a fact that was corrected as wrong without one.",
         "properties": {
@@ -32668,6 +33628,28 @@
         "additionalProperties": false,
         "description": "Core projection and reviewed module fields, on the existing flat wire.",
         "properties": {
+          "agentId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agentid"
+          },
+          "agentName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agentname"
+          },
           "archivedAt": {
             "anyOf": [
               {
@@ -34079,9 +35061,30 @@
             ],
             "title": "Description"
           },
+          "holds": {
+            "description": "The names of the fields a secret of this kind holds (from the credential register per kind) — never a value. Empty for a kind that holds none.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Holds",
+            "type": "array"
+          },
           "id": {
             "title": "Id",
             "type": "string"
+          },
+          "lastUsedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When a call last resolved this secret; null when never.",
+            "title": "Lastusedat"
           },
           "metadata": {
             "anyOf": [
@@ -34102,6 +35105,20 @@
           "updatedAt": {
             "title": "Updatedat",
             "type": "string"
+          },
+          "usedBy": {
+            "description": "What uses this secret, as GET /secrets/{id}/used-by says it.",
+            "items": {
+              "$ref": "#/components/schemas/SecretUserSchema"
+            },
+            "title": "Usedby",
+            "type": "array"
+          },
+          "usedByCount": {
+            "default": 0,
+            "description": "How many tools, toolboxes, data sources and module settings use this secret: a tool's working or published credential, a box's shared one, a source's connection, a mailbox. A secret in use cannot be deleted.",
+            "title": "Usedbycount",
+            "type": "integer"
           },
           "version": {
             "title": "Version",
@@ -34339,6 +35356,54 @@
           "unchanged"
         ],
         "title": "SecretTransferResult",
+        "type": "object"
+      },
+      "SecretUsedByResponse": {
+        "description": "GET /api/v1/secrets/{id}/used-by.",
+        "properties": {
+          "usedBy": {
+            "description": "What uses this secret, by kind and name: a tool whose working or PUBLISHED credential names it, a toolbox whose shared credential names it, a data source that connects with it, a module setting (a mailbox) that names it. Empty: nothing does, and it can be deleted.",
+            "items": {
+              "$ref": "#/components/schemas/SecretUserSchema"
+            },
+            "title": "Usedby",
+            "type": "array"
+          }
+        },
+        "required": [
+          "usedBy"
+        ],
+        "title": "SecretUsedByResponse",
+        "type": "object"
+      },
+      "SecretUserSchema": {
+        "description": "One thing that uses a secret.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "tool",
+              "toolbox",
+              "data_source",
+              "module_setting"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "id",
+          "name"
+        ],
+        "title": "SecretUserSchema",
         "type": "object"
       },
       "SeedAgentRequest": {
@@ -35039,6 +36104,49 @@
           "executorIds"
         ],
         "title": "SetApplicationExecutorsRequest",
+        "type": "object"
+      },
+      "SetAvailabilityRequest": {
+        "additionalProperties": false,
+        "description": "Turn the app on or off and/or choose who sees it. A part left out stays as it is.",
+        "properties": {
+          "audienceIds": {
+            "anyOf": [
+              {
+                "items": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "maxItems": 200,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Audienceids"
+          },
+          "enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enabled"
+          },
+          "expectedVersion": {
+            "description": "Version of the app the choice is based on; a stale value is rejected with HTTP 409 (optimistic locking), so two administrators never erase each other's audiences.",
+            "title": "Expectedversion",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "expectedVersion"
+        ],
+        "title": "SetAvailabilityRequest",
         "type": "object"
       },
       "SetEnabledRequest": {
@@ -36421,6 +37529,19 @@
         "additionalProperties": false,
         "description": "Start a conversation using core and reviewed module-owned fields.",
         "properties": {
+          "agentId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Start a conversation with this agent. Any agent of your workspace whose published version allows conversation can be talked to; it cannot be combined with a subject such as a dashboard. The conversation is yours: only you can go on with it.",
+            "title": "Agentid"
+          },
           "dashboardId": {
             "anyOf": [
               {
@@ -39039,6 +40160,12 @@
             ],
             "title": "Draftversionname"
           },
+          "dryRunStale": {
+            "default": false,
+            "description": "True when the tool is live, carries authored code, and that code has changed since its last clean dry-run. The live version keeps running; the next publish needs a new dry-run.",
+            "title": "Dryrunstale",
+            "type": "boolean"
+          },
           "effectiveSurfacing": {
             "default": "always",
             "description": "What `surfacing` resolves to once the toolbox has had its say: 'always' (in every prompt) or 'on_demand' (found via discover_tools). Read this to answer 'is it in the prompt?'; read `surfacing` for the raw stored choice an edit form binds to.",
@@ -39088,6 +40215,12 @@
           "name": {
             "title": "Name",
             "type": "string"
+          },
+          "needsSecret": {
+            "default": false,
+            "description": "True when the tool's own credential names a secret (a key held under Library > Secrets). A credential inherited from its toolbox is not counted here.",
+            "title": "Needssecret",
+            "type": "boolean"
           },
           "publishedMajorVersion": {
             "anyOf": [
@@ -39259,6 +40392,94 @@
         "title": "ToolTemplateListItem",
         "type": "object"
       },
+      "ToolUsedBy": {
+        "description": "GET /api/v1/tools/{id}/used-by — who uses a tool, in counts.",
+        "properties": {
+          "agents": {
+            "description": "Live agents that hold this tool itself. An agent that holds the tool's whole toolbox is counted under `viaToolboxAgents`, not here.",
+            "title": "Agents",
+            "type": "integer"
+          },
+          "steps": {
+            "description": "Workflow steps (draft or published) that name this tool.",
+            "title": "Steps",
+            "type": "integer"
+          },
+          "viaToolboxAgents": {
+            "default": 0,
+            "description": "Live agents that hold that whole toolbox, so reach this tool through it.",
+            "title": "Viatoolboxagents",
+            "type": "integer"
+          },
+          "viaToolboxId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The live toolbox the tool sits in, or null when it is in none.",
+            "title": "Viatoolboxid"
+          },
+          "viaToolboxName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "That toolbox's name.",
+            "title": "Viatoolboxname"
+          }
+        },
+        "required": [
+          "agents",
+          "steps"
+        ],
+        "title": "ToolUsedBy",
+        "type": "object"
+      },
+      "ToolboxHolder": {
+        "description": "One agent that holds a whole toolbox.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "ToolboxHolder",
+        "type": "object"
+      },
+      "ToolboxHoldersResponse": {
+        "description": "GET /api/v1/toolboxes/{id}/agents.",
+        "properties": {
+          "agents": {
+            "description": "The live agents that hold this toolbox whole (DECISIONS.md 11), by name. Each gets every tool in the box's published version when a run starts. While any agent holds it, the box is neither archived nor deleted.",
+            "items": {
+              "$ref": "#/components/schemas/ToolboxHolder"
+            },
+            "title": "Agents",
+            "type": "array"
+          }
+        },
+        "required": [
+          "agents"
+        ],
+        "title": "ToolboxHoldersResponse",
+        "type": "object"
+      },
       "ToolboxListResponse": {
         "description": "GET /api/v1/toolboxes.",
         "properties": {
@@ -39279,6 +40500,19 @@
       "ToolboxSchema": {
         "description": "One toolbox as the API returns it.",
         "properties": {
+          "archivedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the box was archived; null while it is in use.",
+            "title": "Archivedat"
+          },
           "authConfig": {
             "anyOf": [
               {
@@ -39303,6 +40537,36 @@
             ],
             "title": "Description"
           },
+          "descriptionIsAutomatic": {
+            "default": false,
+            "description": "Whether the description is still the sentence the platform wrote when it grouped the tools. An agent reads that line to decide whether to open the box, so it should be rewritten to say what the box is for.",
+            "title": "Descriptionisautomatic",
+            "type": "boolean"
+          },
+          "draftMajorVersion": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The working draft's version number. Changing the name, the description or which tools the box holds lands on this draft; it goes live when the box is published. Null when there is no working draft.",
+            "title": "Draftmajorversion"
+          },
+          "draftVersionName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The working draft's name, or null.",
+            "title": "Draftversionname"
+          },
           "environmentValues": {
             "anyOf": [
               {
@@ -39325,13 +40589,37 @@
             "title": "Hasauthconfig",
             "type": "boolean"
           },
+          "heldByCount": {
+            "default": 0,
+            "description": "How many agents hold this box whole (DECISIONS.md 11).",
+            "title": "Heldbycount",
+            "type": "integer"
+          },
           "id": {
             "title": "Id",
             "type": "string"
           },
+          "isPlatform": {
+            "default": false,
+            "description": "Whether the platform ships this box (read-only to a workspace).",
+            "title": "Isplatform",
+            "type": "boolean"
+          },
           "name": {
             "title": "Name",
             "type": "string"
+          },
+          "publishedMajorVersion": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The version that is live: what an agent holding this box gets. Null while nothing is published.",
+            "title": "Publishedmajorversion"
           },
           "toolCount": {
             "default": 0,
@@ -40505,6 +41793,22 @@
             ],
             "description": "IDs of Tool entities this agent may call (wires to `tool`).",
             "title": "Toolids"
+          },
+          "toolboxIds": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 64,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "IDs of Toolbox entities this agent holds WHOLE (wires to `toolbox`): it gets every tool in each box's PUBLISHED version when a run starts, so a tool put in the box and published reaches it without publishing the agent again.",
+            "title": "Toolboxids"
           }
         },
         "required": [
@@ -40747,6 +42051,20 @@
               }
             ],
             "title": "Toolids"
+          },
+          "toolboxIds": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Toolboxids"
           },
           "version": {
             "title": "Version",
@@ -47220,7 +48538,7 @@
     },
     "/api/v1/agents": {
       "get": {
-        "description": "List agents for the current tenant.\n\n``class=system`` agents (the Builder team) are excluded unless\n``?includeSystem=true`` — the read-only \"show system agents\" reveal\n(Builder epic #593, S1).",
+        "description": "List agents for the current tenant.\n\n``class=system`` agents (the Builder team) are excluded unless\n``?includeSystem=true`` — the read-only \"show system agents\" reveal\n(Builder epic #593, S1).\n\n``?conversational=true`` lists only the agents a conversation can be\nstarted with now, by the rule a start applies (#1826 K1).",
         "operationId": "list_agents_api_v1_agents_get",
         "parameters": [
           {
@@ -47248,6 +48566,16 @@
               ],
               "title": "Archived",
               "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "conversational",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Conversational",
+              "type": "boolean"
             }
           }
         ],
@@ -55691,7 +57019,7 @@
     },
     "/api/v1/conversation-attachments": {
       "get": {
-        "description": "List attachments linked to a conversation run (tenant-scoped).",
+        "description": "List attachments of the caller's conversation (tenant-scoped and private to its opener).",
         "operationId": "list_attachments_api_v1_conversation_attachments_get",
         "parameters": [
           {
@@ -55845,7 +57173,7 @@
         ]
       },
       "get": {
-        "description": "Return an attachment's metadata (tenant-scoped; 404 otherwise).",
+        "description": "Return metadata; a conversation's file is private to its opener (404 otherwise).",
         "operationId": "get_attachment_api_v1_conversation_attachments__attachment_id__get",
         "parameters": [
           {
@@ -55894,7 +57222,7 @@
     },
     "/api/v1/conversation-attachments/{attachment_id}/content": {
       "get": {
-        "description": "Stream an attachment's raw bytes (tenant-scoped; 404 otherwise).",
+        "description": "Serve tenant-scoped bytes, private to the opener when linked to a conversation.",
         "operationId": "get_attachment_content_api_v1_conversation_attachments__attachment_id__content_get",
         "parameters": [
           {
@@ -55941,7 +57269,7 @@
     },
     "/api/v1/conversations": {
       "get": {
-        "description": "One page of the tenant's Builder-team conversations (S11, #811 S5).\n\nA conversation is a run, and the history grows one row per chat with\nno pruning — so the list that offers to resume one has to be able to\nsay \"there is more\" instead of ending at an arbitrary point.\n\n``status``, ``createdAfter`` / ``createdBefore`` and ``q`` narrow the\nlist in the QUERY, ahead of the page cut (#2331): \"the conversation on\nthis dashboard yesterday that asked about the plan\" has to be found\nbelow the first page, not only inside it. They only narrow — who may\nlist which conversation is unchanged. A value that cannot be read is\na 422 with the reason, never an empty page or an ignored filter.\n\nName resolution is batched across the page, not per row.",
+        "description": "One page of the tenant's Builder-team conversations (S11, #811 S5).\n\nWith ``mine=true`` the page is the caller's own conversations with agents\n(#1826 K1): the ones they opened with ``agentId``, nobody else's.\n\nA conversation is a run, and the history grows one row per chat with\nno pruning — so the list that offers to resume one has to be able to\nsay \"there is more\" instead of ending at an arbitrary point.\n\n``status``, ``createdAfter`` / ``createdBefore`` and ``q`` narrow the\nlist in the QUERY, ahead of the page cut (#2331): \"the conversation on\nthis dashboard yesterday that asked about the plan\" has to be found\nbelow the first page, not only inside it. They only narrow — who may\nlist which conversation is unchanged. A value that cannot be read is\na 422 with the reason, never an empty page or an ignored filter.\n\nName resolution is batched across the page, not per row.",
         "operationId": "list_conversations_api_v1_conversations_get",
         "parameters": [
           {
@@ -56014,6 +57342,24 @@
               ],
               "description": "Opaque continuation cursor from a previous response's nextCursor. Omit for the first page.",
               "title": "Cursor"
+            }
+          },
+          {
+            "description": "When true, lists the conversations you opened with agentId. Otherwise lists your module conversations in the selected scope. An agent list cannot be combined with a subject such as a dashboard.",
+            "in": "query",
+            "name": "mine",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "When true, lists the conversations you opened with agentId. Otherwise lists your module conversations in the selected scope. An agent list cannot be combined with a subject such as a dashboard.",
+              "title": "Mine"
             }
           },
           {
@@ -56125,7 +57471,7 @@
         ]
       },
       "post": {
-        "description": "Start a chat with the Builder team (Builder epic #593, S7/S8).",
+        "description": "Start a conversation: with any agent that may be talked to (``agentId``), about a\nsubject a module offers (a dashboard), or with the Builder team (Builder epic #593, S7/S8).",
         "operationId": "start_conversation_api_v1_conversations_post",
         "requestBody": {
           "content": {
@@ -57988,6 +59334,118 @@
         ]
       }
     },
+    "/api/v1/data-tables/hidden": {
+      "get": {
+        "description": "The hidden tables of the modules in this workspace, for inspection.\n\nOne page holds them all: a module hides a table per spec it declares, so\nthe list is bounded by the code, not by the workspace. Each carries\n``rowCount``; the rows come from ``/hidden/{table_id}/rows``.",
+        "operationId": "list_hidden_data_tables_api_v1_data_tables_hidden_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_DataTableSummary_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Hidden Data Tables",
+        "tags": [
+          "data-tables"
+        ]
+      }
+    },
+    "/api/v1/data-tables/hidden/{table_id}/rows": {
+      "get": {
+        "description": "One page of a hidden platform table's rows, for inspection; any other table is 404.",
+        "operationId": "list_hidden_data_table_rows_api_v1_data_tables_hidden__table_id__rows_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "table_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Table Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Opaque continuation token from the previous page's nextCursor. Send it back unchanged; never construct one.",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Opaque continuation token from the previous page's nextCursor. Send it back unchanged; never construct one.",
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 200,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_DataTableRowItem_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Hidden Data Table Rows",
+        "tags": [
+          "data-tables"
+        ]
+      }
+    },
     "/api/v1/data-tables/{entity_id}/archive": {
       "post": {
         "description": "Archive: out of use and out of the lists; versions untouched.\n\nOnly a draft can be archived. Idempotent — archiving an archived item\nsucceeds with ``changed=false``.",
@@ -59429,7 +60887,7 @@
     },
     "/api/v1/data-tables/{table_id}/versions/published": {
       "get": {
-        "description": "The currently published table + its document, or null.\n\nThis is what a run reads: an edit reaches execution when it is\npublished, not when it is saved.",
+        "description": "The currently published table + its document, or null.\n\nThis is what a run reads: an edit reaches execution when it is\npublished, not when it is saved. Read through the reader like every\nother route of a table, so a table this reader may not see — a hidden\nplatform table (K-hide) among them — is not found here either.",
         "operationId": "get_data_table_published_version_api_v1_data_tables__table_id__versions_published_get",
         "parameters": [
           {
@@ -62033,6 +63491,579 @@
         "summary": "Mark Finding Handled",
         "tags": [
           "findings"
+        ]
+      }
+    },
+    "/api/v1/flow-apps": {
+      "get": {
+        "description": "One page of this workspace's apps, newest first (B-NB8).",
+        "operationId": "list_flow_apps_api_v1_flow_apps_get",
+        "parameters": [
+          {
+            "description": "Page size (max 200).",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Page size (max 200).",
+              "title": "Limit"
+            }
+          },
+          {
+            "description": "Opaque continuation cursor from a previous response's nextCursor. Omit for the first page.",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Opaque continuation cursor from a previous response's nextCursor. Omit for the first page.",
+              "title": "Cursor"
+            }
+          },
+          {
+            "description": "Which items to list: 'exclude' (default) leaves archived items out, 'only' lists only the archived ones (the Archived view), 'include' lists both.",
+            "in": "query",
+            "name": "archived",
+            "required": false,
+            "schema": {
+              "default": "exclude",
+              "description": "Which items to list: 'exclude' (default) leaves archived items out, 'only' lists only the archived ones (the Archived view), 'include' lists both.",
+              "enum": [
+                "exclude",
+                "include",
+                "only"
+              ],
+              "title": "Archived",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_FlowAppResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Flow Apps",
+        "tags": [
+          "flow-apps"
+        ]
+      }
+    },
+    "/api/v1/flow-apps/deleted": {
+      "get": {
+        "description": "Apps in the Trash that can still be restored.",
+        "operationId": "list_deleted_flow_apps_api_v1_flow_apps_deleted_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeletedEntityListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Deleted Flow Apps",
+        "tags": [
+          "flow-apps"
+        ]
+      }
+    },
+    "/api/v1/flow-apps/{app_id}": {
+      "delete": {
+        "description": "Take the app out of the workspace into the Trash, restorable.",
+        "operationId": "delete_flow_app_api_v1_flow_apps__app_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "app_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "App Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "expectedVersion",
+            "required": true,
+            "schema": {
+              "title": "Expectedversion",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteFlowAppResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Flow App",
+        "tags": [
+          "flow-apps"
+        ]
+      },
+      "get": {
+        "operationId": "get_flow_app_api_v1_flow_apps__app_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "app_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "App Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FlowAppResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Flow App",
+        "tags": [
+          "flow-apps"
+        ]
+      }
+    },
+    "/api/v1/flow-apps/{app_id}/availability": {
+      "put": {
+        "description": "Turn the app on or off and/or choose the audiences that see it.\n\nAn explicit state, not a toggle: asking for what already holds changes\nnothing. A part left out stays as it is.",
+        "operationId": "set_flow_app_availability_api_v1_flow_apps__app_id__availability_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "app_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "App Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetAvailabilityRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FlowAppResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Set Flow App Availability",
+        "tags": [
+          "flow-apps"
+        ]
+      }
+    },
+    "/api/v1/flow-apps/{app_id}/restore": {
+      "post": {
+        "description": "Bring an app back from the Trash, exactly as it was (off stays off).",
+        "operationId": "restore_flow_app_api_v1_flow_apps__app_id__restore_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "app_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "App Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RestoreEntityResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Restore Flow App",
+        "tags": [
+          "flow-apps"
+        ]
+      }
+    },
+    "/api/v1/flow-apps/{app_id}/versions": {
+      "get": {
+        "description": "One page of an app's versions, newest first (B-NB8).",
+        "operationId": "list_flow_app_versions_api_v1_flow_apps__app_id__versions_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "app_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "App Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Page size (max 200).",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Page size (max 200).",
+              "title": "Limit"
+            }
+          },
+          {
+            "description": "Opaque continuation cursor from a previous response's nextCursor. Omit for the first page.",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Opaque continuation cursor from a previous response's nextCursor. Omit for the first page.",
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_FlowAppVersionResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Flow App Versions",
+        "tags": [
+          "flow-apps"
+        ]
+      }
+    },
+    "/api/v1/flow-apps/{app_id}/versions/{version_id}/accept": {
+      "post": {
+        "description": "Accept the rights a version asks for that the live version does not cover.\n\nOnly a version Axonity approved can be accepted; it is live as soon as it\nis, unless it is blocked. Until then the previous version stays live.",
+        "operationId": "accept_flow_app_version_api_v1_flow_apps__app_id__versions__version_id__accept_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "app_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "App Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FlowAppVersionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Accept Flow App Version",
+        "tags": [
+          "flow-apps"
+        ]
+      }
+    },
+    "/api/v1/flow-apps/{entity_id}/archive": {
+      "post": {
+        "description": "Archive: out of use and out of the lists; versions untouched.\n\nOnly a draft can be archived. Idempotent — archiving an archived item\nsucceeds with ``changed=false``.",
+        "operationId": "archive_flow_app_api_v1_flow_apps__entity_id__archive_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArchiveEntityResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Archive Flow App",
+        "tags": [
+          "flow-apps"
+        ]
+      }
+    },
+    "/api/v1/flow-apps/{entity_id}/unarchive": {
+      "post": {
+        "description": "Unarchive: back in use, in the state it had (Draft or Published).",
+        "operationId": "unarchive_flow_app_api_v1_flow_apps__entity_id__unarchive_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArchiveEntityResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Unarchive Flow App",
+        "tags": [
+          "flow-apps"
         ]
       }
     },
@@ -70560,6 +72591,392 @@
         "summary": "Get Output Schema Version",
         "tags": [
           "output-schemas"
+        ]
+      }
+    },
+    "/api/v1/platform/flow-app-bundles/{bundle_sha256}/block": {
+      "post": {
+        "description": "The emergency stop: this code is live in no workspace of the installation until lifted.",
+        "operationId": "block_flow_app_bundle_api_v1_platform_flow_app_bundles__bundle_sha256__block_post",
+        "parameters": [
+          {
+            "description": "The sha256 of a bundle.",
+            "in": "path",
+            "name": "bundle_sha256",
+            "required": true,
+            "schema": {
+              "description": "The sha256 of a bundle.",
+              "pattern": "^[0-9a-f]{64}$",
+              "title": "Bundle Sha256",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BlockRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BlockResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Block Flow App Bundle",
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/platform/flow-app-bundles/{bundle_sha256}/unblock": {
+      "post": {
+        "description": "Lift the emergency stop on this code: the same act, the other way.",
+        "operationId": "unblock_flow_app_bundle_api_v1_platform_flow_app_bundles__bundle_sha256__unblock_post",
+        "parameters": [
+          {
+            "description": "The sha256 of a bundle.",
+            "in": "path",
+            "name": "bundle_sha256",
+            "required": true,
+            "schema": {
+              "description": "The sha256 of a bundle.",
+              "pattern": "^[0-9a-f]{64}$",
+              "title": "Bundle Sha256",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BlockResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Unblock Flow App Bundle",
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/platform/flow-app-versions": {
+      "get": {
+        "description": "Versions of apps in every workspace, newest first (B-NB8).",
+        "operationId": "list_flow_app_versions_for_axonity_api_v1_platform_flow_app_versions_get",
+        "parameters": [
+          {
+            "description": "Only versions in this state; 'awaiting_approval' is the queue.",
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "fetching",
+                    "failed",
+                    "awaiting_approval",
+                    "approved",
+                    "rejected"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only versions in this state; 'awaiting_approval' is the queue.",
+              "title": "Status"
+            }
+          },
+          {
+            "description": "Page size (max 200).",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Page size (max 200).",
+              "title": "Limit"
+            }
+          },
+          {
+            "description": "Opaque continuation cursor from a previous response's nextCursor. Omit for the first page.",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Opaque continuation cursor from a previous response's nextCursor. Omit for the first page.",
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_PlatformFlowAppVersionSummary_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Flow App Versions For Axonity",
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/platform/flow-app-versions/{version_id}": {
+      "get": {
+        "description": "What the one who decides reads: manifest, builder, every right, what it adds, the files.",
+        "operationId": "get_flow_app_version_for_axonity_api_v1_platform_flow_app_versions__version_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformFlowAppVersionDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Flow App Version For Axonity",
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/platform/flow-app-versions/{version_id}/approve": {
+      "post": {
+        "description": "Approve a version that waits.\n\nIf it asks for a right the live version does not cover, it then waits for\nthe workspace's administrator; otherwise it is live at once. Audited in the\nworkspace with who built it.",
+        "operationId": "approve_flow_app_version_api_v1_platform_flow_app_versions__version_id__approve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/DecisionRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformFlowAppVersionSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Approve Flow App Version",
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/platform/flow-app-versions/{version_id}/reject": {
+      "post": {
+        "description": "Refuse a version that waits. The reason is required: the builder reads it.",
+        "operationId": "reject_flow_app_version_api_v1_platform_flow_app_versions__version_id__reject_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecisionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformFlowAppVersionSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Reject Flow App Version",
+        "tags": [
+          "platform"
         ]
       }
     },
@@ -81705,6 +84122,55 @@
         ]
       }
     },
+    "/api/v1/secrets/{secret_id}/used-by": {
+      "get": {
+        "description": "What uses this secret: tools, toolboxes, data sources (DECISIONS.md 22).\n\nBounded by the workspace's tools, boxes and sources, which people make by\nhand; the secrets screen shows them all, and a delete refuses while any.",
+        "operationId": "secret_used_by_api_v1_secrets__secret_id__used_by_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "secret_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Secret Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SecretUsedByResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Secret Used By",
+        "tags": [
+          "secrets"
+        ]
+      }
+    },
     "/api/v1/service-tokens": {
       "get": {
         "description": "List the tenant's service tokens (metadata only — never the secret).\n\nA token an administrator tidied away is left out unless ``includeDismissed=true``.",
@@ -86366,6 +88832,25 @@
       "get": {
         "description": "Every toolbox in the tenant, with how many tools each holds.\n\nWhole, not paged — and that is not an oversight. A toolbox is a\ntop-level organising label a person creates by hand, of which a\ntenant holds O(10); 106 tools collapse into roughly six. The list\nthis feature exists to tame is the TOOL list, and the boxes are the\ntaming, so paging the boxes would hide the very structure the page\nis for. It does not grow with machine activity, which is the case\nB-NB8 was written against.",
         "operationId": "list_toolboxes_api_v1_toolboxes_get",
+        "parameters": [
+          {
+            "description": "Which items to list: 'exclude' (default) leaves archived items out, 'only' lists only the archived ones (the Archived view), 'include' lists both.",
+            "in": "query",
+            "name": "archived",
+            "required": false,
+            "schema": {
+              "default": "exclude",
+              "description": "Which items to list: 'exclude' (default) leaves archived items out, 'only' lists only the archived ones (the Archived view), 'include' lists both.",
+              "enum": [
+                "exclude",
+                "include",
+                "only"
+              ],
+              "title": "Archived",
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -86376,6 +88861,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "security": [
@@ -86389,7 +88884,7 @@
         ]
       },
       "post": {
-        "description": "Create a toolbox.",
+        "description": "Create a toolbox, a draft and publishable from the moment it exists.",
         "operationId": "create_toolbox_api_v1_toolboxes_post",
         "requestBody": {
           "content": {
@@ -86434,9 +88929,134 @@
         ]
       }
     },
+    "/api/v1/toolboxes/deleted": {
+      "get": {
+        "description": "Boxes in the Trash that can still be restored.",
+        "operationId": "list_deleted_toolboxes_api_v1_toolboxes_deleted_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeletedEntityListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Deleted Toolboxes",
+        "tags": [
+          "toolboxes"
+        ]
+      }
+    },
+    "/api/v1/toolboxes/{entity_id}/archive": {
+      "post": {
+        "description": "Archive: out of use and out of the lists; versions untouched.\n\nOnly a draft can be archived. Idempotent — archiving an archived item\nsucceeds with ``changed=false``.",
+        "operationId": "archive_toolbox_api_v1_toolboxes__entity_id__archive_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArchiveEntityResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Archive Toolbox",
+        "tags": [
+          "toolboxes"
+        ]
+      }
+    },
+    "/api/v1/toolboxes/{entity_id}/unarchive": {
+      "post": {
+        "description": "Unarchive: back in use, in the state it had (Draft or Published).",
+        "operationId": "unarchive_toolbox_api_v1_toolboxes__entity_id__unarchive_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArchiveEntityResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Unarchive Toolbox",
+        "tags": [
+          "toolboxes"
+        ]
+      }
+    },
     "/api/v1/toolboxes/{toolbox_id}": {
       "delete": {
-        "description": "Delete a toolbox. Its tools survive, ungrouped.",
+        "description": "Move a toolbox to the Trash. Its tools read as ungrouped until a restore.",
         "operationId": "delete_toolbox_api_v1_toolboxes__toolbox_id__delete",
         "parameters": [
           {
@@ -86489,6 +89109,53 @@
           }
         ],
         "summary": "Delete Toolbox",
+        "tags": [
+          "toolboxes"
+        ]
+      },
+      "get": {
+        "description": "One box, with its tool count and its publication.",
+        "operationId": "get_toolbox_api_v1_toolboxes__toolbox_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "toolbox_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Toolbox Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolboxSchema"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Toolbox",
         "tags": [
           "toolboxes"
         ]
@@ -86546,6 +89213,55 @@
           }
         ],
         "summary": "Update Toolbox",
+        "tags": [
+          "toolboxes"
+        ]
+      }
+    },
+    "/api/v1/toolboxes/{toolbox_id}/agents": {
+      "get": {
+        "description": "The agents that hold this box whole (DECISIONS.md 11).\n\nBounded by the workspace's agents, which a person makes by hand; the box\npage shows them all and a delete or an archive names them.",
+        "operationId": "list_toolbox_agents_api_v1_toolboxes__toolbox_id__agents_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "toolbox_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Toolbox Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolboxHoldersResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Toolbox Agents",
         "tags": [
           "toolboxes"
         ]
@@ -86659,6 +89375,121 @@
         ]
       }
     },
+    "/api/v1/toolboxes/{toolbox_id}/discard-draft": {
+      "post": {
+        "description": "Throw the working draft away: the box holds what is published again.",
+        "operationId": "discard_toolbox_draft_api_v1_toolboxes__toolbox_id__discard_draft_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "toolbox_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Toolbox Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiscardDraftResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Discard Toolbox Draft",
+        "tags": [
+          "toolboxes"
+        ]
+      }
+    },
+    "/api/v1/toolboxes/{toolbox_id}/restore": {
+      "post": {
+        "description": "Bring a box back from the Trash, with the tools it held.\n\nIdempotent; takes no expected version. ``name`` brings it back under a new\nname when its own was taken while it sat in the Trash.",
+        "operationId": "restore_toolbox_api_v1_toolboxes__toolbox_id__restore_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "toolbox_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Toolbox Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/RestoreEntityRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RestoreEntityResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Restore Toolbox",
+        "tags": [
+          "toolboxes"
+        ]
+      }
+    },
     "/api/v1/toolboxes/{toolbox_id}/tools": {
       "put": {
         "description": "Declare exactly which tools this toolbox holds.",
@@ -86713,6 +89544,725 @@
           }
         ],
         "summary": "Set Toolbox Membership",
+        "tags": [
+          "toolboxes"
+        ]
+      }
+    },
+    "/api/v1/toolboxes/{toolbox_id}/versions": {
+      "get": {
+        "description": "The version history of one box.",
+        "operationId": "list_toolbox_versions_api_v1_toolboxes__toolbox_id__versions_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "toolbox_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Toolbox Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "type",
+            "required": false,
+            "schema": {
+              "default": "all",
+              "enum": [
+                "checkpoint",
+                "major",
+                "all"
+              ],
+              "title": "Type",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VersionListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Toolbox Versions",
+        "tags": [
+          "toolboxes"
+        ]
+      },
+      "post": {
+        "description": "Name what the box holds now as a version (Save As).",
+        "operationId": "create_toolbox_major_version_api_v1_toolboxes__toolbox_id__versions_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "toolbox_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Toolbox Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMajorVersionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MajorVersionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Toolbox Major Version",
+        "tags": [
+          "toolboxes"
+        ]
+      }
+    },
+    "/api/v1/toolboxes/{toolbox_id}/versions/deleted": {
+      "get": {
+        "description": "Removed versions that can still be restored.",
+        "operationId": "list_deleted_toolbox_versions_api_v1_toolboxes__toolbox_id__versions_deleted_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "toolbox_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Toolbox Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeletedVersionListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Deleted Toolbox Versions",
+        "tags": [
+          "toolboxes"
+        ]
+      }
+    },
+    "/api/v1/toolboxes/{toolbox_id}/versions/ensure": {
+      "post": {
+        "description": "Ensure a working draft exists (idempotent).",
+        "operationId": "ensure_toolbox_draft_version_api_v1_toolboxes__toolbox_id__versions_ensure_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "toolbox_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Toolbox Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnsureDraftVersionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Ensure Toolbox Draft Version",
+        "tags": [
+          "toolboxes"
+        ]
+      }
+    },
+    "/api/v1/toolboxes/{toolbox_id}/versions/major/{major_version}": {
+      "patch": {
+        "description": "Rename a major version.",
+        "operationId": "rename_toolbox_version_api_v1_toolboxes__toolbox_id__versions_major__major_version__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "toolbox_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Toolbox Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "major_version",
+            "required": true,
+            "schema": {
+              "title": "Major Version",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RenameVersionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RenameVersionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Rename Toolbox Version",
+        "tags": [
+          "toolboxes"
+        ]
+      }
+    },
+    "/api/v1/toolboxes/{toolbox_id}/versions/publish/{major_version}": {
+      "post": {
+        "description": "Publish a major version: what an agent holding the box gets.\n\nClosed to service tokens: an external agent asks for a publish through\nthe approval queue, it never publishes directly (#676).",
+        "operationId": "publish_toolbox_version_api_v1_toolboxes__toolbox_id__versions_publish__major_version__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "toolbox_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Toolbox Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "major_version",
+            "required": true,
+            "schema": {
+              "title": "Major Version",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Publish Toolbox Version",
+        "tags": [
+          "toolboxes"
+        ]
+      }
+    },
+    "/api/v1/toolboxes/{toolbox_id}/versions/published": {
+      "get": {
+        "description": "The published version and what it holds, or null.",
+        "operationId": "get_toolbox_published_version_api_v1_toolboxes__toolbox_id__versions_published_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "toolbox_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Toolbox Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/PublishedVersionInfo"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Get Toolbox Published Version Api V1 Toolboxes  Toolbox Id  Versions Published Get"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Toolbox Published Version",
+        "tags": [
+          "toolboxes"
+        ]
+      }
+    },
+    "/api/v1/toolboxes/{toolbox_id}/versions/unpublish": {
+      "post": {
+        "description": "Withdraw the published version, back to a draft.",
+        "operationId": "unpublish_toolbox_api_v1_toolboxes__toolbox_id__versions_unpublish_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "toolbox_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Toolbox Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnpublishResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Unpublish Toolbox",
+        "tags": [
+          "toolboxes"
+        ]
+      }
+    },
+    "/api/v1/toolboxes/{toolbox_id}/versions/{version_id}": {
+      "delete": {
+        "description": "Delete one version from a box's history, keeping it restorable.",
+        "operationId": "delete_toolbox_version_api_v1_toolboxes__toolbox_id__versions__version_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "toolbox_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Toolbox Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteVersionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Toolbox Version",
+        "tags": [
+          "toolboxes"
+        ]
+      }
+    },
+    "/api/v1/toolboxes/{toolbox_id}/versions/{version_id}/restore": {
+      "post": {
+        "description": "Roll a box back to an earlier version — what it holds included.",
+        "operationId": "restore_toolbox_version_api_v1_toolboxes__toolbox_id__versions__version_id__restore_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "toolbox_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Toolbox Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RestoreVersionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RestoreResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Restore Toolbox Version",
+        "tags": [
+          "toolboxes"
+        ]
+      }
+    },
+    "/api/v1/toolboxes/{toolbox_id}/versions/{version_id}/restore-deleted": {
+      "post": {
+        "description": "Un-delete one version, without making it live.",
+        "operationId": "restore_deleted_toolbox_version_api_v1_toolboxes__toolbox_id__versions__version_id__restore_deleted_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "toolbox_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Toolbox Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RestoreDeletedVersionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Restore Deleted Toolbox Version",
+        "tags": [
+          "toolboxes"
+        ]
+      }
+    },
+    "/api/v1/toolboxes/{toolbox_id}/versions/{version}": {
+      "get": {
+        "description": "One version's stored snapshot.",
+        "operationId": "get_toolbox_version_api_v1_toolboxes__toolbox_id__versions__version__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "toolbox_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Toolbox Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version",
+            "required": true,
+            "schema": {
+              "title": "Version",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VersionDetailResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Toolbox Version",
         "tags": [
           "toolboxes"
         ]
@@ -87750,6 +91300,55 @@
           }
         ],
         "summary": "Unpublish Tool",
+        "tags": [
+          "tools"
+        ]
+      }
+    },
+    "/api/v1/tools/{tool_id}/used-by": {
+      "get": {
+        "description": "Who uses this tool: agents holding it, steps naming it, agents holding its box.",
+        "operationId": "get_tool_used_by_api_v1_tools__tool_id__used_by_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tool_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tool Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolUsedBy"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Tool Used By",
         "tags": [
           "tools"
         ]

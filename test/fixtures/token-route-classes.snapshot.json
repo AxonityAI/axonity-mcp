@@ -109,6 +109,10 @@
     "class": "dicht",
     "why": "credentials, secrets, platform, deployment, configuration"
   },
+  "DELETE /api/v1/flow-apps/{app_id}": {
+    "class": "dicht",
+    "why": "of a person at a screen, reads included"
+  },
   "DELETE /api/v1/flow-step-prompts/{link_id}": {
     "class": "dicht",
     "why": "delete: configuration without an approval step"
@@ -226,6 +230,10 @@
     "why": "no authentication of its own: a token never reaches the gate"
   },
   "DELETE /api/v1/toolboxes/{toolbox_id}": {
+    "class": "dicht",
+    "why": "delete: configuration without an approval step"
+  },
+  "DELETE /api/v1/toolboxes/{toolbox_id}/versions/{version_id}": {
     "class": "dicht",
     "why": "delete: configuration without an approval step"
   },
@@ -524,6 +532,14 @@
   "GET /api/v1/data-tables/deleted": {
     "class": "lezen"
   },
+  "GET /api/v1/data-tables/hidden": {
+    "class": "dicht",
+    "why": "(require_platform_admin); a workspace does not see them, so neither does a token"
+  },
+  "GET /api/v1/data-tables/hidden/{table_id}/rows": {
+    "class": "dicht",
+    "why": "(require_platform_admin); a workspace does not see them, so neither does a token"
+  },
   "GET /api/v1/data-tables/{table_id}": {
     "class": "lezen"
   },
@@ -625,6 +641,22 @@
   },
   "GET /api/v1/findings/{finding_id}": {
     "class": "lezen"
+  },
+  "GET /api/v1/flow-apps": {
+    "class": "dicht",
+    "why": "of a person at a screen, reads included"
+  },
+  "GET /api/v1/flow-apps/deleted": {
+    "class": "dicht",
+    "why": "of a person at a screen, reads included"
+  },
+  "GET /api/v1/flow-apps/{app_id}": {
+    "class": "dicht",
+    "why": "of a person at a screen, reads included"
+  },
+  "GET /api/v1/flow-apps/{app_id}/versions": {
+    "class": "dicht",
+    "why": "of a person at a screen, reads included"
   },
   "GET /api/v1/flow-steps/{flow_step_id}/prompts": {
     "class": "dicht",
@@ -833,6 +865,14 @@
   },
   "GET /api/v1/output-schemas/{schema_id}/versions/{version}": {
     "class": "lezen"
+  },
+  "GET /api/v1/platform/flow-app-versions": {
+    "class": "dicht",
+    "why": "of a person at a screen, reads included"
+  },
+  "GET /api/v1/platform/flow-app-versions/{version_id}": {
+    "class": "dicht",
+    "why": "of a person at a screen, reads included"
   },
   "GET /api/v1/platform/models": {
     "class": "dicht",
@@ -1075,6 +1115,10 @@
     "class": "dicht",
     "why": "credentials, secrets, platform, deployment, configuration"
   },
+  "GET /api/v1/secrets/{secret_id}/used-by": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
   "GET /api/v1/service-tokens": {
     "class": "dicht",
     "why": "credentials, secrets, platform, deployment, configuration"
@@ -1202,7 +1246,28 @@
   "GET /api/v1/toolboxes": {
     "class": "lezen"
   },
+  "GET /api/v1/toolboxes/deleted": {
+    "class": "lezen"
+  },
+  "GET /api/v1/toolboxes/{toolbox_id}": {
+    "class": "lezen"
+  },
+  "GET /api/v1/toolboxes/{toolbox_id}/agents": {
+    "class": "lezen"
+  },
   "GET /api/v1/toolboxes/{toolbox_id}/dependent-tools": {
+    "class": "lezen"
+  },
+  "GET /api/v1/toolboxes/{toolbox_id}/versions": {
+    "class": "lezen"
+  },
+  "GET /api/v1/toolboxes/{toolbox_id}/versions/deleted": {
+    "class": "lezen"
+  },
+  "GET /api/v1/toolboxes/{toolbox_id}/versions/published": {
+    "class": "lezen"
+  },
+  "GET /api/v1/toolboxes/{toolbox_id}/versions/{version}": {
     "class": "lezen"
   },
   "GET /api/v1/tools": {
@@ -1218,6 +1283,9 @@
     "class": "lezen"
   },
   "GET /api/v1/tools/{tool_id}/published": {
+    "class": "lezen"
+  },
+  "GET /api/v1/tools/{tool_id}/used-by": {
     "class": "lezen"
   },
   "GET /api/v1/tools/{tool_id}/versions": {
@@ -1498,6 +1566,10 @@
   "PATCH /api/v1/tenant-settings/model-tier-map": {
     "class": "dicht",
     "why": "administration settings"
+  },
+  "PATCH /api/v1/toolboxes/{toolbox_id}/versions/major/{major_version}": {
+    "class": "dicht",
+    "why": "changes behaviour; since DECISIONS.md 18 it is versioned, which does not make the rows a draft"
   },
   "PATCH /api/v1/tools/{tool_id}/versions/major/{major_version}": {
     "class": "configuratie"
@@ -2050,6 +2122,22 @@
     "class": "dicht",
     "why": "consultant"
   },
+  "POST /api/v1/flow-apps/{app_id}/restore": {
+    "class": "dicht",
+    "why": "of a person at a screen, reads included"
+  },
+  "POST /api/v1/flow-apps/{app_id}/versions/{version_id}/accept": {
+    "class": "dicht",
+    "why": "of a person at a screen, reads included"
+  },
+  "POST /api/v1/flow-apps/{entity_id}/archive": {
+    "class": "dicht",
+    "why": "of a person at a screen, reads included"
+  },
+  "POST /api/v1/flow-apps/{entity_id}/unarchive": {
+    "class": "dicht",
+    "why": "of a person at a screen, reads included"
+  },
   "POST /api/v1/flow-steps/{flow_step_id}/prompts": {
     "class": "dicht",
     "why": "attachment rows, not proven to be draft-only"
@@ -2289,6 +2377,22 @@
   "POST /api/v1/output-schemas/{schema_id}/versions/{version_id}/restore-deleted": {
     "class": "dicht",
     "why": "restore: configuration without an approval step"
+  },
+  "POST /api/v1/platform/flow-app-bundles/{bundle_sha256}/block": {
+    "class": "dicht",
+    "why": "of a person at a screen, reads included"
+  },
+  "POST /api/v1/platform/flow-app-bundles/{bundle_sha256}/unblock": {
+    "class": "dicht",
+    "why": "of a person at a screen, reads included"
+  },
+  "POST /api/v1/platform/flow-app-versions/{version_id}/approve": {
+    "class": "dicht",
+    "why": "of a person at a screen, reads included"
+  },
+  "POST /api/v1/platform/flow-app-versions/{version_id}/reject": {
+    "class": "dicht",
+    "why": "of a person at a screen, reads included"
   },
   "POST /api/v1/platform/models": {
     "class": "dicht",
@@ -2763,7 +2867,47 @@
   },
   "POST /api/v1/toolboxes": {
     "class": "dicht",
-    "why": "no draft: saved directly"
+    "why": "changes behaviour; since DECISIONS.md 18 it is versioned, which does not make the rows a draft"
+  },
+  "POST /api/v1/toolboxes/{entity_id}/archive": {
+    "class": "dicht",
+    "why": "archive: a delete by another name, without an approval step (Levenscyclus)"
+  },
+  "POST /api/v1/toolboxes/{entity_id}/unarchive": {
+    "class": "dicht",
+    "why": "archive: a delete by another name, without an approval step (Levenscyclus)"
+  },
+  "POST /api/v1/toolboxes/{toolbox_id}/discard-draft": {
+    "class": "dicht",
+    "why": "changes behaviour; since DECISIONS.md 18 it is versioned, which does not make the rows a draft"
+  },
+  "POST /api/v1/toolboxes/{toolbox_id}/restore": {
+    "class": "dicht",
+    "why": "restore: configuration without an approval step"
+  },
+  "POST /api/v1/toolboxes/{toolbox_id}/versions": {
+    "class": "dicht",
+    "why": "changes behaviour; since DECISIONS.md 18 it is versioned, which does not make the rows a draft"
+  },
+  "POST /api/v1/toolboxes/{toolbox_id}/versions/ensure": {
+    "class": "dicht",
+    "why": "changes behaviour; since DECISIONS.md 18 it is versioned, which does not make the rows a draft"
+  },
+  "POST /api/v1/toolboxes/{toolbox_id}/versions/publish/{major_version}": {
+    "class": "dicht",
+    "why": "direct publish: only the approval request"
+  },
+  "POST /api/v1/toolboxes/{toolbox_id}/versions/unpublish": {
+    "class": "dicht",
+    "why": "direct publish: only the approval request"
+  },
+  "POST /api/v1/toolboxes/{toolbox_id}/versions/{version_id}/restore": {
+    "class": "dicht",
+    "why": "restore: configuration without an approval step"
+  },
+  "POST /api/v1/toolboxes/{toolbox_id}/versions/{version_id}/restore-deleted": {
+    "class": "dicht",
+    "why": "restore: configuration without an approval step"
   },
   "POST /api/v1/tools": {
     "class": "configuratie"
@@ -3009,6 +3153,10 @@
     "class": "dicht",
     "why": "credentials, secrets, platform, deployment, configuration"
   },
+  "PUT /api/v1/flow-apps/{app_id}/availability": {
+    "class": "dicht",
+    "why": "of a person at a screen, reads included"
+  },
   "PUT /api/v1/flow-steps/{flow_step_id}/prompts/order": {
     "class": "dicht",
     "why": "attachment rows, not proven to be draft-only"
@@ -3092,15 +3240,15 @@
   },
   "PUT /api/v1/toolboxes/{toolbox_id}": {
     "class": "dicht",
-    "why": "no draft: saved directly"
+    "why": "changes behaviour; since DECISIONS.md 18 it is versioned, which does not make the rows a draft"
   },
   "PUT /api/v1/toolboxes/{toolbox_id}/auth": {
     "class": "dicht",
-    "why": "no draft: saved directly"
+    "why": "changes behaviour; since DECISIONS.md 18 it is versioned, which does not make the rows a draft"
   },
   "PUT /api/v1/toolboxes/{toolbox_id}/tools": {
     "class": "dicht",
-    "why": "no draft: saved directly"
+    "why": "changes behaviour; since DECISIONS.md 18 it is versioned, which does not make the rows a draft"
   },
   "PUT /api/v1/tools/{tool_id}": {
     "class": "configuratie"

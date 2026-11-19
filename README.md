@@ -67,9 +67,9 @@ was kept here. A conformance test asserts their absence.
 
 ### The generic entity family
 
-Fourteen entities — **workflow, agent, tool, skill, policy, reference_doc,
+Fifteen entities — **workflow, agent, tool, skill, policy, reference_doc,
 output_schema, prompt_snippet, flow, data_table, measure, query, application,
-table_database** —
+table_database, toolbox** —
 share one shape,
 though not every entity gets every verb (see the per-entity notes below for the
 exceptions):
@@ -100,7 +100,7 @@ Warehouses and dashboards below.
 Some list routes narrow in the query, which is where narrowing belongs — the
 backend applies it before the rows come back:
 `list_workflows({ stageId?, capabilityId?, archived? })`,
-`list_agents({ includeSystem?, archived? })`,
+`list_agents({ includeSystem?, archived?, conversational? })`,
 `list_tools({ archived? })`,
 `list_skills({ archived? })`,
 `list_policies({ scope?, ownerId?, archived? })`,
@@ -244,17 +244,28 @@ across these routes — the tool parameter names say which.
   { type: "file", filename? }` keeps the answer as a file of the run and
   returns `{ fileId, filename, contentType, sizeBytes }`, which Digitize
   documents and a sub-workflow's file parameter take.
-- **Toolboxes** (the group a tool is filed under): `list_toolboxes`,
-  `create_toolbox`, `update_toolbox`, `delete_toolbox`, `set_toolbox_tools`,
-  `assign_tool_toolbox`, `set_toolbox_auth`, `list_toolbox_dependent_tools`.
-  Read `list_toolboxes` before `create_tool` and pass `toolboxId` — a tool made
-  without one is ungrouped. Three things worth knowing before you write:
-  `set_toolbox_tools` **declares** the membership (anything you leave out is
-  evicted — `assign_tool_toolbox` moves a single tool and takes `null` to
-  ungroup); a box never changes what an agent may *call*, only how a tool is
-  *advertised* (agents link to individual tools, never to a box); and deleting a
-  box leaves its tools alive, ungrouped. `set_toolbox_auth` sets the credential a
-  box's tools share and carries the same placeholder guard as a connector.
+- **Toolboxes** (the group a tool is filed under, and what an agent can hold
+  whole): `list_toolboxes`, `read_toolbox`, `create_toolbox`, `update_toolbox`,
+  `delete_toolbox`, `set_toolbox_tools`, `assign_tool_toolbox`,
+  `set_toolbox_auth`, `list_toolbox_dependent_tools` and `list_toolbox_agents`,
+  and, since a box is versioned like a skill, `restore_toolbox`,
+  `list_deleted_toolboxes`, `discard_toolbox_draft`, `archive_toolbox`,
+  `unarchive_toolbox`, `request_publish_toolbox` and the `*_toolbox_version`
+  tools. Read `list_toolboxes` before `create_tool` and pass `toolboxId` — a
+  tool made without one is ungrouped. Four things worth knowing before you
+  write: `set_toolbox_tools` **declares** the membership (anything you leave
+  out is evicted — `assign_tool_toolbox` moves a single tool and takes `null`
+  to ungroup); name, description and membership are a **draft** until the box is
+  published, through an approval a person decides; an agent can hold a **whole
+  box** (`toolboxIds` on `create_agent` / `update_agent`) and gets the tools of
+  the box's published version; and deleting a box leaves its tools alive,
+  ungrouped, and sends the box to the Trash (`restore_toolbox`) — it is refused
+  while an agent holds it. `set_toolbox_auth` sets the credential a box's tools
+  share (not versioned) and carries the same placeholder guard as a connector.
+- **Secrets, read-only**: `list_secrets` and `read_secret` as before, and
+  `read_secret_used_by` — which tools, toolboxes, data sources and module
+  settings use a secret. A secret in use cannot be deleted; no tool here deletes
+  one. `read_tool_used_by` says who uses a tool, in counts.
 - **Attach / detach memory**: `attach_skill_to_agent`,
   `attach_skill_to_workflow`, `attach_policy_to_agent`,
   `attach_reference_to_agent`, `attach_reference_to_workflow`, and a
@@ -858,7 +869,7 @@ These are enforced by the backend, not merely by convention:
   schema; `test/conformance.test.ts` fails if a route or documented enum
   diverges (see `test/fixtures/README.md`).
 - **Every backend route is accounted for, and the build says so.**
-  `test/completeness.test.ts` partitions all 853 operations in the pinned
+  `test/completeness.test.ts` partitions all 892 operations in the pinned
   snapshot using four classifiers. For tenant-API routes it checks for
   *covered by a tool* or *excluded by a rule that carries a
   written reason*, with an explicit temporary exception for the unresolved

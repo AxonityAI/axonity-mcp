@@ -318,6 +318,7 @@ export function registerApprovalTools(
                 "workflow",
                 "agent",
                 "tool",
+                "toolbox",
                 "skill",
                 "policy",
                 "reference_doc",

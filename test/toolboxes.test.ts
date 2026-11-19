@@ -195,8 +195,8 @@ describe("the guide carries what the schema cannot say", () => {
 
     // 1. Declaring is not adding.
     expect(text).toMatch(/DECLARES the membership/);
-    // 2. A box grants nothing — the link is to individual tools.
-    expect(text).toMatch(/NEVER changes what an agent may call/);
+    // 2. An agent can hold a whole box, and what it gets is the published version.
+    expect(text).toMatch(/hold a WHOLE toolbox/);
     // 3. Deleting a box spares its tools.
     expect(text).toMatch(/does NOT delete its tools/);
     // And the reason a tool must be filed at all.

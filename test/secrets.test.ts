@@ -77,7 +77,11 @@ describe("the secret catalogue is readable", () => {
     const { server, handlers } = fakeServer();
     registerSecretTools(server as never, fakeClient() as unknown as AxonityClient);
 
-    expect([...handlers.keys()].sort()).toEqual(["list_secrets", "read_secret"]);
+    expect([...handlers.keys()].sort()).toEqual([
+      "list_secrets",
+      "read_secret",
+      "read_secret_used_by",
+    ]);
   });
 
   it("says values are unreadable and unwritable, so an agent stops looking", () => {

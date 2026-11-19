@@ -226,6 +226,15 @@ export interface EntityDef {
   noTrashDoor?: boolean;
   /** Appended to `list_<entity>`'s description when the rows say something the generic text does not. */
   listNote?: string;
+  /**
+   * Verbs this registrar leaves to a module of its own, because that kind's
+   * route takes something the generic tool cannot say (typed fields, a lock
+   * spelled another way). The rest of the family — read, restore, the Trash
+   * list, discard, archive and the publish request — is still generated, so it
+   * cannot drift from the other kinds. Only `toolbox` does this
+   * (`tools/toolboxes.ts`).
+   */
+  ownTools?: ("list" | "create" | "update" | "delete")[];
 }
 
 export function registerEntityTools(
@@ -241,8 +250,9 @@ export function registerEntityTools(
 
   const listFilters = def.listFilters ?? [];
   const paging = def.listPaging;
+  const own = new Set(def.ownTools ?? []);
 
-  server.tool(
+  if (!own.has("list")) server.tool(
     `list_${plural}`,
     `List ${paging ? "" : "all "}${label} in your Axonity tenant (id, name or title, version).` +
       (def.archivable
@@ -330,7 +340,7 @@ export function registerEntityTools(
     );
   }
 
-  if (creatable) {
+  if (creatable && !own.has("create")) {
     server.tool(
       `create_${singular}`,
       `Create a new ${singular} draft. Pass the entity's fields (camelCase) in ` +
@@ -355,7 +365,7 @@ export function registerEntityTools(
     );
   }
 
-  server.tool(
+  if (!own.has("update")) server.tool(
     `update_${singular}`,
     `Update a ${singular} draft. Read it first to get \`expectedVersion\`; on a ` +
       `409 conflict, read again and retry. Pass only the fields you are ` +
@@ -397,7 +407,7 @@ export function registerEntityTools(
     const deleteVersionParam = def.deleteVersionParam;
     const hasDiscardDraft = def.hasDiscardDraft !== false;
 
-    server.tool(
+    if (!own.has("delete")) server.tool(
       `delete_${singular}`,
       `Delete a ${singular}. Destructive, but RECOVERABLE — it is soft-deleted ` +
         `and can be brought back with restore_${singular} (it will not appear in ` +

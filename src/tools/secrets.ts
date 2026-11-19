@@ -63,11 +63,23 @@ export function redactSecretMetadata(response: unknown): unknown {
 export function registerSecretTools(server: McpServer, client: AxonityClient): void {
   server.tool(
     "list_secrets",
-    "List the tenant's secrets (id, name, description, authType, version). This " +
-      "is the catalogue of what EXISTS — no route in Axonity ever returns a " +
-      "secret's value, and this connector cannot create, change or delete one. " +
-      "Use it to find the id for a connector's `authConfig.secretId` instead of " +
-      "asking a human to copy one out of the UI.",
+    "List the tenant's secrets (id, name, description, authType, version, " +
+      "updatedAt). This is the catalogue of what EXISTS — no route in Axonity " +
+      "ever returns a secret's value, and this connector cannot create, change " +
+      "or delete one. Use it to find the id for a connector's " +
+      "`authConfig.secretId` instead of asking a human to copy one out of the " +
+      "UI. " +
+      "\n\nEach row also says what the secret is for and whether anything " +
+      "depends on it: `holds` (the NAMES of the fields a secret of this kind " +
+      "holds — never a value; empty for a kind that holds none), `usedBy` and " +
+      "`usedByCount` (the tools, toolboxes, data sources and module settings " +
+      "that use it: a tool's working or published credential, a box's shared " +
+      "one, a source's connection, a mailbox) and `lastUsedAt` (when a call " +
+      "last resolved it; null when never). " +
+      "\n\nA secret in use cannot be deleted — a person deletes it in Axonity " +
+      "and is refused while anything uses it, with the users named; this " +
+      "connector has no tool for it. Check read_secret_used_by before you " +
+      "rebind a connector away from a secret.",
     {},
     async () => guard(async () => jsonResult(await client.get("/api/v1/secrets"))),
   );
@@ -88,5 +100,19 @@ export function registerSecretTools(server: McpServer, client: AxonityClient): v
           redactSecretMetadata(await client.get(`/api/v1/secrets/${secretId}`)),
         ),
       ),
+  );
+
+  server.tool(
+    "read_secret_used_by",
+    "What uses one secret: { usedBy: [{ kind, id, name }] }, `kind` being " +
+      "`tool` (its working or PUBLISHED credential names it), `toolbox` (its " +
+      "shared credential), `data_source` (it connects with it) or " +
+      "`module_setting` (a mailbox). Empty means nothing does and it can be " +
+      "deleted. A module setting only an administrator may change is named to " +
+      "those who may see it, and shown as `a module setting` to anyone else. " +
+      "Read-only: it answers names, never a value.",
+    { secretId: z.string().describe("The secret's id (from list_secrets).") },
+    async ({ secretId }) =>
+      guard(async () => jsonResult(await client.get(`/api/v1/secrets/${secretId}/used-by`))),
   );
 }
