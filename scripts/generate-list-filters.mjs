@@ -46,7 +46,7 @@ const LIST_ROUTES = {
   reference_doc: "/api/v1/reference-docs",
   output_schema: "/api/v1/output-schemas",
   prompt_snippet: "/api/v1/prompt-snippets",
-  flow: "/api/v1/flows",
+  method: "/api/v1/methods",
   data_table: "/api/v1/data-tables",
   table_database: "/api/v1/table-databases",
   data_source: "/api/v1/data-sources",

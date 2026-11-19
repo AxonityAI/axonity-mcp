@@ -261,15 +261,15 @@ describe("version tools", () => {
     expect(client.get).toHaveBeenCalledWith("/api/v1/workflows/w-1/published");
   });
 
-  it("reads flow published at /api/v1/flows/{id}/published", async () => {
-    const flow = {
-      singular: "flow",
-      basePath: "/api/v1/flows",
+  it("reads method published at /api/v1/methods/{id}/published", async () => {
+    const method = {
+      singular: "method",
+      basePath: "/api/v1/methods",
       publishedPath: "entity" as const,
     };
-    const { handlers, client } = setup(registerVersionTools, flow);
-    await handlers.get("read_flow_published")!({ id: "f-1" });
-    expect(client.get).toHaveBeenCalledWith("/api/v1/flows/f-1/published");
+    const { handlers, client } = setup(registerVersionTools, method);
+    await handlers.get("read_method_published")!({ id: "f-1" });
+    expect(client.get).toHaveBeenCalledWith("/api/v1/methods/f-1/published");
   });
 
   it("reads it at /{id}/versions/published for memory entities", async () => {

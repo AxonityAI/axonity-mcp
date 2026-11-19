@@ -198,7 +198,8 @@ describe("what a request says about itself (A2, A5a, A5b, H3b)", () => {
       expect(description).toContain("publishes as of now");
       expect(description).not.toContain("null when there is no working draft");
       expect(description).toContain("falls back to the newest named major version");
-      expect(description).toContain("a flow, which has no versions");
+      // `describe` in entity_publish_gateway: `publishes_version` is None for a method.
+      expect(description).toContain("as for a method (its approval names none)");
       expect(description).toContain("release's own workflow");
       expect(description).not.toContain("`version` comes from the saved verdict");
     },

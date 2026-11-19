@@ -3,7 +3,7 @@
 A local [Model Context Protocol](https://modelcontextprotocol.io) server that lets
 an external agent (e.g. **Claude Code** on your laptop) read, draft, update, and
 recoverably delete **workflows, agents (with their persona), tools, skills,
-policies, reference docs, output schemas, prompt snippets and flows** in your
+policies, reference docs, output schemas, prompt snippets and methods** in your
 Axonity tenant —
 the same verbs the internal Builder team has, minus direct publish.
 
@@ -52,7 +52,7 @@ approval of each call is the guard.
 
 ## Tools
 
-533 tools total. `axonity_conventions` (read this first) covers the authoring
+582 tools total (28 of them the old `flow` names, see Methods below). `axonity_conventions` (read this first) covers the authoring
 rules — drafts vs live, optimistic locking, per-entity fields, delete/restore,
 and how to tell a retryable error from one that will never succeed.
 `axonity_semantic_conventions` is its counterpart for one job only: building a
@@ -68,7 +68,7 @@ was kept here. A conformance test asserts their absence.
 ### The generic entity family
 
 Fifteen entities — **workflow, agent, tool, skill, policy, reference_doc,
-output_schema, prompt_snippet, flow, data_table, measure, query, application,
+output_schema, prompt_snippet, method, data_table, measure, query, application,
 table_database, toolbox** —
 share one shape,
 though not every entity gets every verb (see the per-entity notes below for the
@@ -107,7 +107,7 @@ backend applies it before the rows come back:
 `list_reference_docs({ scope?, ownerId?, archived? })`,
 `list_output_schemas({ archived? })`,
 `list_prompt_snippets({ deleted?, archived? })`,
-`list_flows({ archived? })`,
+`list_methods({ archived? })`,
 `list_data_tables({ name?, archived?, isDynamic?, filledBy?, databaseId? })`,
 `list_table_databases({ kind?, archived? })`,
 `list_data_sources({ enabled?, archived? })`,
@@ -169,12 +169,45 @@ Plus:
 - `bulk_delete_workflows` — soft-delete several at once (each with its own
   `expectedVersion`).
 
+### Methods (formerly flows)
+
+A **method** is how an agent works through a workflow step: a set of steps, each
+saying where it goes next. Flow renamed it from "flow" (agent-first R6), and the
+connector follows: the tools are `list_methods`, `read_method`, `create_method`,
+`update_method`, `delete_method`, `archive_method`, `request_publish_method` and
+the rest of the generic family above, the version tools
+(`list_method_versions`, `read_method_published`, …), `clone_method`
+(takes an optional `name`; the route needs a body, and a bare POST was a 422),
+`read_method_used_by` (the agents that run it, and the workflows, `published` or
+`draft`), and the prompt tools on a method's steps (`list_method_step_prompts`,
+`attach_prompt_snippet_to_method_step`, `update_method_step_prompt`,
+`reorder_method_step_prompts`, `detach_prompt_snippet_from_method_step`,
+`read_method_prompt_stacks`). They call `/api/v1/methods`, `/api/v1/method-steps`
+and `/api/v1/method-step-prompts`, and name the kind `method` in a publish
+request.
+
+What the backend does, and what the descriptions say after it: `methodSteps`
+on an update replaces the whole step list; a step's transition names its target
+by step name or by the id a read gave it, and a target that is no step is
+refused; a step with no transition ends the method; the start is pinned on every
+save, so reordering never moves it (`firstStepName` moves it); a published
+workflow that runs a method blocks `delete_method` and `archive_method`.
+
+**The old names still work for this release.** Every tool with `flow` in its
+name (28 of them, listed in `test/methods.test.ts`) stays registered beside its
+new name, begins with `DEPRECATED — the old name of …`, takes its old argument
+names (`flowId`, `flowStepId`) and makes the same call on the new route. Also
+still read: `flowSteps` in `fields` as `methodSteps` (both in one call is an
+error), and `flow` as a kind in `request_publish_bulk` and
+`list_workflows_using` (sent as `method`). All of it goes in the next release;
+`src/tools/aliases.ts` is where to look.
+
 ### Archive and the Trash
 
 **Archived** is an explicit choice beside Draft and Published ("I no longer want
 to see this"), made with `archive_<entity>` and undone with `unarchive_<entity>`
 on workflow, agent, tool, skill, policy, reference_doc, output_schema,
-prompt_snippet, flow, data_table, measure, query, application, data_source and
+prompt_snippet, method, data_table, measure, query, application, data_source and
 dashboard. The routes are `POST /{entity}/{id}/archive` and `/unarchive`, with
 no body and no version, and answer `{ id, archived, changed, archivedAt }`;
 doing it twice is `changed: false`, not an error. What the backend refuses is
@@ -202,7 +235,7 @@ then takes `name` and brings it back under another one.
 
 ### Version history, rollback, and version-level delete
 
-For the versioned entities (including `flow`, `data_table`, `measure` and
+For the versioned entities (including `method`, `data_table`, `measure` and
 `application`):
 
 | Tool | What it does |
@@ -279,19 +312,19 @@ across these routes — the tool parameter names say which.
   prompt actually assembles inside that workflow, with a `linkSource` per row
   saying why each item is there.
 - **What uses this?**: `list_workflows_using({ entityKind, entityId })` names
-  the workflows that reference a tool, agent, flow, output schema or workflow,
+  the workflows that reference a tool, agent, method, output schema or workflow,
   **and the steps they reference it in**, with `draft`/`published` per hit.
   `list_dependent_agents({ entityKind, entityId })` is the same question for a
   skill, policy or reference doc. Ask before editing anything shared — the
   alternative is validating every workflow in the tenant.
 - **Prompt elements (placement)**: a `prompt_snippet` is a library item; it only
-  takes effect once placed into a flow step's prompt stack.
-  `read_workflow_prompt_stacks` / `read_flow_prompt_stacks` resolve a
-  workflow/flow to its steps and each step's `system`/`user` stacks (this is how
-  you find the `flowStepId`s). Then `attach_prompt_snippet_to_flow_step`
-  (`target` = `system`|`user`, with an order), `update_flow_step_prompt`,
-  `reorder_flow_step_prompts`, `detach_prompt_snippet_from_flow_step`, and
-  `list_flow_step_prompts` / `list_wildcard_prompts`.
+  takes effect once placed into a method step's prompt stack.
+  `read_workflow_prompt_stacks` / `read_method_prompt_stacks` resolve a
+  workflow/method to its steps and each step's `system`/`user` stacks (this is how
+  you find the `methodStepId`s). Then `attach_prompt_snippet_to_method_step`
+  (`target` = `system`|`user`, with an order), `update_method_step_prompt`,
+  `reorder_method_step_prompts`, `detach_prompt_snippet_from_method_step`, and
+  `list_method_step_prompts` / `list_wildcard_prompts`.
 - **Company** (the tenant's single company document — a singleton, no id):
   `read_company`, `update_company` (whole-document save with `expectedVersion`),
   `list_company_versions`, `read_company_version`, `restore_company_version`,
@@ -332,7 +365,7 @@ across these routes — the tool parameter names say which.
   changing a secret is a human act in Axonity (#39).
 - **Catalog & cloning**: `list_system_tools` (read-only catalog — enabling one
   for an agent is `update_agent` with the id added to `systemToolIds`),
-  `clone_flow`, `clone_prompt_snippet`, `list_tool_packages` (the import
+  `clone_method`, `clone_prompt_snippet`, `list_tool_packages` (the import
   allowlist `validate_tool_code` judges against), `list_templates` /
   `read_template`.
 - **Tables** (`data_table`): the tenant's own reference data — a table an
@@ -718,7 +751,7 @@ not status checks or a guarantee that publication will succeed.
 
 `request_publish_release({ workflowId, changeSummary? })` proposes a **release**:
 a workflow *and everything its run needs* — the agents it runs (each with its
-persona), their tools, the flows it pins, the memory scoped to those agents —
+persona), their tools, the methods it pins, the memory scoped to those agents —
 as ONE approval.
 Prefer it over a request per entity. Taking a tenant live entity-by-entity means
 a hundred-odd approvals, none of which means anything on its own, and a human
@@ -871,7 +904,7 @@ These are enforced by the backend, not merely by convention:
   schema; `test/conformance.test.ts` fails if a route or documented enum
   diverges (see `test/fixtures/README.md`).
 - **Every backend route is accounted for, and the build says so.**
-  `test/completeness.test.ts` partitions all 892 operations in the pinned
+  `test/completeness.test.ts` partitions all 894 operations in the pinned
   snapshot using four classifiers. For tenant-API routes it checks for
   *covered by a tool* or *excluded by a rule that carries a
   written reason*, with an explicit temporary exception for the unresolved
@@ -883,10 +916,9 @@ These are enforced by the backend, not merely by convention:
   of these four classifiers fails the build, so an unclassified route cannot
   silently disappear from the parity check.
 
-**One known exception, not enforced:** a framework-provided `flow` is meant to
-be read-only to a tenant, but the backend does not actually block
-`update_flow`/`delete_flow` against one. Prefer `clone_flow` over editing a
-framework flow in place.
+A method the platform provides is read-only to a tenant: the backend refuses
+`update_method` and `delete_method` against one (403). `clone_method` makes a
+copy of your own, which you can edit.
 
 ## Development
 

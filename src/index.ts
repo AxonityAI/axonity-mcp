@@ -63,6 +63,7 @@ import { registerKnowledgeGraphTools } from "./tools/knowledgeGraph.js";
 import { registerModelTools } from "./tools/model.js";
 import { registerModuleTools } from "./tools/modules.js";
 import { registerOperationsTools } from "./tools/operations.js";
+import { registerMethodTools } from "./tools/methods.js";
 import { registerPromptPlacementTools } from "./tools/promptPlacement.js";
 import { registerQueryTools } from "./tools/queries.js";
 import { LIST_FILTERS } from "./generated/listFilters.js";
@@ -406,6 +407,58 @@ const TOOLBOX_DISCARD_NOTE =
   "of the box immediately, with the same live effect on how they are " +
   "advertised and which shared credential they inherit.";
 
+/**
+ * What an agent must know before it writes a method. Each sentence is the
+ * backend's own behaviour (`MethodService`, `routes/methods.py`), and
+ * `test/methods.test.ts` pins them: the transition-target message, the
+ * start-step rule (`_runner_start_name`, `update_method`), the replace of the
+ * whole step list (`_replace_steps`), the in-use refusal (`refuse_if_in_use`).
+ */
+const METHOD_CREATE_NOTE =
+  "A method is a `name`, a `description` and `methodSteps`: how an agent works " +
+  "through a workflow step. Each step has a `name` (unique in the method), a " +
+  "`displayOrder` and an `exitTool` (`{ name, jsonSchema }`, required), and may " +
+  "have `transitions` saying where it goes next: `{ when: 'auto', next }` goes " +
+  "to one step; `{ when: 'fork', forkField, routes, default }` reads " +
+  "`forkField` from the exit tool's payload and goes to the step `routes` names " +
+  "for that value, else to `default`. A target (`next`, `default`, a route's " +
+  "value) is another step of the same request, by its name — or by the id a " +
+  "read gave it; anything else is refused (\"Transition target … does not match " +
+  "any step.\"). A step with no transition ends the method. `firstStepName` " +
+  "says which step it starts on; left out, it starts on the step with the " +
+  "lowest `displayOrder`. This makes a draft: the runtime reads the published " +
+  "version (read_method_published), which request_publish_method asks a " +
+  "person to approve.";
+
+const METHOD_UPDATE_NOTE =
+  "`methodSteps` replaces the WHOLE step list: send every step you keep, as " +
+  "read_method gave it (a step is matched by its `id`, else by its name; a " +
+  "step you leave out is removed). Leave `methodSteps` out to change only the " +
+  "name or description. The start is explicit: every save pins the step it " +
+  "starts on, so reordering never moves where it starts. `firstStepName` " +
+  "moves it to another step; if the step it was on is gone and you name none, " +
+  "it falls to the step with the lowest `displayOrder`. A method provided by " +
+  "the platform cannot be edited — the update is refused (403); clone_method makes " +
+  "a copy of your own, which you can.";
+
+const METHOD_DELETE_NOTE =
+  "A method that a PUBLISHED workflow still runs is refused with a 409 " +
+  "(\"Cannot delete: method is referenced by published workflow(s): …\"): " +
+  "a draft that names it does not block, because a draft does not run it. " +
+  "read_method_used_by says which workflows and agents. A method the " +
+  "platform provides is refused too.";
+
+const METHOD_PUBLISH_NOTE =
+  "A method's approval names no version: its `version` is null.";
+
+const METHOD_LIST_NOTE =
+  "Each row: id, name, description, `stepCount`, `usedByCount` (how many " +
+  "agents run it, through workflows in use), `publishedMajorVersion` and " +
+  "`draftMajorVersion` (null while there is none), `isPlatform` (true for one " +
+  "the platform provides: read it, clone_method to change a copy), " +
+  "`archivedAt`, `module`, `scope`, `version`, `updatedAt`. The steps are in " +
+  "read_method.";
+
 const WORKFLOW_CLEARANCE_NOTE =
   "WHAT THE PROCESS MAY READ. " +
   CLEARANCE_SHAPE +
@@ -574,12 +627,22 @@ export const ENTITIES: EntityDef[] = [
     deleteVersionParam: "expectedVersion",
   },
   {
-    singular: "flow",
+    // A "flow" until Flow renamed it (agent-first R6): the old tool names stay
+    // one release as an alias, and `flowSteps` is still read as `methodSteps`.
+    singular: "method",
+    formerSingular: "flow",
+    formerFields: { flowSteps: "methodSteps" },
     archivable: true,
-    basePath: "/api/v1/flows",
+    archiveGuard: "in_use",
+    basePath: "/api/v1/methods",
     updateMethod: "PATCH",
-    label: "flows (reusable workflow fragments)",
+    label: "methods (how an agent works through a workflow step: its steps and where each goes next)",
     deleteVersionParam: "expectedVersion",
+    createNote: METHOD_CREATE_NOTE,
+    updateWarning: METHOD_UPDATE_NOTE,
+    deleteNote: METHOD_DELETE_NOTE,
+    publishNote: METHOD_PUBLISH_NOTE,
+    listNote: METHOD_LIST_NOTE,
   },
   {
     // A table is the same category of thing as an output schema — authored,
@@ -855,8 +918,8 @@ export const ENTITIES: EntityDef[] = [
 
 /**
  * Entities with version history. Every authored entity here exposes the
- * `/versions*` routes, `flow` included (verified against the backend:
- * `/api/v1/flows/{id}/versions…`), so each gets the version tools. The
+ * `/versions*` routes, `method` included (verified against the backend:
+ * `/api/v1/methods/{id}/versions…`), so each gets the version tools. The
  * persona is not here: since axonity-flow#2176 it is a field of the agent and
  * its history is the agent's.
  */
@@ -887,7 +950,12 @@ const VERSIONED: VersionedEntity[] = [
     basePath: "/api/v1/prompt-snippets",
     publishedPath: "versions",
   },
-  { singular: "flow", basePath: "/api/v1/flows", publishedPath: "entity" },
+  {
+    singular: "method",
+    formerSingular: "flow",
+    basePath: "/api/v1/methods",
+    publishedPath: "entity",
+  },
   {
     singular: "data_table",
     basePath: "/api/v1/data-tables",
@@ -960,6 +1028,7 @@ export function registerAll(
   registerDependencyTools(server as McpServer, client);
   registerCatalogTools(server as McpServer, client);
   registerPromptPlacementTools(server as McpServer, client);
+  registerMethodTools(server as McpServer, client);
   registerCompanyTools(server as McpServer, client);
   registerSecretTools(server as McpServer, client);
   registerSubworkflowTools(server as McpServer, client);

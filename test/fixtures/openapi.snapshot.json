@@ -1183,7 +1183,7 @@
           },
           "entityType": {
             "enum": [
-              "flow",
+              "method",
               "workflow",
               "agent",
               "tool",
@@ -1510,6 +1510,40 @@
           "answer"
         ],
         "title": "AnswerAskUserRequest",
+        "type": "object"
+      },
+      "AppFrameResponse": {
+        "description": "Where the shell points the frame of an app (#1826 A2).",
+        "properties": {
+          "appId": {
+            "description": "The app, for the bridge (A3) to name in what it asks.",
+            "format": "uuid",
+            "title": "Appid",
+            "type": "string"
+          },
+          "entryPath": {
+            "description": "The path of the app's first page, relative to filesBase; opened in a sandboxed frame.",
+            "title": "Entrypath",
+            "type": "string"
+          },
+          "filesBase": {
+            "description": "Where the app's files are served from: empty means the origin of Flow itself. The shell builds the address as filesBase + entryPath, never from a constant.",
+            "title": "Filesbase",
+            "type": "string"
+          },
+          "name": {
+            "description": "The app's name, for the frame's title.",
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "appId",
+          "name",
+          "filesBase",
+          "entryPath"
+        ],
+        "title": "AppFrameResponse",
         "type": "object"
       },
       "AppRegisterRequest": {
@@ -2012,7 +2046,7 @@
             "title": "Displayorder",
             "type": "integer"
           },
-          "flowStepId": {
+          "methodStepId": {
             "anyOf": [
               {
                 "type": "string"
@@ -2021,7 +2055,7 @@
                 "type": "null"
               }
             ],
-            "title": "Flowstepid"
+            "title": "Methodstepid"
           },
           "snippetId": {
             "title": "Snippetid",
@@ -6889,7 +6923,7 @@
           },
           "entityType": {
             "enum": [
-              "flow",
+              "method",
               "workflow",
               "agent",
               "tool",
@@ -7948,7 +7982,7 @@
             "type": "boolean"
           },
           "template": {
-            "description": "The snippet body — a Jinja/prompt template string that is rendered into a flow step's prompt stack when placed.",
+            "description": "The snippet body — a Jinja/prompt template string that is rendered into a method step's prompt stack when placed.",
             "maxLength": 65536,
             "minLength": 1,
             "title": "Template",
@@ -15296,642 +15330,6 @@
         "title": "FlowAppVersionResponse",
         "type": "object"
       },
-      "FlowCloneRequest": {
-        "description": "POST /api/v1/flows/{id}/clone — fork a visible flow.\n\n``name`` is optional; the service defaults it to ``\"<original> (copy)\"``\nso the UX can offer a one-click \"Clone this flow\" path.",
-        "properties": {
-          "name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Name"
-          }
-        },
-        "title": "FlowCloneRequest",
-        "type": "object"
-      },
-      "FlowCreateRequest": {
-        "description": "POST /api/v1/flows — create a new flow.\n\n``flow_steps`` may be empty (a blank flow) or seeded with an initial\nset. If provided, the caller can reference the entry point by name\nvia ``first_step_name``; the service resolves to the server-generated\nstep id.",
-        "properties": {
-          "description": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Description"
-          },
-          "firstStepName": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Firststepname"
-          },
-          "flowSteps": {
-            "items": {
-              "$ref": "#/components/schemas/FlowStepSchema"
-            },
-            "title": "Flowsteps",
-            "type": "array"
-          },
-          "name": {
-            "title": "Name",
-            "type": "string"
-          },
-          "scope": {
-            "default": "tenant",
-            "enum": [
-              "framework",
-              "tenant"
-            ],
-            "title": "Scope",
-            "type": "string"
-          }
-        },
-        "required": [
-          "name"
-        ],
-        "title": "FlowCreateRequest",
-        "type": "object"
-      },
-      "FlowListItem": {
-        "description": "Lightweight flow row for the list view (GET /api/v1/flows).",
-        "properties": {
-          "archivedAt": {
-            "anyOf": [
-              {
-                "format": "date-time",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Archivedat"
-          },
-          "description": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Description"
-          },
-          "id": {
-            "title": "Id",
-            "type": "string"
-          },
-          "isPlatform": {
-            "default": false,
-            "title": "Isplatform",
-            "type": "boolean"
-          },
-          "module": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Module"
-          },
-          "name": {
-            "title": "Name",
-            "type": "string"
-          },
-          "scope": {
-            "enum": [
-              "framework",
-              "tenant"
-            ],
-            "title": "Scope",
-            "type": "string"
-          },
-          "stepCount": {
-            "default": 0,
-            "title": "Stepcount",
-            "type": "integer"
-          },
-          "updatedAt": {
-            "title": "Updatedat",
-            "type": "string"
-          },
-          "version": {
-            "title": "Version",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "id",
-          "scope",
-          "name",
-          "version",
-          "updatedAt"
-        ],
-        "title": "FlowListItem",
-        "type": "object"
-      },
-      "FlowPromptStacksResponse": {
-        "description": "Resolved prompt stacks for every flow step of a single flow.",
-        "properties": {
-          "flowId": {
-            "description": "The flow that was resolved.",
-            "title": "Flowid",
-            "type": "string"
-          },
-          "flowSteps": {
-            "description": "One entry per flow step in the flow.",
-            "items": {
-              "$ref": "#/components/schemas/FlowStepPromptStack"
-            },
-            "title": "Flowsteps",
-            "type": "array"
-          },
-          "wildcardPrompts": {
-            "description": "Tenant wildcard snippets applied to the top of every flow step.",
-            "items": {
-              "$ref": "#/components/schemas/WildcardPromptEntry"
-            },
-            "title": "Wildcardprompts",
-            "type": "array"
-          }
-        },
-        "required": [
-          "flowId",
-          "flowSteps",
-          "wildcardPrompts"
-        ],
-        "title": "FlowPromptStacksResponse",
-        "type": "object"
-      },
-      "FlowSchema": {
-        "description": "Full flow detail returned by GET /api/v1/flows/{id}.",
-        "properties": {
-          "archivedAt": {
-            "anyOf": [
-              {
-                "format": "date-time",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Archivedat"
-          },
-          "createdAt": {
-            "title": "Createdat",
-            "type": "string"
-          },
-          "deletedAt": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Deletedat"
-          },
-          "description": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Description"
-          },
-          "firstStepId": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Firststepid"
-          },
-          "flowSteps": {
-            "items": {
-              "$ref": "#/components/schemas/FlowStepSchema"
-            },
-            "title": "Flowsteps",
-            "type": "array"
-          },
-          "id": {
-            "title": "Id",
-            "type": "string"
-          },
-          "isPlatform": {
-            "default": false,
-            "title": "Isplatform",
-            "type": "boolean"
-          },
-          "module": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Module"
-          },
-          "name": {
-            "title": "Name",
-            "type": "string"
-          },
-          "scope": {
-            "enum": [
-              "framework",
-              "tenant"
-            ],
-            "title": "Scope",
-            "type": "string"
-          },
-          "tenantId": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Tenantid"
-          },
-          "updatedAt": {
-            "title": "Updatedat",
-            "type": "string"
-          },
-          "version": {
-            "title": "Version",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "id",
-          "scope",
-          "name",
-          "version",
-          "createdAt",
-          "updatedAt"
-        ],
-        "title": "FlowSchema",
-        "type": "object"
-      },
-      "FlowStepPromptItem": {
-        "description": "One per-step attachment of a snippet, with its target + order\ninside that step. ``target`` and ``display_order`` belong to the\nattachment — different steps can use the same snippet differently.",
-        "properties": {
-          "displayOrder": {
-            "title": "Displayorder",
-            "type": "integer"
-          },
-          "flowStepId": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Flowstepid"
-          },
-          "id": {
-            "title": "Id",
-            "type": "string"
-          },
-          "snippetId": {
-            "title": "Snippetid",
-            "type": "string"
-          },
-          "target": {
-            "enum": [
-              "system",
-              "user"
-            ],
-            "title": "Target",
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "flowStepId",
-          "snippetId",
-          "target",
-          "displayOrder"
-        ],
-        "title": "FlowStepPromptItem",
-        "type": "object"
-      },
-      "FlowStepPromptStack": {
-        "description": "A flow step and its resolved system/user prompt stacks.",
-        "properties": {
-          "flowId": {
-            "description": "Id of the flow this step belongs to.",
-            "title": "Flowid",
-            "type": "string"
-          },
-          "flowStepId": {
-            "description": "Flow step id — the placement target for attach/detach/reorder.",
-            "title": "Flowstepid",
-            "type": "string"
-          },
-          "flowStepName": {
-            "description": "Name of the flow step within its flow.",
-            "title": "Flowstepname",
-            "type": "string"
-          },
-          "stepId": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Id of the owning workflow step; null when resolving a flow directly.",
-            "title": "Stepid"
-          },
-          "stepName": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Name of the owning workflow step.",
-            "title": "Stepname"
-          },
-          "stepType": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Type of the owning workflow step (e.g. 'agent').",
-            "title": "Steptype"
-          },
-          "systemPrompts": {
-            "description": "Snippets in the step's system stack, ordered by displayOrder.",
-            "items": {
-              "$ref": "#/components/schemas/PromptStackEntry"
-            },
-            "title": "Systemprompts",
-            "type": "array"
-          },
-          "userPrompts": {
-            "description": "Snippets in the step's user stack, ordered by displayOrder.",
-            "items": {
-              "$ref": "#/components/schemas/PromptStackEntry"
-            },
-            "title": "Userprompts",
-            "type": "array"
-          }
-        },
-        "required": [
-          "flowStepId",
-          "flowStepName",
-          "flowId",
-          "systemPrompts",
-          "userPrompts"
-        ],
-        "title": "FlowStepPromptStack",
-        "type": "object"
-      },
-      "FlowStepSchema": {
-        "description": "A flow-step as exposed in API responses and nested in create/update.\n\nOn create, ``id`` may be absent (server generates). ``transitions``\nreference other steps by their ``name`` within the same flow when the\nrequest lacks server-side IDs; the service layer resolves names to\nUUIDs before persisting.",
-        "properties": {
-          "description": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Description"
-          },
-          "displayOrder": {
-            "title": "Displayorder",
-            "type": "integer"
-          },
-          "executionMode": {
-            "default": "sync",
-            "enum": [
-              "sync",
-              "detached"
-            ],
-            "title": "Executionmode",
-            "type": "string"
-          },
-          "exitTool": {
-            "$ref": "#/components/schemas/ExitToolSchema"
-          },
-          "id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Id"
-          },
-          "name": {
-            "title": "Name",
-            "type": "string"
-          },
-          "promptSlot": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Promptslot"
-          },
-          "reasoningBudget": {
-            "anyOf": [
-              {
-                "maximum": 500.0,
-                "minimum": 1.0,
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "How many reasoning turns this step may take before it must wrap up. Leave empty for the platform default (50). A whole number between 1 and 500.",
-            "title": "Reasoningbudget"
-          },
-          "toolsPolicy": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/ToolsPolicySchema"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "transitions": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/TransitionSchema"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Transitions"
-          },
-          "turnTerminal": {
-            "default": "exit",
-            "enum": [
-              "exit",
-              "park"
-            ],
-            "title": "Turnterminal",
-            "type": "string"
-          },
-          "variables": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/PromptVariableSchema"
-                },
-                "maxItems": 50,
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "The variables the code that calls this method supplies, beyond the platform's standard ones. Leave empty for a step that needs none.",
-            "title": "Variables"
-          },
-          "wallClockBudget": {
-            "anyOf": [
-              {
-                "maximum": 21600.0,
-                "minimum": 1.0,
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "How many seconds this step may spend reasoning before it must wrap up. Time spent waiting on delegates does not count. Leave empty for the platform default (3600). A whole number between 1 and 21600.",
-            "title": "Wallclockbudget"
-          }
-        },
-        "required": [
-          "name",
-          "displayOrder",
-          "exitTool"
-        ],
-        "title": "FlowStepSchema",
-        "type": "object"
-      },
-      "FlowUpdateRequest": {
-        "description": "PATCH /api/v1/flows/{id} — partial update with optimistic locking.\n\nWhen ``flow_steps`` is provided it replaces the entire list (the\nservice diffs and preserves step IDs by matching on ``id`` then\n``name``). Omitting the field leaves the steps untouched.",
-        "properties": {
-          "description": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Description"
-          },
-          "expectedVersion": {
-            "title": "Expectedversion",
-            "type": "integer"
-          },
-          "firstStepName": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Firststepname"
-          },
-          "flowSteps": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/FlowStepSchema"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Flowsteps"
-          },
-          "name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Name"
-          }
-        },
-        "required": [
-          "expectedVersion"
-        ],
-        "title": "FlowUpdateRequest",
-        "type": "object"
-      },
       "FolderResponse": {
         "properties": {
           "createdAt": {
@@ -16285,7 +15683,7 @@
               "application",
               "measure",
               "query",
-              "flow",
+              "method",
               "toolbox"
             ],
             "title": "Entitytype",
@@ -22183,6 +21581,752 @@
           "mergeSha"
         ],
         "title": "MergeBranchResponse",
+        "type": "object"
+      },
+      "MethodCloneRequest": {
+        "description": "POST /api/v1/flows/{id}/clone — fork a visible flow.\n\n``name`` is optional; the service defaults it to ``\"<original> (copy)\"``\nso the UX can offer a one-click \"Clone this flow\" path.",
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "title": "MethodCloneRequest",
+        "type": "object"
+      },
+      "MethodCreateRequest": {
+        "description": "POST /api/v1/flows — create a new flow.\n\n``flow_steps`` may be empty (a blank flow) or seeded with an initial\nset. If provided, the caller can reference the entry point by name\nvia ``first_step_name``; the service resolves to the server-generated\nstep id.",
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "firstStepName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Firststepname"
+          },
+          "methodSteps": {
+            "items": {
+              "$ref": "#/components/schemas/MethodStepSchema"
+            },
+            "title": "Methodsteps",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "scope": {
+            "default": "tenant",
+            "enum": [
+              "framework",
+              "tenant"
+            ],
+            "title": "Scope",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "MethodCreateRequest",
+        "type": "object"
+      },
+      "MethodListItem": {
+        "description": "Lightweight flow row for the list view (GET /api/v1/flows).",
+        "properties": {
+          "archivedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Archivedat"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "draftMajorVersion": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The working draft's major version, if there is one.",
+            "title": "Draftmajorversion"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "isPlatform": {
+            "default": false,
+            "title": "Isplatform",
+            "type": "boolean"
+          },
+          "module": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Module"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "publishedMajorVersion": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The live major version; null when nothing is published.",
+            "title": "Publishedmajorversion"
+          },
+          "scope": {
+            "enum": [
+              "framework",
+              "tenant"
+            ],
+            "title": "Scope",
+            "type": "string"
+          },
+          "stepCount": {
+            "default": 0,
+            "title": "Stepcount",
+            "type": "integer"
+          },
+          "updatedAt": {
+            "title": "Updatedat",
+            "type": "string"
+          },
+          "usedByCount": {
+            "default": 0,
+            "description": "How many agents run this method: the agents of the workflow steps in use that name it (or, for the platform's default method, name no method). Who they are: GET /api/v1/methods/{id}/used-by.",
+            "title": "Usedbycount",
+            "type": "integer"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "scope",
+          "name",
+          "version",
+          "updatedAt"
+        ],
+        "title": "MethodListItem",
+        "type": "object"
+      },
+      "MethodPromptStacksResponse": {
+        "description": "Resolved prompt stacks for every flow step of a single flow.",
+        "properties": {
+          "methodId": {
+            "description": "The method that was resolved.",
+            "title": "Methodid",
+            "type": "string"
+          },
+          "methodSteps": {
+            "description": "One entry per method step in the method.",
+            "items": {
+              "$ref": "#/components/schemas/MethodStepPromptStack"
+            },
+            "title": "Methodsteps",
+            "type": "array"
+          },
+          "wildcardPrompts": {
+            "description": "Tenant wildcard snippets applied to the top of every method step.",
+            "items": {
+              "$ref": "#/components/schemas/WildcardPromptEntry"
+            },
+            "title": "Wildcardprompts",
+            "type": "array"
+          }
+        },
+        "required": [
+          "methodId",
+          "methodSteps",
+          "wildcardPrompts"
+        ],
+        "title": "MethodPromptStacksResponse",
+        "type": "object"
+      },
+      "MethodSchema": {
+        "description": "Full flow detail returned by GET /api/v1/flows/{id}.",
+        "properties": {
+          "archivedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Archivedat"
+          },
+          "createdAt": {
+            "title": "Createdat",
+            "type": "string"
+          },
+          "deletedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deletedat"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "draftMajorVersion": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The working draft's major version, if there is one.",
+            "title": "Draftmajorversion"
+          },
+          "draftVersionName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the working draft is called.",
+            "title": "Draftversionname"
+          },
+          "firstStepId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Firststepid"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "isPlatform": {
+            "default": false,
+            "title": "Isplatform",
+            "type": "boolean"
+          },
+          "methodSteps": {
+            "items": {
+              "$ref": "#/components/schemas/MethodStepSchema"
+            },
+            "title": "Methodsteps",
+            "type": "array"
+          },
+          "module": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Module"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "publishedMajorVersion": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The live major version; null when nothing is published.",
+            "title": "Publishedmajorversion"
+          },
+          "scope": {
+            "enum": [
+              "framework",
+              "tenant"
+            ],
+            "title": "Scope",
+            "type": "string"
+          },
+          "tenantId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tenantid"
+          },
+          "updatedAt": {
+            "title": "Updatedat",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "scope",
+          "name",
+          "version",
+          "createdAt",
+          "updatedAt"
+        ],
+        "title": "MethodSchema",
+        "type": "object"
+      },
+      "MethodStepPromptItem": {
+        "description": "One per-step attachment of a snippet, with its target + order\ninside that step. ``target`` and ``display_order`` belong to the\nattachment — different steps can use the same snippet differently.",
+        "properties": {
+          "displayOrder": {
+            "title": "Displayorder",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "methodStepId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Methodstepid"
+          },
+          "snippetId": {
+            "title": "Snippetid",
+            "type": "string"
+          },
+          "target": {
+            "enum": [
+              "system",
+              "user"
+            ],
+            "title": "Target",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "methodStepId",
+          "snippetId",
+          "target",
+          "displayOrder"
+        ],
+        "title": "MethodStepPromptItem",
+        "type": "object"
+      },
+      "MethodStepPromptStack": {
+        "description": "A flow step and its resolved system/user prompt stacks.",
+        "properties": {
+          "flowStepName": {
+            "description": "Name of the method step within its method.",
+            "title": "Flowstepname",
+            "type": "string"
+          },
+          "methodId": {
+            "description": "Id of the method this step belongs to.",
+            "title": "Methodid",
+            "type": "string"
+          },
+          "methodStepId": {
+            "description": "Method step id — the placement target for attach/detach/reorder.",
+            "title": "Methodstepid",
+            "type": "string"
+          },
+          "stepId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Id of the owning workflow step; null when resolving a method directly.",
+            "title": "Stepid"
+          },
+          "stepName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Name of the owning workflow step.",
+            "title": "Stepname"
+          },
+          "stepType": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Type of the owning workflow step (e.g. 'agent').",
+            "title": "Steptype"
+          },
+          "systemPrompts": {
+            "description": "Snippets in the step's system stack, ordered by displayOrder.",
+            "items": {
+              "$ref": "#/components/schemas/PromptStackEntry"
+            },
+            "title": "Systemprompts",
+            "type": "array"
+          },
+          "userPrompts": {
+            "description": "Snippets in the step's user stack, ordered by displayOrder.",
+            "items": {
+              "$ref": "#/components/schemas/PromptStackEntry"
+            },
+            "title": "Userprompts",
+            "type": "array"
+          }
+        },
+        "required": [
+          "methodStepId",
+          "flowStepName",
+          "methodId",
+          "systemPrompts",
+          "userPrompts"
+        ],
+        "title": "MethodStepPromptStack",
+        "type": "object"
+      },
+      "MethodStepSchema": {
+        "description": "A flow-step as exposed in API responses and nested in create/update.\n\nOn create, ``id`` may be absent (server generates). ``transitions``\nreference other steps by their ``name`` within the same flow when the\nrequest lacks server-side IDs; the service layer resolves names to\nUUIDs before persisting.",
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "displayOrder": {
+            "title": "Displayorder",
+            "type": "integer"
+          },
+          "executionMode": {
+            "default": "sync",
+            "enum": [
+              "sync",
+              "detached"
+            ],
+            "title": "Executionmode",
+            "type": "string"
+          },
+          "exitTool": {
+            "$ref": "#/components/schemas/ExitToolSchema"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "promptSlot": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Promptslot"
+          },
+          "reasoningBudget": {
+            "anyOf": [
+              {
+                "maximum": 500.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How many reasoning turns this step may take before it must wrap up. Leave empty for the platform default (50). A whole number between 1 and 500.",
+            "title": "Reasoningbudget"
+          },
+          "toolsPolicy": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ToolsPolicySchema"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "transitions": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/TransitionSchema"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Transitions"
+          },
+          "turnTerminal": {
+            "default": "exit",
+            "enum": [
+              "exit",
+              "park"
+            ],
+            "title": "Turnterminal",
+            "type": "string"
+          },
+          "variables": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/PromptVariableSchema"
+                },
+                "maxItems": 50,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The variables the code that calls this method supplies, beyond the platform's standard ones. Leave empty for a step that needs none.",
+            "title": "Variables"
+          },
+          "wallClockBudget": {
+            "anyOf": [
+              {
+                "maximum": 21600.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How many seconds this step may spend reasoning before it must wrap up. Time spent waiting on delegates does not count. Leave empty for the platform default (3600). A whole number between 1 and 21600.",
+            "title": "Wallclockbudget"
+          }
+        },
+        "required": [
+          "name",
+          "displayOrder",
+          "exitTool"
+        ],
+        "title": "MethodStepSchema",
+        "type": "object"
+      },
+      "MethodUpdateRequest": {
+        "description": "PATCH /api/v1/flows/{id} — partial update with optimistic locking.\n\nWhen ``flow_steps`` is provided it replaces the entire list (the\nservice diffs and preserves step IDs by matching on ``id`` then\n``name``). Omitting the field leaves the steps untouched.",
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "expectedVersion": {
+            "title": "Expectedversion",
+            "type": "integer"
+          },
+          "firstStepName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Firststepname"
+          },
+          "methodSteps": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/MethodStepSchema"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Methodsteps"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "required": [
+          "expectedVersion"
+        ],
+        "title": "MethodUpdateRequest",
+        "type": "object"
+      },
+      "MethodUsageResponse": {
+        "description": "Who runs this method, and through which workflows (R6, *Used by*).\n\n# paging-exempt: the agents and workflows of ONE method, bounded by the\n# tenant's workflow library (O(100), grown by deliberate human authoring),\n# the same bound :class:`DependentWorkflowsResponse` rests on.",
+        "properties": {
+          "agents": {
+            "description": "The agents that run it: per workflow step that runs this method, the step's own owner, else the workflow's owner. Name-ordered.",
+            "items": {
+              "$ref": "#/components/schemas/MethodUser"
+            },
+            "title": "Agents",
+            "type": "array"
+          },
+          "workflows": {
+            "description": "The workflows in use (not deleted, not archived) whose steps run it, once per document that names it: 'draft' or 'published'.",
+            "items": {
+              "$ref": "#/components/schemas/DependentWorkflow"
+            },
+            "title": "Workflows",
+            "type": "array"
+          }
+        },
+        "title": "MethodUsageResponse",
+        "type": "object"
+      },
+      "MethodUser": {
+        "description": "One agent that runs a method.",
+        "properties": {
+          "id": {
+            "description": "The agent's id.",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "description": "The agent's name.",
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "MethodUser",
         "type": "object"
       },
       "ModelCatalogResponse": {
@@ -28225,7 +28369,7 @@
         "type": "object"
       },
       "PromptSnippetItem": {
-        "description": "One row from the snippet library.\n\nSnippets are pure content. Where they land in the assembled\nprompt (system vs user) and in what order is owned by each\nper-step :class:`FlowStepPromptItem`.",
+        "description": "One row from the snippet library.\n\nSnippets are pure content. Where they land in the assembled\nprompt (system vs user) and in what order is owned by each\nper-step :class:`MethodStepPromptItem`.",
         "properties": {
           "archivedAt": {
             "anyOf": [
@@ -28323,6 +28467,31 @@
             "title": "Name",
             "type": "string"
           },
+          "publishedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the live version was published; null when nothing is.",
+            "title": "Publishedat"
+          },
+          "publishedMajorVersion": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The live major version; null when nothing is published.",
+            "title": "Publishedmajorversion"
+          },
           "required": {
             "title": "Required",
             "type": "boolean"
@@ -28338,6 +28507,24 @@
           "usageCount": {
             "default": 0,
             "title": "Usagecount",
+            "type": "integer"
+          },
+          "usedInEveryStep": {
+            "default": false,
+            "description": "Attached to every step, not to particular ones.",
+            "title": "Usedineverystep",
+            "type": "boolean"
+          },
+          "usedInMethods": {
+            "default": 0,
+            "description": "Methods those steps belong to.",
+            "title": "Usedinmethods",
+            "type": "integer"
+          },
+          "usedInSteps": {
+            "default": 0,
+            "description": "Method steps it is attached to.",
+            "title": "Usedinsteps",
             "type": "integer"
           },
           "version": {
@@ -28370,7 +28557,7 @@
             "type": "integer"
           },
           "linkId": {
-            "description": "Attachment id (flow-step-prompt link) — pass to PATCH /flow-step-prompts/{linkId} or DELETE to move/reorder/detach it.",
+            "description": "Attachment id (method-step-prompt link) — pass to PATCH /method-step-prompts/{linkId} or DELETE to move/reorder/detach it.",
             "title": "Linkid",
             "type": "string"
           },
@@ -28774,7 +28961,7 @@
           },
           "entityType": {
             "enum": [
-              "flow",
+              "method",
               "workflow",
               "agent",
               "tool",
@@ -35453,8 +35640,69 @@
         "title": "SeedAgentResponse",
         "type": "object"
       },
+      "SeedFlowAppRequest": {
+        "description": "Leave a Flow-App live in a workspace, for the browser specs of the frame.\n\nThe files are given, base64, by path: a spec reads the test app of\n``backend/tests/fixtures/flow_apps/hello`` and posts it. What this does is what\na deploy, the executor, Axonity and the workspace's administrator do, through\nthe same services in the same order: declare the version, store its files,\napprove it, switch the app on for the Staff audience. Tied to\n``is_development``; never exposed in production.",
+        "properties": {
+          "files": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "maxProperties": 200,
+            "title": "Files",
+            "type": "object"
+          },
+          "name": {
+            "default": "Hello app",
+            "title": "Name",
+            "type": "string"
+          },
+          "slug": {
+            "default": "hello",
+            "title": "Slug",
+            "type": "string"
+          },
+          "tenantId": {
+            "title": "Tenantid",
+            "type": "string"
+          },
+          "userId": {
+            "title": "Userid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tenantId",
+          "userId",
+          "files"
+        ],
+        "title": "SeedFlowAppRequest",
+        "type": "object"
+      },
+      "SeedFlowAppResponse": {
+        "properties": {
+          "appId": {
+            "title": "Appid",
+            "type": "string"
+          },
+          "bundleSha256": {
+            "title": "Bundlesha256",
+            "type": "string"
+          },
+          "entryPath": {
+            "title": "Entrypath",
+            "type": "string"
+          }
+        },
+        "required": [
+          "appId",
+          "bundleSha256",
+          "entryPath"
+        ],
+        "title": "SeedFlowAppResponse",
+        "type": "object"
+      },
       "SeedFlowRequest": {
-        "description": "Insert a tenant-scoped Flow + one FlowStep so a Playwright spec\ncan reference a custom exit-tool contract from a workflow's agent\nstep (e.g. `submit_plan` as the exit tool to exercise V7 §6.3\nplan persistence). Mirrors the in-process\n``make_single_step_flow`` helper.",
+        "description": "Insert a tenant-scoped Flow + one FlowStep so a Playwright spec\ncan reference a custom exit-tool contract from a workflow's agent\nstep (e.g. `submit_plan` as the exit tool to exercise V7 §6.3\nplan persistence). Mirrors the in-process\n``make_single_step_method`` helper.",
         "properties": {
           "description": {
             "default": "Acceptance-test single-step flow",
@@ -35486,13 +35734,13 @@
             "title": "Firststepid",
             "type": "string"
           },
-          "flowId": {
-            "title": "Flowid",
+          "methodId": {
+            "title": "Methodid",
             "type": "string"
           }
         },
         "required": [
-          "flowId",
+          "methodId",
           "firstStepId"
         ],
         "title": "SeedFlowResponse",
@@ -35722,7 +35970,7 @@
             "enum": [
               "agent",
               "workflow",
-              "flow",
+              "method",
               "prompt_snippet",
               "tool",
               "toolbox",
@@ -37637,17 +37885,6 @@
             ],
             "title": "Customicon"
           },
-          "flowId": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Flowid"
-          },
           "id": {
             "title": "Id",
             "type": "string"
@@ -37666,6 +37903,17 @@
               }
             ],
             "title": "Inputs"
+          },
+          "methodId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Methodid"
           },
           "name": {
             "title": "Name",
@@ -37767,28 +38015,6 @@
             ],
             "title": "Error"
           },
-          "flowId": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Flowid"
-          },
-          "flowName": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Flowname"
-          },
           "iterationCount": {
             "anyOf": [
               {
@@ -37852,6 +38078,28 @@
               }
             ],
             "title": "Messages"
+          },
+          "methodId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Methodid"
+          },
+          "methodName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Methodname"
           },
           "notAchievedReason": {
             "anyOf": [
@@ -43463,7 +43711,7 @@
                 "type": "null"
               }
             ],
-            "description": "The snippet body — a Jinja/prompt template string that is rendered into a flow step's prompt stack when placed.",
+            "description": "The snippet body — a Jinja/prompt template string that is rendered into a method step's prompt stack when placed.",
             "title": "Template"
           }
         },
@@ -46589,7 +46837,7 @@
             "type": "integer"
           },
           "linkId": {
-            "description": "Attachment id (wildcard flow-step-prompt link).",
+            "description": "Attachment id (wildcard method-step-prompt link).",
             "title": "Linkid",
             "type": "string"
           },
@@ -46635,7 +46883,7 @@
             "description": "What kind of entity this row is.",
             "enum": [
               "agent",
-              "flow",
+              "method",
               "workflow",
               "tool",
               "data_table",
@@ -46653,7 +46901,7 @@
           },
           "publicationState": {
             "default": "not_published",
-            "description": "Whether the runtime can actually see this component. 'live' is published and unchanged since; 'edited' is published with newer changes the runtime has NOT got; 'not_published' has never gone live and reaches nobody; 'missing' is referenced but no longer readable (deleted without being unpublished first); 'not_versioned' is a kind with no publication lifecycle at all — flows, per ENTITY-LIFECYCLE-CONTRACT.md section 4.1 — where 'not published' would be true of the row and false about the world. Derived per read from the entity's row version against the one its live publish points at; nothing is stored.",
+            "description": "Whether the runtime can actually see this component. 'live' is published and unchanged since; 'edited' is published with newer changes the runtime has NOT got; 'not_published' has never gone live and reaches nobody; 'missing' is referenced but no longer readable (deleted without being unpublished first); 'not_versioned' is a kind with no publication lifecycle at all — methods, per ENTITY-LIFECYCLE-CONTRACT.md section 4.1 — where 'not published' would be true of the row and false about the world. Derived per read from the entity's row version against the one its live publish points at; nothing is stored.",
             "enum": [
               "live",
               "edited",
@@ -46671,7 +46919,7 @@
             "type": "integer"
           },
           "section": {
-            "description": "Which section of the Components tab this row belongs to: 'agents' (agents and flows), 'called' (workflows this one invokes), 'tools', 'tables', 'knowledge' (skills, policies, reference docs).",
+            "description": "Which section of the Components tab this row belongs to: 'agents' (agents and methods), 'called' (workflows this one invokes), 'tools', 'tables', 'knowledge' (skills, policies, reference docs).",
             "enum": [
               "agents",
               "called",
@@ -47310,16 +47558,16 @@
       "WorkflowPromptStacksResponse": {
         "description": "Resolved prompt stacks for every flow step reachable from a workflow.",
         "properties": {
-          "flowSteps": {
-            "description": "One entry per flow step under the workflow's agent steps (steps with an explicit flowId). Steps without one are omitted.",
+          "methodSteps": {
+            "description": "One entry per method step under the workflow's agent steps (steps with an explicit methodId). Steps without one are omitted.",
             "items": {
-              "$ref": "#/components/schemas/FlowStepPromptStack"
+              "$ref": "#/components/schemas/MethodStepPromptStack"
             },
-            "title": "Flowsteps",
+            "title": "Methodsteps",
             "type": "array"
           },
           "wildcardPrompts": {
-            "description": "Tenant wildcard snippets applied to the top of every flow step.",
+            "description": "Tenant wildcard snippets applied to the top of every method step.",
             "items": {
               "$ref": "#/components/schemas/WildcardPromptEntry"
             },
@@ -47334,7 +47582,7 @@
         },
         "required": [
           "workflowId",
-          "flowSteps",
+          "methodSteps",
           "wildcardPrompts"
         ],
         "title": "WorkflowPromptStacksResponse",
@@ -52575,6 +52823,57 @@
         "summary": "Unarchive Application",
         "tags": [
           "applications"
+        ]
+      }
+    },
+    "/api/v1/apps/{slug}/frame": {
+      "get": {
+        "description": "Where to point the frame of this app for the person asking.",
+        "operationId": "get_app_frame_api_v1_apps__slug__frame_get",
+        "parameters": [
+          {
+            "description": "The app's handle in this workspace.",
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "description": "The app's handle in this workspace.",
+              "maxLength": 120,
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppFrameResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get App Frame",
+        "tags": [
+          "apps"
         ]
       }
     },
@@ -64067,1572 +64366,6 @@
         ]
       }
     },
-    "/api/v1/flow-step-prompts/{link_id}": {
-      "delete": {
-        "operationId": "detach_snippet_api_v1_flow_step_prompts__link_id__delete",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "link_id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Link Id",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Detach Snippet",
-        "tags": [
-          "prompt-snippets"
-        ]
-      },
-      "patch": {
-        "description": "Update an attachment's target (system/user) or display_order.\n\nUsed by the flow-step editor when the designer drags a snippet\nbetween the System and User stacks, or nudges its position.",
-        "operationId": "update_attachment_api_v1_flow_step_prompts__link_id__patch",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "link_id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Link Id",
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateAttachmentRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/FlowStepPromptItem"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Update Attachment",
-        "tags": [
-          "prompt-snippets"
-        ]
-      }
-    },
-    "/api/v1/flow-steps/{flow_step_id}/prompts": {
-      "get": {
-        "description": "Snippets attached to this step (excludes wildcard).",
-        "operationId": "list_step_attachments_api_v1_flow_steps__flow_step_id__prompts_get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "flow_step_id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Flow Step Id",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/FlowStepPromptItem"
-                  },
-                  "title": "Response List Step Attachments Api V1 Flow Steps  Flow Step Id  Prompts Get",
-                  "type": "array"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "List Step Attachments",
-        "tags": [
-          "prompt-snippets"
-        ]
-      },
-      "post": {
-        "description": "Attach a library snippet to this flow step.",
-        "operationId": "attach_snippet_api_v1_flow_steps__flow_step_id__prompts_post",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "flow_step_id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Flow Step Id",
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AttachSnippetRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/FlowStepPromptItem"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Attach Snippet",
-        "tags": [
-          "prompt-snippets"
-        ]
-      }
-    },
-    "/api/v1/flow-steps/{flow_step_id}/prompts/order": {
-      "put": {
-        "description": "Replace this step's snippet ordering with the supplied list.",
-        "operationId": "reorder_attachments_api_v1_flow_steps__flow_step_id__prompts_order_put",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "flow_step_id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Flow Step Id",
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ReorderSnippetsRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/FlowStepPromptItem"
-                  },
-                  "title": "Response Reorder Attachments Api V1 Flow Steps  Flow Step Id  Prompts Order Put",
-                  "type": "array"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Reorder Attachments",
-        "tags": [
-          "prompt-snippets"
-        ]
-      }
-    },
-    "/api/v1/flows": {
-      "get": {
-        "description": "List the tenant's flows plus all framework-scoped flows.",
-        "operationId": "list_flows_api_v1_flows_get",
-        "parameters": [
-          {
-            "description": "Which items to list: 'exclude' (default) leaves archived items out, 'only' lists only the archived ones (the Archived view), 'include' lists both.",
-            "in": "query",
-            "name": "archived",
-            "required": false,
-            "schema": {
-              "default": "exclude",
-              "description": "Which items to list: 'exclude' (default) leaves archived items out, 'only' lists only the archived ones (the Archived view), 'include' lists both.",
-              "enum": [
-                "exclude",
-                "include",
-                "only"
-              ],
-              "title": "Archived",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/FlowListItem"
-                  },
-                  "title": "Response List Flows Api V1 Flows Get",
-                  "type": "array"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "List Flows",
-        "tags": [
-          "flows"
-        ]
-      },
-      "post": {
-        "description": "Create a new tenant-scoped flow with optional initial steps.",
-        "operationId": "create_flow_api_v1_flows_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/FlowCreateRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/FlowSchema"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Create Flow",
-        "tags": [
-          "flows"
-        ]
-      }
-    },
-    "/api/v1/flows/deleted": {
-      "get": {
-        "description": "List soft-deleted flows that can still be restored.",
-        "operationId": "list_deleted_flows_api_v1_flows_deleted_get",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DeletedEntityListResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "List Deleted Flows",
-        "tags": [
-          "flows"
-        ]
-      }
-    },
-    "/api/v1/flows/{entity_id}/archive": {
-      "post": {
-        "description": "Archive: out of use and out of the lists; versions untouched.\n\nOnly a draft can be archived. Idempotent — archiving an archived item\nsucceeds with ``changed=false``.",
-        "operationId": "archive_flow_api_v1_flows__entity_id__archive_post",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "entity_id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Entity Id",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ArchiveEntityResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Archive Flow",
-        "tags": [
-          "flows"
-        ]
-      }
-    },
-    "/api/v1/flows/{entity_id}/unarchive": {
-      "post": {
-        "description": "Unarchive: back in use, in the state it had (Draft or Published).",
-        "operationId": "unarchive_flow_api_v1_flows__entity_id__unarchive_post",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "entity_id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Entity Id",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ArchiveEntityResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Unarchive Flow",
-        "tags": [
-          "flows"
-        ]
-      }
-    },
-    "/api/v1/flows/{flow_id}": {
-      "delete": {
-        "description": "Soft-delete a tenant-scoped flow. 409 on version mismatch, 403 on framework.\n\nThe query parameter is ``expectedVersion`` (camelCase) to match the rest\nof the API surface — frontend sends camelCase; FastAPI aliases it back to\nthe snake_case Python argument.",
-        "operationId": "delete_flow_api_v1_flows__flow_id__delete",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "flow_id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Flow Id",
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "expectedVersion",
-            "required": true,
-            "schema": {
-              "title": "Expectedversion",
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DeleteFlowResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Delete Flow",
-        "tags": [
-          "flows"
-        ]
-      },
-      "get": {
-        "description": "Fetch a single flow (tenant-owned or framework-scope).",
-        "operationId": "get_flow_api_v1_flows__flow_id__get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "flow_id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Flow Id",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/FlowSchema"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Get Flow",
-        "tags": [
-          "flows"
-        ]
-      },
-      "patch": {
-        "description": "Update flow envelope + optionally replace its step list.\n\nRequires ``expectedVersion``; returns 409 on mismatch.\nReturns 403 if the targeted flow is framework-scoped (read-only).",
-        "operationId": "update_flow_api_v1_flows__flow_id__patch",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "flow_id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Flow Id",
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/FlowUpdateRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/FlowSchema"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Update Flow",
-        "tags": [
-          "flows"
-        ]
-      }
-    },
-    "/api/v1/flows/{flow_id}/clone": {
-      "post": {
-        "description": "Fork a visible flow into a new tenant-owned copy.\n\nSource may be a framework-scoped flow (the documented escape hatch\nfrom system-seeded flows being read-only) or one of the caller's own\ntenant flows. Cross-tenant sources return 404 — same response as a\nmissing flow, to avoid leaking other tenants' row existence.",
-        "operationId": "clone_flow_api_v1_flows__flow_id__clone_post",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "flow_id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Flow Id",
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/FlowCloneRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/FlowSchema"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Clone Flow",
-        "tags": [
-          "flows"
-        ]
-      }
-    },
-    "/api/v1/flows/{flow_id}/discard-draft": {
-      "post": {
-        "operationId": "discard_flow_draft_api_v1_flows__flow_id__discard_draft_post",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "flow_id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Flow Id",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DiscardDraftResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Discard Flow Draft",
-        "tags": [
-          "flows"
-        ]
-      }
-    },
-    "/api/v1/flows/{flow_id}/prompt-stacks": {
-      "get": {
-        "description": "Resolve a single flow → its flow steps → their system/user prompt stacks.\n\nThe flow-scoped counterpart of the workflow resolver, for when an agent\nalready holds a flow id. Read-only; tenant-scoped (#721).",
-        "operationId": "resolve_flow_prompt_stacks_api_v1_flows__flow_id__prompt_stacks_get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "flow_id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Flow Id",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/FlowPromptStacksResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Resolve Flow Prompt Stacks",
-        "tags": [
-          "prompt-snippets"
-        ]
-      }
-    },
-    "/api/v1/flows/{flow_id}/publish": {
-      "post": {
-        "operationId": "publish_flow_api_v1_flows__flow_id__publish_post",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "flow_id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Flow Id",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PublishResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Publish Flow",
-        "tags": [
-          "flows"
-        ]
-      }
-    },
-    "/api/v1/flows/{flow_id}/published": {
-      "get": {
-        "operationId": "get_published_flow_api_v1_flows__flow_id__published_get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "flow_id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Flow Id",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "anyOf": [
-                    {
-                      "$ref": "#/components/schemas/PublishedVersionInfo"
-                    },
-                    {
-                      "type": "null"
-                    }
-                  ],
-                  "title": "Response Get Published Flow Api V1 Flows  Flow Id  Published Get"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Get Published Flow",
-        "tags": [
-          "flows"
-        ]
-      }
-    },
-    "/api/v1/flows/{flow_id}/restore": {
-      "post": {
-        "description": "Un-delete a flow.\n\nIdempotent — restoring a live flow succeeds with\n``restored=false``. Takes no ``expectedVersion``: a recovery must\nnever lose to a stale version check.",
-        "operationId": "restore_flow_api_v1_flows__flow_id__restore_post",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "flow_id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Flow Id",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RestoreEntityResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Restore Flow",
-        "tags": [
-          "flows"
-        ]
-      }
-    },
-    "/api/v1/flows/{flow_id}/unpublish": {
-      "post": {
-        "operationId": "unpublish_flow_api_v1_flows__flow_id__unpublish_post",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "flow_id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Flow Id",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UnpublishResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Unpublish Flow",
-        "tags": [
-          "flows"
-        ]
-      }
-    },
-    "/api/v1/flows/{flow_id}/versions": {
-      "get": {
-        "operationId": "list_flow_versions_api_v1_flows__flow_id__versions_get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "flow_id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Flow Id",
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "type",
-            "required": false,
-            "schema": {
-              "default": "all",
-              "enum": [
-                "checkpoint",
-                "major",
-                "all"
-              ],
-              "title": "Type",
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "limit",
-            "required": false,
-            "schema": {
-              "default": 50,
-              "maximum": 200,
-              "minimum": 1,
-              "title": "Limit",
-              "type": "integer"
-            }
-          },
-          {
-            "in": "query",
-            "name": "offset",
-            "required": false,
-            "schema": {
-              "default": 0,
-              "minimum": 0,
-              "title": "Offset",
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/VersionListResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "List Flow Versions",
-        "tags": [
-          "flows"
-        ]
-      },
-      "post": {
-        "operationId": "create_flow_version_api_v1_flows__flow_id__versions_post",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "flow_id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Flow Id",
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateMajorVersionRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EnsureDraftVersionResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Create Flow Version",
-        "tags": [
-          "flows"
-        ]
-      }
-    },
-    "/api/v1/flows/{flow_id}/versions/deleted": {
-      "get": {
-        "operationId": "list_deleted_flow_versions_api_v1_flows__flow_id__versions_deleted_get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "flow_id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Flow Id",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DeletedVersionListResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "List Deleted Flow Versions",
-        "tags": [
-          "flows"
-        ]
-      }
-    },
-    "/api/v1/flows/{flow_id}/versions/ensure": {
-      "post": {
-        "operationId": "ensure_flow_version_api_v1_flows__flow_id__versions_ensure_post",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "flow_id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Flow Id",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EnsureDraftVersionResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Ensure Flow Version",
-        "tags": [
-          "flows"
-        ]
-      }
-    },
-    "/api/v1/flows/{flow_id}/versions/major/{major_version}": {
-      "patch": {
-        "operationId": "rename_flow_version_api_v1_flows__flow_id__versions_major__major_version__patch",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "flow_id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Flow Id",
-              "type": "string"
-            }
-          },
-          {
-            "in": "path",
-            "name": "major_version",
-            "required": true,
-            "schema": {
-              "title": "Major Version",
-              "type": "integer"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RenameVersionRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RenameVersionResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Rename Flow Version",
-        "tags": [
-          "flows"
-        ]
-      }
-    },
-    "/api/v1/flows/{flow_id}/versions/{version_id}": {
-      "delete": {
-        "operationId": "delete_flow_version_api_v1_flows__flow_id__versions__version_id__delete",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "flow_id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Flow Id",
-              "type": "string"
-            }
-          },
-          {
-            "in": "path",
-            "name": "version_id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Version Id",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DeleteVersionResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Delete Flow Version",
-        "tags": [
-          "flows"
-        ]
-      }
-    },
-    "/api/v1/flows/{flow_id}/versions/{version_id}/restore": {
-      "post": {
-        "operationId": "restore_flow_version_api_v1_flows__flow_id__versions__version_id__restore_post",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "flow_id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Flow Id",
-              "type": "string"
-            }
-          },
-          {
-            "in": "path",
-            "name": "version_id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Version Id",
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RestoreVersionRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RestoreResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Restore Flow Version",
-        "tags": [
-          "flows"
-        ]
-      }
-    },
-    "/api/v1/flows/{flow_id}/versions/{version_id}/restore-deleted": {
-      "post": {
-        "operationId": "restore_deleted_flow_version_api_v1_flows__flow_id__versions__version_id__restore_deleted_post",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "flow_id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Flow Id",
-              "type": "string"
-            }
-          },
-          {
-            "in": "path",
-            "name": "version_id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Version Id",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RestoreDeletedVersionResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Restore Deleted Flow Version",
-        "tags": [
-          "flows"
-        ]
-      }
-    },
-    "/api/v1/flows/{flow_id}/versions/{version}": {
-      "get": {
-        "operationId": "get_flow_version_api_v1_flows__flow_id__versions__version__get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "flow_id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Flow Id",
-              "type": "string"
-            }
-          },
-          {
-            "in": "path",
-            "name": "version",
-            "required": true,
-            "schema": {
-              "title": "Version",
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/VersionDetailResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Get Flow Version",
-        "tags": [
-          "flows"
-        ]
-      }
-    },
     "/api/v1/folders/ensure": {
       "post": {
         "description": "Resolve (and create-if-absent) a folder for a (scope, owner_id).\n\nIdempotent: subsequent calls for the same key return the same row.",
@@ -70657,6 +69390,1621 @@
         "summary": "Get Measure Version",
         "tags": [
           "measures"
+        ]
+      }
+    },
+    "/api/v1/method-step-prompts/{link_id}": {
+      "delete": {
+        "operationId": "detach_snippet_api_v1_method_step_prompts__link_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "link_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Link Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Detach Snippet",
+        "tags": [
+          "prompt-snippets"
+        ]
+      },
+      "patch": {
+        "description": "Update an attachment's target (system/user) or display_order.\n\nUsed by the flow-step editor when the designer drags a snippet\nbetween the System and User stacks, or nudges its position.",
+        "operationId": "update_attachment_api_v1_method_step_prompts__link_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "link_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Link Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAttachmentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MethodStepPromptItem"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Attachment",
+        "tags": [
+          "prompt-snippets"
+        ]
+      }
+    },
+    "/api/v1/method-steps/{method_step_id}/prompts": {
+      "get": {
+        "description": "Snippets attached to this step (excludes wildcard).",
+        "operationId": "list_step_attachments_api_v1_method_steps__method_step_id__prompts_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "method_step_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Method Step Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MethodStepPromptItem"
+                  },
+                  "title": "Response List Step Attachments Api V1 Method Steps  Method Step Id  Prompts Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Step Attachments",
+        "tags": [
+          "prompt-snippets"
+        ]
+      },
+      "post": {
+        "description": "Attach a library snippet to this flow step.",
+        "operationId": "attach_snippet_api_v1_method_steps__method_step_id__prompts_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "method_step_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Method Step Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttachSnippetRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MethodStepPromptItem"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Attach Snippet",
+        "tags": [
+          "prompt-snippets"
+        ]
+      }
+    },
+    "/api/v1/method-steps/{method_step_id}/prompts/order": {
+      "put": {
+        "description": "Replace this step's snippet ordering with the supplied list.",
+        "operationId": "reorder_attachments_api_v1_method_steps__method_step_id__prompts_order_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "method_step_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Method Step Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReorderSnippetsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MethodStepPromptItem"
+                  },
+                  "title": "Response Reorder Attachments Api V1 Method Steps  Method Step Id  Prompts Order Put",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Reorder Attachments",
+        "tags": [
+          "prompt-snippets"
+        ]
+      }
+    },
+    "/api/v1/methods": {
+      "get": {
+        "description": "List the tenant's flows plus all framework-scoped flows.",
+        "operationId": "list_methods_api_v1_methods_get",
+        "parameters": [
+          {
+            "description": "Which items to list: 'exclude' (default) leaves archived items out, 'only' lists only the archived ones (the Archived view), 'include' lists both.",
+            "in": "query",
+            "name": "archived",
+            "required": false,
+            "schema": {
+              "default": "exclude",
+              "description": "Which items to list: 'exclude' (default) leaves archived items out, 'only' lists only the archived ones (the Archived view), 'include' lists both.",
+              "enum": [
+                "exclude",
+                "include",
+                "only"
+              ],
+              "title": "Archived",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MethodListItem"
+                  },
+                  "title": "Response List Methods Api V1 Methods Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Methods",
+        "tags": [
+          "methods"
+        ]
+      },
+      "post": {
+        "description": "Create a new tenant-scoped flow with optional initial steps.",
+        "operationId": "create_method_api_v1_methods_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MethodCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MethodSchema"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Method",
+        "tags": [
+          "methods"
+        ]
+      }
+    },
+    "/api/v1/methods/deleted": {
+      "get": {
+        "description": "List soft-deleted flows that can still be restored.",
+        "operationId": "list_deleted_methods_api_v1_methods_deleted_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeletedEntityListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Deleted Methods",
+        "tags": [
+          "methods"
+        ]
+      }
+    },
+    "/api/v1/methods/{entity_id}/archive": {
+      "post": {
+        "description": "Archive: out of use and out of the lists; versions untouched.\n\nOnly a draft can be archived. Idempotent — archiving an archived item\nsucceeds with ``changed=false``.",
+        "operationId": "archive_method_api_v1_methods__entity_id__archive_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArchiveEntityResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Archive Method",
+        "tags": [
+          "methods"
+        ]
+      }
+    },
+    "/api/v1/methods/{entity_id}/unarchive": {
+      "post": {
+        "description": "Unarchive: back in use, in the state it had (Draft or Published).",
+        "operationId": "unarchive_method_api_v1_methods__entity_id__unarchive_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArchiveEntityResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Unarchive Method",
+        "tags": [
+          "methods"
+        ]
+      }
+    },
+    "/api/v1/methods/{method_id}": {
+      "delete": {
+        "description": "Soft-delete a tenant-scoped flow. 409 on version mismatch, 403 on framework.\n\nThe query parameter is ``expectedVersion`` (camelCase) to match the rest\nof the API surface — frontend sends camelCase; FastAPI aliases it back to\nthe snake_case Python argument.",
+        "operationId": "delete_method_api_v1_methods__method_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "method_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Method Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "expectedVersion",
+            "required": true,
+            "schema": {
+              "title": "Expectedversion",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteFlowResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Method",
+        "tags": [
+          "methods"
+        ]
+      },
+      "get": {
+        "description": "Fetch a single flow (tenant-owned or framework-scope).",
+        "operationId": "get_method_api_v1_methods__method_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "method_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Method Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MethodSchema"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Method",
+        "tags": [
+          "methods"
+        ]
+      },
+      "patch": {
+        "description": "Update flow envelope + optionally replace its step list.\n\nRequires ``expectedVersion``; returns 409 on mismatch.\nReturns 403 if the targeted flow is framework-scoped (read-only).",
+        "operationId": "update_method_api_v1_methods__method_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "method_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Method Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MethodUpdateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MethodSchema"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Method",
+        "tags": [
+          "methods"
+        ]
+      }
+    },
+    "/api/v1/methods/{method_id}/clone": {
+      "post": {
+        "description": "Fork a visible flow into a new tenant-owned copy.\n\nSource may be a framework-scoped flow (the documented escape hatch\nfrom system-seeded flows being read-only) or one of the caller's own\ntenant flows. Cross-tenant sources return 404 — same response as a\nmissing flow, to avoid leaking other tenants' row existence.",
+        "operationId": "clone_method_api_v1_methods__method_id__clone_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "method_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Method Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MethodCloneRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MethodSchema"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Clone Method",
+        "tags": [
+          "methods"
+        ]
+      }
+    },
+    "/api/v1/methods/{method_id}/discard-draft": {
+      "post": {
+        "operationId": "discard_method_draft_api_v1_methods__method_id__discard_draft_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "method_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Method Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiscardDraftResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Discard Method Draft",
+        "tags": [
+          "methods"
+        ]
+      }
+    },
+    "/api/v1/methods/{method_id}/prompt-stacks": {
+      "get": {
+        "description": "Resolve a single flow → its flow steps → their system/user prompt stacks.\n\nThe flow-scoped counterpart of the workflow resolver, for when an agent\nalready holds a flow id. Read-only; tenant-scoped (#721).",
+        "operationId": "resolve_method_prompt_stacks_api_v1_methods__method_id__prompt_stacks_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "method_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Method Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MethodPromptStacksResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Resolve Method Prompt Stacks",
+        "tags": [
+          "prompt-snippets"
+        ]
+      }
+    },
+    "/api/v1/methods/{method_id}/publish": {
+      "post": {
+        "operationId": "publish_method_api_v1_methods__method_id__publish_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "method_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Method Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Publish Method",
+        "tags": [
+          "methods"
+        ]
+      }
+    },
+    "/api/v1/methods/{method_id}/published": {
+      "get": {
+        "operationId": "get_published_method_api_v1_methods__method_id__published_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "method_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Method Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/PublishedVersionInfo"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Get Published Method Api V1 Methods  Method Id  Published Get"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Published Method",
+        "tags": [
+          "methods"
+        ]
+      }
+    },
+    "/api/v1/methods/{method_id}/restore": {
+      "post": {
+        "description": "Un-delete a flow.\n\nIdempotent — restoring a live flow succeeds with\n``restored=false``. Takes no ``expectedVersion``: a recovery must\nnever lose to a stale version check.",
+        "operationId": "restore_method_api_v1_methods__method_id__restore_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "method_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Method Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RestoreEntityResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Restore Method",
+        "tags": [
+          "methods"
+        ]
+      }
+    },
+    "/api/v1/methods/{method_id}/unpublish": {
+      "post": {
+        "operationId": "unpublish_method_api_v1_methods__method_id__unpublish_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "method_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Method Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnpublishResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Unpublish Method",
+        "tags": [
+          "methods"
+        ]
+      }
+    },
+    "/api/v1/methods/{method_id}/used-by": {
+      "get": {
+        "description": "Who runs this method, and through which workflows (*Used by*).\n\nThe agents of the workflow steps in use that run it — a step's own owner,\nelse its workflow's owner — and those workflows, per document. For the\nplatform's default method, the agent steps that name no method.",
+        "operationId": "get_method_used_by_api_v1_methods__method_id__used_by_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "method_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Method Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MethodUsageResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Method Used By",
+        "tags": [
+          "methods"
+        ]
+      }
+    },
+    "/api/v1/methods/{method_id}/versions": {
+      "get": {
+        "operationId": "list_method_versions_api_v1_methods__method_id__versions_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "method_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Method Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "type",
+            "required": false,
+            "schema": {
+              "default": "all",
+              "enum": [
+                "checkpoint",
+                "major",
+                "all"
+              ],
+              "title": "Type",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VersionListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Method Versions",
+        "tags": [
+          "methods"
+        ]
+      },
+      "post": {
+        "operationId": "create_method_version_api_v1_methods__method_id__versions_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "method_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Method Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMajorVersionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnsureDraftVersionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Method Version",
+        "tags": [
+          "methods"
+        ]
+      }
+    },
+    "/api/v1/methods/{method_id}/versions/deleted": {
+      "get": {
+        "operationId": "list_deleted_method_versions_api_v1_methods__method_id__versions_deleted_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "method_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Method Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeletedVersionListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Deleted Method Versions",
+        "tags": [
+          "methods"
+        ]
+      }
+    },
+    "/api/v1/methods/{method_id}/versions/ensure": {
+      "post": {
+        "operationId": "ensure_method_version_api_v1_methods__method_id__versions_ensure_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "method_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Method Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnsureDraftVersionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Ensure Method Version",
+        "tags": [
+          "methods"
+        ]
+      }
+    },
+    "/api/v1/methods/{method_id}/versions/major/{major_version}": {
+      "patch": {
+        "operationId": "rename_method_version_api_v1_methods__method_id__versions_major__major_version__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "method_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Method Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "major_version",
+            "required": true,
+            "schema": {
+              "title": "Major Version",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RenameVersionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RenameVersionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Rename Method Version",
+        "tags": [
+          "methods"
+        ]
+      }
+    },
+    "/api/v1/methods/{method_id}/versions/{version_id}": {
+      "delete": {
+        "operationId": "delete_method_version_api_v1_methods__method_id__versions__version_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "method_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Method Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteVersionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Method Version",
+        "tags": [
+          "methods"
+        ]
+      }
+    },
+    "/api/v1/methods/{method_id}/versions/{version_id}/restore": {
+      "post": {
+        "operationId": "restore_method_version_api_v1_methods__method_id__versions__version_id__restore_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "method_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Method Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RestoreVersionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RestoreResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Restore Method Version",
+        "tags": [
+          "methods"
+        ]
+      }
+    },
+    "/api/v1/methods/{method_id}/versions/{version_id}/restore-deleted": {
+      "post": {
+        "operationId": "restore_deleted_method_version_api_v1_methods__method_id__versions__version_id__restore_deleted_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "method_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Method Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RestoreDeletedVersionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Restore Deleted Method Version",
+        "tags": [
+          "methods"
+        ]
+      }
+    },
+    "/api/v1/methods/{method_id}/versions/{version}": {
+      "get": {
+        "operationId": "get_method_version_api_v1_methods__method_id__versions__version__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "method_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Method Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version",
+            "required": true,
+            "schema": {
+              "title": "Version",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VersionDetailResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Method Version",
+        "tags": [
+          "methods"
         ]
       }
     },
@@ -93088,7 +93436,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/FlowStepPromptItem"
+                    "$ref": "#/components/schemas/MethodStepPromptItem"
                   },
                   "title": "Response List Wildcard Attachments Api V1 Wildcard Prompts Get",
                   "type": "array"
@@ -93499,6 +93847,7 @@
               "enum": [
                 "tool",
                 "agent",
+                "method",
                 "flow",
                 "output_schema",
                 "workflow",
@@ -94583,7 +94932,7 @@
     },
     "/api/v1/workflows/{workflow_id}/prompt-stacks": {
       "get": {
-        "description": "Resolve a workflow → its flow steps → each step's system/user prompt stacks.\n\nThe single read an agent uses before placing snippets without a UI: it turns\na workflow into the ``flowStepId``s it can attach to (with the owning workflow\nstep's id/name/type) and what is already attached, plus the tenant's wildcard\nsnippets. Read-only; tenant-scoped (#721).",
+        "description": "Resolve a workflow → its flow steps → each step's system/user prompt stacks.\n\nThe single read an agent uses before placing snippets without a UI: it turns\na workflow into the ``methodStepId``s it can attach to (with the owning workflow\nstep's id/name/type) and what is already attached, plus the tenant's wildcard\nsnippets. Read-only; tenant-scoped (#721).",
         "operationId": "resolve_workflow_prompt_stacks_api_v1_workflows__workflow_id__prompt_stacks_get",
         "parameters": [
           {

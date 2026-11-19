@@ -359,7 +359,9 @@ describe("archive: what the backend refuses, said before the call", () => {
 
   it("only the kinds whose delete has a guard promise the in-use refusal", () => {
     const { descriptions } = surface();
-    const inUse = ["agent", "workflow", "tool", "output_schema", "data_table", "table_database", "measure", "data_source", "toolbox"];
+    // `method` since Methods (R6): `archive_ops.GUARDS["method"]` is
+    // `MethodService.refuse_if_in_use`, the guard its delete calls.
+    const inUse = ["agent", "workflow", "tool", "output_schema", "data_table", "table_database", "measure", "data_source", "toolbox", "method"];
     for (const e of archiveKinds) {
       const d = descriptions.get(`archive_${e.singular}`)!;
       expect(/same words as delete_/.test(d), e.singular).toBe(inUse.includes(e.singular));

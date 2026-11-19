@@ -27,6 +27,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 
 import type { AxonityClient } from "../client.js";
+import { currentSpelling, defineTool, formerName } from "./aliases.js";
 import { guard, jsonResult } from "./result.js";
 import { refuseWhileWorkflowWarns } from "./warningGate.js";
 
@@ -83,7 +84,7 @@ export interface EntityDef {
   guardFields?: (fields: Record<string, unknown>) => void;
   /**
    * Whether `request_publish_<entity>` is generated. Default true, and true for
-   * every current entity (flow included): each is a valid `entityType` for a
+   * every current entity (method included): each is a valid `entityType` for a
    * publish approval on the backend (`ApprovalEntityType`). Set false only for a
    * future entity that genuinely cannot be publish-approved.
    */
@@ -111,13 +112,13 @@ export interface EntityDef {
    * is what turns on `delete_/restore_/list_deleted_/discard_*` — omit it for
    * an entity with no lifecycle routes. The two spellings are a real backend
    * inconsistency, not a typo: `expectedVersion` (workflow, agent, tool,
-   * prompt_snippet, flow) vs `expected_version` (skill, policy, reference_doc,
+   * prompt_snippet, method) vs `expected_version` (skill, policy, reference_doc,
    * output_schema).
    */
   deleteVersionParam?: "expectedVersion" | "expected_version";
   /**
    * Whether `discard_<entity>_draft` is generated. Default true when the entity
-   * is deletable, and true for every current entity — both `flow` and
+   * is deletable, and true for every current entity — both `method` and
    * `prompt_snippet` have a discard-draft route
    * (`POST .../{id}/discard-draft`). Escape hatch for a future entity lacking one.
    */
@@ -240,6 +241,38 @@ export interface EntityDef {
    * (`tools/toolboxes.ts`).
    */
   ownTools?: ("list" | "create" | "update" | "delete")[];
+  /**
+   * The word this kind went by before it was renamed (`flow`, now `method`).
+   * Every tool this registrar makes for it is ALSO registered under the old
+   * name, as an alias that says so and makes the same call, for one release
+   * (`tools/aliases.ts`). Omit it for a kind that was never renamed.
+   */
+  formerSingular?: string;
+  /**
+   * Field names an agent may still write the old way, old -> current
+   * (`flowSteps` -> `methodSteps`). Read as the current one before the call;
+   * both in one call is refused.
+   */
+  formerFields?: Record<string, string>;
+}
+
+/** `server.tool` for one kind: each tool also under its old name, when the kind has one. */
+function entityTool(server: McpServer, def: EntityDef) {
+  const former = def.formerSingular;
+  return (
+    name: string,
+    description: string,
+    shape: z.ZodRawShape,
+    handler: (args: never) => Promise<unknown>,
+  ): void =>
+    defineTool(
+      server,
+      name,
+      description,
+      shape,
+      handler,
+      former ? { name: formerName(name, def.singular, former) } : undefined,
+    );
 }
 
 export function registerEntityTools(
@@ -248,6 +281,7 @@ export function registerEntityTools(
   def: EntityDef,
 ): void {
   const { singular, basePath, updateMethod, label, guardFields } = def;
+  const tool = entityTool(server, def);
   const plural = def.plural ?? `${singular}s`;
   const publishable = def.publishable !== false;
   const creatable = def.creatable !== false;
@@ -257,7 +291,7 @@ export function registerEntityTools(
   const paging = def.listPaging;
   const own = new Set(def.ownTools ?? []);
 
-  if (!own.has("list")) server.tool(
+  if (!own.has("list")) tool(
     `list_${plural}`,
     `List ${paging ? "" : "all "}${label} in your Axonity tenant (id, name or title, version).` +
       (def.archivable
@@ -335,7 +369,7 @@ export function registerEntityTools(
   );
 
   if (readable) {
-    server.tool(
+    tool(
       `read_${singular}`,
       `Read one ${singular} by id, including its current draft and version. ` +
         `Read before you update — you need the current version.`,
@@ -346,7 +380,7 @@ export function registerEntityTools(
   }
 
   if (creatable && !own.has("create")) {
-    server.tool(
+    tool(
       `create_${singular}`,
       `Create a new ${singular} draft. Pass the entity's fields (camelCase) in ` +
         `\`fields\`; the backend validates them. Returns the created ${singular} ` +
@@ -364,13 +398,14 @@ export function registerEntityTools(
       },
       async ({ fields }) =>
         guard(async () => {
-          guardFields?.(fields);
-          return jsonResult(await client.post(basePath, fields));
+          const body = currentSpelling(fields, def.formerFields);
+          guardFields?.(body);
+          return jsonResult(await client.post(basePath, body));
         }),
     );
   }
 
-  if (!own.has("update")) server.tool(
+  if (!own.has("update")) tool(
     `update_${singular}`,
     `Update a ${singular} draft. Read it first to get \`expectedVersion\`; on a ` +
       `409 conflict, read again and retry. Pass only the fields you are ` +
@@ -397,8 +432,9 @@ export function registerEntityTools(
     },
     async ({ id, expectedVersion, fields }) =>
       guard(async () => {
-        guardFields?.(fields);
-        const body = { expectedVersion, ...fields };
+        const current = currentSpelling(fields, def.formerFields);
+        guardFields?.(current);
+        const body = { expectedVersion, ...current };
         const path = `${basePath}/${id}`;
         const data =
           updateMethod === "PUT"
@@ -412,7 +448,7 @@ export function registerEntityTools(
     const deleteVersionParam = def.deleteVersionParam;
     const hasDiscardDraft = def.hasDiscardDraft !== false;
 
-    if (!own.has("delete")) server.tool(
+    if (!own.has("delete")) tool(
       `delete_${singular}`,
       `Delete a ${singular}. Destructive, but RECOVERABLE — it is soft-deleted ` +
         `and can be brought back with restore_${singular} (it will not appear in ` +
@@ -440,7 +476,7 @@ export function registerEntityTools(
         }),
     );
 
-    server.tool(
+    tool(
       `restore_${singular}`,
       `Undo delete_${singular} — bring a soft-deleted ${singular} back. Takes no ` +
         `version check (a restore must never lose to a stale-version guard). Can ` +
@@ -490,7 +526,7 @@ export function registerEntityTools(
         ),
     );
 
-    server.tool(
+    tool(
       `list_deleted_${plural}`,
       `List soft-deleted ${label} — the restore candidates for restore_${singular}.`,
       {},
@@ -505,7 +541,7 @@ export function registerEntityTools(
     );
 
     if (hasDiscardDraft) {
-      server.tool(
+      tool(
         `discard_${singular}_draft`,
         `Discard uncommitted draft edits on a ${singular}, resetting it to its ` +
           `last published state. Fails if it has never been published — there is ` +
@@ -524,7 +560,7 @@ export function registerEntityTools(
 
   if (!publishable) return;
 
-  server.tool(
+  tool(
     `request_publish_${singular}`,
     `Request that a ${singular} be published. This does NOT publish it — it ` +
       `creates a pending approval a human approves in Axonity. Returns the ` +
@@ -569,13 +605,14 @@ function registerArchiveTools(
   def: EntityDef,
 ): void {
   const { singular, basePath } = def;
+  const tool = entityTool(server, def);
   // A kind with no versions (data_source, dashboard) has no draft and no
   // publication: `refuse_published_item` reads `published_versions` and finds
   // no row for it, so the refusal and the words about versions are not true
   // there (review S1 of #120).
   const versioned = def.publishable !== false;
 
-  server.tool(
+  tool(
     `archive_${singular}`,
     `Archive a ${singular}: out of use — no run reads it — and out of the lists, ` +
       `until unarchive_${singular} brings it back. ` +
@@ -600,7 +637,7 @@ function registerArchiveTools(
       guard(async () => jsonResult(await client.post(`${basePath}/${id}/archive`))),
   );
 
-  server.tool(
+  tool(
     `unarchive_${singular}`,
     `Unarchive a ${singular}: back in use, ` +
       (versioned ? `in the state it had (draft or published)` : `as it was`) +

@@ -43,7 +43,7 @@ export function registerComponentTools(
 ): void {
   server.tool(
     "list_workflow_components",
-    "Everything this workflow is made of, in ONE call: the agents and flows " +
+    "Everything this workflow is made of, in ONE call: the agents and methods " +
       "that run its steps, the workflows it calls, the tools those agents " +
       "reach, the tables behind those tools, and the knowledge attached to " +
       "them. Read-only. " +

@@ -23,7 +23,7 @@
  *     guard.
  *
  * The published snapshot also lives in two places depending on the entity
- * family: `/{id}/published` for workflow/agent/tool/flow, `/{id}/versions/published`
+ * family: `/{id}/published` for workflow/agent/tool/method, `/{id}/versions/published`
  * for the memory entities (including output_schema and prompt_snippet, which
  * gained full versioning alongside them). `publishedPath` selects the right one.
  *
@@ -34,6 +34,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 
 import type { AxonityClient } from "../client.js";
+import { defineTool, formerName } from "./aliases.js";
 import { guard, jsonResult } from "./result.js";
 
 /** A required literal — an agent cannot satisfy it by filling in a default. */
@@ -58,14 +59,34 @@ export interface VersionedEntity {
    * live.
    */
   restoreNote?: string;
+  /**
+   * The word this kind went by before it was renamed. Each version tool is
+   * also registered under the old name for one release (`tools/aliases.ts`).
+   */
+  formerSingular?: string;
 }
 
 export function registerVersionTools(
   server: McpServer,
   client: AxonityClient,
-  { singular, basePath, publishedPath, restoreNote }: VersionedEntity,
+  { singular, basePath, publishedPath, restoreNote, formerSingular }: VersionedEntity,
 ): void {
-  server.tool(
+  const tool = (
+    name: string,
+    description: string,
+    shape: z.ZodRawShape,
+    handler: (args: never) => Promise<unknown>,
+  ): void =>
+    defineTool(
+      server,
+      name,
+      description,
+      shape,
+      handler,
+      formerSingular ? { name: formerName(name, singular, formerSingular) } : undefined,
+    );
+
+  tool(
     `list_${singular}_versions`,
     `List a ${singular}'s version history — checkpoints (every save) and major ` +
       `versions (named releases). Use this to find the versionId you need for ` +
@@ -87,7 +108,7 @@ export function registerVersionTools(
       ),
   );
 
-  server.tool(
+  tool(
     `read_${singular}_version`,
     `Read one historical version of a ${singular} by its CHECKPOINT NUMBER (an ` +
       `integer like 3, from the \`version\` field in list_${singular}_versions) — ` +
@@ -105,7 +126,7 @@ export function registerVersionTools(
       ),
   );
 
-  server.tool(
+  tool(
     `restore_${singular}_version`,
     `Roll a ${singular}'s DRAFT back to an earlier version. Takes the versionId ` +
       `(a UUID from list_${singular}_versions), NOT the checkpoint number. The ` +
@@ -131,7 +152,7 @@ export function registerVersionTools(
       ),
   );
 
-  server.tool(
+  tool(
     `delete_${singular}_version`,
     `Permanently remove one entry from a ${singular}'s version history. The ` +
       `working draft and the currently published version are protected and ` +
@@ -149,7 +170,7 @@ export function registerVersionTools(
       }),
   );
 
-  server.tool(
+  tool(
     `list_deleted_${singular}_versions`,
     `List a ${singular}'s deleted version rows — restore candidates for ` +
       `restore_deleted_${singular}_version. Deleted version numbers stay ` +
@@ -159,7 +180,7 @@ export function registerVersionTools(
       guard(async () => jsonResult(await client.get(`${basePath}/${id}/versions/deleted`))),
   );
 
-  server.tool(
+  tool(
     `restore_deleted_${singular}_version`,
     `Undo delete_${singular}_version — bring a removed version row back into ` +
       `history. This does NOT change the current draft (unlike ` +
@@ -179,7 +200,7 @@ export function registerVersionTools(
       ),
   );
 
-  server.tool(
+  tool(
     `create_${singular}_major_version`,
     `Cut a new NAMED major version of a ${singular} — "Save As" for the ` +
       `current draft. The draft's state becomes a labelled release in history ` +
@@ -211,7 +232,7 @@ export function registerVersionTools(
       ),
   );
 
-  server.tool(
+  tool(
     `ensure_${singular}_major_version`,
     `Make sure a ${singular} has a working draft major version, creating an ` +
       `unnamed one ("Version N") if it has none. IDEMPOTENT — calling it when ` +
@@ -226,7 +247,7 @@ export function registerVersionTools(
       ),
   );
 
-  server.tool(
+  tool(
     `name_${singular}_major_version`,
     `Give a ${singular}'s major version a name — label a release so it is easy to ` +
       `find in history. Targets a MAJOR version by its integer number (from ` +
@@ -251,7 +272,7 @@ export function registerVersionTools(
       ),
   );
 
-  server.tool(
+  tool(
     `read_${singular}_published`,
     `Read the LIVE published version of a ${singular} — what the runtime ` +
       `actually uses, as opposed to the draft that read_${singular} returns. ` +

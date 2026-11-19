@@ -269,10 +269,10 @@ describe("catalog and cloning", () => {
     expect(client.get).toHaveBeenCalledWith("/api/v1/system-tools");
   });
 
-  it("clones a flow", async () => {
+  it("clones a method, with the body the route requires", async () => {
     const { handlers, client } = setup(registerCatalogTools);
-    await handlers.get("clone_flow")!({ flowId: "f-1" });
-    expect(client.post).toHaveBeenCalledWith("/api/v1/flows/f-1/clone");
+    await handlers.get("clone_method")!({ methodId: "f-1" });
+    expect(client.post).toHaveBeenCalledWith("/api/v1/methods/f-1/clone", {});
   });
 
   it("clones a prompt snippet", async () => {

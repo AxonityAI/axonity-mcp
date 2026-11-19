@@ -384,7 +384,7 @@ describe("list filters are generated, not kept (M4)", () => {
     // tables arrived with the refreshed schema and no line at all.
     // Levenscyclus R3 (`archived` on every list of an archivable kind) is that
     // argument once more: fifteen routes took one parameter, and the five kinds
-    // that had no filter before (dashboard, flow, output_schema, skill, tool)
+    // that had no filter before (dashboard, flow — now method —, output_schema, skill, tool)
     // arrived here with no line written. `status` on tables left: the backend
     // refuses a status now, archived is `archived`.
     expect(Object.keys(table).sort()).toEqual([
@@ -393,8 +393,8 @@ describe("list filters are generated, not kept (M4)", () => {
       "dashboard",
       "data_source",
       "data_table",
-      "flow",
       "measure",
+      "method",
       "output_schema",
       "policy",
       "prompt_snippet",

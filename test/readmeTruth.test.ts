@@ -61,8 +61,8 @@ describe("the README carries no claim #107 corrected", () => {
   });
 
   it("release: the agents it runs, each with its persona", () => {
-    expect(README).toMatch(/the agents it runs \(each with its\s+persona\), their tools, the flows it pins/);
-    expect(README).not.toMatch(/their tools and\s+personas, the flows it pins/);
+    expect(README).toMatch(/the agents it runs \(each with its\s+persona\), their tools, the methods it pins/);
+    expect(README).not.toMatch(/their tools and\s+personas, the methods it pins/);
   });
 
   it("the generic entity family is exactly the entities registered with drafts and publication", async () => {
@@ -75,7 +75,9 @@ describe("the README carries no claim #107 corrected", () => {
     const family = names
       .filter((n) => n.startsWith("request_publish_"))
       .map((n) => n.slice("request_publish_".length))
-      .filter((n) => !["bulk", "release", "company"].includes(n))
+      // `flow` is `request_publish_flow`, the old name of `request_publish_method`
+      // (an alias for one release, `tools/aliases.ts`) — not a second entity.
+      .filter((n) => !["bulk", "release", "company", "flow"].includes(n))
       .sort();
 
     const match = README.match(/([A-Z][a-z]+) entities — \*\*([^*]+)\*\* —/);
