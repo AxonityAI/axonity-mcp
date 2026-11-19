@@ -268,8 +268,10 @@ describe("a secret says what uses it and when it was last used", () => {
       expect(Object.keys(row), field).toContain(field);
       expect(d, field).toContain(field);
     }
-    // DECISIONS.md 22, `SecretService.delete_secret`: the refusal a person meets.
-    expect(d).toContain("A secret in use cannot be deleted");
+    // `SecretService.delete_secret` no longer refuses a secret in use (Jonathan, 19 Nov):
+    // used-by informs, it does not forbid, and the text must not say it does.
+    expect(d).toContain("can still be deleted");
+    expect(d).not.toContain("cannot be deleted");
     expect(d).toContain("read_secret_used_by");
   });
 
