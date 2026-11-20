@@ -37,6 +37,12 @@ export const FORBIDDEN: Rule[] = [
   // refusal. Recorded rather than left to be rediscovered by whoever wonders
   // why the pinned schema has routes the connector does not call.
   { label: "Flow-App (a person at a screen)", path: /\/flow-apps(\/|$)/ },
+  // Opening an app (#1826 A2, main #2495): `GET /apps/{slug}/frame` answers
+  // where the shell points the frame of an app, for the person whose session
+  // asks. The route's own docstring: "A session only: closed to personal and
+  // service tokens (`dicht`), because opening an app is a person at a screen",
+  // and the token table says the answer "is read nowhere else".
+  { label: "Flow-App frame (a person at a screen)", path: /^\/api\/v1\/apps\/[^/]+\/frame$/ },
   // Hidden tables are `require_platform_admin` (main #2472): a workspace does
   // not see them, so neither does a token (token table: "a workspace does not
   // see them, so neither does a token").

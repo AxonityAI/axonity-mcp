@@ -154,7 +154,7 @@ export const LIST_FILTERS: Record<string, ListFilter[]> = {
         "Which items to list: 'exclude' (default) leaves archived items out, 'only' lists only the archived ones (the Archived view), 'include' lists both.",
     },
   ],
-  "flow": [
+  "method": [
     {
       arg: "archived",
       query: "archived",

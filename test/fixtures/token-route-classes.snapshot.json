@@ -113,18 +113,6 @@
     "class": "dicht",
     "why": "of a person at a screen, reads included"
   },
-  "DELETE /api/v1/flow-step-prompts/{link_id}": {
-    "class": "dicht",
-    "why": "delete: configuration without an approval step"
-  },
-  "DELETE /api/v1/flows/{flow_id}": {
-    "class": "dicht",
-    "why": "delete: configuration without an approval step"
-  },
-  "DELETE /api/v1/flows/{flow_id}/versions/{version_id}": {
-    "class": "dicht",
-    "why": "delete: configuration without an approval step"
-  },
   "DELETE /api/v1/me/tokens/{token_id}": {
     "class": "dicht",
     "why": "a token never manages tokens"
@@ -138,6 +126,18 @@
     "why": "delete: configuration without an approval step"
   },
   "DELETE /api/v1/measures/{measure_id}/versions/{version_id}": {
+    "class": "dicht",
+    "why": "delete: configuration without an approval step"
+  },
+  "DELETE /api/v1/method-step-prompts/{link_id}": {
+    "class": "dicht",
+    "why": "delete: configuration without an approval step"
+  },
+  "DELETE /api/v1/methods/{method_id}": {
+    "class": "dicht",
+    "why": "delete: configuration without an approval step"
+  },
+  "DELETE /api/v1/methods/{method_id}/versions/{version_id}": {
     "class": "dicht",
     "why": "delete: configuration without an approval step"
   },
@@ -378,6 +378,10 @@
   },
   "GET /api/v1/applications/{application_id}/versions/{version}": {
     "class": "lezen"
+  },
+  "GET /api/v1/apps/{slug}/frame": {
+    "class": "dicht",
+    "why": "nowhere else"
   },
   "GET /api/v1/audiences": {
     "class": "lezen"
@@ -658,34 +662,6 @@
     "class": "dicht",
     "why": "of a person at a screen, reads included"
   },
-  "GET /api/v1/flow-steps/{flow_step_id}/prompts": {
-    "class": "dicht",
-    "why": "attachment rows, not proven to be draft-only"
-  },
-  "GET /api/v1/flows": {
-    "class": "lezen"
-  },
-  "GET /api/v1/flows/deleted": {
-    "class": "lezen"
-  },
-  "GET /api/v1/flows/{flow_id}": {
-    "class": "lezen"
-  },
-  "GET /api/v1/flows/{flow_id}/prompt-stacks": {
-    "class": "lezen"
-  },
-  "GET /api/v1/flows/{flow_id}/published": {
-    "class": "lezen"
-  },
-  "GET /api/v1/flows/{flow_id}/versions": {
-    "class": "lezen"
-  },
-  "GET /api/v1/flows/{flow_id}/versions/deleted": {
-    "class": "lezen"
-  },
-  "GET /api/v1/flows/{flow_id}/versions/{version}": {
-    "class": "lezen"
-  },
   "GET /api/v1/folders/{folder_id}/files": {
     "class": "dicht",
     "why": "credentials, secrets, platform, deployment, configuration"
@@ -814,6 +790,37 @@
     "class": "lezen"
   },
   "GET /api/v1/measures/{measure_id}/versions/{version}": {
+    "class": "lezen"
+  },
+  "GET /api/v1/method-steps/{method_step_id}/prompts": {
+    "class": "dicht",
+    "why": "attachment rows, not proven to be draft-only"
+  },
+  "GET /api/v1/methods": {
+    "class": "lezen"
+  },
+  "GET /api/v1/methods/deleted": {
+    "class": "lezen"
+  },
+  "GET /api/v1/methods/{method_id}": {
+    "class": "lezen"
+  },
+  "GET /api/v1/methods/{method_id}/prompt-stacks": {
+    "class": "lezen"
+  },
+  "GET /api/v1/methods/{method_id}/published": {
+    "class": "lezen"
+  },
+  "GET /api/v1/methods/{method_id}/used-by": {
+    "class": "lezen"
+  },
+  "GET /api/v1/methods/{method_id}/versions": {
+    "class": "lezen"
+  },
+  "GET /api/v1/methods/{method_id}/versions/deleted": {
+    "class": "lezen"
+  },
+  "GET /api/v1/methods/{method_id}/versions/{version}": {
     "class": "lezen"
   },
   "GET /api/v1/model/gaps": {
@@ -1401,6 +1408,10 @@
     "class": "dicht",
     "why": "webhook triggers"
   },
+  "GET /app-files/{tenant_id}/{app_id}/{bundle_sha256}/{file_path:path}": {
+    "class": "dicht",
+    "why": "It is listed here only so the conformance test sees every route"
+  },
   "GET /health": {
     "class": "dicht",
     "why": "no authentication of its own: a token never reaches the gate"
@@ -1463,16 +1474,6 @@
     "class": "dicht",
     "why": "credentials, secrets, platform, deployment, configuration"
   },
-  "PATCH /api/v1/flow-step-prompts/{link_id}": {
-    "class": "dicht",
-    "why": "attachment rows, not proven to be draft-only"
-  },
-  "PATCH /api/v1/flows/{flow_id}": {
-    "class": "configuratie"
-  },
-  "PATCH /api/v1/flows/{flow_id}/versions/major/{major_version}": {
-    "class": "configuratie"
-  },
   "PATCH /api/v1/knowledge/source-types/{key}": {
     "class": "dicht",
     "why": "knowledge upkeep"
@@ -1486,6 +1487,16 @@
     "why": "(forbid_service_token_for_personal_reads); the person resolves their own settings in the browser"
   },
   "PATCH /api/v1/measures/{measure_id}/versions/major/{major_version}": {
+    "class": "configuratie"
+  },
+  "PATCH /api/v1/method-step-prompts/{link_id}": {
+    "class": "dicht",
+    "why": "attachment rows, not proven to be draft-only"
+  },
+  "PATCH /api/v1/methods/{method_id}": {
+    "class": "configuratie"
+  },
+  "PATCH /api/v1/methods/{method_id}/versions/major/{major_version}": {
     "class": "configuratie"
   },
   "PATCH /api/v1/modules/{module_id}/settings": {
@@ -1601,6 +1612,10 @@
     "why": "no authentication of its own: a token never reaches the gate"
   },
   "POST /api/v1/_test/seed-flow": {
+    "class": "dicht",
+    "why": "no authentication of its own: a token never reaches the gate"
+  },
+  "POST /api/v1/_test/seed-flow-app": {
     "class": "dicht",
     "why": "no authentication of its own: a token never reaches the gate"
   },
@@ -2138,53 +2153,6 @@
     "class": "dicht",
     "why": "of a person at a screen, reads included"
   },
-  "POST /api/v1/flow-steps/{flow_step_id}/prompts": {
-    "class": "dicht",
-    "why": "attachment rows, not proven to be draft-only"
-  },
-  "POST /api/v1/flows": {
-    "class": "configuratie"
-  },
-  "POST /api/v1/flows/{entity_id}/archive": {
-    "class": "dicht",
-    "why": "archive: a delete by another name, without an approval step (Levenscyclus)"
-  },
-  "POST /api/v1/flows/{entity_id}/unarchive": {
-    "class": "dicht",
-    "why": "archive: a delete by another name, without an approval step (Levenscyclus)"
-  },
-  "POST /api/v1/flows/{flow_id}/clone": {
-    "class": "configuratie"
-  },
-  "POST /api/v1/flows/{flow_id}/discard-draft": {
-    "class": "configuratie"
-  },
-  "POST /api/v1/flows/{flow_id}/publish": {
-    "class": "dicht",
-    "why": "direct publish: only the approval request"
-  },
-  "POST /api/v1/flows/{flow_id}/restore": {
-    "class": "dicht",
-    "why": "restore: configuration without an approval step"
-  },
-  "POST /api/v1/flows/{flow_id}/unpublish": {
-    "class": "dicht",
-    "why": "direct publish: only the approval request"
-  },
-  "POST /api/v1/flows/{flow_id}/versions": {
-    "class": "configuratie"
-  },
-  "POST /api/v1/flows/{flow_id}/versions/ensure": {
-    "class": "configuratie"
-  },
-  "POST /api/v1/flows/{flow_id}/versions/{version_id}/restore": {
-    "class": "dicht",
-    "why": "restore: configuration without an approval step"
-  },
-  "POST /api/v1/flows/{flow_id}/versions/{version_id}/restore-deleted": {
-    "class": "dicht",
-    "why": "restore: configuration without an approval step"
-  },
   "POST /api/v1/folders/ensure": {
     "class": "dicht",
     "why": "credentials, secrets, platform, deployment, configuration"
@@ -2323,6 +2291,53 @@
     "why": "restore: configuration without an approval step"
   },
   "POST /api/v1/measures/{measure_id}/versions/{version_id}/restore-deleted": {
+    "class": "dicht",
+    "why": "restore: configuration without an approval step"
+  },
+  "POST /api/v1/method-steps/{method_step_id}/prompts": {
+    "class": "dicht",
+    "why": "attachment rows, not proven to be draft-only"
+  },
+  "POST /api/v1/methods": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/methods/{entity_id}/archive": {
+    "class": "dicht",
+    "why": "archive: a delete by another name, without an approval step (Levenscyclus)"
+  },
+  "POST /api/v1/methods/{entity_id}/unarchive": {
+    "class": "dicht",
+    "why": "archive: a delete by another name, without an approval step (Levenscyclus)"
+  },
+  "POST /api/v1/methods/{method_id}/clone": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/methods/{method_id}/discard-draft": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/methods/{method_id}/publish": {
+    "class": "dicht",
+    "why": "direct publish: only the approval request"
+  },
+  "POST /api/v1/methods/{method_id}/restore": {
+    "class": "dicht",
+    "why": "restore: configuration without an approval step"
+  },
+  "POST /api/v1/methods/{method_id}/unpublish": {
+    "class": "dicht",
+    "why": "direct publish: only the approval request"
+  },
+  "POST /api/v1/methods/{method_id}/versions": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/methods/{method_id}/versions/ensure": {
+    "class": "configuratie"
+  },
+  "POST /api/v1/methods/{method_id}/versions/{version_id}/restore": {
+    "class": "dicht",
+    "why": "restore: configuration without an approval step"
+  },
+  "POST /api/v1/methods/{method_id}/versions/{version_id}/restore-deleted": {
     "class": "dicht",
     "why": "restore: configuration without an approval step"
   },
@@ -3157,10 +3172,6 @@
     "class": "dicht",
     "why": "of a person at a screen, reads included"
   },
-  "PUT /api/v1/flow-steps/{flow_step_id}/prompts/order": {
-    "class": "dicht",
-    "why": "attachment rows, not proven to be draft-only"
-  },
   "PUT /api/v1/knowledge/learning/topic": {
     "class": "dicht",
     "why": "knowledge upkeep"
@@ -3175,6 +3186,10 @@
   },
   "PUT /api/v1/measures/{measure_id}": {
     "class": "configuratie"
+  },
+  "PUT /api/v1/method-steps/{method_step_id}/prompts/order": {
+    "class": "dicht",
+    "why": "attachment rows, not proven to be draft-only"
   },
   "PUT /api/v1/output-schemas/{schema_id}": {
     "class": "configuratie"

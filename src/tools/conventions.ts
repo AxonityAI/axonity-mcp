@@ -116,8 +116,8 @@ has run cleanly once, at its current version.
 
 ## Drafts, not live
 - \`create_*\` and \`update_*\` produce a DRAFT. The live runtime is unaffected
-  until a human publishes it in Axonity. \`flow\` has the same rule: runtime uses
-  the published snapshot from \`read_flow_published\` until \`request_publish_flow\`
+  until a human publishes it in Axonity. \`method\` has the same rule: runtime uses
+  the published snapshot from \`read_method_published\` until \`request_publish_method\`
   is approved.
 - You cannot publish directly — the backend refuses a direct publish from a service
   token with a 403, so there is no tool for it and no way around it.
@@ -261,7 +261,7 @@ has run cleanly once, at its current version.
 - Deleting is not archiving. **Archived** is its own act, beside Draft and
   Published: \`archive_*\` / \`unarchive_*\` on \`workflow\`, \`agent\`, \`tool\`,
   \`skill\`, \`policy\`, \`reference_doc\`, \`output_schema\`, \`prompt_snippet\`,
-  \`flow\`, \`data_table\`, \`table_database\`, \`measure\`, \`query\`, \`application\`,
+  \`method\`, \`data_table\`, \`table_database\`, \`measure\`, \`query\`, \`application\`,
   \`toolbox\`, \`data_source\` and \`dashboard\`. An archived item is out of use — no run
   reads it — and out of \`list_*\` unless \`archived\` is \`include\` or \`only\`;
   its row says \`archivedAt\`. It is not edited until it is unarchived. On a
@@ -461,10 +461,22 @@ made any time before you attach them.
 - Reusable prompt fragments; a normal entity. Wire-level oddity:
   \`list_deleted_prompt_snippets\` returns the backend \`items\` envelope.
 
-### flow
-- A reusable workflow fragment in the authored-entity lifecycle. \`create_flow\` /
-  \`update_flow\` write draft state; runtime uses \`read_flow_published\` until
-  approval. \`request_publish_flow\` to publish, \`discard_flow_draft\` to reset.
+### method
+- How an agent works through a workflow step: a set of steps, and where each
+  one goes next. \`create_method\` / \`update_method\` write draft state, and their
+  descriptions say how a route names its target and what a save replaces;
+  runtime uses \`read_method_published\` until approval. \`request_publish_method\`
+  to publish, \`discard_method_draft\` to reset. A step with no transition ends
+  the method.
+- Before you change, delete or archive one, \`read_method_used_by\` says which
+  agents and workflows run it. A PUBLISHED workflow that runs it blocks delete
+  and archive; a draft that only names it does not. A method the platform
+  provides is read-only: \`clone_method\` makes your own copy.
+- A method was called a flow until Flow renamed it. The old tool names
+  (\`create_flow\`, \`read_flow_published\`, \`clone_flow\` and every other tool with
+  \`flow\` in its name) still work as an alias in this release and are removed in
+  the next, \`flowSteps\` is still read as \`methodSteps\`, and \`flow\` is still
+  accepted as a kind. Use the new names.
 
 ### data_table
 - An authored table of rows: the tenant's own reference data, designed and
@@ -648,18 +660,18 @@ get "into" a workflow — there is no attach route for it):
 
 ## Prompt elements & placement (Memory V2)
 A prompt snippet is a LIBRARY item — creating it changes nothing on its own. It
-only shapes a run once it is PLACED into a flow step's prompt stack. Placement is
-per flow step, in one of two channels, at an order:
-- \`read_workflow_prompt_stacks(workflowId)\` (or \`read_flow_prompt_stacks(flowId)\`)
-  resolves a workflow/flow to its steps and each step's system/user stacks — this
-  is how you DISCOVER the \`flowStepId\`s you place against. Start here.
-- \`attach_prompt_snippet_to_flow_step(flowStepId, snippetId, target, displayOrder?)\`
+only shapes a run once it is PLACED into a method step's prompt stack. Placement is
+per method step, in one of two channels, at an order:
+- \`read_workflow_prompt_stacks(workflowId)\` (or \`read_method_prompt_stacks(methodId)\`)
+  resolves a workflow/method to its steps and each step's system/user stacks — this
+  is how you DISCOVER the \`methodStepId\`s you place against. Start here.
+- \`attach_prompt_snippet_to_method_step(methodStepId, snippetId, target, displayOrder?)\`
   — \`target\` is \`"system"\` (instructions the model is steered by) or \`"user"\`
   (content presented as the user turn).
-- \`list_flow_step_prompts\` shows a step's current system/user stacks (with each
-  attachment's \`linkId\`); \`update_flow_step_prompt(linkId, …)\` moves/reorders one;
-  \`reorder_flow_step_prompts(flowStepId, snippetIds)\` sets the whole order;
-  \`detach_prompt_snippet_from_flow_step(linkId)\` unlinks (the snippet survives).
+- \`list_method_step_prompts\` shows a step's current system/user stacks (with each
+  attachment's \`linkId\`); \`update_method_step_prompt(linkId, …)\` moves/reorders one;
+  \`reorder_method_step_prompts(methodStepId, snippetIds)\` sets the whole order;
+  \`detach_prompt_snippet_from_method_step(linkId)\` unlinks (the snippet survives).
 - A WILDCARD snippet applies to EVERY step (top of every stack), with no
   per-step link. \`list_wildcard_prompts\` shows them.
 
@@ -683,7 +695,7 @@ elsewhere points at nothing. Do this instead:
 1. Read the source graph (in the session pointed at it) for its SHAPE: names,
    field values, which tools each agent lists, which agents/tools each workflow
    step references. START WITH \`list_workflow_components\`: it answers what the
-   workflow is made of in one call — agents and flows, the workflows it calls,
+   workflow is made of in one call — agents and methods, the workflows it calls,
    the tools those agents reach, the tables behind those tools, the knowledge
    attached — each row naming the STEPS that are the reason it is there. Walking
    that outward by hand is how a rebuild quietly loses a tool nobody noticed was
@@ -835,8 +847,10 @@ a document to find out what the platform did.
 
 ## Validating: two questions, two calls
 - \`validate_workflow({ workflowId })\` checks the workflow as SAVED against the
-  tenant catalog — whether the agents, tools and flows the steps reference
-  exist and are published — plus its own wiring (its triggers and the knowledge
+  tenant catalog — whether the agents and tools the steps reference exist and
+  are published, and whether the methods exist (a method that is only a draft
+  passes: the runtime reads only the published version, so publish it before
+  the workflow runs) — plus its own wiring (its triggers and the knowledge
   attached to it). This is the "can this run?" answer. It needs a token with
   the \`author\` scope.
 - \`validate_workflow({ document })\` judges the document against the same

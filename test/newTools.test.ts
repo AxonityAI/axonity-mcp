@@ -52,7 +52,7 @@ describe("authoring guide (axonity_conventions) stays complete", () => {
 
     for (const needle of [
       "Prompt elements & placement (Memory V2)",
-      "attach_prompt_snippet_to_flow_step",
+      "attach_prompt_snippet_to_method_step",
       "list_wildcard_prompts",
       "### company",
       "start_workflow_run",
@@ -79,21 +79,21 @@ describe("prompt-element placement", () => {
 
   it("lists a step's prompt stack and the wildcards", async () => {
     const { handlers, client } = setup();
-    await handlers.get("list_flow_step_prompts")!({ flowStepId: "fs-1" });
-    expect(client.get).toHaveBeenCalledWith("/api/v1/flow-steps/fs-1/prompts");
+    await handlers.get("list_method_step_prompts")!({ methodStepId: "fs-1" });
+    expect(client.get).toHaveBeenCalledWith("/api/v1/method-steps/fs-1/prompts");
     await handlers.get("list_wildcard_prompts")!({});
     expect(client.get).toHaveBeenCalledWith("/api/v1/wildcard-prompts");
   });
 
   it("attaches a snippet with target + order", async () => {
     const { handlers, client } = setup();
-    await handlers.get("attach_prompt_snippet_to_flow_step")!({
-      flowStepId: "fs-1",
+    await handlers.get("attach_prompt_snippet_to_method_step")!({
+      methodStepId: "fs-1",
       snippetId: "sn-1",
       target: "system",
       displayOrder: 2,
     });
-    expect(client.post).toHaveBeenCalledWith("/api/v1/flow-steps/fs-1/prompts", {
+    expect(client.post).toHaveBeenCalledWith("/api/v1/method-steps/fs-1/prompts", {
       snippetId: "sn-1",
       target: "system",
       displayOrder: 2,
@@ -102,12 +102,12 @@ describe("prompt-element placement", () => {
 
   it("omits displayOrder when not given (lets the backend default it)", async () => {
     const { handlers, client } = setup();
-    await handlers.get("attach_prompt_snippet_to_flow_step")!({
-      flowStepId: "fs-1",
+    await handlers.get("attach_prompt_snippet_to_method_step")!({
+      methodStepId: "fs-1",
       snippetId: "sn-1",
       target: "user",
     });
-    expect(client.post).toHaveBeenCalledWith("/api/v1/flow-steps/fs-1/prompts", {
+    expect(client.post).toHaveBeenCalledWith("/api/v1/method-steps/fs-1/prompts", {
       snippetId: "sn-1",
       target: "user",
     });
@@ -115,23 +115,23 @@ describe("prompt-element placement", () => {
 
   it("updates only the fields given, by linkId", async () => {
     const { handlers, client } = setup();
-    await handlers.get("update_flow_step_prompt")!({ linkId: "lk-1", target: "system" });
-    expect(client.patch).toHaveBeenCalledWith("/api/v1/flow-step-prompts/lk-1", {
+    await handlers.get("update_method_step_prompt")!({ linkId: "lk-1", target: "system" });
+    expect(client.patch).toHaveBeenCalledWith("/api/v1/method-step-prompts/lk-1", {
       target: "system",
     });
   });
 
   it("reorders a step and detaches by linkId", async () => {
     const { handlers, client } = setup();
-    await handlers.get("reorder_flow_step_prompts")!({
-      flowStepId: "fs-1",
+    await handlers.get("reorder_method_step_prompts")!({
+      methodStepId: "fs-1",
       snippetIds: ["a", "b", "c"],
     });
-    expect(client.put).toHaveBeenCalledWith("/api/v1/flow-steps/fs-1/prompts/order", {
+    expect(client.put).toHaveBeenCalledWith("/api/v1/method-steps/fs-1/prompts/order", {
       snippetIds: ["a", "b", "c"],
     });
-    const res = await handlers.get("detach_prompt_snippet_from_flow_step")!({ linkId: "lk-1" });
-    expect(client.del).toHaveBeenCalledWith("/api/v1/flow-step-prompts/lk-1");
+    const res = await handlers.get("detach_prompt_snippet_from_method_step")!({ linkId: "lk-1" });
+    expect(client.del).toHaveBeenCalledWith("/api/v1/method-step-prompts/lk-1");
     // Was `detached: true` — a claim this connector minted itself, which is the
     // fiction #24 removes. This fake answers with a body, so the contract here is
     // that the body is forwarded verbatim. The 204 path has its own test below.
@@ -293,20 +293,20 @@ describe("workflow extras + version naming", () => {
 describe("prompt-snippet detach makes no unfounded claim (#24)", () => {
   it("reports acceptance only — the route is 204 by design", async () => {
     const { server, handlers } = fakeServer();
-    // DELETE /flow-step-prompts/{id} is declared 204_NO_CONTENT in
+    // DELETE /method-step-prompts/{id} is declared 204_NO_CONTENT in
     // prompt_snippets.py, so there is genuinely nothing to forward.
     const client = { ...fakeClient(), del: vi.fn(async () => undefined) };
     registerPromptPlacementTools(server as never, client as unknown as AxonityClient);
 
-    const result = await handlers.get("detach_prompt_snippet_from_flow_step")!({
+    const result = await handlers.get("detach_prompt_snippet_from_method_step")!({
       linkId: "ln-1",
     });
     const body = JSON.parse(text(result));
 
-    expect(client.del).toHaveBeenCalledWith("/api/v1/flow-step-prompts/ln-1");
+    expect(client.del).toHaveBeenCalledWith("/api/v1/method-step-prompts/ln-1");
     expect(body.detached).toBeUndefined();
     expect(body.completed).toBe(true);
-    expect(body.note).toMatch(/list_flow_step_prompts/);
+    expect(body.note).toMatch(/list_method_step_prompts/);
     expect(body.request).toEqual({ linkId: "ln-1" });
   });
 });

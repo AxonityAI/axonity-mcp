@@ -30,8 +30,9 @@ export function registerValidationTools(
       "triggers and the knowledge attached to it). This is the real 'can this " +
       "run?'. It needs a token with the `author` scope." +
       "\n- document → validates the document you pass, as it stands, against " +
-      "the SAME catalog: whether the agents, tools and flows its steps reference " +
-      "exist and are published. It saves nothing, and a read-only token may " +
+      "the SAME catalog: whether the agents and tools its steps reference exist " +
+      "and are published, and whether the methods exist (a method that is only a draft passes: " +
+      "the runtime reads only the published version, so publish it before the workflow runs). It saves nothing, and a read-only token may " +
       "call it. Without the workflow's id the checks about one workflow's own " +
       "wiring — its triggers and the knowledge attached to it — are skipped, so " +
       "for a workflow that exists, validate it by workflowId once it is saved. " +
@@ -206,7 +207,7 @@ const CURRENT_REQUEST_VERSION =
   "publishes as of now. For a single-entity request whose kind publishes a " +
   "named major version (such as a skill), a missing working draft falls back to " +
   "the newest named major version. It is null when no publish-target version " +
-  "is named, including a flow, which has no versions. For a decided request, " +
+  "is named, as for a method (its approval names none). For a decided request, " +
   "it is the version it recorded (a workflow, agent or tool records none). " +
   "On a release it is the version of the " +
   "release's own workflow, and only when approving the release publishes that " +
@@ -324,6 +325,7 @@ export function registerApprovalTools(
                 "reference_doc",
                 "output_schema",
                 "prompt_snippet",
+                "method",
                 "flow",
                 "data_table",
                 "application",
@@ -335,7 +337,8 @@ export function registerApprovalTools(
               .describe(
                 "What kind of entity this entry publishes. The same kinds the " +
                   "platform's approval queue takes — an application among them, " +
-                  "so its act/observe tools are rebuilt when it is approved.",
+                  "so its act/observe tools are rebuilt when it is approved. " +
+                  "`flow` is the old word for `method` and is sent as it.",
               ),
             entityId: z
               .string()
@@ -361,14 +364,20 @@ export function registerApprovalTools(
             await refuseWhileWorkflowWarns(client, r.entityId);
           }
         }
-        return jsonResult(await client.post("/api/v1/publish-approvals/bulk", { requests }));
+        // `flow` is what a method was called: the platform's kinds have `method`.
+        const current = requests.map((r) =>
+          r.entityType === "flow" ? { ...r, entityType: "method" as const } : r,
+        );
+        return jsonResult(
+          await client.post("/api/v1/publish-approvals/bulk", { requests: current }),
+        );
       }),
   );
 
   server.tool(
     "request_publish_release",
     "Request that a WORKFLOW AND EVERYTHING IT NEEDS go live as one release — " +
-      "the agents it runs (each with its persona), their tools, the flows it pins, and the " +
+      "the agents it runs (each with its persona), their tools, the methods it pins, and the " +
       "memory scoped to those agents. Prefer this over a request per entity: " +
       "taking a tenant live entity-by-entity means a hundred-odd separate " +
       "approvals, none of which means anything on its own, and a human asked " +

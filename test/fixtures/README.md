@@ -11,6 +11,33 @@ diff in review.
 
 ## Provenance
 
+- **Methods (R6 of agent-first), 2026-11-19, not released.** The complete OpenAPI
+  and token-route tables come from Flow `main` `e00df9b36` (Methods, #2491, with
+  the Tools merge and the Flow-App frame, #2495, in it): this is the pin the
+  Tools entry below said was to be re-taken after the merge. The checkout (the
+  primary one, at that commit, with only unrelated untracked files) was read and
+  not changed. OpenAPI came from `scripts/dump_openapi.py` and the token table
+  from `scripts/generate-token-route-classes.mjs --flow`, both run with `env -i`,
+  `ENVIRONMENT=development` and an unreachable database URL; run twice, both
+  came out byte for byte the same, and no server, database or tenant was touched.
+  - OpenAPI has 894 operations (892 -> 894), 2,855,559 bytes, SHA-256
+    `7488450caf3d334a376ea0b36b900147e24b1a24a3ce841cfe579718f35c7a74`.
+    The rename: 29 operations of `/api/v1/flows*` and `/api/v1/flow-steps*` /
+    `/api/v1/flow-step-prompts*` are gone and their 29 counterparts are
+    `/api/v1/methods*`, `/api/v1/method-steps*` and `/api/v1/method-step-prompts*`;
+    `flowSteps`, `flowStepId` and `flowId` are `methodSteps`, `methodStepId` and
+    `methodId`; the kind `flow` is `method` in every enum that had it. New with
+    Methods: `GET /methods/{id}/used-by`, `draftMajorVersion`,
+    `publishedMajorVersion` and `usedByCount` on the method rows, and
+    `usedInSteps`/`usedInMethods`/`usedInEveryStep` on a prompt snippet. The one
+    operation that is not Methods: `GET /apps/{slug}/frame` (Flow-App, main #2495).
+    The old addresses are not in the schema: the backend rewrites them before
+    routing for an older connector, and this one does not call them.
+  - Token-route classes have 926 rows, 102,879 bytes, SHA-256
+    `dc30463e176a21a8bfb673a27a7ea2aea655c224c657cceb01b1c37209776753`.
+    `src/generated/tokenRouteClasses.ts` and `src/generated/listFilters.ts`
+    are regenerated.
+
 - **Tools (R9 of agent-first), 2026-11-19, not released.** The complete OpenAPI
   and token-route tables come from Flow `f866f787a8f7ff769cd24133b8d921cf479e4280`
   (branch `af-r9-tools`, PR #2489, main `4c1bfa5ad` merged in). Both fixtures are

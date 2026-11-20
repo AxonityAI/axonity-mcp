@@ -60,7 +60,8 @@ export interface ProbeServer {
  */
 export const PROBE_ARGS: Record<string, unknown> = {
   id: "x", workflowId: "x", agentId: "x", toolId: "x", runId: "x", approvalId: "x",
-  flowId: "x", snippetId: "x", flowStepId: "x", linkId: "x", webhookId: "x",
+  flowId: "x", methodId: "x", snippetId: "x", flowStepId: "x", methodStepId: "x",
+  linkId: "x", webhookId: "x",
   scheduleId: "x", triggerId: "x", secretId: "x", versionId: "x", version: 1,
   majorVersion: 1, expectedVersion: 1, displayOrder: 0, name: "x",
   cronExpr: "0 0 * * *", conditionText: "x", repeatIntervalMinutes: 5,
@@ -112,6 +113,7 @@ export const PROBE_VARIANTS: Record<string, unknown>[] = [
   // list_workflows_using — the five document-reference kinds.
   { entityKind: "tool" },
   { entityKind: "agent" },
+  { entityKind: "method" },
   { entityKind: "flow" },
   { entityKind: "output_schema" },
   { entityKind: "workflow" },

@@ -160,7 +160,10 @@ describe("MCP route surface conforms to the backend OpenAPI snapshot", () => {
       ...(snapshot.components.schemas.CreateApprovalRequest?.properties?.entityType?.enum ?? []),
     ].sort();
     expect(accepted, "the enum vanished — check the snapshot").toContain("application");
-    expect(offered).toEqual(accepted);
+    // Every kind the queue takes, and `flow`: the old word for `method`, still
+    // offered for one release and sent as `method` (`tools/aliases.ts`).
+    expect(offered).toEqual([...accepted, "flow"].sort());
+    expect(accepted).not.toContain("flow");
   });
 
   /**

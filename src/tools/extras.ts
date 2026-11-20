@@ -13,6 +13,7 @@ import { z } from "zod";
 
 import type { AxonityClient } from "../client.js";
 import { assertPlaceholderCredentials } from "./credentials.js";
+import { defineTool } from "./aliases.js";
 import { detachResult, guard, jsonResult } from "./result.js";
 
 /**
@@ -614,17 +615,20 @@ export function registerDependencyTools(
       "document one — use list_dependent_agents.",
     {
       entityKind: z
-        .enum(["tool", "agent", "flow", "output_schema", "workflow"])
+        .enum(["tool", "agent", "method", "flow", "output_schema", "workflow"])
         .describe(
           "What kind of thing you are about to change. `workflow` answers " +
-            "which workflows call this one with a Run a workflow step.",
+            "which workflows call this one with a Run a workflow step. `flow` is " +
+            "the old word for `method` and is read as it.",
         ),
       entityId: z.string().describe("That entity's id."),
     },
     async ({ entityKind, entityId }) =>
       guard(async () =>
         jsonResult(
-          await client.get(`/api/v1/workflows/using/${entityKind}/${entityId}`),
+          await client.get(
+            `/api/v1/workflows/using/${entityKind === "flow" ? "method" : entityKind}/${entityId}`,
+          ),
         ),
       ),
   );
@@ -639,7 +643,7 @@ export function registerDependencyTools(
       "\n\nLIVE links only. Detaching closes the link's interval rather than " +
       "deleting the row, so a list that included closed ones would name agents " +
       "that no longer use it — worse than no list at all. " +
-      "\n\nFor workflow documents that reference a tool, agent, flow, output " +
+      "\n\nFor workflow documents that reference a tool, agent, method, output " +
       "schema or workflow, use list_workflows_using instead.",
     {
       entityKind: z
@@ -677,7 +681,7 @@ export function registerDependencyTools(
  * Small standalone tools that don't fit any of the other groupings: the
  * system-tools catalog (read-only — there is no grant/revoke route; enabling
  * one for an agent means writing `systemToolIds` via `update_agent`), and
- * cloning a flow/prompt-snippet into a tenant-owned copy.
+ * cloning a method/prompt-snippet into a tenant-owned copy.
  */
 export function registerCatalogTools(server: McpServer, client: AxonityClient): void {
   server.tool(
@@ -689,16 +693,44 @@ export function registerCatalogTools(server: McpServer, client: AxonityClient): 
     async () => guard(async () => jsonResult(await client.get("/api/v1/system-tools"))),
   );
 
-  server.tool(
-    "clone_flow",
-    "Fork a flow into a new, independent, tenant-owned copy — including a " +
-      "framework-provided one. Prefer this over editing a framework flow " +
-      "directly: it is visible and NOT actually protected from update_flow/ " +
-      "delete_flow (a backend gap, despite what its docstrings claim), so " +
-      "editing one in place risks changing something other tenants share.",
-    { flowId: z.string().describe("The flow's id.") },
-    async ({ flowId }) =>
-      guard(async () => jsonResult(await client.post(`/api/v1/flows/${flowId}/clone`))),
+  defineTool(
+    server,
+    "clone_method",
+    "Fork a method into a new, independent, tenant-owned copy — including one the " +
+      "platform provides. A method the platform provides is immutable (update and " +
+      "delete are refused with 403), so this is how you change one: clone it, then " +
+      "edit your copy with update_method. The copy is not published: a workflow " +
+      "runs a method only once it is (request_publish_method). `name` names the " +
+      "copy; left out, it is called \"<original name> (copy)\".",
+    {
+      methodId: z.string().describe("The method's id."),
+      name: z
+        .string()
+        .optional()
+        .describe("What to call the copy. Left out, it is called \"<original name> (copy)\"."),
+    },
+    async ({ methodId, name }: { methodId: string; name?: string }) =>
+      guard(async () =>
+        // The route takes a body even when it is empty (`MethodCloneRequest`),
+        // which is why a bare POST was a 422.
+        jsonResult(
+          await client.post(
+            `/api/v1/methods/${methodId}/clone`,
+            name === undefined ? {} : { name },
+          ),
+        ),
+      ),
+    {
+      name: "clone_flow",
+      shape: {
+        flowId: z.string().describe("The method's id (this tool's old spelling)."),
+        name: z
+          .string()
+          .optional()
+          .describe("What to call the copy. Left out, it is called \"<original name> (copy)\"."),
+      },
+      adapt: ({ flowId, ...rest }) => ({ ...rest, methodId: flowId }),
+    },
   );
 
   server.tool(
