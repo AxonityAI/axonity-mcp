@@ -299,8 +299,8 @@ across these routes — the tool parameter names say which.
   share (not versioned) and carries the same placeholder guard as a connector.
 - **Secrets, read-only**: `list_secrets` and `read_secret` as before, and
   `read_secret_used_by` — which tools, toolboxes, data sources and module
-  settings use a secret. A secret in use cannot be deleted; no tool here deletes
-  one. `read_tool_used_by` says who uses a tool, in counts.
+  settings use a secret. A secret that something uses can still be deleted by a person in
+  Axonity; no tool here deletes one. `read_tool_used_by` says who uses a tool, in counts.
 - **Attach / detach memory**: `attach_skill_to_agent`,
   `attach_skill_to_workflow`, `attach_policy_to_agent`,
   `attach_reference_to_agent`, `attach_reference_to_workflow`, and a

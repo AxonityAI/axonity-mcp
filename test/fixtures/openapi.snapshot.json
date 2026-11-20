@@ -35303,7 +35303,7 @@
           },
           "usedByCount": {
             "default": 0,
-            "description": "How many tools, toolboxes, data sources and module settings use this secret: a tool's working or published credential, a box's shared one, a source's connection, a mailbox. A secret in use cannot be deleted.",
+            "description": "How many tools, toolboxes, data sources and module settings use this secret: a tool's working or published credential, a box's shared one, a source's connection, a mailbox.",
             "title": "Usedbycount",
             "type": "integer"
           },

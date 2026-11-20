@@ -76,10 +76,10 @@ export function registerSecretTools(server: McpServer, client: AxonityClient): v
       "that use it: a tool's working or published credential, a box's shared " +
       "one, a source's connection, a mailbox) and `lastUsedAt` (when a call " +
       "last resolved it; null when never). " +
-      "\n\nA secret in use cannot be deleted — a person deletes it in Axonity " +
-      "and is refused while anything uses it, with the users named; this " +
-      "connector has no tool for it. Check read_secret_used_by before you " +
-      "rebind a connector away from a secret.",
+      "\n\nA secret that something uses can still be deleted — a person " +
+      "deletes it in Axonity, after a confirmation, and whatever referenced " +
+      "it fails at execution time; this connector has no tool for it. Check " +
+      "read_secret_used_by before you rebind a connector away from a secret.",
     {},
     async () => guard(async () => jsonResult(await client.get("/api/v1/secrets"))),
   );
