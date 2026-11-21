@@ -74,6 +74,22 @@ describe("registered surface stays inside its authority boundary", () => {
     expect(forbids("POST", "/api/v1/apps/manifest/validate")).toBe(false);
   });
 
+  it("records the module operations that require a person at a screen", () => {
+    for (const operation of [
+      "PUT /api/v1/modules/m-1/enabled",
+      "POST /api/v1/modules/m-1/deletion",
+      "GET /api/v1/modules/m-1/deletion-preflight",
+      "GET /api/v1/modules/m-1/versions",
+    ]) {
+      const [method, path] = operation.split(" ");
+      expect(forbids(method, path), operation).toBe(true);
+    }
+
+    // Workspace module settings are token-safe authoring data, not the
+    // human-operated lifecycle screen the four routes above belong to.
+    expect(forbids("GET", "/api/v1/modules/m-1/settings")).toBe(false);
+  });
+
   it("no tool targets a deny-listed route family", async () => {
     const calls: Recorded[] = [];
     const client = recordingClient(calls);

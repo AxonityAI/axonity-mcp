@@ -81,6 +81,21 @@ const PLANNED = z
       "neither. When it comes true it is reported as `done`, never removed " +
       "by itself: the author decides. Defaults to false.",
   );
+const DELAY_FROM = z
+  .number()
+  .nullable()
+  .optional()
+  .describe("Optional earliest delay before this influence takes effect.");
+const DELAY_TO = z
+  .number()
+  .nullable()
+  .optional()
+  .describe("Optional latest delay before this influence takes effect.");
+const DELAY_UNIT = z
+  .enum(["days", "weeks", "months", "years"])
+  .nullable()
+  .optional()
+  .describe("Unit of the optional delay range: days, weeks, months or years.");
 
 /** Said by every write: where the rule lives, and how it goes live. */
 const RULES =
@@ -121,6 +136,9 @@ const ROW = {
   owner: OWNER,
   basis: BASIS.optional(),
   planned: PLANNED.optional(),
+  delayFrom: DELAY_FROM,
+  delayTo: DELAY_TO,
+  delayUnit: DELAY_UNIT,
 };
 
 /** The body as the route takes it: strict, so only what was given. */
@@ -139,7 +157,7 @@ export function registerMeasureInfluenceTools(
       "`measure` for every influence into or out of one measure, or nothing " +
       "for the whole workspace. " +
       "\n\nEach item is `{ fromMeasure, toMeasure, kind, effect, why, owner, " +
-      "basis, planned, state }`. `state`: `active` (both measures are " +
+      "basis, planned, delayFrom, delayTo, delayUnit, state }`. The optional delay range says when it takes effect. `state`: `active` (both measures are " +
       "there), `planned` (a missing link, still missing), `done` (a planned " +
       "link that came true — remove it if it was a formula, or make it an " +
       "ordinary influence), `points_nowhere` (a measure it names was removed " +
@@ -179,7 +197,7 @@ export function registerMeasureInfluenceTools(
       "with `kind: \"formula\"`. Read axonity_semantic_conventions for when " +
       "to write which. " +
       "\n\nAnswers with the row as written and its `state`. To change the " +
-      "effect, why, owner, basis or planned of one that is there, use " +
+      "effect, why, owner, basis, planned or its optional delay range of one that is there, use " +
       "update_measure_influence; to change its from, to or kind, unlink it " +
       "and write a new one." +
       RULES +
@@ -192,7 +210,7 @@ export function registerMeasureInfluenceTools(
   server.tool(
     "update_measure_influence",
     "Change one influence in the draft: its `effect`, `why`, `owner`, " +
-      "`basis` or `planned`. It is found by `fromMeasure` + `toMeasure` + " +
+      "`basis`, `planned` or its optional delay range. It is found by `fromMeasure` + `toMeasure` + " +
       "`kind` — what makes it the same influence — so those three cannot " +
       "change here: unlink_measures and link_measures for that. Send the " +
       "WHOLE row (effect, why and owner are required, as on a new one); a " +
@@ -245,7 +263,7 @@ export function registerMeasureInfluenceTools(
       "\n\nAnswers `{ root, nodes, edges, missing }`. A node is " +
       "`{ name, label, unit, published, built }` — `built: false` is a " +
       "measure only a planned row names. An edge is `{ from, to, kind, " +
-      "effect, why, owner, basis, planned, state }`: `kind` `formula` is a " +
+      "effect, why, owner, basis, planned, delayFrom, delayTo, delayUnit, state }`: `kind` `formula` is a " +
       "part of the formula (no effect), `influence` an influence. `missing` " +
       "is every place where \"why did this move?\" stops: `{ measure, " +
       "reason, from, to, kind }` with reason `not_built`, `not_published`, " +

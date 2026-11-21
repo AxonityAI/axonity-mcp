@@ -1198,6 +1198,7 @@
               "toolbox",
               "measure",
               "query",
+              "data_source",
               "company"
             ],
             "title": "Entitytype",
@@ -5089,7 +5090,7 @@
             "additionalProperties": {
               "type": "integer"
             },
-            "description": "Concepts per kind: concept, state, metric, rule.",
+            "description": "Concepts per kind: concept, state, metric, definition.",
             "title": "Bykind",
             "type": "object"
           },
@@ -5110,13 +5111,20 @@
         "additionalProperties": false,
         "description": "A new concept. Every field the entry needs, or it is refused.",
         "properties": {
+          "broader": {
+            "default": "",
+            "description": "Existing broader concept name; empty for a root. Loops are refused.",
+            "maxLength": 200,
+            "title": "Broader",
+            "type": "string"
+          },
           "kind": {
-            "description": "What sort of entry this is. `concept` is one of your own words; `state` is when something counts as being in that state; `metric` says what a number means and what it is per; `rule` is a sentence that always applies. The four: concept, state, metric, rule.",
+            "description": "What sort of entry this is. `concept` is one of your own words; `state` is when something counts as being in that state; `metric` says what a number means and what it is per; `definition` is a sentence about your data that is always true. The four: concept, state, metric, definition. The old word `rule` is still accepted and is stored as `definition`.",
             "enum": [
               "concept",
               "state",
               "metric",
-              "rule"
+              "definition"
             ],
             "title": "Kind",
             "type": "string"
@@ -5146,9 +5154,18 @@
             "title": "Refersto",
             "type": "string"
           },
+          "related": {
+            "description": "Existing related concept names. Each item is a name. Symmetric.",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 200,
+            "title": "Related",
+            "type": "array"
+          },
           "scope": {
             "default": "",
-            "description": "For a rule only: where the sentence applies. Empty means the whole model; otherwise `table:orders_monthly` or `column:orders_monthly.net_revenue`.",
+            "description": "For a definition only: where the sentence applies. Empty means the whole model; otherwise `table:orders_monthly` or `column:orders_monthly.net_revenue`.",
             "maxLength": 300,
             "title": "Scope",
             "type": "string"
@@ -5176,13 +5193,26 @@
       "ConceptItem": {
         "description": "One concept, as the list and the editor read it.",
         "properties": {
+          "broader": {
+            "default": "",
+            "description": "Name of the broader concept, empty for a root.",
+            "maxLength": 200,
+            "title": "Broader",
+            "type": "string"
+          },
+          "hierarchyAvailable": {
+            "default": true,
+            "description": "Whether the applied table schema contains broader and related.",
+            "title": "Hierarchyavailable",
+            "type": "boolean"
+          },
           "id": {
             "description": "The entry's row id — what a change or a removal names.",
             "title": "Id",
             "type": "string"
           },
           "kind": {
-            "description": "What sort of entry this is. `concept` is one of your own words; `state` is when something counts as being in that state; `metric` says what a number means and what it is per; `rule` is a sentence that always applies. The four: concept, state, metric, rule.",
+            "description": "What sort of entry this is. `concept` is one of your own words; `state` is when something counts as being in that state; `metric` says what a number means and what it is per; `definition` is a sentence about your data that is always true. The four: concept, state, metric, definition.",
             "title": "Kind",
             "type": "string"
           },
@@ -5198,11 +5228,25 @@
             "title": "Name",
             "type": "string"
           },
+          "narrower": {
+            "description": "Names of narrower concepts, derived from their broader field.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Narrower",
+            "type": "array"
+          },
           "owner": {
             "description": "Who to ask when this definition is disputed — a role or a person, \"CGO\". Approval says it may go live; this says whose it is.",
             "maxLength": 200,
             "title": "Owner",
             "type": "string"
+          },
+          "pointsNowhere": {
+            "default": false,
+            "description": "Whether a nonempty model reference no longer resolves.",
+            "title": "Pointsnowhere",
+            "type": "boolean"
           },
           "refersTo": {
             "description": "What in the model this is about, in one of these forms: measure:active_clients, table:orders_monthly, column:orders_monthly.country, value:orders_monthly.status=lost, query:revenue_per_country, query:revenue_per_country.revenue. It must exist. Empty for a word that is not in the model yet.",
@@ -5210,8 +5254,16 @@
             "title": "Refersto",
             "type": "string"
           },
+          "related": {
+            "description": "Names of related concepts. This association is symmetric.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Related",
+            "type": "array"
+          },
           "scope": {
-            "description": "For a rule only: where the sentence applies. Empty means the whole model; otherwise `table:orders_monthly` or `column:orders_monthly.net_revenue`.",
+            "description": "For a definition only: where the sentence applies. Empty means the whole model; otherwise `table:orders_monthly` or `column:orders_monthly.net_revenue`.",
             "maxLength": 300,
             "title": "Scope",
             "type": "string"
@@ -5224,6 +5276,12 @@
             "maxItems": 25,
             "title": "Synonyms",
             "type": "array"
+          },
+          "tableId": {
+            "default": "",
+            "description": "The concepts table; publication and version history belong to it.",
+            "title": "Tableid",
+            "type": "string"
           }
         },
         "required": [
@@ -5316,6 +5374,19 @@
         "additionalProperties": false,
         "description": "The fields to change. What is not sent keeps its value.",
         "properties": {
+          "broader": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Name of an existing broader concept, empty to clear it.",
+            "title": "Broader"
+          },
           "kind": {
             "anyOf": [
               {
@@ -5323,7 +5394,7 @@
                   "concept",
                   "state",
                   "metric",
-                  "rule"
+                  "definition"
                 ],
                 "type": "string"
               },
@@ -5381,6 +5452,22 @@
             ],
             "description": "What in the model this is about, in one of these forms: measure:active_clients, table:orders_monthly, column:orders_monthly.country, value:orders_monthly.status=lost, query:revenue_per_country, query:revenue_per_country.revenue. It must exist. Empty for a word that is not in the model yet.",
             "title": "Refersto"
+          },
+          "related": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 200,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Related concept names; an empty list removes the associations from both ends.",
+            "title": "Related"
           },
           "scope": {
             "anyOf": [
@@ -5651,6 +5738,17 @@
             "format": "uuid",
             "title": "Id",
             "type": "string"
+          },
+          "module": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Module"
           },
           "nextScheduledFor": {
             "anyOf": [
@@ -6574,6 +6672,15 @@
       "ConnectionTestResult": {
         "description": "Whether the source answered, in words.",
         "properties": {
+          "basis": {
+            "default": "draft",
+            "enum": [
+              "draft",
+              "published"
+            ],
+            "title": "Basis",
+            "type": "string"
+          },
           "checkedAt": {
             "anyOf": [
               {
@@ -7642,6 +7749,7 @@
               "toolbox",
               "measure",
               "query",
+              "data_source",
               "company"
             ],
             "title": "Entitytype",
@@ -8012,6 +8120,12 @@
             "maxLength": 255,
             "title": "Name",
             "type": "string"
+          },
+          "perPerson": {
+            "default": false,
+            "description": "Keep each app user's rows separate. This requires live rows, allows no unique column, and cannot be filled from a source.",
+            "title": "Perperson",
+            "type": "boolean"
           },
           "rhythm": {
             "anyOf": [
@@ -10251,6 +10365,28 @@
             ],
             "title": "Description"
           },
+          "draftMajorVersion": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draftmajorversion"
+          },
+          "draftVersionName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draftversionname"
+          },
           "enabled": {
             "title": "Enabled",
             "type": "boolean"
@@ -10297,6 +10433,17 @@
           },
           "policy": {
             "$ref": "#/components/schemas/DataSourcePolicy"
+          },
+          "publishedMajorVersion": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publishedmajorversion"
           },
           "secretId": {
             "anyOf": [
@@ -10501,6 +10648,28 @@
             ],
             "title": "Description"
           },
+          "draftMajorVersion": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draftmajorversion"
+          },
+          "draftVersionName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draftversionname"
+          },
           "enabled": {
             "title": "Enabled",
             "type": "boolean"
@@ -10544,6 +10713,17 @@
           "name": {
             "title": "Name",
             "type": "string"
+          },
+          "publishedMajorVersion": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publishedmajorversion"
           },
           "secretId": {
             "anyOf": [
@@ -10680,6 +10860,195 @@
           "expectedVersion"
         ],
         "title": "DataSourceUpdate",
+        "type": "object"
+      },
+      "DataSourceUsedBy": {
+        "description": "One place that uses a data source, as ``GET /data-sources/{id}/used-by`` says it.",
+        "properties": {
+          "breaksOnDelete": {
+            "description": "True for exactly what the refusal to delete the source names (the tables that live in it). Reading this adds no refusal.",
+            "title": "Breaksondelete",
+            "type": "boolean"
+          },
+          "entityId": {
+            "description": "The place's id.",
+            "title": "Entityid",
+            "type": "string"
+          },
+          "entityType": {
+            "description": "What kind of place: a query, a table, the secret it connects with, or a workflow.",
+            "enum": [
+              "query",
+              "data_table",
+              "secret",
+              "workflow"
+            ],
+            "title": "Entitytype",
+            "type": "string"
+          },
+          "how": {
+            "description": "How it uses the source: a query that names it, a table a query of it fills, a table that lives in it (a delete of the source refuses on those), the secret it connects with, or the platform workflow that explores it.",
+            "enum": [
+              "query",
+              "fill",
+              "place",
+              "secret",
+              "exploration"
+            ],
+            "title": "How",
+            "type": "string"
+          },
+          "name": {
+            "description": "The place's own name.",
+            "title": "Name",
+            "type": "string"
+          },
+          "namedIn": {
+            "anyOf": [
+              {
+                "enum": [
+                  "published",
+                  "draft"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "In which version of the PLACE (a query) or of the SOURCE (its secret, its exploration) the use is named: published is what runs now, draft an edit nobody published. Null where it has no versions.",
+            "title": "Namedin"
+          },
+          "where": {
+            "description": "The author's own words for the spot: the query that fills a table, the rhythm of the exploration. Empty where there is no finer place.",
+            "title": "Where",
+            "type": "string"
+          }
+        },
+        "required": [
+          "entityType",
+          "entityId",
+          "name",
+          "how",
+          "where",
+          "namedIn",
+          "breaksOnDelete"
+        ],
+        "title": "DataSourceUsedBy",
+        "type": "object"
+      },
+      "DataTableReach": {
+        "description": "Who reaches the table, how, where, what version they see, and whether a delete breaks it.",
+        "properties": {
+          "access": {
+            "description": "Whether it reads the rows, writes them, or only describes the table.",
+            "enum": [
+              "reads",
+              "writes",
+              "describes"
+            ],
+            "title": "Access",
+            "type": "string"
+          },
+          "breaksOnDelete": {
+            "description": "True for exactly what the refusal to delete the table names (published processes and agents, published measures). Reading this adds no refusal.",
+            "title": "Breaksondelete",
+            "type": "boolean"
+          },
+          "entityId": {
+            "description": "The place's id (the module's id for an extension).",
+            "title": "Entityid",
+            "type": "string"
+          },
+          "entityType": {
+            "description": "What kind of place: agent, workflow, extension (a module's setting), query, measure, dashboard or relationship.",
+            "title": "Entitytype",
+            "type": "string"
+          },
+          "how": {
+            "description": "The way it reaches the table: a tool of the table (an agent holds it, a step calls it), a step that routes on the table, a module setting, a process that runs an agent holding a tool, the query that fills it, a measure that reads it, a dashboard tile, or a relationship.",
+            "enum": [
+              "tool",
+              "step",
+              "setting",
+              "agent",
+              "fill",
+              "measure",
+              "tile",
+              "relationship"
+            ],
+            "title": "How",
+            "type": "string"
+          },
+          "name": {
+            "description": "The place's own name.",
+            "title": "Name",
+            "type": "string"
+          },
+          "namedIn": {
+            "anyOf": [
+              {
+                "enum": [
+                  "published",
+                  "draft"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "In which version of the PLACE the table is named: published is what runs now and what a delete refuses on; draft is an edit nobody published. Null where the place has no versions.",
+            "title": "Namedin"
+          },
+          "rows": {
+            "anyOf": [
+              {
+                "enum": [
+                  "live",
+                  "published_version",
+                  "source"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Which rows it reads: live (a table something fills), published_version (a table its author keeps: the rows the version pinned) or source (the rows stay in the data source). Null while nothing is published.",
+            "title": "Rows"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The published version of the table this place reads; null while the table has never been published (nothing runs on it) and for the query that fills it.",
+            "title": "Version"
+          },
+          "where": {
+            "description": "The author's own words for the spot: step names, tool names, the measures a tile names. Empty where there is no finer place.",
+            "title": "Where",
+            "type": "string"
+          }
+        },
+        "required": [
+          "entityType",
+          "entityId",
+          "name",
+          "how",
+          "access",
+          "where",
+          "namedIn",
+          "breaksOnDelete",
+          "version",
+          "rows"
+        ],
+        "title": "DataTableReach",
         "type": "object"
       },
       "DataTableResponse": {
@@ -10874,6 +11243,12 @@
           "name": {
             "title": "Name",
             "type": "string"
+          },
+          "perPerson": {
+            "default": false,
+            "description": "Whether app runs see and write rows only for their subject.",
+            "title": "Perperson",
+            "type": "boolean"
           },
           "publishedMajorVersion": {
             "anyOf": [
@@ -11356,6 +11731,12 @@
             "title": "Name",
             "type": "string"
           },
+          "perPerson": {
+            "default": false,
+            "description": "Whether app runs see and write rows only for their subject.",
+            "title": "Perperson",
+            "type": "boolean"
+          },
           "publishedMajorVersion": {
             "anyOf": [
               {
@@ -11582,6 +11963,21 @@
         "title": "DataTableToolsResponse",
         "type": "object"
       },
+      "DecisionActionRequest": {
+        "description": "A transition on the generation the screen showed: a compare-and-set.",
+        "properties": {
+          "expectedGeneration": {
+            "minimum": 0.0,
+            "title": "Expectedgeneration",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "expectedGeneration"
+        ],
+        "title": "DecisionActionRequest",
+        "type": "object"
+      },
       "DecisionBody": {
         "description": "The answer: ``answer`` to *addition or contradiction?*, ``keep`` (the fact\nthat is right) to *which is right?*.",
         "properties": {
@@ -11764,6 +12160,31 @@
           "facts"
         ],
         "title": "DecisionItem",
+        "type": "object"
+      },
+      "DecisionMoved": {
+        "description": "Where the row is after the transition.",
+        "properties": {
+          "generation": {
+            "title": "Generation",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "state",
+          "generation"
+        ],
+        "title": "DecisionMoved",
         "type": "object"
       },
       "DecisionOutcome": {
@@ -15818,6 +16239,14 @@
             "title": "Enabled",
             "type": "boolean"
           },
+          "hosting": {
+            "enum": [
+              "member",
+              "external"
+            ],
+            "title": "Hosting",
+            "type": "string"
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
@@ -15868,6 +16297,7 @@
           "id",
           "slug",
           "name",
+          "hosting",
           "enabled",
           "audienceIds",
           "version",
@@ -16410,6 +16840,8 @@
               "application",
               "measure",
               "query",
+              "data_source",
+              "dashboard",
               "method",
               "toolbox"
             ],
@@ -20135,6 +20567,374 @@
         "title": "LogoutRequest",
         "type": "object"
       },
+      "MailMessageItem": {
+        "description": "One mail the register knows, as codes: what it is, why, and where it went.",
+        "properties": {
+          "generation": {
+            "title": "Generation",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "intent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Intent"
+          },
+          "parkReason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parkreason"
+          },
+          "processId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Processid"
+          },
+          "processName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Processname"
+          },
+          "processOutcome": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Processoutcome"
+          },
+          "receivedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Receivedat"
+          },
+          "runId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Runid"
+          },
+          "seenAt": {
+            "format": "date-time",
+            "title": "Seenat",
+            "type": "string"
+          },
+          "startNo": {
+            "title": "Startno",
+            "type": "integer"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          },
+          "triageReason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Triagereason"
+          },
+          "unreadDue": {
+            "title": "Unreaddue",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "state",
+          "generation",
+          "startNo",
+          "seenAt",
+          "unreadDue"
+        ],
+        "title": "MailMessageItem",
+        "type": "object"
+      },
+      "MailTrialRequest": {
+        "description": "A mail the administrator describes: the fields of the conditions, never its text.",
+        "properties": {
+          "categories": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 50,
+            "title": "Categories",
+            "type": "array"
+          },
+          "flagged": {
+            "default": false,
+            "title": "Flagged",
+            "type": "boolean"
+          },
+          "folder": {
+            "default": "inbox",
+            "maxLength": 255,
+            "title": "Folder",
+            "type": "string"
+          },
+          "hasAttachments": {
+            "default": false,
+            "title": "Hasattachments",
+            "type": "boolean"
+          },
+          "isRead": {
+            "default": false,
+            "title": "Isread",
+            "type": "boolean"
+          },
+          "receivedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Receivedat"
+          },
+          "sender": {
+            "default": "",
+            "maxLength": 320,
+            "title": "Sender",
+            "type": "string"
+          },
+          "subject": {
+            "default": "",
+            "maxLength": 998,
+            "title": "Subject",
+            "type": "string"
+          },
+          "to": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 100,
+            "title": "To",
+            "type": "array"
+          }
+        },
+        "title": "MailTrialRequest",
+        "type": "object"
+      },
+      "MailTrialResult": {
+        "description": "Where the routing would send the mail: a code, the intents, and the process.",
+        "properties": {
+          "candidates": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/TrialCandidate"
+            },
+            "title": "Candidates",
+            "type": "array"
+          },
+          "outcome": {
+            "title": "Outcome",
+            "type": "string"
+          },
+          "processId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Processid"
+          },
+          "processName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Processname"
+          }
+        },
+        "required": [
+          "outcome"
+        ],
+        "title": "MailTrialResult",
+        "type": "object"
+      },
+      "MailboxLabel": {
+        "description": "How a person knows a mailbox: its name and its address.",
+        "properties": {
+          "address": {
+            "title": "Address",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "address"
+        ],
+        "title": "MailboxLabel",
+        "type": "object"
+      },
+      "MailboxMonitoring": {
+        "description": "The start that watches a mailbox: its id (switched with PATCH /conditional-triggers/{id}).",
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "startId": {
+            "format": "uuid",
+            "title": "Startid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "startId",
+          "enabled"
+        ],
+        "title": "MailboxMonitoring",
+        "type": "object"
+      },
+      "MailboxStatus": {
+        "description": "One mailbox: its last check, and how many of its mails need an administrator.",
+        "properties": {
+          "lastCheckedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lastcheckedat"
+          },
+          "lastOkAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lastokat"
+          },
+          "mailboxId": {
+            "title": "Mailboxid",
+            "type": "string"
+          },
+          "monitoring": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MailboxMonitoring"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "needsYou": {
+            "default": 0,
+            "title": "Needsyou",
+            "type": "integer"
+          },
+          "routeName": {
+            "title": "Routename",
+            "type": "string"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "statusReason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Statusreason"
+          }
+        },
+        "required": [
+          "name",
+          "routeName",
+          "mailboxId"
+        ],
+        "title": "MailboxStatus",
+        "type": "object"
+      },
       "MajorVersionResponse": {
         "description": "Response after creating a major version.",
         "properties": {
@@ -20848,6 +21648,10 @@
             ],
             "title": "Draftversionname"
           },
+          "format": {
+            "$ref": "#/components/schemas/MeasureFormatPayload",
+            "description": "Stored display unit, optional currency code, and decimal precision."
+          },
           "formula": {
             "default": "",
             "description": "The formula as TEXT, with names — the one spelling, written by the server from the stored tree. The tree is in `definition` and names things by id, which is what makes a rename break nothing; this is what a person reads and types. Empty for a measure that carries no formula.",
@@ -20914,6 +21718,18 @@
               }
             ],
             "title": "Publishedmajorversion"
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the measure counts, such as EUR or orders.",
+            "title": "Quantity"
           },
           "questions": {
             "default": [],
@@ -21113,6 +21929,48 @@
             "title": "Basis",
             "type": "string"
           },
+          "delayFrom": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional earliest delay.",
+            "title": "Delayfrom"
+          },
+          "delayTo": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional latest delay.",
+            "title": "Delayto"
+          },
+          "delayUnit": {
+            "anyOf": [
+              {
+                "enum": [
+                  "days",
+                  "weeks",
+                  "months",
+                  "years"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Unit of the optional delay.",
+            "title": "Delayunit"
+          },
           "effect": {
             "description": "same or opposite.",
             "title": "Effect",
@@ -21198,6 +22056,48 @@
             "maxLength": 600,
             "title": "Basis",
             "type": "string"
+          },
+          "delayFrom": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional earliest delay before this influence takes effect.",
+            "title": "Delayfrom"
+          },
+          "delayTo": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional latest delay before this influence takes effect.",
+            "title": "Delayto"
+          },
+          "delayUnit": {
+            "anyOf": [
+              {
+                "enum": [
+                  "days",
+                  "weeks",
+                  "months",
+                  "years"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Unit of the optional delay range: days, weeks, months or years.",
+            "title": "Delayunit"
           },
           "effect": {
             "description": "same: when the first rises, the second rises. opposite: when the first rises, the second falls.",
@@ -22106,6 +23006,10 @@
             ],
             "title": "Draftversionname"
           },
+          "format": {
+            "$ref": "#/components/schemas/MeasureFormatPayload",
+            "description": "Stored display unit, optional currency code, and decimal precision."
+          },
           "id": {
             "title": "Id",
             "type": "string"
@@ -22148,6 +23052,18 @@
               }
             ],
             "title": "Publishedmajorversion"
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the measure counts, such as EUR or orders.",
+            "title": "Quantity"
           },
           "questions": {
             "default": [],
@@ -23690,6 +24606,17 @@
             "title": "Alwayson",
             "type": "boolean"
           },
+          "companionApp": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Companionapp"
+          },
           "dependsOn": {
             "default": [],
             "items": {
@@ -23781,7 +24708,8 @@
             "default": "platform",
             "enum": [
               "core",
-              "platform"
+              "platform",
+              "plugin"
             ],
             "title": "Source",
             "type": "string"
@@ -23812,6 +24740,17 @@
             },
             "title": "Triggertypes",
             "type": "array"
+          },
+          "unavailableReason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unavailablereason"
           }
         },
         "required": [
@@ -23827,8 +24766,20 @@
       },
       "ModuleRight": {
         "additionalProperties": false,
-        "description": "A declared right and its membership role pending granular rights.",
+        "description": "A declared right and its membership role pending granular rights.\n\n``guards=\"workflows\"`` marks the right that governs the module's own workflows (R2.4): whoever\nturns the switch of such a workflow's start, and whoever opens what its runs hold, needs it. A\nworkflow carries its module's stamp, so the core asks the register for this right and never\nspells a module (``services/module_workflow_access.py``). A module marks at most one.",
         "properties": {
+          "guards": {
+            "anyOf": [
+              {
+                "const": "workflows",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Guards"
+          },
           "id": {
             "pattern": "\\S",
             "title": "Id",
@@ -25138,6 +26089,35 @@
         "title": "OAuthStatusResponse",
         "type": "object"
       },
+      "ObjectGraph": {
+        "additionalProperties": false,
+        "properties": {
+          "concepts": {
+            "description": "All existing entries of kind concept, each with its meaning and stable row id.",
+            "items": {
+              "$ref": "#/components/schemas/ConceptItem"
+            },
+            "maxItems": 200,
+            "title": "Concepts",
+            "type": "array"
+          },
+          "relationships": {
+            "description": "Directed relationships between those concepts, each with a verb, cardinality and note.",
+            "items": {
+              "$ref": "#/components/schemas/RelationshipItem"
+            },
+            "maxItems": 2000,
+            "title": "Relationships",
+            "type": "array"
+          }
+        },
+        "required": [
+          "concepts",
+          "relationships"
+        ],
+        "title": "ObjectGraph",
+        "type": "object"
+      },
       "OpenProposalSchema": {
         "description": "A pull request this app already has open into the chain's source.\n\nPresent so the screen can ASK before it proposes: \"add this to the review\nthat is already open, or start a new one?\". Without it the only way to find\nout is to commit and read the answer, which is after the choice.",
         "properties": {
@@ -25170,6 +26150,48 @@
             "description": "Where it comes from; often empty.",
             "title": "Basis",
             "type": "string"
+          },
+          "delayFrom": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional earliest delay.",
+            "title": "Delayfrom"
+          },
+          "delayTo": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional latest delay.",
+            "title": "Delayto"
+          },
+          "delayUnit": {
+            "anyOf": [
+              {
+                "enum": [
+                  "days",
+                  "weeks",
+                  "months",
+                  "years"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Unit of the optional delay.",
+            "title": "Delayunit"
           },
           "effect": {
             "description": "same or opposite.",
@@ -26210,6 +27232,78 @@
         "title": "Page[DataSourceSummary]",
         "type": "object"
       },
+      "Page_DataSourceUsedBy_": {
+        "properties": {
+          "hasMore": {
+            "default": false,
+            "title": "Hasmore",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/DataSourceUsedBy"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          },
+          "pageSize": {
+            "title": "Pagesize",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "pageSize"
+        ],
+        "title": "Page[DataSourceUsedBy]",
+        "type": "object"
+      },
+      "Page_DataTableReach_": {
+        "properties": {
+          "hasMore": {
+            "default": false,
+            "title": "Hasmore",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/DataTableReach"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          },
+          "pageSize": {
+            "title": "Pagesize",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "pageSize"
+        ],
+        "title": "Page[DataTableReach]",
+        "type": "object"
+      },
       "Page_DataTableRowItem_": {
         "properties": {
           "hasMore": {
@@ -26642,6 +27736,78 @@
         "title": "Page[LearningItemView]",
         "type": "object"
       },
+      "Page_MailMessageItem_": {
+        "properties": {
+          "hasMore": {
+            "default": false,
+            "title": "Hasmore",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/MailMessageItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          },
+          "pageSize": {
+            "title": "Pagesize",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "pageSize"
+        ],
+        "title": "Page[MailMessageItem]",
+        "type": "object"
+      },
+      "Page_MailboxStatus_": {
+        "properties": {
+          "hasMore": {
+            "default": false,
+            "title": "Hasmore",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/MailboxStatus"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          },
+          "pageSize": {
+            "title": "Pagesize",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "pageSize"
+        ],
+        "title": "Page[MailboxStatus]",
+        "type": "object"
+      },
       "Page_MeasureSummary_": {
         "properties": {
           "hasMore": {
@@ -26784,6 +27950,78 @@
           "pageSize"
         ],
         "title": "Page[PlatformFlowAppVersionSummary]",
+        "type": "object"
+      },
+      "Page_PluginReferenceResponse_": {
+        "properties": {
+          "hasMore": {
+            "default": false,
+            "title": "Hasmore",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PluginReferenceResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          },
+          "pageSize": {
+            "title": "Pagesize",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "pageSize"
+        ],
+        "title": "Page[PluginReferenceResponse]",
+        "type": "object"
+      },
+      "Page_PluginVersionOverviewResponse_": {
+        "properties": {
+          "hasMore": {
+            "default": false,
+            "title": "Hasmore",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PluginVersionOverviewResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          },
+          "pageSize": {
+            "title": "Pagesize",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "pageSize"
+        ],
+        "title": "Page[PluginVersionOverviewResponse]",
         "type": "object"
       },
       "Page_PublishApprovalItem_": {
@@ -27980,6 +29218,8 @@
               "application",
               "measure",
               "query",
+              "data-source",
+              "dashboard",
               "toolbox",
               "method",
               "app"
@@ -28465,6 +29705,18 @@
             ],
             "title": "Decidedat"
           },
+          "decidedByName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The platform administrator who made the decision.",
+            "title": "Decidedbyname"
+          },
           "decisionReason": {
             "anyOf": [
               {
@@ -28548,6 +29800,14 @@
             ],
             "title": "Status",
             "type": "string"
+          },
+          "webrtcApiMarkers": {
+            "description": "WebRTC API names found in the stored JavaScript for explicit human review.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Webrtcapimarkers",
+            "type": "array"
           },
           "workspaceId": {
             "format": "uuid",
@@ -28803,6 +30063,234 @@
           "status"
         ],
         "title": "PlatformMemberItem",
+        "type": "object"
+      },
+      "PluginDeletionPreflightResponse": {
+        "properties": {
+          "counts": {
+            "items": {
+              "$ref": "#/components/schemas/PluginOwnedCountResponse"
+            },
+            "title": "Counts",
+            "type": "array"
+          },
+          "liveTableRows": {
+            "title": "Livetablerows",
+            "type": "integer"
+          },
+          "pluginId": {
+            "title": "Pluginid",
+            "type": "string"
+          },
+          "pluginLabel": {
+            "title": "Pluginlabel",
+            "type": "string"
+          },
+          "referenceCount": {
+            "title": "Referencecount",
+            "type": "integer"
+          },
+          "references": {
+            "$ref": "#/components/schemas/Page_PluginReferenceResponse_"
+          }
+        },
+        "required": [
+          "pluginId",
+          "pluginLabel",
+          "counts",
+          "liveTableRows",
+          "referenceCount",
+          "references"
+        ],
+        "title": "PluginDeletionPreflightResponse",
+        "type": "object"
+      },
+      "PluginDeletionRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "mode": {
+            "enum": [
+              "preserve_data",
+              "delete_data"
+            ],
+            "title": "Mode",
+            "type": "string"
+          }
+        },
+        "required": [
+          "mode"
+        ],
+        "title": "PluginDeletionRequest",
+        "type": "object"
+      },
+      "PluginDeletionResponse": {
+        "properties": {
+          "status": {
+            "enum": [
+              "preserved",
+              "queued"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "taskId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Taskid"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "PluginDeletionResponse",
+        "type": "object"
+      },
+      "PluginOwnedCountResponse": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "count"
+        ],
+        "title": "PluginOwnedCountResponse",
+        "type": "object"
+      },
+      "PluginReferenceResponse": {
+        "properties": {
+          "detail": {
+            "default": "",
+            "title": "Detail",
+            "type": "string"
+          },
+          "entityId": {
+            "title": "Entityid",
+            "type": "string"
+          },
+          "entityType": {
+            "title": "Entitytype",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "where": {
+            "title": "Where",
+            "type": "string"
+          }
+        },
+        "required": [
+          "entityType",
+          "entityId",
+          "name",
+          "where"
+        ],
+        "title": "PluginReferenceResponse",
+        "type": "object"
+      },
+      "PluginVersionOverviewResponse": {
+        "description": "One plug-in version with the Flow-App companion deployed from the same commit.",
+        "properties": {
+          "active": {
+            "title": "Active",
+            "type": "boolean"
+          },
+          "companionAppSlug": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Companionappslug"
+          },
+          "companionAppVersionId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Companionappversionid"
+          },
+          "companionBundleSha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Companionbundlesha256"
+          },
+          "contentSha256": {
+            "title": "Contentsha256",
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "manifestSha256": {
+            "title": "Manifestsha256",
+            "type": "string"
+          },
+          "sourceCommit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcecommit"
+          },
+          "sourceRepo": {
+            "title": "Sourcerepo",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "contentSha256",
+          "manifestSha256",
+          "sourceRepo",
+          "sourceCommit",
+          "createdAt",
+          "active",
+          "companionAppSlug",
+          "companionAppVersionId",
+          "companionBundleSha256"
+        ],
+        "title": "PluginVersionOverviewResponse",
         "type": "object"
       },
       "PolicyForAgentResponse": {
@@ -29966,6 +31454,7 @@
               "toolbox",
               "measure",
               "query",
+              "data_source",
               "company"
             ],
             "title": "Entitytype",
@@ -30854,6 +32343,16 @@
       "QueryTestResult": {
         "description": "What a test run answered, and the facts an author judges it by.",
         "properties": {
+          "basis": {
+            "default": "draft",
+            "description": "Which content of the source this ran under. The editor's test tries the source as the person has it now (the draft), so a limit can be seen to refuse something before it is published; what runs as published work reads the published version.",
+            "enum": [
+              "draft",
+              "published"
+            ],
+            "title": "Basis",
+            "type": "string"
+          },
           "bytesScanned": {
             "title": "Bytesscanned",
             "type": "integer"
@@ -32059,6 +33558,106 @@
           "verified"
         ],
         "title": "RelationshipCounts",
+        "type": "object"
+      },
+      "RelationshipItem": {
+        "additionalProperties": false,
+        "properties": {
+          "cardinality": {
+            "description": "Cardinality from source to target, for example 1 → 0..n.",
+            "maxLength": 30,
+            "title": "Cardinality",
+            "type": "string"
+          },
+          "fromConcept": {
+            "description": "From: name of an existing concept.",
+            "maxLength": 200,
+            "title": "Fromconcept",
+            "type": "string"
+          },
+          "id": {
+            "description": "Stable relationship row id for removal.",
+            "title": "Id",
+            "type": "string"
+          },
+          "note": {
+            "default": "",
+            "description": "Optional note about this relationship.",
+            "maxLength": 600,
+            "title": "Note",
+            "type": "string"
+          },
+          "tableId": {
+            "description": "Platform table owning this relationship's lifecycle.",
+            "title": "Tableid",
+            "type": "string"
+          },
+          "toConcept": {
+            "description": "To: name of an existing concept.",
+            "maxLength": 200,
+            "title": "Toconcept",
+            "type": "string"
+          },
+          "verb": {
+            "description": "Verb: what the source does to the target.",
+            "maxLength": 100,
+            "title": "Verb",
+            "type": "string"
+          }
+        },
+        "required": [
+          "fromConcept",
+          "verb",
+          "toConcept",
+          "cardinality",
+          "id",
+          "tableId"
+        ],
+        "title": "RelationshipItem",
+        "type": "object"
+      },
+      "RelationshipWrite": {
+        "additionalProperties": false,
+        "properties": {
+          "cardinality": {
+            "description": "Cardinality from source to target, for example 1 → 0..n.",
+            "maxLength": 30,
+            "title": "Cardinality",
+            "type": "string"
+          },
+          "fromConcept": {
+            "description": "From: name of an existing concept.",
+            "maxLength": 200,
+            "title": "Fromconcept",
+            "type": "string"
+          },
+          "note": {
+            "default": "",
+            "description": "Optional note about this relationship.",
+            "maxLength": 600,
+            "title": "Note",
+            "type": "string"
+          },
+          "toConcept": {
+            "description": "To: name of an existing concept.",
+            "maxLength": 200,
+            "title": "Toconcept",
+            "type": "string"
+          },
+          "verb": {
+            "description": "Verb: what the source does to the target.",
+            "maxLength": 100,
+            "title": "Verb",
+            "type": "string"
+          }
+        },
+        "required": [
+          "fromConcept",
+          "verb",
+          "toConcept",
+          "cardinality"
+        ],
+        "title": "RelationshipWrite",
         "type": "object"
       },
       "ReleaseApprovalItem": {
@@ -33579,6 +35178,14 @@
             "title": "Mailboxcount",
             "type": "integer"
           },
+          "mailboxes": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/MailboxLabel"
+            },
+            "title": "Mailboxes",
+            "type": "array"
+          },
           "name": {
             "title": "Name",
             "type": "string"
@@ -34640,6 +36247,15 @@
       "RunQueryResult": {
         "description": "What a query answered, and what it cost.\n\n``rows`` is bounded by the service's ceiling, so this object cannot grow\nwith the warehouse. ``truncated`` says when rows were left unread — a\nnumber shown as complete when it is not is the outcome this surface may\nnever produce.",
         "properties": {
+          "basis": {
+            "default": "draft",
+            "enum": [
+              "draft",
+              "published"
+            ],
+            "title": "Basis",
+            "type": "string"
+          },
           "bytesScanned": {
             "title": "Bytesscanned",
             "type": "integer"
@@ -36896,7 +38512,7 @@
         "type": "object"
       },
       "SeedFlowAppRequest": {
-        "description": "Leave a Flow-App live in a workspace, for the browser specs of the frame.\n\nThe files are given, base64, by path: a spec reads the test app of\n``backend/tests/fixtures/flow_apps/hello`` and posts it. What this does is what\na deploy, the executor, Axonity and the workspace's administrator do, through\nthe same services in the same order: declare the version, store its files,\napprove it, switch the app on for the Staff audience. Tied to\n``is_development``; never exposed in production.",
+        "description": "Leave a Flow-App live in a workspace, for the browser specs of the frame.\n\nThe files are given, base64, by path: a spec reads the test app of\n``backend/tests/fixtures/flow_apps/hello`` and posts it. What this does is what\na deploy, the executor, Axonity and the workspace's administrator do, through\nthe same services in the same order: declare the version, store its files,\napprove it, accept the rights it asks for, switch the app on for the Staff audience. Tied to\n``is_development``; never exposed in production.",
         "properties": {
           "files": {
             "additionalProperties": {
@@ -36905,6 +38521,18 @@
             "maxProperties": 200,
             "title": "Files",
             "type": "object"
+          },
+          "manifestYaml": {
+            "anyOf": [
+              {
+                "maxLength": 100000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manifestyaml"
           },
           "name": {
             "default": "Hello app",
@@ -37237,6 +38865,8 @@
               "table_database",
               "measure",
               "query",
+              "data_source",
+              "dashboard",
               "application",
               "extension"
             ],
@@ -41340,7 +42970,8 @@
           "role": {
             "enum": [
               "admin",
-              "member"
+              "member",
+              "external"
             ],
             "title": "Role",
             "type": "string"
@@ -42919,6 +44550,45 @@
             "title": "Basis",
             "type": "string"
           },
+          "delayFrom": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delayfrom"
+          },
+          "delayTo": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delayto"
+          },
+          "delayUnit": {
+            "anyOf": [
+              {
+                "enum": [
+                  "days",
+                  "weeks",
+                  "months",
+                  "years"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delayunit"
+          },
           "effect": {
             "description": "same or opposite; empty for a formula part.",
             "title": "Effect",
@@ -43032,6 +44702,29 @@
           "reason"
         ],
         "title": "TreeGap",
+        "type": "object"
+      },
+      "TrialCandidate": {
+        "properties": {
+          "conflict": {
+            "title": "Conflict",
+            "type": "boolean"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "intent": {
+            "title": "Intent",
+            "type": "string"
+          }
+        },
+        "required": [
+          "intent",
+          "description",
+          "conflict"
+        ],
+        "title": "TrialCandidate",
         "type": "object"
       },
       "TriggerElementSchema": {
@@ -44370,6 +46063,18 @@
             ],
             "title": "Name"
           },
+          "perPerson": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Enable or disable per-person row ownership.",
+            "title": "Perperson"
+          },
           "rhythm": {
             "anyOf": [
               {
@@ -44656,6 +46361,7 @@
               {
                 "enum": [
                   "member",
+                  "external",
                   "admin",
                   "platform_admin"
                 ],
@@ -47527,7 +49233,8 @@
               "tool",
               "data_table",
               "secret",
-              "extension"
+              "extension",
+              "data_source"
             ],
             "title": "Kind",
             "type": "string"
@@ -58316,6 +60023,100 @@
         ]
       }
     },
+    "/api/v1/concept-relationships": {
+      "post": {
+        "operationId": "add_relationship_api_v1_concept_relationships_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RelationshipWrite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RelationshipItem"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Add Relationship",
+        "tags": [
+          "concepts"
+        ]
+      }
+    },
+    "/api/v1/concept-relationships/{row_id}": {
+      "delete": {
+        "operationId": "remove_relationship_api_v1_concept_relationships__row_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "row_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Row Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObjectGraph"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Remove Relationship",
+        "tags": [
+          "concepts"
+        ]
+      }
+    },
     "/api/v1/concepts": {
       "get": {
         "description": "This workspace's definitions, one page at a time (B-NB8).\n\nAn empty page before the workspace has written its first one — not a\n404. \"You have no definitions yet\" is an answer; a missing table is an\nimplementation detail nobody asked about.",
@@ -58737,7 +60538,7 @@
         ]
       },
       "patch": {
-        "description": "Partial update — only fields present in the body are written.",
+        "description": "Partial update — only fields present in the body are written.\n\nThe switch (``enabled``) of a start that belongs to a module's workflow takes the right the\nmodule names for its workflows (K2: Mail's ``manage``); every other start stays the members'.",
         "operationId": "update_conditional_trigger_api_v1_conditional_triggers__trigger_id__patch",
         "parameters": [
           {
@@ -61862,6 +63663,55 @@
         ]
       }
     },
+    "/api/v1/data-sources/{entity_id}/discard-draft": {
+      "post": {
+        "description": "Discard the draft, back to what is published. Refuses if never published.",
+        "operationId": "discard_draft_api_v1_data_sources__entity_id__discard_draft_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiscardDraftResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Discard Draft",
+        "tags": [
+          "data-sources"
+        ]
+      }
+    },
     "/api/v1/data-sources/{entity_id}/unarchive": {
       "post": {
         "description": "Unarchive: back in use, in the state it had (Draft or Published).",
@@ -61906,6 +63756,725 @@
           }
         ],
         "summary": "Unarchive Data Source",
+        "tags": [
+          "data-sources"
+        ]
+      }
+    },
+    "/api/v1/data-sources/{entity_id}/versions": {
+      "get": {
+        "description": "The version history of one entity.",
+        "operationId": "list_versions_api_v1_data_sources__entity_id__versions_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "type",
+            "required": false,
+            "schema": {
+              "default": "all",
+              "enum": [
+                "checkpoint",
+                "major",
+                "all"
+              ],
+              "title": "Type",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VersionListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Versions",
+        "tags": [
+          "data-sources"
+        ]
+      },
+      "post": {
+        "description": "Save As: name what the draft holds now.",
+        "operationId": "create_major_version_api_v1_data_sources__entity_id__versions_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMajorVersionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MajorVersionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Major Version",
+        "tags": [
+          "data-sources"
+        ]
+      }
+    },
+    "/api/v1/data-sources/{entity_id}/versions/deleted": {
+      "get": {
+        "description": "Removed versions that can still be restored.",
+        "operationId": "list_deleted_versions_api_v1_data_sources__entity_id__versions_deleted_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeletedVersionListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Deleted Versions",
+        "tags": [
+          "data-sources"
+        ]
+      }
+    },
+    "/api/v1/data-sources/{entity_id}/versions/ensure": {
+      "post": {
+        "description": "Make sure a working draft exists. Idempotent.",
+        "operationId": "ensure_draft_version_api_v1_data_sources__entity_id__versions_ensure_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnsureDraftVersionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Ensure Draft Version",
+        "tags": [
+          "data-sources"
+        ]
+      }
+    },
+    "/api/v1/data-sources/{entity_id}/versions/major/{major_version}": {
+      "patch": {
+        "description": "Rename a major version.",
+        "operationId": "rename_version_api_v1_data_sources__entity_id__versions_major__major_version__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "major_version",
+            "required": true,
+            "schema": {
+              "title": "Major Version",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RenameVersionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RenameVersionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Rename Version",
+        "tags": [
+          "data-sources"
+        ]
+      }
+    },
+    "/api/v1/data-sources/{entity_id}/versions/publish/{major_version}": {
+      "post": {
+        "description": "Make a major version live. Agents go through the approval queue.",
+        "operationId": "publish_version_api_v1_data_sources__entity_id__versions_publish__major_version__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "major_version",
+            "required": true,
+            "schema": {
+              "title": "Major Version",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Publish Version",
+        "tags": [
+          "data-sources"
+        ]
+      }
+    },
+    "/api/v1/data-sources/{entity_id}/versions/published": {
+      "get": {
+        "description": "The live version and its document, or null — what runs and viewers read.",
+        "operationId": "get_published_version_api_v1_data_sources__entity_id__versions_published_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/PublishedVersionInfo"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Get Published Version Api V1 Data Sources  Entity Id  Versions Published Get"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Published Version",
+        "tags": [
+          "data-sources"
+        ]
+      }
+    },
+    "/api/v1/data-sources/{entity_id}/versions/unpublish": {
+      "post": {
+        "description": "Take the live version down; it becomes the draft if there is none.",
+        "operationId": "unpublish_api_v1_data_sources__entity_id__versions_unpublish_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnpublishResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Unpublish",
+        "tags": [
+          "data-sources"
+        ]
+      }
+    },
+    "/api/v1/data-sources/{entity_id}/versions/{version_id}": {
+      "delete": {
+        "description": "Tombstone one snapshot — recoverable, audited.",
+        "operationId": "delete_version_api_v1_data_sources__entity_id__versions__version_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteVersionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Version",
+        "tags": [
+          "data-sources"
+        ]
+      }
+    },
+    "/api/v1/data-sources/{entity_id}/versions/{version_id}/restore": {
+      "post": {
+        "description": "Roll the draft back to an earlier snapshot.",
+        "operationId": "restore_version_api_v1_data_sources__entity_id__versions__version_id__restore_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RestoreVersionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RestoreResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Restore Version",
+        "tags": [
+          "data-sources"
+        ]
+      }
+    },
+    "/api/v1/data-sources/{entity_id}/versions/{version_id}/restore-deleted": {
+      "post": {
+        "description": "Un-delete one version, without making it live.",
+        "operationId": "restore_deleted_version_api_v1_data_sources__entity_id__versions__version_id__restore_deleted_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RestoreDeletedVersionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Restore Deleted Version",
+        "tags": [
+          "data-sources"
+        ]
+      }
+    },
+    "/api/v1/data-sources/{entity_id}/versions/{version}": {
+      "get": {
+        "description": "One version's stored snapshot.",
+        "operationId": "get_version_api_v1_data_sources__entity_id__versions__version__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version",
+            "required": true,
+            "schema": {
+              "title": "Version",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VersionDetailResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Version",
         "tags": [
           "data-sources"
         ]
@@ -62431,6 +65000,91 @@
           }
         ],
         "summary": "Test Data Source",
+        "tags": [
+          "data-sources"
+        ]
+      }
+    },
+    "/api/v1/data-sources/{source_id}/used-by": {
+      "get": {
+        "description": "What uses this source — its Used by, and what a delete of it would refuse on.\n\nThe queries that name it (and which version does), the tables those queries fill, the tables\nthat live in it (``breaksOnDelete``, from the same reader as the refusal to delete), the\nsecret it connects with (a name, never a value) and the platform workflow that explores it.\nOne list, in a stable order, continued by ``nextCursor``: it is bounded by what authors\nhave wired to the source, never by runs or rows.",
+        "operationId": "list_data_source_used_by_api_v1_data_sources__source_id__used_by_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Source Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Opaque continuation token from the previous page's nextCursor. Send it back unchanged; never construct one.",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Opaque continuation token from the previous page's nextCursor. Send it back unchanged; never construct one.",
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 200,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_DataSourceUsedBy_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Data Source Used By",
         "tags": [
           "data-sources"
         ]
@@ -63095,6 +65749,91 @@
           }
         ],
         "summary": "Discard Data Table Draft",
+        "tags": [
+          "data-tables"
+        ]
+      }
+    },
+    "/api/v1/data-tables/{table_id}/reaches": {
+      "get": {
+        "description": "Who reads this table and who writes it — the Reaches tab, and what a delete would break.\n\nAgents that hold one of its tools, processes whose step routes on it or calls a tool of it,\nmodule settings, and what Insights puts on it (the query that fills it, the measures that\nread it, the dashboards that show those, its relationships): how each reaches it, where, in\nwhich version of itself it names the table, which version of the table it sees, and whether\na delete refuses on it (``breaksOnDelete``, from the same reader as the refusal). No count\nof reads: who may read and write, not how often.\n\nOne list, in a stable order, continued by ``nextCursor``: it is bounded by what authors have\nwired to the table, never by runs or rows.",
+        "operationId": "list_data_table_reaches_api_v1_data_tables__table_id__reaches_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "table_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Table Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Opaque continuation token from the previous page's nextCursor. Send it back unchanged; never construct one.",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Opaque continuation token from the previous page's nextCursor. Send it back unchanged; never construct one.",
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 200,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_DataTableReach_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Data Table Reaches",
         "tags": [
           "data-tables"
         ]
@@ -70193,6 +72932,262 @@
         ]
       }
     },
+    "/api/v1/mail/mailboxes/status": {
+      "get": {
+        "description": "Each mailbox with its last check and how many of its mails need an administrator.\n\nOne page: a workspace's mailboxes are a short list an administrator keeps by hand.",
+        "operationId": "list_mailbox_statuses_api_v1_mail_mailboxes_status_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_MailboxStatus_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Mailbox Statuses",
+        "tags": [
+          "mail"
+        ]
+      }
+    },
+    "/api/v1/mail/mailboxes/{name}/messages": {
+      "get": {
+        "description": "The mails of one mailbox in a view (Needs you, Activity), newest first; no mail text.",
+        "operationId": "list_mailbox_messages_api_v1_mail_mailboxes__name__messages_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "view",
+            "required": false,
+            "schema": {
+              "default": "everything",
+              "enum": [
+                "everything",
+                "needs_you",
+                "in_progress",
+                "handed_over",
+                "skipped",
+                "failed"
+              ],
+              "title": "View",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_MailMessageItem_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Mailbox Messages",
+        "tags": [
+          "mail"
+        ]
+      }
+    },
+    "/api/v1/mail/mailboxes/{name}/test": {
+      "post": {
+        "description": "Where this mailbox's routing would send a described mail. Starts and saves nothing.",
+        "operationId": "test_a_mail_api_v1_mail_mailboxes__name__test_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MailTrialRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MailTrialResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Test A Mail",
+        "tags": [
+          "mail"
+        ]
+      }
+    },
+    "/api/v1/mail/messages/{decision_id}/{action}": {
+      "post": {
+        "description": "T3 (``offer_again``), T13 (``start_again``) or T14 (``mark_handled``): a CAS, audited.",
+        "operationId": "act_on_message_api_v1_mail_messages__decision_id___action__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "decision_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Decision Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "action",
+            "required": true,
+            "schema": {
+              "enum": [
+                "offer_again",
+                "start_again",
+                "mark_handled"
+              ],
+              "title": "Action",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecisionActionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DecisionMoved"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Act On Message",
+        "tags": [
+          "mail"
+        ]
+      }
+    },
     "/api/v1/mail/routes": {
       "get": {
         "description": "The route names of this workspace's mailboxes, in alphabetical order.\n\nOne page: a workspace's mailboxes are a short list an administrator keeps by hand, and the\nnames are never more than the mailboxes.",
@@ -74237,6 +77232,202 @@
         ]
       }
     },
+    "/api/v1/modules/{module_id}/deletion": {
+      "post": {
+        "description": "Remove the plug-in now while preserving data, or queue an atomic purge.",
+        "operationId": "remove_plugin_api_v1_modules__module_id__deletion_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "module_id",
+            "required": true,
+            "schema": {
+              "title": "Module Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PluginDeletionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PluginDeletionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Remove Plugin",
+        "tags": [
+          "modules"
+        ]
+      }
+    },
+    "/api/v1/modules/{module_id}/deletion-preflight": {
+      "get": {
+        "description": "Count the plug-in's live data and page everything outside it that refers to it.",
+        "operationId": "plugin_deletion_preflight_api_v1_modules__module_id__deletion_preflight_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "module_id",
+            "required": true,
+            "schema": {
+              "title": "Module Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Limit"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PluginDeletionPreflightResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Plugin Deletion Preflight",
+        "tags": [
+          "modules"
+        ]
+      }
+    },
+    "/api/v1/modules/{module_id}/enabled": {
+      "put": {
+        "description": "Switch a PLUG-IN of the caller's workspace on or off: the workspace administrator's (C48).\n\nA plug-in is deployed from the workspace's repository and starts off; this is\nthe one switch that makes it available. A platform module is not switched\nhere (``PUT /api/v1/platform/modules/{id}``, a platform administrator), and\nthe installation's emergency stop is not lifted here either. The service\ndecides who may, again, so no route can be wired to the wrong rule.",
+        "operationId": "switch_plugin_api_v1_modules__module_id__enabled_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "module_id",
+            "required": true,
+            "schema": {
+              "title": "Module Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModuleSwitchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModuleResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Switch Plugin",
+        "tags": [
+          "modules"
+        ]
+      }
+    },
     "/api/v1/modules/{module_id}/settings": {
       "get": {
         "operationId": "read_settings_api_v1_modules__module_id__settings_get",
@@ -74520,6 +77711,86 @@
         "summary": "Settings Schema",
         "tags": [
           "module settings"
+        ]
+      }
+    },
+    "/api/v1/modules/{module_id}/versions": {
+      "get": {
+        "description": "One page of this workspace's immutable versions of one plug-in.",
+        "operationId": "list_plugin_versions_api_v1_modules__module_id__versions_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "module_id",
+            "required": true,
+            "schema": {
+              "title": "Module Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Limit"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_PluginVersionOverviewResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Plugin Versions",
+        "tags": [
+          "modules"
         ]
       }
     },
@@ -74822,6 +78093,33 @@
         "summary": "Decide Request",
         "tags": [
           "oauth"
+        ]
+      }
+    },
+    "/api/v1/objects": {
+      "get": {
+        "description": "The ontology's capped concept set and its author-maintained relationships.",
+        "operationId": "object_map_api_v1_objects_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObjectGraph"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Object Map",
+        "tags": [
+          "concepts"
         ]
       }
     },

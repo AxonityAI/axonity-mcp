@@ -327,6 +327,7 @@ export function registerApprovalTools(
                 "prompt_snippet",
                 "method",
                 "flow",
+                "data_source",
                 "data_table",
                 "application",
                 "table_database",

@@ -367,6 +367,71 @@ export const FORBIDDEN: Rule[] = [
     path: /\/api\/v1\/trash\/[^/]+\/[^/]+$/,
     methods: ["DELETE"],
   },
+
+  // The four module lifecycle operations are deliberately closed in Flow's
+  // token table: they operate the Installation screen, rather than a draft an
+  // author owns. Enabling a module, choosing whether its data survives, the
+  // preflight that makes that choice intelligible, and the resulting history
+  // each require a person at a screen.
+  {
+    label: "enable or disable a module (a person at a screen)",
+    path: /^\/api\/v1\/modules\/[^/]+\/enabled$/,
+    methods: ["PUT"],
+  },
+  // A person chooses whether installed module data is preserved or deleted.
+  {
+    label: "choose module deletion (a person at a screen)",
+    path: /^\/api\/v1\/modules\/[^/]+\/deletion$/,
+    methods: ["POST"],
+  },
+  // The preflight explains that human choice; it is not a separate data API.
+  {
+    label: "read module deletion preflight (a person at a screen)",
+    path: /^\/api\/v1\/modules\/[^/]+\/deletion-preflight$/,
+    methods: ["GET"],
+  },
+  // Immutable module history belongs to that same human lifecycle screen.
+  {
+    label: "read module lifecycle versions (a person at a screen)",
+    path: /^\/api\/v1\/modules\/[^/]+\/versions$/,
+    methods: ["GET"],
+  },
+
+  // Data sources stay live MCP-authored objects. Their new history endpoints
+  // expose or alter connection-configuration checkpoints, while the existing
+  // create/update/test tools keep the deliberate current-state workflow. The
+  // connector does not make a second source-versioning surface around secrets.
+  {
+    label: "data source version history (current source tools only)",
+    path: /^\/api\/v1\/data-sources\/[^/]+\/(discard-draft|versions)(\/|$)/,
+  },
+  // Both graph reads are for inspecting a model on a screen; the authoring
+  // tools already name their actual source/table links. Returning a second,
+  // untyped relationship graph would make a parallel modelling API.
+  {
+    label: "data source usage graph (no MCP graph API)",
+    path: /^\/api\/v1\/data-sources\/[^/]+\/used-by$/,
+    methods: ["GET"],
+  },
+  // A table's reachability graph is likewise a screen-only model inspection.
+  {
+    label: "data table reach graph (no MCP graph API)",
+    path: /^\/api\/v1\/data-tables\/[^/]+\/reaches$/,
+    methods: ["GET"],
+  },
+  // Mailbox diagnostics and messages are operational delivery state and human
+  // correspondence. Testing a mailbox or deciding a queued mail action is an
+  // administrator's screen action, not tenant authoring through this token.
+  { label: "mailbox diagnostics and messages (human mail screen)", path: /^\/api\/v1\/mail\/mailboxes(\/|$)/ },
+  { label: "mail delivery decisions (human mail screen)", path: /^\/api\/v1\/mail\/messages\/[^/]+\/[^/]+$/ },
+  // Concept-relationship rows are the experimental semantic graph's direct
+  // table edits. The MCP has no reviewed graph authoring contract for them, so
+  // it must not turn an internal row API into an unvalidated modelling tool.
+  { label: "concept relationship rows (no MCP graph authoring API)", path: /^\/api\/v1\/concept-relationships(\/|$)/ },
+  // This generic object catalogue has no typed object contract. The connector
+  // exposes typed tenant entities only; an untyped catch-all would bypass their
+  // validation and lifetime rules.
+  { label: "generic object catalogue (typed tools only)", path: /^\/api\/v1\/objects$/ },
 ];
 
 export function forbids(method: string, path: string): boolean {
