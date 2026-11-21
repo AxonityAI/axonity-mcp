@@ -43,6 +43,18 @@ export const FORBIDDEN: Rule[] = [
   // service tokens (`dicht`), because opening an app is a person at a screen",
   // and the token table says the answer "is read nowhere else".
   { label: "Flow-App frame (a person at a screen)", path: /^\/api\/v1\/apps\/[^/]+\/frame$/ },
+  // The dashboard's original app list is also session-only. B153 deliberately
+  // adds `/apps/status` for the personal token and is the only MCP discovery
+  // path: it shares this list's visibility facts without turning a browser
+  // surface into a second token contract.
+  { label: "Flow-App dashboard list (session-only)", path: /^\/api\/v1\/apps$/ },
+  // These are the Flow-App bridge's private protocol, not a general tenant
+  // API. Every call requires both a browser session and X-Flow-App; the bridge
+  // derives that app identity from the frame, then limits runs, conversations,
+  // rows and settings to grants in that one manifest. A personal MCP token has
+  // neither proof, and duplicating the bridge would create a second authority
+  // model. The corresponding general MCP tools remain the authoring surface.
+  { label: "Flow-App bridge protocol (frame-bound)", path: /\/api\/v1\/app-surface\// },
   // Hidden tables are `require_platform_admin` (main #2472): a workspace does
   // not see them, so neither does a token (token table: "a workspace does not
   // see them, so neither does a token").
@@ -163,6 +175,23 @@ export const FORBIDDEN: Rule[] = [
   // What an agent legitimately wants from here — why is this run parked, what
   // is it waiting for — is `read_run_waiting_on`, which reads the same rows.
   { label: "admin wake-tasks (scheduler plumbing)", path: /\/api\/v1\/admin\// },
+
+  // Mail route topology is the mail subsystem's operational wiring, not a
+  // tenant-authored object. It has no counterpart write flow in this connector;
+  // reading it would expose implementation paths without helping an author
+  // create or inspect an addressable tenant entity.
+  { label: "mail route topology (operational wiring)", path: /\/api\/v1\/mail\/routes$/ },
+  // A table database's schema is the visual/modelled relationship graph
+  // (tables, splits and verification state). The connector's table-database
+  // tools deliberately operate on the database document and its versions;
+  // inventing a parallel graph reader would make the schema surface an
+  // unreviewed second modelling API.
+  { label: "table database relationship graph (no MCP modelling API)", path: /\/api\/v1\/table-databases\/[^/]+\/schema$/ },
+  // Verifying a relationship changes its persisted verification outcome based
+  // on live table data. That is a human data-quality decision: when values are
+  // missing the caller must interpret them, and an MCP token must not mark the
+  // relationship verified on behalf of that review.
+  { label: "verify table relationship (human data-quality decision)", path: /\/api\/v1\/table-relationships\/[^/]+\/verify$/ },
 
   // ---- axonity-mcp#59 — the last stacks, answered -----------------------
 
