@@ -1512,6 +1512,193 @@
         "title": "AnswerAskUserRequest",
         "type": "object"
       },
+      "AnswerBody": {
+        "additionalProperties": false,
+        "properties": {
+          "answer": {
+            "title": "Answer",
+            "type": "string"
+          }
+        },
+        "required": [
+          "answer"
+        ],
+        "title": "AnswerBody",
+        "type": "object"
+      },
+      "AnswerEventResponse": {
+        "description": "The text that ends the turn.",
+        "properties": {
+          "at": {
+            "title": "At",
+            "type": "integer"
+          },
+          "handInCallId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The id of the submit_output call that carries it, if any.",
+            "title": "Handincallid"
+          },
+          "kind": {
+            "const": "answer",
+            "default": "answer",
+            "title": "Kind",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "turn": {
+            "title": "Turn",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "at",
+          "turn",
+          "text"
+        ],
+        "title": "AnswerEventResponse",
+        "type": "object"
+      },
+      "AppConversationTurn": {
+        "description": "One turn of a conversation (B143): what was asked, what the agent did, what it answered.\n\n``steps`` are short sentences (\"Calculating Omzet D2C\"), one per call of the agent: never the\narguments of a tool or its result. ``answer`` is the text that ended the turn, ``None`` while\nthe agent is still at it.",
+        "properties": {
+          "answer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answer"
+          },
+          "question": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Question"
+          },
+          "steps": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Steps",
+            "type": "array"
+          }
+        },
+        "title": "AppConversationTurn",
+        "type": "object"
+      },
+      "AppConversationView": {
+        "description": "One conversation the person opened through the app.",
+        "properties": {
+          "agent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agent"
+          },
+          "createdAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Createdat"
+          },
+          "endedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Endedat"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "turns": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/AppConversationTurn"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Turns"
+          }
+        },
+        "required": [
+          "id",
+          "status"
+        ],
+        "title": "AppConversationView",
+        "type": "object"
+      },
+      "AppEntryResponse": {
+        "description": "An app the person may open: what the sidebar of the Dashboard draws (#1826 A5).",
+        "properties": {
+          "hasUserSettings": {
+            "description": "Whether the app has a setting a person sets for themselves (level user).",
+            "title": "Hasusersettings",
+            "type": "boolean"
+          },
+          "label": {
+            "description": "The name the sidebar shows, from the live version's manifest.",
+            "title": "Label",
+            "type": "string"
+          },
+          "slug": {
+            "description": "The app's handle; its page is /apps/<slug>.",
+            "title": "Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "label",
+          "hasUserSettings"
+        ],
+        "title": "AppEntryResponse",
+        "type": "object"
+      },
       "AppFrameResponse": {
         "description": "Where the shell points the frame of an app (#1826 A2).",
         "properties": {
@@ -1544,6 +1731,330 @@
           "entryPath"
         ],
         "title": "AppFrameResponse",
+        "type": "object"
+      },
+      "AppMeasureAnswer": {
+        "description": "A number, and what an app needs to read it: the period and the unit (review M2).\n\nA narrow projection of the answer Flow's own screens read (``MeasureQueryResult``), made here\nand not there. It carries NOTHING of what the number is made of: no table or column, no part of\nthe formula, no count of rows, no date the table was last filled, no status against limits or\nplan. The right to a measure is a right to a number.",
+        "properties": {
+          "certified": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Certified"
+          },
+          "change": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Change"
+          },
+          "changeKind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Changekind"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          },
+          "comparisonPeriod": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comparisonperiod"
+          },
+          "comparisonSeries": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Comparisonseries",
+            "type": "array"
+          },
+          "comparisonTotal": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comparisontotal"
+          },
+          "delta": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delta"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "grain": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grain"
+          },
+          "measure": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Measure"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "period": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period"
+          },
+          "series": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Series",
+            "type": "array"
+          },
+          "total": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total"
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "title": "AppMeasureAnswer",
+        "type": "object"
+      },
+      "AppMeasureQuery": {
+        "additionalProperties": false,
+        "description": "One number: a published measure, over a period. No split and no filter (review M2).",
+        "properties": {
+          "compare": {
+            "default": "none",
+            "description": "What the total is compared with.",
+            "enum": [
+              "none",
+              "previous_period",
+              "previous_year"
+            ],
+            "title": "Compare",
+            "type": "string"
+          },
+          "end": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Last day of a custom range, inclusive.",
+            "title": "End"
+          },
+          "grain": {
+            "default": "none",
+            "description": "Draw a series per this grain.",
+            "enum": [
+              "none",
+              "auto",
+              "day",
+              "week",
+              "month",
+              "quarter",
+              "year"
+            ],
+            "title": "Grain",
+            "type": "string"
+          },
+          "measure": {
+            "description": "The measure's slug, as the app's rights name it.",
+            "maxLength": 64,
+            "title": "Measure",
+            "type": "string"
+          },
+          "period": {
+            "anyOf": [
+              {
+                "enum": [
+                  "today",
+                  "this_week",
+                  "last_week",
+                  "this_month",
+                  "last_month",
+                  "this_quarter",
+                  "last_quarter",
+                  "year_to_date",
+                  "last_30_days",
+                  "last_3_months",
+                  "last_12_months",
+                  "last_3_full_months",
+                  "last_12_full_months",
+                  "year_to_last_full_month",
+                  "last_4_full_weeks",
+                  "last_8_full_weeks",
+                  "last_13_full_weeks",
+                  "all_time"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "this_month",
+            "description": "A named period. Send null and start and end for a custom range.",
+            "title": "Period"
+          },
+          "start": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "First day of a custom range.",
+            "title": "Start"
+          }
+        },
+        "required": [
+          "measure"
+        ],
+        "title": "AppMeasureQuery",
+        "type": "object"
+      },
+      "AppOpenQuestion": {
+        "description": "A question a step of the run is waiting on, so a screen can ask the person.",
+        "properties": {
+          "choices": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Choices"
+          },
+          "question": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Question"
+          },
+          "stepId": {
+            "title": "Stepid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "stepId"
+        ],
+        "title": "AppOpenQuestion",
         "type": "object"
       },
       "AppRegisterRequest": {
@@ -1634,6 +2145,145 @@
           "manifest"
         ],
         "title": "AppRegisterUrlResponse",
+        "type": "object"
+      },
+      "AppRunOutcome": {
+        "description": "What a finished run came to (B143): the values its end step declares.\n\n``structured`` holds them, by the declared names. A flow whose end step declares nothing\nanswers as the platform does for a sub-process: the step that did the work, its text and its\nstructured outputs. Never the input or the output of the steps in between.",
+        "properties": {
+          "structured": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Structured"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          }
+        },
+        "title": "AppRunOutcome",
+        "type": "object"
+      },
+      "AppRunView": {
+        "description": "One run the person started through the app, as narrow as it can be.",
+        "properties": {
+          "completedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completedat"
+          },
+          "createdAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Createdat"
+          },
+          "currentStep": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currentstep"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "openQuestion": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AppOpenQuestion"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "outcome": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AppRunOutcome"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "startedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Startedat"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "workflow": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workflow"
+          }
+        },
+        "required": [
+          "id",
+          "status"
+        ],
+        "title": "AppRunView",
+        "type": "object"
+      },
+      "AppSettings": {
+        "description": "The app's own settings, resolved for the person: ``key -> value`` (``null`` when unset).",
+        "properties": {
+          "values": {
+            "additionalProperties": true,
+            "title": "Values",
+            "type": "object"
+          }
+        },
+        "title": "AppSettings",
         "type": "object"
       },
       "AppStatusResponse": {
@@ -2515,7 +3165,7 @@
         "description": "Stop this code everywhere in the installation.",
         "properties": {
           "reason": {
-            "description": "Why. Read in every workspace's audit.",
+            "description": "Why. Only Axonity's platform administrators read it: it may name another customer, so a workspace is told only that Axonity blocked the version.",
             "maxLength": 65536,
             "title": "Reason",
             "type": "string"
@@ -2543,6 +3193,20 @@
           "versionsChanged"
         ],
         "title": "BlockResponse",
+        "type": "object"
+      },
+      "Body_runs_upload_input_api_v1_app_surface_workflows__workflow__files_post": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_runs_upload_input_api_v1_app_surface_workflows__workflow__files_post",
         "type": "object"
       },
       "Body_upload_attachment_api_v1_conversation_attachments_post": {
@@ -6307,6 +6971,46 @@
           "workflowName"
         ],
         "title": "ContributionResponse",
+        "type": "object"
+      },
+      "ConversationActivityResponse": {
+        "description": "The events of one transcript in message order, and how many turns it began.",
+        "properties": {
+          "events": {
+            "items": {
+              "discriminator": {
+                "mapping": {
+                  "answer": "#/components/schemas/AnswerEventResponse",
+                  "step": "#/components/schemas/StepEventResponse",
+                  "turn": "#/components/schemas/TurnEventResponse"
+                },
+                "propertyName": "kind"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/TurnEventResponse"
+                },
+                {
+                  "$ref": "#/components/schemas/StepEventResponse"
+                },
+                {
+                  "$ref": "#/components/schemas/AnswerEventResponse"
+                }
+              ]
+            },
+            "title": "Events",
+            "type": "array"
+          },
+          "turns": {
+            "title": "Turns",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "events",
+          "turns"
+        ],
+        "title": "ConversationActivityResponse",
         "type": "object"
       },
       "ConversationMessageRequest": {
@@ -10260,6 +10964,17 @@
             "title": "Source",
             "type": "string"
           },
+          "storageConversion": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StorageConversionStatus"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Set while the table's rows wait to be moved to its own storage, after the platform update that introduced it. Until then the table cannot be read, written, published, restored or deleted; its draft can be edited and discarded. Null for every table that is ready."
+          },
           "tenantId": {
             "title": "Tenantid",
             "type": "string"
@@ -10717,6 +11432,17 @@
             ],
             "title": "Source",
             "type": "string"
+          },
+          "storageConversion": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StorageConversionStatus"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Set while the table's rows wait to be moved to its own storage, after the platform update that introduced it. Until then the table cannot be read, written, published, restored or deleted; its draft can be edited and discarded. Null for every table that is ready."
           },
           "tenantId": {
             "title": "Tenantid",
@@ -15200,6 +15926,7 @@
                 "type": "null"
               }
             ],
+            "description": "Set exactly when the version is blocked. A workspace reads the fixed sentence 'Blocked by Axonity'; only Axonity's platform administrator reads the reason Axonity wrote.",
             "title": "Blockreason"
           },
           "blockedAt": {
@@ -17612,6 +18339,16 @@
       "InvocationMessagesResponse": {
         "description": "One agent invocation's transcript, fetched on open (#875).\n\nThe body behind a row in ``RunDetail.agent_invocations``, which\ncarries metadata and a ``messageCount`` and no message bodies at all.\nSame shape as :class:`RunValueResponse` and the session-memory file\nread: the collection view carries handles, a body arrives when\nsomeone asks to see it.\n\n``messages`` is the FULLY DECODED conversation — a transcript stored\nafter #855 is marker-encoded on disk, and the repository resolves it,\nso a caller never has to know which shape the row was written in.\nEmpty list for an invocation that has not taken a turn yet.",
         "properties": {
+          "activity": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ConversationActivityResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "invocationId": {
             "title": "Invocationid",
             "type": "string"
@@ -19474,6 +20211,62 @@
           "key"
         ],
         "title": "ManagedObjectRequest",
+        "type": "object"
+      },
+      "ManifestValidationError": {
+        "description": "One canonical manifest refusal, at its wire path.",
+        "properties": {
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "message"
+        ],
+        "title": "ManifestValidationError",
+        "type": "object"
+      },
+      "ManifestValidationRequest": {
+        "additionalProperties": false,
+        "description": "One parsed Flow-App manifest to check without storing it.",
+        "properties": {
+          "manifest": {
+            "additionalProperties": true,
+            "title": "Manifest",
+            "type": "object"
+          }
+        },
+        "required": [
+          "manifest"
+        ],
+        "title": "ManifestValidationRequest",
+        "type": "object"
+      },
+      "ManifestValidationResponse": {
+        "description": "Whether a manifest satisfies the canonical Flow-App schema.",
+        "properties": {
+          "errors": {
+            "items": {
+              "$ref": "#/components/schemas/ManifestValidationError"
+            },
+            "title": "Errors",
+            "type": "array"
+          },
+          "valid": {
+            "title": "Valid",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "valid"
+        ],
+        "title": "ManifestValidationResponse",
         "type": "object"
       },
       "MapNode": {
@@ -24913,6 +25706,114 @@
         "title": "Page[ActionVerdictItem]",
         "type": "object"
       },
+      "Page_AppConversationView_": {
+        "properties": {
+          "hasMore": {
+            "default": false,
+            "title": "Hasmore",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AppConversationView"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          },
+          "pageSize": {
+            "title": "Pagesize",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "pageSize"
+        ],
+        "title": "Page[AppConversationView]",
+        "type": "object"
+      },
+      "Page_AppEntryResponse_": {
+        "properties": {
+          "hasMore": {
+            "default": false,
+            "title": "Hasmore",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AppEntryResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          },
+          "pageSize": {
+            "title": "Pagesize",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "pageSize"
+        ],
+        "title": "Page[AppEntryResponse]",
+        "type": "object"
+      },
+      "Page_AppRunView_": {
+        "properties": {
+          "hasMore": {
+            "default": false,
+            "title": "Hasmore",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AppRunView"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          },
+          "pageSize": {
+            "title": "Pagesize",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "pageSize"
+        ],
+        "title": "Page[AppRunView]",
+        "type": "object"
+      },
       "Page_ApplicationActionItem_": {
         "properties": {
           "hasMore": {
@@ -26065,6 +26966,42 @@
         "title": "Page[RoleResponse]",
         "type": "object"
       },
+      "Page_RouteName_": {
+        "properties": {
+          "hasMore": {
+            "default": false,
+            "title": "Hasmore",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RouteName"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          },
+          "pageSize": {
+            "title": "Pagesize",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "pageSize"
+        ],
+        "title": "Page[RouteName]",
+        "type": "object"
+      },
       "Page_RunItemResult_": {
         "properties": {
           "hasMore": {
@@ -26423,6 +27360,42 @@
           "pageSize"
         ],
         "title": "Page[WorkspaceSummary]",
+        "type": "object"
+      },
+      "Page_str_": {
+        "properties": {
+          "hasMore": {
+            "default": false,
+            "title": "Hasmore",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          },
+          "pageSize": {
+            "title": "Pagesize",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "pageSize"
+        ],
+        "title": "Page[str]",
         "type": "object"
       },
       "PassageView": {
@@ -27436,6 +28409,7 @@
                 "type": "null"
               }
             ],
+            "description": "Set exactly when the version is blocked. A workspace reads the fixed sentence 'Blocked by Axonity'; only Axonity's platform administrator reads the reason Axonity wrote.",
             "title": "Blockreason"
           },
           "blockedAt": {
@@ -27649,6 +28623,7 @@
                 "type": "null"
               }
             ],
+            "description": "Set exactly when the version is blocked. A workspace reads the fixed sentence 'Blocked by Axonity'; only Axonity's platform administrator reads the reason Axonity wrote.",
             "title": "Blockreason"
           },
           "blockedAt": {
@@ -28046,6 +29021,21 @@
           "policyId": {
             "title": "Policyid",
             "type": "string"
+          },
+          "takesEffect": {
+            "anyOf": [
+              {
+                "enum": [
+                  "after_publish",
+                  "immediately"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Takeseffect"
           }
         },
         "required": [
@@ -30767,6 +31757,21 @@
             "default": false,
             "title": "Stillinscope",
             "type": "boolean"
+          },
+          "takesEffect": {
+            "anyOf": [
+              {
+                "enum": [
+                  "after_publish",
+                  "immediately"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Takeseffect"
           }
         },
         "required": [
@@ -32557,6 +33562,33 @@
           "isExecutable"
         ],
         "title": "RouteKindOption",
+        "type": "object"
+      },
+      "RouteName": {
+        "description": "One route name of the workspace, how many mailboxes carry it, and what is live on it.",
+        "properties": {
+          "intents": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/TakenIntent"
+            },
+            "title": "Intents",
+            "type": "array"
+          },
+          "mailboxCount": {
+            "title": "Mailboxcount",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "mailboxCount"
+        ],
+        "title": "RouteName",
         "type": "object"
       },
       "RuleCount": {
@@ -35024,6 +36056,150 @@
         "title": "SchemaColumnOut",
         "type": "object"
       },
+      "SchemaColumnResponse": {
+        "properties": {
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "kind",
+          "role"
+        ],
+        "title": "SchemaColumnResponse",
+        "type": "object"
+      },
+      "SchemaRelationshipResponse": {
+        "properties": {
+          "cardinality": {
+            "title": "Cardinality",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "fromColumn": {
+            "title": "Fromcolumn",
+            "type": "string"
+          },
+          "fromTableId": {
+            "title": "Fromtableid",
+            "type": "string"
+          },
+          "fromTableName": {
+            "title": "Fromtablename",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "incoming": {
+            "title": "Incoming",
+            "type": "boolean"
+          },
+          "splits": {
+            "items": {
+              "$ref": "#/components/schemas/SchemaSplitResponse"
+            },
+            "title": "Splits",
+            "type": "array"
+          },
+          "toColumn": {
+            "title": "Tocolumn",
+            "type": "string"
+          },
+          "toTableId": {
+            "title": "Totableid",
+            "type": "string"
+          },
+          "toTableName": {
+            "title": "Totablename",
+            "type": "string"
+          },
+          "verified": {
+            "title": "Verified",
+            "type": "boolean"
+          },
+          "verifiedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verifiedat"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "fromTableId",
+          "fromTableName",
+          "fromColumn",
+          "toTableId",
+          "toTableName",
+          "toColumn",
+          "cardinality",
+          "verified",
+          "version",
+          "incoming",
+          "splits"
+        ],
+        "title": "SchemaRelationshipResponse",
+        "type": "object"
+      },
+      "SchemaSplitResponse": {
+        "description": "A table a measure can be split by over this relationship.",
+        "properties": {
+          "columns": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Columns",
+            "type": "array"
+          },
+          "measureTable": {
+            "title": "Measuretable",
+            "type": "string"
+          },
+          "table": {
+            "title": "Table",
+            "type": "string"
+          }
+        },
+        "required": [
+          "measureTable",
+          "table",
+          "columns"
+        ],
+        "title": "SchemaSplitResponse",
+        "type": "object"
+      },
       "SchemaTableOut": {
         "description": "One table the source holds, with its columns.",
         "properties": {
@@ -35054,6 +36230,85 @@
           "columns"
         ],
         "title": "SchemaTableOut",
+        "type": "object"
+      },
+      "SchemaTableResponse": {
+        "properties": {
+          "columnCount": {
+            "title": "Columncount",
+            "type": "integer"
+          },
+          "columns": {
+            "items": {
+              "$ref": "#/components/schemas/SchemaColumnResponse"
+            },
+            "title": "Columns",
+            "type": "array"
+          },
+          "databaseId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Databaseid"
+          },
+          "databaseKind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Databasekind"
+          },
+          "databaseName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Databasename"
+          },
+          "filledBy": {
+            "title": "Filledby",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "inDatabase": {
+            "title": "Indatabase",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "role",
+          "filledBy",
+          "columnCount",
+          "inDatabase",
+          "columns"
+        ],
+        "title": "SchemaTableResponse",
         "type": "object"
       },
       "ScopeEdgeSchema": {
@@ -35994,6 +37249,22 @@
           "id"
         ],
         "title": "SelectionRootSchema",
+        "type": "object"
+      },
+      "SendMessageBody": {
+        "additionalProperties": false,
+        "properties": {
+          "message": {
+            "maxLength": 1000000,
+            "minLength": 1,
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "title": "SendMessageBody",
         "type": "object"
       },
       "ServiceTokenListItem": {
@@ -37058,6 +38329,21 @@
             "title": "Skillid",
             "type": "string"
           },
+          "takesEffect": {
+            "anyOf": [
+              {
+                "enum": [
+                  "after_publish",
+                  "immediately"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Takeseffect"
+          },
           "targetId": {
             "title": "Targetid",
             "type": "string"
@@ -37773,6 +39059,35 @@
         "title": "StagedValuesBatchResponse",
         "type": "object"
       },
+      "StartConversationBody": {
+        "additionalProperties": false,
+        "properties": {
+          "agent": {
+            "description": "The agent's slug.",
+            "maxLength": 120,
+            "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+            "title": "Agent",
+            "type": "string"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "maxLength": 1000000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          }
+        },
+        "required": [
+          "agent"
+        ],
+        "title": "StartConversationBody",
+        "type": "object"
+      },
       "StartConversationRequest": {
         "additionalProperties": false,
         "description": "Start a conversation using core and reviewed module-owned fields.",
@@ -37840,6 +39155,78 @@
           }
         },
         "title": "StartConversationRequest",
+        "type": "object"
+      },
+      "StartRunBody": {
+        "additionalProperties": false,
+        "description": "The input of a start, by parameter name; a file parameter holds an upload's reference.",
+        "properties": {
+          "inputs": {
+            "additionalProperties": true,
+            "title": "Inputs",
+            "type": "object"
+          }
+        },
+        "title": "StartRunBody",
+        "type": "object"
+      },
+      "StepEventResponse": {
+        "description": "One call of the agent that is not a hand-back, as a sentence.",
+        "properties": {
+          "at": {
+            "title": "At",
+            "type": "integer"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          },
+          "done": {
+            "description": "Whether the call's result is in.",
+            "title": "Done",
+            "type": "boolean"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The tool call's id, stable across reads.",
+            "title": "Id"
+          },
+          "kind": {
+            "const": "step",
+            "default": "step",
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "turn": {
+            "title": "Turn",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "at",
+          "turn",
+          "label",
+          "done"
+        ],
+        "title": "StepEventResponse",
         "type": "object"
       },
       "StepSchema": {
@@ -38014,6 +39401,18 @@
               }
             ],
             "title": "Error"
+          },
+          "failure": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure"
           },
           "iterationCount": {
             "anyOf": [
@@ -38405,6 +39804,49 @@
           }
         },
         "title": "StopBulkResult",
+        "type": "object"
+      },
+      "StorageConversionStatus": {
+        "description": "A table whose rows still wait to be moved to their own storage (B6).",
+        "properties": {
+          "message": {
+            "description": "What a person reads about it.",
+            "title": "Message",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "draft_uniqueness",
+                  "history",
+                  "cells",
+                  "storage_objects",
+                  "ownership",
+                  "draft_design",
+                  "busy",
+                  "unexpected"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why the last attempt did not move it, or null when it has not been tried yet. The author can fix 'draft_uniqueness' (the draft makes a column unique that the rows were not held to) and 'draft_design' (the rows no longer fit the draft of a never-published table) by changing or discarding the draft; 'busy' resolves itself at the next start; every other reason needs a platform administrator.",
+            "title": "Reason"
+          },
+          "state": {
+            "const": "pending",
+            "default": "pending",
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "title": "StorageConversionStatus",
         "type": "object"
       },
       "SubworkflowField": {
@@ -39013,6 +40455,35 @@
         "title": "TableDatabaseResponse",
         "type": "object"
       },
+      "TableDatabaseSchemaResponse": {
+        "properties": {
+          "databaseId": {
+            "title": "Databaseid",
+            "type": "string"
+          },
+          "relationships": {
+            "items": {
+              "$ref": "#/components/schemas/SchemaRelationshipResponse"
+            },
+            "title": "Relationships",
+            "type": "array"
+          },
+          "tables": {
+            "items": {
+              "$ref": "#/components/schemas/SchemaTableResponse"
+            },
+            "title": "Tables",
+            "type": "array"
+          }
+        },
+        "required": [
+          "databaseId",
+          "tables",
+          "relationships"
+        ],
+        "title": "TableDatabaseSchemaResponse",
+        "type": "object"
+      },
       "TableRelationshipCreate": {
         "description": "POST /api/v1/table-relationships.",
         "properties": {
@@ -39209,6 +40680,67 @@
           "expectedVersion"
         ],
         "title": "TableRelationshipUpdate",
+        "type": "object"
+      },
+      "TableRelationshipVerifyResult": {
+        "description": "The answer of ``POST /api/v1/table-relationships/{id}/verify``.\n\n``ok`` is true exactly when every value in the from column exists in the\nto column; then the relationship has been marked verified, with who and\nwhen, and ``relationship`` shows it so. When values are missing the\nrelationship is not verified (one that was is no longer): ``missingCount``\nis how many distinct values the to column lacks — the real total — and\n``missing`` is those values, one keyset page of them (``limit``, ``cursor``\non the request; ``nextCursor`` here to go on).",
+        "properties": {
+          "checkedCount": {
+            "title": "Checkedcount",
+            "type": "integer"
+          },
+          "missing": {
+            "$ref": "#/components/schemas/Page_str_"
+          },
+          "missingCount": {
+            "title": "Missingcount",
+            "type": "integer"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "relationship": {
+            "$ref": "#/components/schemas/TableRelationshipDetail"
+          }
+        },
+        "required": [
+          "ok",
+          "missingCount",
+          "missing",
+          "checkedCount",
+          "relationship"
+        ],
+        "title": "TableRelationshipVerifyResult",
+        "type": "object"
+      },
+      "TakenIntent": {
+        "description": "An intent a live process already claims on a route, and who holds it.",
+        "properties": {
+          "holders": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Holders",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "holders"
+        ],
+        "title": "TakenIntent",
         "type": "object"
       },
       "TaskQueueListResponse": {
@@ -41724,6 +43256,43 @@
           }
         },
         "title": "TriggersSchema",
+        "type": "object"
+      },
+      "TurnEventResponse": {
+        "description": "The person speaks, or the step prompt opens: a turn begins.",
+        "properties": {
+          "at": {
+            "title": "At",
+            "type": "integer"
+          },
+          "kind": {
+            "const": "turn",
+            "default": "turn",
+            "title": "Kind",
+            "type": "string"
+          },
+          "question": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What they said; null when there are no words to show.",
+            "title": "Question"
+          },
+          "turn": {
+            "title": "Turn",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "at",
+          "turn"
+        ],
+        "title": "TurnEventResponse",
         "type": "object"
       },
       "UnpublishResponse": {
@@ -51076,6 +52645,1286 @@
         ]
       }
     },
+    "/api/v1/app-surface/conversations": {
+      "get": {
+        "description": "One page of the conversations the person opened through this app, newest first.",
+        "operationId": "conversations_list_api_v1_app_surface_conversations_get",
+        "parameters": [
+          {
+            "description": "Opaque cursor of the previous page.",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 1000,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Opaque cursor of the previous page.",
+              "title": "Cursor"
+            }
+          },
+          {
+            "description": "Page size; the shared default and maximum apply.",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Page size; the shared default and maximum apply.",
+              "title": "Limit"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Flow-App",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Flow-App"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_AppConversationView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Conversations List",
+        "tags": [
+          "app-surface"
+        ]
+      },
+      "post": {
+        "description": "Open a conversation with an agent the app is assigned.",
+        "operationId": "conversations_start_api_v1_app_surface_conversations_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Flow-App",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Flow-App"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartConversationBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppConversationView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Conversations Start",
+        "tags": [
+          "app-surface"
+        ]
+      }
+    },
+    "/api/v1/app-surface/conversations/{conversation_id}": {
+      "get": {
+        "description": "One conversation the person opened through this app.",
+        "operationId": "conversations_read_api_v1_app_surface_conversations__conversation_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Flow-App",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Flow-App"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppConversationView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Conversations Read",
+        "tags": [
+          "app-surface"
+        ]
+      }
+    },
+    "/api/v1/app-surface/conversations/{conversation_id}/end": {
+      "post": {
+        "description": "End a conversation the person opened through this app.",
+        "operationId": "conversations_end_api_v1_app_surface_conversations__conversation_id__end_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Flow-App",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Flow-App"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppConversationView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Conversations End",
+        "tags": [
+          "app-surface"
+        ]
+      }
+    },
+    "/api/v1/app-surface/conversations/{conversation_id}/messages": {
+      "post": {
+        "description": "Send the next turn of a conversation the person opened through this app.",
+        "operationId": "conversations_send_api_v1_app_surface_conversations__conversation_id__messages_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Flow-App",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Flow-App"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendMessageBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppConversationView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Conversations Send",
+        "tags": [
+          "app-surface"
+        ]
+      }
+    },
+    "/api/v1/app-surface/module-operations/measures.query": {
+      "post": {
+        "description": "measures.query: an operation a module brought to the app surface.",
+        "operationId": "module_operation_measures_query_api_v1_app_surface_module_operations_measures_query_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Flow-App",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Flow-App"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AppMeasureQuery"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppMeasureAnswer"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Module Operation Measures Query",
+        "tags": [
+          "app-surface"
+        ]
+      }
+    },
+    "/api/v1/app-surface/runs/{run_id}": {
+      "get": {
+        "description": "Status, outcome and open question of one run the person started through this app.",
+        "operationId": "runs_read_api_v1_app_surface_runs__run_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Flow-App",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Flow-App"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppRunView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Runs Read",
+        "tags": [
+          "app-surface"
+        ]
+      }
+    },
+    "/api/v1/app-surface/runs/{run_id}/steps/{step_id}/answer": {
+      "post": {
+        "description": "Answer the question a step of the person's own run waits on.",
+        "operationId": "runs_answer_api_v1_app_surface_runs__run_id__steps__step_id__answer_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The step that waits.",
+            "in": "path",
+            "name": "step_id",
+            "required": true,
+            "schema": {
+              "description": "The step that waits.",
+              "maxLength": 200,
+              "title": "Step Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Flow-App",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Flow-App"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnswerBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppRunView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Runs Answer",
+        "tags": [
+          "app-surface"
+        ]
+      }
+    },
+    "/api/v1/app-surface/settings": {
+      "get": {
+        "description": "The app's own settings, resolved for the person.",
+        "operationId": "settings_read_api_v1_app_surface_settings_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Flow-App",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Flow-App"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppSettings"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Settings Read",
+        "tags": [
+          "app-surface"
+        ]
+      }
+    },
+    "/api/v1/app-surface/tables/{table}/rows": {
+      "get": {
+        "description": "One page of the rows of a published table, as far as the person may read them.",
+        "operationId": "tables_rows_read_api_v1_app_surface_tables__table__rows_get",
+        "parameters": [
+          {
+            "description": "The table's slug, as the app's rights name it.",
+            "in": "path",
+            "name": "table",
+            "required": true,
+            "schema": {
+              "description": "The table's slug, as the app's rights name it.",
+              "maxLength": 120,
+              "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+              "title": "Table",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Any cell containing this text.",
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "default": "",
+              "description": "Any cell containing this text.",
+              "maxLength": 1000,
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Opaque cursor of the previous page.",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 1000,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Opaque cursor of the previous page.",
+              "title": "Cursor"
+            }
+          },
+          {
+            "description": "Page size; the shared default and maximum apply.",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Page size; the shared default and maximum apply.",
+              "title": "Limit"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Flow-App",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Flow-App"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_DataTableRowItem_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Tables Rows Read",
+        "tags": [
+          "app-surface"
+        ]
+      },
+      "post": {
+        "description": "Add one row to a published table.",
+        "operationId": "tables_rows_add_api_v1_app_surface_tables__table__rows_post",
+        "parameters": [
+          {
+            "description": "The table's slug, as the app's rights name it.",
+            "in": "path",
+            "name": "table",
+            "required": true,
+            "schema": {
+              "description": "The table's slug, as the app's rights name it.",
+              "maxLength": 120,
+              "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+              "title": "Table",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Flow-App",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Flow-App"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddDataTableRowRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataTableRowResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Tables Rows Add",
+        "tags": [
+          "app-surface"
+        ]
+      }
+    },
+    "/api/v1/app-surface/tables/{table}/rows/{row_id}": {
+      "delete": {
+        "description": "Remove one row of a published table, and return what was removed.",
+        "operationId": "tables_rows_delete_api_v1_app_surface_tables__table__rows__row_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "row_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Row Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The table's slug, as the app's rights name it.",
+            "in": "path",
+            "name": "table",
+            "required": true,
+            "schema": {
+              "description": "The table's slug, as the app's rights name it.",
+              "maxLength": 120,
+              "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+              "title": "Table",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Flow-App",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Flow-App"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataTableRowResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Tables Rows Delete",
+        "tags": [
+          "app-surface"
+        ]
+      },
+      "patch": {
+        "description": "Change named columns of one row of a published table.",
+        "operationId": "tables_rows_update_api_v1_app_surface_tables__table__rows__row_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "row_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Row Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The table's slug, as the app's rights name it.",
+            "in": "path",
+            "name": "table",
+            "required": true,
+            "schema": {
+              "description": "The table's slug, as the app's rights name it.",
+              "maxLength": 120,
+              "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+              "title": "Table",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Flow-App",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Flow-App"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateDataTableRowRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataTableRowResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Tables Rows Update",
+        "tags": [
+          "app-surface"
+        ]
+      }
+    },
+    "/api/v1/app-surface/workflows/{workflow}/files": {
+      "post": {
+        "description": "Hand over one file for a start parameter of kind file.",
+        "operationId": "runs_upload_input_api_v1_app_surface_workflows__workflow__files_post",
+        "parameters": [
+          {
+            "description": "The flow's slug, as the app's rights name it.",
+            "in": "path",
+            "name": "workflow",
+            "required": true,
+            "schema": {
+              "description": "The flow's slug, as the app's rights name it.",
+              "maxLength": 120,
+              "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+              "title": "Workflow",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The start parameter of kind file.",
+            "in": "query",
+            "name": "parameter",
+            "required": true,
+            "schema": {
+              "description": "The start parameter of kind file.",
+              "maxLength": 200,
+              "title": "Parameter",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Flow-App",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Flow-App"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_runs_upload_input_api_v1_app_surface_workflows__workflow__files_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunInputFileResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Runs Upload Input",
+        "tags": [
+          "app-surface"
+        ]
+      }
+    },
+    "/api/v1/app-surface/workflows/{workflow}/runs": {
+      "get": {
+        "description": "One page of the runs the person started through this app, newest first.",
+        "operationId": "runs_list_api_v1_app_surface_workflows__workflow__runs_get",
+        "parameters": [
+          {
+            "description": "The flow's slug, as the app's rights name it.",
+            "in": "path",
+            "name": "workflow",
+            "required": true,
+            "schema": {
+              "description": "The flow's slug, as the app's rights name it.",
+              "maxLength": 120,
+              "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+              "title": "Workflow",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Opaque cursor of the previous page.",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 1000,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Opaque cursor of the previous page.",
+              "title": "Cursor"
+            }
+          },
+          {
+            "description": "Page size; the shared default and maximum apply.",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Page size; the shared default and maximum apply.",
+              "title": "Limit"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Flow-App",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Flow-App"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_AppRunView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Runs List",
+        "tags": [
+          "app-surface"
+        ]
+      },
+      "post": {
+        "description": "Start a published flow whose start says this app may, with the person's input.",
+        "operationId": "runs_start_api_v1_app_surface_workflows__workflow__runs_post",
+        "parameters": [
+          {
+            "description": "The flow's slug, as the app's rights name it.",
+            "in": "path",
+            "name": "workflow",
+            "required": true,
+            "schema": {
+              "description": "The flow's slug, as the app's rights name it.",
+              "maxLength": 120,
+              "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+              "title": "Workflow",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Flow-App",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Flow-App"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartRunBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppRunView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Runs Start",
+        "tags": [
+          "app-surface"
+        ]
+      }
+    },
     "/api/v1/applications": {
       "get": {
         "description": "One page of this workspace's applications, newest first (B-NB8).",
@@ -52823,6 +55672,203 @@
         "summary": "Unarchive Application",
         "tags": [
           "applications"
+        ]
+      }
+    },
+    "/api/v1/apps": {
+      "get": {
+        "description": "One page of the apps this person may open, newest first (B-NB8).\n\nOnly apps that are on, have a version that may run and are for an audience the person\nreads; every other app is not mentioned, not even as hidden.",
+        "operationId": "list_apps_for_me_api_v1_apps_get",
+        "parameters": [
+          {
+            "description": "Page size (max 200).",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Page size (max 200).",
+              "title": "Limit"
+            }
+          },
+          {
+            "description": "Opaque continuation cursor from a previous response's nextCursor. Omit for the first page.",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Opaque continuation cursor from a previous response's nextCursor. Omit for the first page.",
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_AppEntryResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Apps For Me",
+        "tags": [
+          "apps"
+        ]
+      }
+    },
+    "/api/v1/apps/manifest/validate": {
+      "post": {
+        "description": "Validate one manifest with the parser used by config import, without writing.",
+        "operationId": "validate_app_manifest_api_v1_apps_manifest_validate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManifestValidationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManifestValidationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Validate App Manifest",
+        "tags": [
+          "apps"
+        ]
+      }
+    },
+    "/api/v1/apps/status": {
+      "get": {
+        "description": "The apps the person behind this request may open, for MCP status reads.",
+        "operationId": "get_apps_status_api_v1_apps_status_get",
+        "parameters": [
+          {
+            "description": "Page size (max 200).",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Page size (max 200).",
+              "title": "Limit"
+            }
+          },
+          {
+            "description": "Opaque continuation cursor from a previous response's nextCursor. Omit for the first page.",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Opaque continuation cursor from a previous response's nextCursor. Omit for the first page.",
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_AppEntryResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Apps Status",
+        "tags": [
+          "apps"
         ]
       }
     },
@@ -67144,6 +70190,64 @@
         "summary": "Library Summary",
         "tags": [
           "library"
+        ]
+      }
+    },
+    "/api/v1/mail/routes": {
+      "get": {
+        "description": "The route names of this workspace's mailboxes, in alphabetical order.\n\nOne page: a workspace's mailboxes are a short list an administrator keeps by hand, and the\nnames are never more than the mailboxes.",
+        "operationId": "list_route_names_api_v1_mail_routes_get",
+        "parameters": [
+          {
+            "description": "The process being edited: its own published version is left out of what is already taken, since it cannot conflict with itself.",
+            "in": "query",
+            "name": "excludeWorkflow",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The process being edited: its own published version is left out of what is already taken, since it cannot conflict with itself.",
+              "title": "Excludeworkflow"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_RouteName_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Route Names",
+        "tags": [
+          "mail"
         ]
       }
     },
@@ -82754,7 +85858,7 @@
     },
     "/api/v1/runs/{run_id}/invocations/{invocation_id}/messages": {
       "get": {
-        "description": "One agent invocation's transcript, on open (#875).\n\n``GET /runs/{run_id}`` lists every invocation with its metadata and a\n``messageCount``; this serves the conversation behind one of those\nrows. Before it existed, the run page downloaded every transcript in\nthe run to draw a list — 287,416 B of a 307,069 B response on run\n``369e81be``, none of it displayed until an operator opened a step.\n\nSame contract as ``GET /runs/{run_id}/values/{digest}`` (#839 S2) and\n``GET /runs/{run_id}/session-memory/{file_id}`` (#440): a collection\nview carries handles, a body transfers when someone asks for it.\n\n404s unless the run belongs to the caller's tenant AND the invocation\nbelongs to THAT run — an invocation id observed elsewhere reads\nnothing here.",
+        "description": "One agent invocation's transcript, on open (#875).\n\n``?activity=true`` adds what the transcript says turn by turn (the question, the steps as\nsentences, the answer) by the one set of rules a Flow-App reads too (#1826 A3, B143);\n``answersOnly=false`` reads it as the Builder's feed shows it (every text, no steps).\n\n``GET /runs/{run_id}`` lists every invocation with its metadata and a\n``messageCount``; this serves the conversation behind one of those\nrows. Before it existed, the run page downloaded every transcript in\nthe run to draw a list — 287,416 B of a 307,069 B response on run\n``369e81be``, none of it displayed until an operator opened a step.\n\nSame contract as ``GET /runs/{run_id}/values/{digest}`` (#839 S2) and\n``GET /runs/{run_id}/session-memory/{file_id}`` (#440): a collection\nview carries handles, a body transfers when someone asks for it.\n\n404s unless the run belongs to the caller's tenant AND the invocation\nbelongs to THAT run — an invocation id observed elsewhere reads\nnothing here.",
         "operationId": "get_invocation_messages_api_v1_runs__run_id__invocations__invocation_id__messages_get",
         "parameters": [
           {
@@ -82775,6 +85879,26 @@
               "format": "uuid",
               "title": "Invocation Id",
               "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "activity",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Activity",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "answersOnly",
+            "required": false,
+            "schema": {
+              "default": true,
+              "title": "Answersonly",
+              "type": "boolean"
             }
           }
         ],
@@ -86516,6 +89640,55 @@
         ]
       }
     },
+    "/api/v1/table-databases/{database_id}/schema": {
+      "get": {
+        "description": "The schema of one database: its tables, the ones they connect to, the splits.\n\nTables carry their key columns and the part each plays; every relationship\ncarries the splits it lets a measure use — by the rule a split resolves\nwith. A relationship is a draft until somebody verifies it.",
+        "operationId": "get_table_database_schema_api_v1_table_databases__database_id__schema_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "database_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Database Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TableDatabaseSchemaResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Table Database Schema",
+        "tags": [
+          "table-databases"
+        ]
+      }
+    },
     "/api/v1/table-databases/{database_id}/versions": {
       "get": {
         "description": "The version history of one database.",
@@ -87703,6 +90876,90 @@
           }
         ],
         "summary": "Restore Table Relationship",
+        "tags": [
+          "table-relationships"
+        ]
+      }
+    },
+    "/api/v1/table-relationships/{relationship_id}/verify": {
+      "post": {
+        "description": "Check the keys against the data: every from value must exist in the to column.\n\nThe data is what a run or a measure reads of each table: the published\ncontent of a table its author keeps, the live rows of one a workflow\nfills; a table never published is refused with its code. Marks the\nconnection verified (who and when) only when nothing is missing;\notherwise it is not verified (one that was is no longer) and the answer\nsays how many values are missing, and which, one page at a time (B-NB8).",
+        "operationId": "verify_table_relationship_api_v1_table_relationships__relationship_id__verify_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "relationship_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Relationship Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Limit"
+            }
+          },
+          {
+            "description": "Opaque continuation token from the previous answer's `missing.nextCursor`. Send it back unchanged to read the next page of missing values; the check itself is made again.",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Opaque continuation token from the previous answer's `missing.nextCursor`. Send it back unchanged to read the next page of missing values; the check itself is made again.",
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TableRelationshipVerifyResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Verify Table Relationship",
         "tags": [
           "table-relationships"
         ]

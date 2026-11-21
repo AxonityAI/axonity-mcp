@@ -19,6 +19,10 @@
     "class": "dicht",
     "why": "delete: configuration without an approval step"
   },
+  "DELETE /api/v1/app-surface/tables/{table}/rows/{row_id}": {
+    "class": "dicht",
+    "why": "test A, keeps this list and the catalogue the same)"
+  },
   "DELETE /api/v1/applications/{application_id}": {
     "class": "dicht",
     "why": "delete: configuration without an approval step"
@@ -349,6 +353,30 @@
   "GET /api/v1/agents/{agent_id}/versions/{version}": {
     "class": "lezen"
   },
+  "GET /api/v1/app-surface/conversations": {
+    "class": "dicht",
+    "why": "test A, keeps this list and the catalogue the same)"
+  },
+  "GET /api/v1/app-surface/conversations/{conversation_id}": {
+    "class": "dicht",
+    "why": "test A, keeps this list and the catalogue the same)"
+  },
+  "GET /api/v1/app-surface/runs/{run_id}": {
+    "class": "dicht",
+    "why": "test A, keeps this list and the catalogue the same)"
+  },
+  "GET /api/v1/app-surface/settings": {
+    "class": "dicht",
+    "why": "test A, keeps this list and the catalogue the same)"
+  },
+  "GET /api/v1/app-surface/tables/{table}/rows": {
+    "class": "dicht",
+    "why": "test A, keeps this list and the catalogue the same)"
+  },
+  "GET /api/v1/app-surface/workflows/{workflow}/runs": {
+    "class": "dicht",
+    "why": "test A, keeps this list and the catalogue the same)"
+  },
   "GET /api/v1/applications": {
     "class": "lezen"
   },
@@ -377,6 +405,13 @@
     "class": "lezen"
   },
   "GET /api/v1/applications/{application_id}/versions/{version}": {
+    "class": "lezen"
+  },
+  "GET /api/v1/apps": {
+    "class": "dicht",
+    "why": "nowhere else"
+  },
+  "GET /api/v1/apps/status": {
     "class": "lezen"
   },
   "GET /api/v1/apps/{slug}/frame": {
@@ -739,6 +774,9 @@
     "class": "lezen"
   },
   "GET /api/v1/library/summary": {
+    "class": "lezen"
+  },
+  "GET /api/v1/mail/routes": {
     "class": "lezen"
   },
   "GET /api/v1/me/mcp-access": {
@@ -1169,6 +1207,9 @@
   "GET /api/v1/table-databases/{database_id}": {
     "class": "lezen"
   },
+  "GET /api/v1/table-databases/{database_id}/schema": {
+    "class": "lezen"
+  },
   "GET /api/v1/table-databases/{database_id}/versions": {
     "class": "lezen"
   },
@@ -1434,6 +1475,10 @@
   },
   "PATCH /api/v1/agents/{agent_id}/versions/major/{major_version}": {
     "class": "configuratie"
+  },
+  "PATCH /api/v1/app-surface/tables/{table}/rows/{row_id}": {
+    "class": "dicht",
+    "why": "test A, keeps this list and the catalogue the same)"
   },
   "PATCH /api/v1/applications/{application_id}/versions/major/{major_version}": {
     "class": "configuratie"
@@ -1710,6 +1755,38 @@
     "class": "dicht",
     "why": "archive: a delete by another name, without an approval step (Levenscyclus)"
   },
+  "POST /api/v1/app-surface/conversations": {
+    "class": "dicht",
+    "why": "test A, keeps this list and the catalogue the same)"
+  },
+  "POST /api/v1/app-surface/conversations/{conversation_id}/end": {
+    "class": "dicht",
+    "why": "test A, keeps this list and the catalogue the same)"
+  },
+  "POST /api/v1/app-surface/conversations/{conversation_id}/messages": {
+    "class": "dicht",
+    "why": "test A, keeps this list and the catalogue the same)"
+  },
+  "POST /api/v1/app-surface/module-operations/measures.query": {
+    "class": "dicht",
+    "why": "test A, keeps this list and the catalogue the same)"
+  },
+  "POST /api/v1/app-surface/runs/{run_id}/steps/{step_id}/answer": {
+    "class": "dicht",
+    "why": "test A, keeps this list and the catalogue the same)"
+  },
+  "POST /api/v1/app-surface/tables/{table}/rows": {
+    "class": "dicht",
+    "why": "test A, keeps this list and the catalogue the same)"
+  },
+  "POST /api/v1/app-surface/workflows/{workflow}/files": {
+    "class": "dicht",
+    "why": "test A, keeps this list and the catalogue the same)"
+  },
+  "POST /api/v1/app-surface/workflows/{workflow}/runs": {
+    "class": "dicht",
+    "why": "test A, keeps this list and the catalogue the same)"
+  },
   "POST /api/v1/applications": {
     "class": "configuratie"
   },
@@ -1761,6 +1838,9 @@
   "POST /api/v1/applications/{entity_id}/unarchive": {
     "class": "dicht",
     "why": "archive: a delete by another name, without an approval step (Levenscyclus)"
+  },
+  "POST /api/v1/apps/manifest/validate": {
+    "class": "lezen"
   },
   "POST /api/v1/audiences": {
     "class": "dicht",
@@ -2815,6 +2895,10 @@
   "POST /api/v1/table-relationships/{relationship_id}/restore": {
     "class": "dicht",
     "why": "restore: configuration without an approval step"
+  },
+  "POST /api/v1/table-relationships/{relationship_id}/verify": {
+    "class": "dicht",
+    "why": "no draft: saved directly"
   },
   "POST /api/v1/task-queue/dismiss-bulk": {
     "class": "actie_beheerder"
