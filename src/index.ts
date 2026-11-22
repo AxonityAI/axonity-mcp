@@ -236,6 +236,27 @@ const TILE_NUMBER_NOTE =
   "to request the measure's expected band. The period and comparison " +
   "caption come from the answer; caption remains context, with no variables.";
 
+/** The statement tile (P&L), axonity-flow#2576 part 1 — validated by the backend. */
+const TILE_STATEMENT_NOTE =
+  "\n\nA STATEMENT TILE (`statement`, size L or XL) is a P&L: lines of " +
+  "measures. `config.rows` is the list of lines, at most 20 lines, each " +
+  "`{label, measure, tableId?, style?, indent?}`: `measure` by NAME, `style` " +
+  "line (default), subtotal (bold) or total (bold, ruled above), `indent` 0–2. " +
+  "A line has no period of its own. `config.statementColumns` picks and orders " +
+  "the columns from: period, period_last_year, period_change, period_share, " +
+  "period_share_change, ytd, ytd_last_year, ytd_change, ytd_share, " +
+  "ytd_share_change — `period` is the dashboard's period, `ytd` the year up to " +
+  "that period's last day, `_change` the change against last year, `_share` " +
+  "the share of the `config.shareOf` row (the LABEL of one of its lines) and " +
+  "`_share_change` how that share moved, in percentage points. Omitted: period, " +
+  "period_change, ytd, ytd_change, plus ytd_share and ytd_share_change when " +
+  "shareOf is set; a share column needs shareOf. Values keep their sign: a " +
+  "cost stored as a negative amount reads with a minus, and a change is " +
+  "coloured by the measure's own direction. Each line's measure counts as " +
+  "named by the dashboard (it cannot be renamed or deleted while there). " +
+  "Give a line a `tableId` (or the tile one) for it to open the drill panel. " +
+  "The lines are set here; Edit does not offer the type.";
+
 /**
  * What writing a measure takes (axonity-flow#1908). The contract, not a manual:
  * the words of the formula are in get_measure_formula_spec and nowhere else.
@@ -910,13 +931,13 @@ export const ENTITIES: EntityDef[] = [
       "tile shows the status. While a tile names a measure as its " +
       "`statusMeasure`, that measure cannot be renamed or deleted." +
       "\n\n" +
-      TILE_PERIOD_NOTE + TILE_NUMBER_NOTE,
+      TILE_PERIOD_NOTE + TILE_NUMBER_NOTE + TILE_STATEMENT_NOTE,
     updateWarning:
       "NO DRAFT: a saved dashboard is what everyone it is shared with sees. " +
       "`layout` is replaced WHOLE when sent — read first and send it complete. " +
       "A tile may carry `config.statusMeasure`: the measure whose limits give " +
       "it its status, when that is not the measure it shows. " +
-      TILE_PERIOD_NOTE + TILE_NUMBER_NOTE,
+      TILE_PERIOD_NOTE + TILE_NUMBER_NOTE + TILE_STATEMENT_NOTE,
   },
 ];
 
