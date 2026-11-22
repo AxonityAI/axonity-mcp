@@ -52,7 +52,7 @@ approval of each call is the guard.
 
 ## Tools
 
-582 tools total (28 of them the old `flow` names, see Methods below). `axonity_conventions` (read this first) covers the authoring
+585 tools total (28 of them the old `flow` names, see Methods below). `axonity_conventions` (read this first) covers the authoring
 rules — drafts vs live, optimistic locking, per-entity fields, delete/restore,
 and how to tell a retryable error from one that will never succeed.
 `axonity_semantic_conventions` is its counterpart for one job only: building a
@@ -768,6 +768,37 @@ ride along), `members` with why each is there, and `blockers` that name the
 member in the way. Requesting is ours; deciding stays human, like everywhere
 else here.
 
+### Start a Flow App
+
+The connector is the way into a new Flow App. Everything it offers for this
+comes from routes of the installation you are connected to; none of it is a
+copy kept here.
+
+- **Server instructions** (`initialize`): the first sentence tells the agent to
+  call `get_flow_app_starter` before it writes any file. Claude Code loads them
+  at the start of every session (limit 4,096 characters; ours is far below).
+- **`get_flow_app_starter`** (`GET /apps/starter`): build, surface and kit
+  version, the contract hash and a single-use download link for the starter
+  package of this installation. The agent downloads and unpacks it with its own
+  shell; the connector never carries the archive.
+- **`get_flow_app_authoring_contract`** (`GET /apps/authoring`): the surface,
+  the manifest schema, the shape of every answer and the contract hash.
+- **`check_flow_app_manifest`** (`POST /apps/manifest/check`): a manifest
+  against the workspace, as the person behind the token may read it. The
+  older `validate_flow_app_manifest` only checks the schema.
+- **Prompt `new-flow-app`** (optional argument `slug`): a slash command in
+  clients that offer prompts (Claude Code: `/mcp__axonity__new-flow-app`). It
+  adds the starter answer to a short instruction; no logic of its own.
+- **Three resources**, read live from `GET /apps/authoring`:
+  `axonity://flow-app/contract` (all of it), `axonity://flow-app/surface/v1` and
+  `axonity://flow-app/manifest-schema`. The same content is available through
+  the tool, for clients that do not read resources.
+
+Local and hosted give the same instructions, prompt and resources
+(`test/hosted.prompts.test.ts`); the hosted connector replays them per request
+beside its tools, as the caller. None of these tools touches `/config/` or
+`/deployment`, and the archive route is on the deny list.
+
 ## Hosted by Axonity (HTTP mode)
 
 The same tools also run inside Axonity, behind its own `/mcp` endpoint, for a
@@ -905,7 +936,7 @@ These are enforced by the backend, not merely by convention:
   schema; `test/conformance.test.ts` fails if a route or documented enum
   diverges (see `test/fixtures/README.md`).
 - **Every backend route is accounted for, and the build says so.**
-  `test/completeness.test.ts` partitions all 944 operations in the pinned
+  `test/completeness.test.ts` partitions all 949 operations in the pinned
   snapshot using four classifiers. For tenant-API routes it checks for
   *covered by a tool* or *excluded by a rule that carries a
   written reason*, with an explicit temporary exception for the unresolved

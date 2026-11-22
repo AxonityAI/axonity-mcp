@@ -37,6 +37,11 @@ export const FORBIDDEN: Rule[] = [
   // refusal. Recorded rather than left to be rediscovered by whoever wonders
   // why the pinned schema has routes the connector does not call.
   { label: "Flow-App (a person at a screen)", path: /\/flow-apps(\/|$)/ },
+  // The starter archive (#1826 starter kit): `GET /apps/starter/download/{ticket}` answers
+  // a gzip tarball for one person, once, for a few minutes. It is not JSON, a tool result
+  // carries text, and an archive pasted into a model's context is no use to it. The agent
+  // downloads the link `get_flow_app_starter` returns with its own shell and unpacks it.
+  { label: "starter archive (binary, single-use, fetched by the agent's shell)", path: /\/apps\/starter\/download\//, methods: ["GET"] },
   // Opening an app (#1826 A2, main #2495): `GET /apps/{slug}/frame` answers
   // where the shell points the frame of an app, for the person whose session
   // asks. The route's own docstring: "A session only: closed to personal and

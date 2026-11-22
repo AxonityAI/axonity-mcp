@@ -71,6 +71,9 @@ import { LIST_FILTERS } from "./generated/listFilters.js";
 import { type EntityDef, registerEntityTools } from "./tools/register.js";
 import { registerTrashTools } from "./tools/trash.js";
 import { registerRunTools } from "./tools/runs.js";
+import { SERVER_INSTRUCTIONS } from "./instructions.js";
+import { registerNewFlowAppPrompt } from "./prompts/newFlowApp.js";
+import { registerFlowAppResources } from "./resources/flowApp.js";
 import { registerRunInputFileTools } from "./tools/runInputFiles.js";
 import { registerSecretTools } from "./tools/secrets.js";
 import { registerSubworkflowTools } from "./tools/subworkflows.js";
@@ -1056,9 +1059,19 @@ export function registerAll(
 /** How the server introduces itself, on either transport. */
 export const SERVER_INFO = { name: "axonity", version: "0.1.0" };
 
+/** The entry a new Flow-App starts from besides the tools: one prompt, three resources. */
+export function registerEntrySurface(server: McpServer, client: AxonityClient): void {
+  registerNewFlowAppPrompt(server, client);
+  registerFlowAppResources(server, client);
+}
+
+/** What the hosted connector replays per request beside its tools, the same as the local one. */
+export const HOSTED_SURFACE = { instructions: SERVER_INSTRUCTIONS, registerEntry: registerEntrySurface };
+
 export function buildServer(client: AxonityClient): McpServer {
-  const server = new McpServer(SERVER_INFO);
+  const server = new McpServer(SERVER_INFO, { instructions: SERVER_INSTRUCTIONS });
   registerAll(server, client);
+  registerEntrySurface(server, client);
   return server;
 }
 
@@ -1081,6 +1094,7 @@ async function mainHttp(): Promise<void> {
     ...config,
     serverInfo: SERVER_INFO,
     register: registerHosted,
+    ...HOSTED_SURFACE,
     prepare: (tools) => forPersonalTokens(tools, routes, TOKEN_ROUTE_CLASSES),
   });
 }

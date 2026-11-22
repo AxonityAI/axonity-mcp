@@ -419,6 +419,15 @@
     "class": "dicht",
     "why": "nowhere else"
   },
+  "GET /api/v1/apps/authoring": {
+    "class": "lezen"
+  },
+  "GET /api/v1/apps/starter": {
+    "class": "lezen"
+  },
+  "GET /api/v1/apps/starter/download/{ticket}": {
+    "class": "lezen"
+  },
   "GET /api/v1/apps/status": {
     "class": "lezen"
   },
@@ -514,6 +523,10 @@
     "why": "credentials, secrets, platform, deployment, configuration"
   },
   "GET /api/v1/config/environments/runtime": {
+    "class": "dicht",
+    "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "GET /api/v1/config/environments/sync/apps": {
     "class": "dicht",
     "why": "credentials, secrets, platform, deployment, configuration"
   },
@@ -1891,6 +1904,9 @@
   "POST /api/v1/applications/{entity_id}/unarchive": {
     "class": "dicht",
     "why": "archive: a delete by another name, without an approval step (Levenscyclus)"
+  },
+  "POST /api/v1/apps/manifest/check": {
+    "class": "lezen"
   },
   "POST /api/v1/apps/manifest/validate": {
     "class": "lezen"

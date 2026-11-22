@@ -108,6 +108,10 @@ export interface HostedServerOptions extends HttpConfig {
   serverInfo: { name: string; version: string };
   /** Register the hosted tool surface onto a server, against a client. */
   register: (server: ProbeServer, client: AxonityClient) => void;
+  /** What the server says about itself on connect; the same text the local connector gives. */
+  instructions?: string;
+  /** Register the prompts and resources onto each replayed server, as the caller (see `register`). */
+  registerEntry?: (server: McpServer, client: AxonityClient) => void;
   /** Rewrite the recorded tools before they are served (their texts). */
   prepare?: (tools: RegisteredTool[]) => RegisteredTool[] | Promise<RegisteredTool[]>;
   /** Bind address. Loopback; a test may not change it either. */
@@ -423,11 +427,16 @@ async function listOnce(
   }
 }
 
-function replay(serverInfo: HostedServerOptions["serverInfo"], tools: RegisteredTool[]): McpServer {
-  const server = new McpServer(serverInfo);
+function replay(
+  serverInfo: HostedServerOptions["serverInfo"],
+  tools: RegisteredTool[],
+  entry: { instructions?: string; into?: (server: McpServer) => void } = {},
+): McpServer {
+  const server = new McpServer(serverInfo, entry.instructions ? { instructions: entry.instructions } : undefined);
   for (const tool of tools) {
     server.tool(tool.name, tool.description, tool.shape as never, tool.handler as never);
   }
+  entry.into?.(server);
   return server;
 }
 
@@ -590,7 +599,10 @@ export async function startHostedServer(options: HostedServerOptions): Promise<H
       }
       if (gone) return;
 
-      const server = replay(options.serverInfo, tools);
+      const server = replay(options.serverInfo, tools, {
+        instructions: options.instructions,
+        into: options.registerEntry && ((target) => options.registerEntry!(target, client)),
+      });
       server.server.setRequestHandler(ListToolsRequestSchema, () => toolList);
       const transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: undefined,

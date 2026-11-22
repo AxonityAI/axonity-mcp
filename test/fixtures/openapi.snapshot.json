@@ -2058,6 +2058,46 @@
         "title": "AppOpenQuestion",
         "type": "object"
       },
+      "AppPreviewSchema": {
+        "description": "One app of the branch in the \"only apps\" preview.",
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "sourceSha": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcesha"
+          },
+          "status": {
+            "enum": [
+              "new",
+              "changed",
+              "unchanged"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "name",
+          "status"
+        ],
+        "title": "AppPreviewSchema",
+        "type": "object"
+      },
       "AppRegisterRequest": {
         "description": "GitHub's App-Manifest redirect parameters, relayed by the FE.\n\n``state`` is the signed token minted by ``GET/POST /app/register-url``; it —\nnot this request body — is what authorizes the registration. ``code`` is\nthe one-time manifest-conversion code GitHub issues on App creation.",
         "properties": {
@@ -2607,6 +2647,43 @@
           "status"
         ],
         "title": "ApprovalDecisionResponse",
+        "type": "object"
+      },
+      "ApprovedElsewhereSchema": {
+        "description": "The same code, approved in another workspace of this installation.",
+        "properties": {
+          "decidedAt": {
+            "format": "date-time",
+            "title": "Decidedat",
+            "type": "string"
+          },
+          "decidedByName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decidedbyname"
+          },
+          "sameManifest": {
+            "description": "Whether the rights (the manifest hash) matched too, not only the code.",
+            "title": "Samemanifest",
+            "type": "boolean"
+          },
+          "workspaceName": {
+            "title": "Workspacename",
+            "type": "string"
+          }
+        },
+        "required": [
+          "workspaceName",
+          "decidedAt",
+          "sameManifest"
+        ],
+        "title": "ApprovedElsewhereSchema",
         "type": "object"
       },
       "ArchiveEntityResponse": {
@@ -21348,6 +21425,18 @@
         "title": "ManagedObjectRequest",
         "type": "object"
       },
+      "ManifestCheck": {
+        "additionalProperties": false,
+        "properties": {
+          "manifest": {
+            "additionalProperties": true,
+            "title": "Manifest",
+            "type": "object"
+          }
+        },
+        "title": "ManifestCheck",
+        "type": "object"
+      },
       "ManifestValidationError": {
         "description": "One canonical manifest refusal, at its wire path.",
         "properties": {
@@ -29974,6 +30063,14 @@
           "appSlug": {
             "title": "Appslug",
             "type": "string"
+          },
+          "approvedElsewhere": {
+            "description": "Where this bundle hash was approved in another workspace of the installation, the matching rights first. A fact to read, never a decision: empty when none, when the code is blocked, or when the lookup failed.",
+            "items": {
+              "$ref": "#/components/schemas/ApprovedElsewhereSchema"
+            },
+            "title": "Approvedelsewhere",
+            "type": "array"
           },
           "blockReason": {
             "anyOf": [
@@ -42005,9 +42102,55 @@
         "title": "SuspendRunResponse",
         "type": "object"
       },
+      "SyncAppsPreviewResponse": {
+        "description": "``GET /config/environments/sync/apps`` — what \"only apps\" would do, nothing written.\n\n``problems`` is the refusal the press would give, in the deploy's own words\n(empty when it would go through); ``apps`` stays listed beside it so a\nrefusal says which app it is about.",
+        "properties": {
+          "apps": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/AppPreviewSchema"
+            },
+            "title": "Apps",
+            "type": "array"
+          },
+          "branch": {
+            "title": "Branch",
+            "type": "string"
+          },
+          "commit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Commit"
+          },
+          "problems": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Problems",
+            "type": "array"
+          }
+        },
+        "required": [
+          "branch"
+        ],
+        "title": "SyncAppsPreviewResponse",
+        "type": "object"
+      },
       "SyncEnvironmentRequest": {
         "description": "``POST /config/environments/sync`` — load this workspace's own branch.\n\nFor the environment NO promotion rule advances: the button that says \"take\nwhat my branch has now\". ``full`` is the one thing it asks, and it asks it\nper press because it describes THIS sync: ``true`` means the branch is the\nwhole configuration, so what it no longer carries leaves the workspace too\n(reversibly); ``false`` adds and updates only.\n\nThere is no branch, ref or repo field, and that is the point: what gets\nloaded is the link the operator set up, never something a request body\nnames. The same reason ``targetTenantId`` is a guard and not a selector\neverywhere else on this surface.",
         "properties": {
+          "appsOnly": {
+            "default": false,
+            "title": "Appsonly",
+            "type": "boolean"
+          },
           "full": {
             "default": false,
             "title": "Full",
@@ -57840,6 +57983,82 @@
         ]
       }
     },
+    "/api/v1/apps/authoring": {
+      "get": {
+        "operationId": "authoring_api_v1_apps_authoring_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Authoring Api V1 Apps Authoring Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Authoring",
+        "tags": [
+          "apps"
+        ]
+      }
+    },
+    "/api/v1/apps/manifest/check": {
+      "post": {
+        "operationId": "check_api_v1_apps_manifest_check_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManifestCheck"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Check Api V1 Apps Manifest Check Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Check",
+        "tags": [
+          "apps"
+        ]
+      }
+    },
     "/api/v1/apps/manifest/validate": {
       "post": {
         "description": "Validate one manifest with the parser used by config import, without writing.",
@@ -57882,6 +58101,79 @@
           }
         ],
         "summary": "Validate App Manifest",
+        "tags": [
+          "apps"
+        ]
+      }
+    },
+    "/api/v1/apps/starter": {
+      "get": {
+        "operationId": "starter_api_v1_apps_starter_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Starter Api V1 Apps Starter Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Starter",
+        "tags": [
+          "apps"
+        ]
+      }
+    },
+    "/api/v1/apps/starter/download/{ticket}": {
+      "get": {
+        "operationId": "download_api_v1_apps_starter_download__ticket__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ticket",
+            "required": true,
+            "schema": {
+              "title": "Ticket",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Download",
         "tags": [
           "apps"
         ]
@@ -61656,7 +61948,7 @@
     },
     "/api/v1/config/environments/sync": {
       "post": {
-        "description": "Load this workspace's own linked branch into it, on request.\n\nThe button for the environment nothing promotes into. ``full`` is the\noperator's answer to \"everything, or only what changed\" — asked per press\nrather than stored, because it is what THIS sync should do.\n\nAn INTERACTIVE ADMIN SESSION is what makes an explicit ``full`` legitimate:\nit is a person answering, not a request body asking for deletions. Every\nother deploy path leaves the answer to the workspace's own stored setting,\nso a deploy credential can never ask for removals (#616 C2 still applies on\ntop — a protected environment takes an admin session, which this is).\n\nRefused (422) when a promotion rule owns this environment: that one is\nadvanced by promoting its source into it. Returns the deploy's own summary,\n``removed`` included — a sync that deletes says so in its result.",
+        "description": "Load this workspace's own linked branch into it, on request.\n\nThe button for the environment nothing promotes into. ``full`` is the\noperator's answer to \"everything, or only what changed\" — asked per press\nrather than stored, because it is what THIS sync should do.\n\nAn INTERACTIVE ADMIN SESSION is what makes an explicit ``full`` legitimate:\nit is a person answering, not a request body asking for deletions. Every\nother deploy path leaves the answer to the workspace's own stored setting,\nso a deploy credential can never ask for removals (#616 C2 still applies on\ntop — a protected environment takes an admin session, which this is).\n\nRefused (422) when a promotion rule owns this environment: that one is\nadvanced by promoting its source into it. Returns the deploy's own summary,\n``removed`` included — a sync that deletes says so in its result.\n\n``appsOnly`` loads only the apps (and plug-in declarations) of the branch\nand leaves the configuration alone: 422 for a protected environment, and\nfor ``full`` asked together with it.",
         "operationId": "sync_environment_api_v1_config_environments_sync_post",
         "requestBody": {
           "content": {
@@ -61696,6 +61988,33 @@
           }
         ],
         "summary": "Sync Environment",
+        "tags": [
+          "config-deploy"
+        ]
+      }
+    },
+    "/api/v1/config/environments/sync/apps": {
+      "get": {
+        "description": "What syncing only the apps of this workspace's own branch would do. Writes nothing.\n\nThe apps of the branch with their status (new, changed, unchanged), and the\nrefusal the press would give — the same check the deploy runs, so a \"no\"\nhere is the \"no\" there. A refusal is part of the answer (200 with\n``problems``), not an error: the screen shows the names beside the list.\n422 for a protected environment, which does not know the mode; 404 when\nnothing is connected. Admin-only, scoped to the caller's own tenant.",
+        "operationId": "preview_sync_apps_api_v1_config_environments_sync_apps_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncAppsPreviewResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Preview Sync Apps",
         "tags": [
           "config-deploy"
         ]
