@@ -20,10 +20,12 @@ const WHAT_A_REQUEST_SAYS =
   "Each request carries `summary` (what it would do, in words), `status` " +
   "(`pending`, `approved`, `rejected` or `expired`), `statusReason` (why it was " +
   "rejected or expired), `result` (what the action returned once approved; null " +
-  "before) and `check`: re-run WHEN YOU READ, so it is what approving would do " +
-  "NOW — `{outcome, reason}` with `outcome` `ok` (would succeed), `changed` " +
-  "(something moved since the request) or `expired`. A blocker you saw earlier " +
-  "may be gone, and `ok` means ok now. " +
+  "before) and `check`: re-run WHEN YOU READ while the request is `pending`, so it " +
+  "is what approving would do NOW — `{outcome, reason}` with `outcome` `ok` (would " +
+  "succeed), `changed` (something moved since the request) or `expired`. A blocker " +
+  "you saw earlier may be gone, and `ok` means ok now. Once the request is decided " +
+  "(`approved`, `rejected` or `expired`) `check` is null: read `status`, " +
+  "`statusReason` and `result` instead. " +
   "Approving and rejecting are a person's act in Axonity; no tool can do them, " +
   "and `canDecide` is false through a token.";
 

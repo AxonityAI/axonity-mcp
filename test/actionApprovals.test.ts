@@ -180,7 +180,8 @@ describe("list_action_approvals and get_action_approval", () => {
 
   it("get reads one approval by id and shows status, check and result", async () => {
     const backend = {
-      get: vi.fn(async () => ({ ...item, status: "approved", result: { applied: true } })),
+      // The real backend fills `check` only while pending: null once decided.
+      get: vi.fn(async () => ({ ...item, status: "approved", result: { applied: true }, check: null })),
       post: vi.fn(), put: vi.fn(), patch: vi.fn(), del: vi.fn(),
     };
     const probe = await connected(backend);
@@ -189,7 +190,17 @@ describe("list_action_approvals and get_action_approval", () => {
     );
     expect(backend.get).toHaveBeenCalledWith(`/api/v1/action-approvals/${APPROVAL_ID}`);
     expect(body).toMatchObject({ status: "approved", result: { applied: true } });
-    expect(body.check.reason).toMatch(/moved/);
+    expect(body.check).toBeNull();
+  });
+
+  it("says check is live only while pending and null once decided", async () => {
+    const probe = await connected({ get: vi.fn() });
+    const tools = (await probe.listTools()).tools;
+    for (const name of ["list_action_approvals", "get_action_approval"]) {
+      const d = tools.find((t) => t.name === name)!.description!;
+      expect(d, name).toMatch(/while the request is `pending`/);
+      expect(d, name).toMatch(/`check` is null/);
+    }
   });
 
   it("their descriptions name fields that exist on the pinned response schema", async () => {

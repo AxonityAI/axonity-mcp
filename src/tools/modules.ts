@@ -126,8 +126,10 @@ export function registerModuleTools(server: McpServer, client: AxonityClient): v
       "override and own lock; follow_deploy uses the server's latest deployed value " +
       "and preserves the own lock. The backend validates field rights, levels, locks " +
       "and revisions, rejects duplicate keys, and derives who made the change, and through which route, from " +
-      "the authenticated request. Who may write: a service token with the author scope, " +
-      "or a personal token whose owner is an administrator of this workspace; a personal " +
+      "the authenticated request. Who may write: a service token needs the author scope AND an " +
+      "owner who is an administrator of this workspace right now (checked live on " +
+      "every call, so a member's author token is refused, for writing and for " +
+      "proposing alike); a personal token also needs an owner who is an administrator; a personal " +
       "token writes with that person's rights, needs the token's 'Run actions' choice, and " +
       "the save is recorded under that person. " +
       "Either can write permitted workspace fields, including admin-classified fields, " +

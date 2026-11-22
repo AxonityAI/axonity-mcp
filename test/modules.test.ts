@@ -346,9 +346,9 @@ describe("who may write module settings, and where the tools stop", () => {
   const write = () => registered().tool("update_module_settings").description;
 
   it("names both token kinds that may write the workspace level", () => {
-    expect(write()).toMatch(/service token with the author scope/i);
+    expect(write()).toMatch(/service token needs the author scope/i);
     expect(write()).toMatch(/personal token/i);
-    expect(write()).toMatch(/owner is an administrator/i);
+    expect(write()).toMatch(/owner who is an administrator/i);
     expect(write()).toMatch(/with that person's rights/i);
   });
 
@@ -425,6 +425,17 @@ describe("who may write module settings, and where the tools stop", () => {
     expect(write()).toMatch(/get_action_approval/);
     expect(write()).toMatch(/mailboxes\[0\]\.address/);
     expect(write()).toMatch(/person changes it in Axonity/i);
+  });
+
+  // Backend `module_settings.py` setting_write: a service token writes (allow)
+  // or proposes (approval) at workspace level only with `author` AND an owner
+  // who is an administrator of the workspace right now.
+  it("says a service token needs author AND an owner who is now an administrator, for allow and approval", () => {
+    expect(write()).toMatch(/service token[^.]*`?author`?[^.]*AND[^.]*(owner|person)[^.]*administrator/i);
+    expect(write()).toMatch(/now|live/i);
+    expect(write()).toMatch(/for writing and for proposing alike/);
+    expect(write()).not.toMatch(/a service token with the author scope, or/);
+    expect(write()).toMatch(/member's author token is refused/);
   });
 
   it("reads writeNeedsApproval off the settings response", () => {
