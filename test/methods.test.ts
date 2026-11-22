@@ -281,7 +281,11 @@ describe("the old names still work for one release, as an alias that says so", (
   it("no other tool is named `flow`: the aliases are exactly the list above", () => {
     const { handlers } = surface();
     const flowNamed = [...handlers.keys()].filter((n) => /(^|_)flows?(_|$)/.test(n));
-    expect(flowNamed.sort()).toEqual(Object.keys(RENAMED).sort());
+    // These two names describe the Flow-App product, not the retired `flow`
+    // entity name that the aliases preserve. They are the explicit B153 app
+    // discovery/validation tools; every remaining match must be an alias.
+    const flowAppTools = ["list_flow_app_status", "validate_flow_app_manifest"];
+    expect(flowNamed.sort()).toEqual([...Object.keys(RENAMED), ...flowAppTools].sort());
   });
 
   it("an alias says it is one, names its replacement, and an agent reads that first", () => {

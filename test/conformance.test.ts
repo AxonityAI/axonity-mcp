@@ -134,6 +134,11 @@ describe("MCP route surface conforms to the backend OpenAPI snapshot", () => {
       snapshot.components.schemas.ConnectorResponseMapping?.properties?.filename,
       "responseMapping.filename vanished — create_connector documents it",
     ).toBeDefined();
+    // Flow-App hosting is a backend contract even though the MCP deliberately
+    // exposes only token-safe app discovery, not the screen-bound app editor.
+    // Keep its two values pinned so a later MCP schema/tool that consumes an
+    // app response cannot silently preserve the retired `flow` spelling.
+    expect(enumOf("FlowAppResponse", "hosting")).toEqual(["member", "external"]);
   });
 
   /**

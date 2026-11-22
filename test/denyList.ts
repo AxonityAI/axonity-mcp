@@ -43,6 +43,18 @@ export const FORBIDDEN: Rule[] = [
   // service tokens (`dicht`), because opening an app is a person at a screen",
   // and the token table says the answer "is read nowhere else".
   { label: "Flow-App frame (a person at a screen)", path: /^\/api\/v1\/apps\/[^/]+\/frame$/ },
+  // The dashboard's original app list is also session-only. B153 deliberately
+  // adds `/apps/status` for the personal token and is the only MCP discovery
+  // path: it shares this list's visibility facts without turning a browser
+  // surface into a second token contract.
+  { label: "Flow-App dashboard list (session-only)", path: /^\/api\/v1\/apps$/ },
+  // These are the Flow-App bridge's private protocol, not a general tenant
+  // API. Every call requires both a browser session and X-Flow-App; the bridge
+  // derives that app identity from the frame, then limits runs, conversations,
+  // rows and settings to grants in that one manifest. A personal MCP token has
+  // neither proof, and duplicating the bridge would create a second authority
+  // model. The corresponding general MCP tools remain the authoring surface.
+  { label: "Flow-App bridge protocol (frame-bound)", path: /\/api\/v1\/app-surface\// },
   // Hidden tables are `require_platform_admin` (main #2472): a workspace does
   // not see them, so neither does a token (token table: "a workspace does not
   // see them, so neither does a token").
@@ -163,6 +175,23 @@ export const FORBIDDEN: Rule[] = [
   // What an agent legitimately wants from here — why is this run parked, what
   // is it waiting for — is `read_run_waiting_on`, which reads the same rows.
   { label: "admin wake-tasks (scheduler plumbing)", path: /\/api\/v1\/admin\// },
+
+  // Mail route topology is the mail subsystem's operational wiring, not a
+  // tenant-authored object. It has no counterpart write flow in this connector;
+  // reading it would expose implementation paths without helping an author
+  // create or inspect an addressable tenant entity.
+  { label: "mail route topology (operational wiring)", path: /\/api\/v1\/mail\/routes$/ },
+  // A table database's schema is the visual/modelled relationship graph
+  // (tables, splits and verification state). The connector's table-database
+  // tools deliberately operate on the database document and its versions;
+  // inventing a parallel graph reader would make the schema surface an
+  // unreviewed second modelling API.
+  { label: "table database relationship graph (no MCP modelling API)", path: /\/api\/v1\/table-databases\/[^/]+\/schema$/ },
+  // Verifying a relationship changes its persisted verification outcome based
+  // on live table data. That is a human data-quality decision: when values are
+  // missing the caller must interpret them, and an MCP token must not mark the
+  // relationship verified on behalf of that review.
+  { label: "verify table relationship (human data-quality decision)", path: /\/api\/v1\/table-relationships\/[^/]+\/verify$/ },
 
   // ---- axonity-mcp#59 — the last stacks, answered -----------------------
 
@@ -338,6 +367,89 @@ export const FORBIDDEN: Rule[] = [
     path: /\/api\/v1\/trash\/[^/]+\/[^/]+$/,
     methods: ["DELETE"],
   },
+
+  // The four module lifecycle operations are deliberately closed in Flow's
+  // token table: they operate the Installation screen, rather than a draft an
+  // author owns. Enabling a module, choosing whether its data survives, the
+  // preflight that makes that choice intelligible, and the resulting history
+  // each require a person at a screen.
+  {
+    label: "enable or disable a module (a person at a screen)",
+    path: /^\/api\/v1\/modules\/[^/]+\/enabled$/,
+    methods: ["PUT"],
+  },
+  // A person chooses whether installed module data is preserved or deleted.
+  {
+    label: "choose module deletion (a person at a screen)",
+    path: /^\/api\/v1\/modules\/[^/]+\/deletion$/,
+    methods: ["POST"],
+  },
+  // The preflight explains that human choice; it is not a separate data API.
+  {
+    label: "read module deletion preflight (a person at a screen)",
+    path: /^\/api\/v1\/modules\/[^/]+\/deletion-preflight$/,
+    methods: ["GET"],
+  },
+  // Immutable module history belongs to that same human lifecycle screen.
+  {
+    label: "read module lifecycle versions (a person at a screen)",
+    path: /^\/api\/v1\/modules\/[^/]+\/versions$/,
+    methods: ["GET"],
+  },
+
+  // Data sources stay live MCP-authored objects. Their new history endpoints
+  // expose or alter connection-configuration checkpoints, while the existing
+  // create/update/test tools keep the deliberate current-state workflow. The
+  // connector does not make a second source-versioning surface around secrets.
+  {
+    label: "data source version history (current source tools only)",
+    path: /^\/api\/v1\/data-sources\/[^/]+\/(discard-draft|versions)(\/|$)/,
+  },
+  // Both graph reads are for inspecting a model on a screen; the authoring
+  // tools already name their actual source/table links. Returning a second,
+  // untyped relationship graph would make a parallel modelling API.
+  {
+    label: "data source usage graph (no MCP graph API)",
+    path: /^\/api\/v1\/data-sources\/[^/]+\/used-by$/,
+    methods: ["GET"],
+  },
+  // The catalogue is the Insights screen's transient view across the live
+  // source and Flow's modelling state. The MCP's typed source/schema tools
+  // remain its reviewed modelling contract; exposing this mixed inspection
+  // page would add a second, unreviewed discovery surface.
+  {
+    label: "data source catalogue inspection (no MCP discovery surface)",
+    path: /^\/api\/v1\/data-sources\/[^/]+\/catalogue$/,
+    methods: ["GET"],
+  },
+  // A table's reachability graph is likewise a screen-only model inspection.
+  {
+    label: "data table reach graph (no MCP graph API)",
+    path: /^\/api\/v1\/data-tables\/[^/]+\/reaches$/,
+    methods: ["GET"],
+  },
+  // A live-row read executes against the connected source and can expose its
+  // current external records. Source limits make it token-permitted, but no
+  // reviewed MCP contract governs that runtime data-read surface; persisted
+  // table rows remain the connector's deliberate data-table API.
+  {
+    label: "live source-table rows (no MCP runtime data-read surface)",
+    path: /^\/api\/v1\/data-tables\/[^/]+\/live-rows$/,
+    methods: ["GET"],
+  },
+  // Mailbox diagnostics and messages are operational delivery state and human
+  // correspondence. Testing a mailbox or deciding a queued mail action is an
+  // administrator's screen action, not tenant authoring through this token.
+  { label: "mailbox diagnostics and messages (human mail screen)", path: /^\/api\/v1\/mail\/mailboxes(\/|$)/ },
+  { label: "mail delivery decisions (human mail screen)", path: /^\/api\/v1\/mail\/messages\/[^/]+\/[^/]+$/ },
+  // Concept-relationship rows are the experimental semantic graph's direct
+  // table edits. The MCP has no reviewed graph authoring contract for them, so
+  // it must not turn an internal row API into an unvalidated modelling tool.
+  { label: "concept relationship rows (no MCP graph authoring API)", path: /^\/api\/v1\/concept-relationships(\/|$)/ },
+  // This generic object catalogue has no typed object contract. The connector
+  // exposes typed tenant entities only; an untyped catch-all would bypass their
+  // validation and lifetime rules.
+  { label: "generic object catalogue (typed tools only)", path: /^\/api\/v1\/objects$/ },
 ];
 
 export function forbids(method: string, path: string): boolean {

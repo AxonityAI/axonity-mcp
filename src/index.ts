@@ -62,6 +62,7 @@ import { registerMeasureInfluenceTools } from "./tools/measureInfluences.js";
 import { registerKnowledgeGraphTools } from "./tools/knowledgeGraph.js";
 import { registerModelTools } from "./tools/model.js";
 import { registerModuleTools } from "./tools/modules.js";
+import { registerFlowAppTools } from "./tools/flowApps.js";
 import { registerOperationsTools } from "./tools/operations.js";
 import { registerMethodTools } from "./tools/methods.js";
 import { registerPromptPlacementTools } from "./tools/promptPlacement.js";
@@ -1035,6 +1036,7 @@ export function registerAll(
   registerToolboxTools(server as McpServer, client);
   registerOperationsTools(server as McpServer, client);
   registerModuleTools(server as McpServer, client);
+  registerFlowAppTools(server as McpServer, client);
   registerDataTableTools(server as McpServer, client);
   registerDataSourceTools(server as McpServer, client);
   registerMeasureTools(server as McpServer, client);

@@ -19,6 +19,10 @@
     "class": "dicht",
     "why": "delete: configuration without an approval step"
   },
+  "DELETE /api/v1/app-surface/tables/{table}/rows/{row_id}": {
+    "class": "dicht",
+    "why": "and the catalogue the same."
+  },
   "DELETE /api/v1/applications/{application_id}": {
     "class": "dicht",
     "why": "delete: configuration without an approval step"
@@ -32,6 +36,10 @@
     "why": "delete: configuration without an approval step"
   },
   "DELETE /api/v1/concept-links": {
+    "class": "dicht",
+    "why": "rows of the concepts and influences tables: not proven to be written in a draft"
+  },
+  "DELETE /api/v1/concept-relationships/{row_id}": {
     "class": "dicht",
     "why": "rows of the concepts and influences tables: not proven to be written in a draft"
   },
@@ -70,6 +78,10 @@
   "DELETE /api/v1/dashboards/{dashboard_id}": {
     "class": "dicht",
     "why": "delete: configuration without an approval step"
+  },
+  "DELETE /api/v1/data-sources/{entity_id}/versions/{version_id}": {
+    "class": "dicht",
+    "why": "bind (K1), and ``enabled`` is the emergency brake, live from the row. Every write stays closed."
   },
   "DELETE /api/v1/data-sources/{source_id}": {
     "class": "dicht",
@@ -349,6 +361,30 @@
   "GET /api/v1/agents/{agent_id}/versions/{version}": {
     "class": "lezen"
   },
+  "GET /api/v1/app-surface/conversations": {
+    "class": "dicht",
+    "why": "and the catalogue the same."
+  },
+  "GET /api/v1/app-surface/conversations/{conversation_id}": {
+    "class": "dicht",
+    "why": "and the catalogue the same."
+  },
+  "GET /api/v1/app-surface/runs/{run_id}": {
+    "class": "dicht",
+    "why": "and the catalogue the same."
+  },
+  "GET /api/v1/app-surface/settings": {
+    "class": "dicht",
+    "why": "and the catalogue the same."
+  },
+  "GET /api/v1/app-surface/tables/{table}/rows": {
+    "class": "dicht",
+    "why": "and the catalogue the same."
+  },
+  "GET /api/v1/app-surface/workflows/{workflow}/runs": {
+    "class": "dicht",
+    "why": "and the catalogue the same."
+  },
   "GET /api/v1/applications": {
     "class": "lezen"
   },
@@ -377,6 +413,13 @@
     "class": "lezen"
   },
   "GET /api/v1/applications/{application_id}/versions/{version}": {
+    "class": "lezen"
+  },
+  "GET /api/v1/apps": {
+    "class": "dicht",
+    "why": "nowhere else"
+  },
+  "GET /api/v1/apps/status": {
     "class": "lezen"
   },
   "GET /api/v1/apps/{slug}/frame": {
@@ -521,13 +564,31 @@
   "GET /api/v1/data-sources/drivers": {
     "class": "lezen"
   },
+  "GET /api/v1/data-sources/{entity_id}/versions": {
+    "class": "lezen"
+  },
+  "GET /api/v1/data-sources/{entity_id}/versions/deleted": {
+    "class": "lezen"
+  },
+  "GET /api/v1/data-sources/{entity_id}/versions/published": {
+    "class": "lezen"
+  },
+  "GET /api/v1/data-sources/{entity_id}/versions/{version}": {
+    "class": "lezen"
+  },
   "GET /api/v1/data-sources/{source_id}": {
+    "class": "lezen"
+  },
+  "GET /api/v1/data-sources/{source_id}/catalogue": {
     "class": "lezen"
   },
   "GET /api/v1/data-sources/{source_id}/changes": {
     "class": "lezen"
   },
   "GET /api/v1/data-sources/{source_id}/schema": {
+    "class": "lezen"
+  },
+  "GET /api/v1/data-sources/{source_id}/used-by": {
     "class": "lezen"
   },
   "GET /api/v1/data-tables": {
@@ -545,6 +606,12 @@
     "why": "(require_platform_admin); a workspace does not see them, so neither does a token"
   },
   "GET /api/v1/data-tables/{table_id}": {
+    "class": "lezen"
+  },
+  "GET /api/v1/data-tables/{table_id}/live-rows": {
+    "class": "actie"
+  },
+  "GET /api/v1/data-tables/{table_id}/reaches": {
     "class": "lezen"
   },
   "GET /api/v1/data-tables/{table_id}/rows": {
@@ -741,6 +808,15 @@
   "GET /api/v1/library/summary": {
     "class": "lezen"
   },
+  "GET /api/v1/mail/mailboxes/status": {
+    "class": "lezen"
+  },
+  "GET /api/v1/mail/mailboxes/{name}/messages": {
+    "class": "lezen"
+  },
+  "GET /api/v1/mail/routes": {
+    "class": "lezen"
+  },
   "GET /api/v1/me/mcp-access": {
     "class": "dicht",
     "why": "a token never manages tokens"
@@ -832,6 +908,10 @@
   "GET /api/v1/modules": {
     "class": "lezen"
   },
+  "GET /api/v1/modules/{module_id}/deletion-preflight": {
+    "class": "dicht",
+    "why": "operations at the screen; neither is a draft, and the service refuses every token (#1826 R4e)."
+  },
   "GET /api/v1/modules/{module_id}/settings": {
     "class": "lezen"
   },
@@ -842,6 +922,10 @@
   "GET /api/v1/modules/{module_id}/settings/schema": {
     "class": "lezen"
   },
+  "GET /api/v1/modules/{module_id}/versions": {
+    "class": "dicht",
+    "why": "facts on that same human-only screen, not a person's ordinary module read (#1826 R5d)."
+  },
   "GET /api/v1/notifications": {
     "class": "lezen"
   },
@@ -851,6 +935,9 @@
   "GET /api/v1/oauth/requests/{request_handle}": {
     "class": "dicht",
     "why": "a token never grants a token: the consent screen is a person's, with a session"
+  },
+  "GET /api/v1/objects": {
+    "class": "lezen"
   },
   "GET /api/v1/output-schemas": {
     "class": "lezen"
@@ -1169,6 +1256,9 @@
   "GET /api/v1/table-databases/{database_id}": {
     "class": "lezen"
   },
+  "GET /api/v1/table-databases/{database_id}/schema": {
+    "class": "lezen"
+  },
   "GET /api/v1/table-databases/{database_id}/versions": {
     "class": "lezen"
   },
@@ -1435,6 +1525,10 @@
   "PATCH /api/v1/agents/{agent_id}/versions/major/{major_version}": {
     "class": "configuratie"
   },
+  "PATCH /api/v1/app-surface/tables/{table}/rows/{row_id}": {
+    "class": "dicht",
+    "why": "and the catalogue the same."
+  },
   "PATCH /api/v1/applications/{application_id}/versions/major/{major_version}": {
     "class": "configuratie"
   },
@@ -1460,6 +1554,10 @@
   "PATCH /api/v1/cron-schedules/{schedule_id}": {
     "class": "dicht",
     "why": "schedules change the cadence of approved work"
+  },
+  "PATCH /api/v1/data-sources/{entity_id}/versions/major/{major_version}": {
+    "class": "dicht",
+    "why": "bind (K1), and ``enabled`` is the emergency brake, live from the row. Every write stays closed."
   },
   "PATCH /api/v1/data-tables/{table_id}/rows": {
     "class": "actie"
@@ -1710,6 +1808,38 @@
     "class": "dicht",
     "why": "archive: a delete by another name, without an approval step (Levenscyclus)"
   },
+  "POST /api/v1/app-surface/conversations": {
+    "class": "dicht",
+    "why": "and the catalogue the same."
+  },
+  "POST /api/v1/app-surface/conversations/{conversation_id}/end": {
+    "class": "dicht",
+    "why": "and the catalogue the same."
+  },
+  "POST /api/v1/app-surface/conversations/{conversation_id}/messages": {
+    "class": "dicht",
+    "why": "and the catalogue the same."
+  },
+  "POST /api/v1/app-surface/module-operations/measures.query": {
+    "class": "dicht",
+    "why": "and the catalogue the same."
+  },
+  "POST /api/v1/app-surface/runs/{run_id}/steps/{step_id}/answer": {
+    "class": "dicht",
+    "why": "and the catalogue the same."
+  },
+  "POST /api/v1/app-surface/tables/{table}/rows": {
+    "class": "dicht",
+    "why": "and the catalogue the same."
+  },
+  "POST /api/v1/app-surface/workflows/{workflow}/files": {
+    "class": "dicht",
+    "why": "and the catalogue the same."
+  },
+  "POST /api/v1/app-surface/workflows/{workflow}/runs": {
+    "class": "dicht",
+    "why": "and the catalogue the same."
+  },
   "POST /api/v1/applications": {
     "class": "configuratie"
   },
@@ -1761,6 +1891,9 @@
   "POST /api/v1/applications/{entity_id}/unarchive": {
     "class": "dicht",
     "why": "archive: a delete by another name, without an approval step (Levenscyclus)"
+  },
+  "POST /api/v1/apps/manifest/validate": {
+    "class": "lezen"
   },
   "POST /api/v1/audiences": {
     "class": "dicht",
@@ -1855,6 +1988,10 @@
     "why": "restore: configuration without an approval step"
   },
   "POST /api/v1/concept-links": {
+    "class": "dicht",
+    "why": "rows of the concepts and influences tables: not proven to be written in a draft"
+  },
+  "POST /api/v1/concept-relationships": {
     "class": "dicht",
     "why": "rows of the concepts and influences tables: not proven to be written in a draft"
   },
@@ -1970,15 +2107,43 @@
   },
   "POST /api/v1/data-sources": {
     "class": "dicht",
-    "why": "no draft: saved directly"
+    "why": "bind (K1), and ``enabled`` is the emergency brake, live from the row. Every write stays closed."
   },
   "POST /api/v1/data-sources/{entity_id}/archive": {
     "class": "dicht",
     "why": "archive: a delete by another name, without an approval step (Levenscyclus)"
   },
+  "POST /api/v1/data-sources/{entity_id}/discard-draft": {
+    "class": "dicht",
+    "why": "bind (K1), and ``enabled`` is the emergency brake, live from the row. Every write stays closed."
+  },
   "POST /api/v1/data-sources/{entity_id}/unarchive": {
     "class": "dicht",
     "why": "archive: a delete by another name, without an approval step (Levenscyclus)"
+  },
+  "POST /api/v1/data-sources/{entity_id}/versions": {
+    "class": "dicht",
+    "why": "bind (K1), and ``enabled`` is the emergency brake, live from the row. Every write stays closed."
+  },
+  "POST /api/v1/data-sources/{entity_id}/versions/ensure": {
+    "class": "dicht",
+    "why": "bind (K1), and ``enabled`` is the emergency brake, live from the row. Every write stays closed."
+  },
+  "POST /api/v1/data-sources/{entity_id}/versions/publish/{major_version}": {
+    "class": "dicht",
+    "why": "bind (K1), and ``enabled`` is the emergency brake, live from the row. Every write stays closed."
+  },
+  "POST /api/v1/data-sources/{entity_id}/versions/unpublish": {
+    "class": "dicht",
+    "why": "bind (K1), and ``enabled`` is the emergency brake, live from the row. Every write stays closed."
+  },
+  "POST /api/v1/data-sources/{entity_id}/versions/{version_id}/restore": {
+    "class": "dicht",
+    "why": "bind (K1), and ``enabled`` is the emergency brake, live from the row. Every write stays closed."
+  },
+  "POST /api/v1/data-sources/{entity_id}/versions/{version_id}/restore-deleted": {
+    "class": "dicht",
+    "why": "bind (K1), and ``enabled`` is the emergency brake, live from the row. Every write stays closed."
   },
   "POST /api/v1/data-sources/{source_id}/explore": {
     "class": "actie"
@@ -2229,6 +2394,14 @@
     "class": "dicht",
     "why": "knowledge upkeep"
   },
+  "POST /api/v1/mail/mailboxes/{name}/test": {
+    "class": "dicht",
+    "why": "means closed: these are an administrator's actions on mail, never a program's."
+  },
+  "POST /api/v1/mail/messages/{decision_id}/{action}": {
+    "class": "dicht",
+    "why": "means closed: these are an administrator's actions on mail, never a program's."
+  },
   "POST /api/v1/me/tokens": {
     "class": "dicht",
     "why": "a token never manages tokens"
@@ -2340,6 +2513,10 @@
   "POST /api/v1/methods/{method_id}/versions/{version_id}/restore-deleted": {
     "class": "dicht",
     "why": "restore: configuration without an approval step"
+  },
+  "POST /api/v1/modules/{module_id}/deletion": {
+    "class": "dicht",
+    "why": "operations at the screen; neither is a draft, and the service refuses every token (#1826 R4e)."
   },
   "POST /api/v1/notifications/read-all": {
     "class": "dicht",
@@ -2816,6 +2993,10 @@
     "class": "dicht",
     "why": "restore: configuration without an approval step"
   },
+  "POST /api/v1/table-relationships/{relationship_id}/verify": {
+    "class": "dicht",
+    "why": "no draft: saved directly"
+  },
   "POST /api/v1/task-queue/dismiss-bulk": {
     "class": "actie_beheerder"
   },
@@ -3155,7 +3336,7 @@
   },
   "PUT /api/v1/data-sources/{source_id}": {
     "class": "dicht",
-    "why": "no draft: saved directly"
+    "why": "bind (K1), and ``enabled`` is the emergency brake, live from the row. Every write stays closed."
   },
   "PUT /api/v1/data-tables/{table_id}": {
     "class": "configuratie"
@@ -3190,6 +3371,10 @@
   "PUT /api/v1/method-steps/{method_step_id}/prompts/order": {
     "class": "dicht",
     "why": "attachment rows, not proven to be draft-only"
+  },
+  "PUT /api/v1/modules/{module_id}/enabled": {
+    "class": "dicht",
+    "why": "refuses every token, a personal one included, and a switch is no draft"
   },
   "PUT /api/v1/output-schemas/{schema_id}": {
     "class": "configuratie"

@@ -42,6 +42,64 @@ function recordingClient(calls: Recorded[]) {
 }
 
 describe("registered surface stays inside its authority boundary", () => {
+  it("records every non-MCP route brought in with the A5 contract refresh", () => {
+    const excluded = [
+      "GET /api/v1/apps",
+      "GET /api/v1/app-surface/conversations",
+      "POST /api/v1/app-surface/conversations",
+      "GET /api/v1/app-surface/conversations/c1",
+      "POST /api/v1/app-surface/conversations/c1/end",
+      "POST /api/v1/app-surface/conversations/c1/messages",
+      "POST /api/v1/app-surface/module-operations/measures.query",
+      "GET /api/v1/app-surface/runs/r1",
+      "POST /api/v1/app-surface/runs/r1/steps/s1/answer",
+      "GET /api/v1/app-surface/settings",
+      "GET /api/v1/app-surface/tables/orders/rows",
+      "POST /api/v1/app-surface/tables/orders/rows",
+      "PATCH /api/v1/app-surface/tables/orders/rows/r1",
+      "DELETE /api/v1/app-surface/tables/orders/rows/r1",
+      "GET /api/v1/app-surface/workflows/intake/runs",
+      "POST /api/v1/app-surface/workflows/intake/runs",
+      "POST /api/v1/app-surface/workflows/intake/files",
+      "GET /api/v1/mail/routes",
+      "GET /api/v1/table-databases/d1/schema",
+      "POST /api/v1/table-relationships/r1/verify",
+    ];
+    for (const operation of excluded) {
+      const [method, path] = operation.split(" ");
+      expect(forbids(method, path), operation).toBe(true);
+    }
+    // B153's token-safe routes remain deliberately reachable.
+    expect(forbids("GET", "/api/v1/apps/status")).toBe(false);
+    expect(forbids("POST", "/api/v1/apps/manifest/validate")).toBe(false);
+  });
+
+  it("records the module operations that require a person at a screen", () => {
+    for (const operation of [
+      "PUT /api/v1/modules/m-1/enabled",
+      "POST /api/v1/modules/m-1/deletion",
+      "GET /api/v1/modules/m-1/deletion-preflight",
+      "GET /api/v1/modules/m-1/versions",
+    ]) {
+      const [method, path] = operation.split(" ");
+      expect(forbids(method, path), operation).toBe(true);
+    }
+
+    // Workspace module settings are token-safe authoring data, not the
+    // human-operated lifecycle screen the four routes above belong to.
+    expect(forbids("GET", "/api/v1/modules/m-1/settings")).toBe(false);
+  });
+
+  it("records the Insights source inspection and live-read routes outside the MCP surface", () => {
+    for (const operation of [
+      "GET /api/v1/data-sources/source-1/catalogue",
+      "GET /api/v1/data-tables/table-1/live-rows",
+    ]) {
+      const [method, path] = operation.split(" ");
+      expect(forbids(method, path), operation).toBe(true);
+    }
+  });
+
   it("no tool targets a deny-listed route family", async () => {
     const calls: Recorded[] = [];
     const client = recordingClient(calls);
