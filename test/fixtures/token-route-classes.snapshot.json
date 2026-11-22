@@ -579,6 +579,9 @@
   "GET /api/v1/data-sources/{source_id}": {
     "class": "lezen"
   },
+  "GET /api/v1/data-sources/{source_id}/catalogue": {
+    "class": "lezen"
+  },
   "GET /api/v1/data-sources/{source_id}/changes": {
     "class": "lezen"
   },
@@ -604,6 +607,9 @@
   },
   "GET /api/v1/data-tables/{table_id}": {
     "class": "lezen"
+  },
+  "GET /api/v1/data-tables/{table_id}/live-rows": {
+    "class": "actie"
   },
   "GET /api/v1/data-tables/{table_id}/reaches": {
     "class": "lezen"

@@ -90,6 +90,16 @@ describe("registered surface stays inside its authority boundary", () => {
     expect(forbids("GET", "/api/v1/modules/m-1/settings")).toBe(false);
   });
 
+  it("records the Insights source inspection and live-read routes outside the MCP surface", () => {
+    for (const operation of [
+      "GET /api/v1/data-sources/source-1/catalogue",
+      "GET /api/v1/data-tables/table-1/live-rows",
+    ]) {
+      const [method, path] = operation.split(" ");
+      expect(forbids(method, path), operation).toBe(true);
+    }
+  });
+
   it("no tool targets a deny-listed route family", async () => {
     const calls: Recorded[] = [];
     const client = recordingClient(calls);

@@ -4302,6 +4302,185 @@
         "title": "CapabilitySchema",
         "type": "object"
       },
+      "CatalogueCounter": {
+        "description": "How many objects a container (or the whole source) holds, and in which state.",
+        "properties": {
+          "container": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The container, or null for all of them.",
+            "title": "Container"
+          },
+          "inDataTable": {
+            "title": "Indatatable",
+            "type": "integer"
+          },
+          "notDescribed": {
+            "title": "Notdescribed",
+            "type": "integer"
+          },
+          "objects": {
+            "title": "Objects",
+            "type": "integer"
+          },
+          "sourceTableDraft": {
+            "title": "Sourcetabledraft",
+            "type": "integer"
+          },
+          "sourceTableVerified": {
+            "title": "Sourcetableverified",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "container",
+          "objects",
+          "sourceTableDraft",
+          "sourceTableVerified",
+          "inDataTable",
+          "notDescribed"
+        ],
+        "title": "CatalogueCounter",
+        "type": "object"
+      },
+      "CatalogueObjectOut": {
+        "description": "One object (a table or a view) of the source, and what Flow holds of it.",
+        "properties": {
+          "columns": {
+            "description": "How many columns the source says it has.",
+            "title": "Columns",
+            "type": "integer"
+          },
+          "container": {
+            "description": "The dataset or schema it sits in.",
+            "title": "Container",
+            "type": "string"
+          },
+          "object": {
+            "description": "The table or view, as the source names it.",
+            "title": "Object",
+            "type": "string"
+          },
+          "readBy": {
+            "description": "The names of the queries that say they read it (`queries.reads`).",
+            "items": {
+              "type": "string"
+            },
+            "title": "Readby",
+            "type": "array"
+          },
+          "state": {
+            "description": "The strongest that is true: a source table (published: verified; else a draft), read by a query that says so (`queries.reads`), or not described.",
+            "enum": [
+              "source_table_verified",
+              "source_table_draft",
+              "in_data_table",
+              "not_described"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "tableId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The source table that describes it, if any.",
+            "title": "Tableid"
+          },
+          "tableName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tablename"
+          }
+        },
+        "required": [
+          "container",
+          "object",
+          "columns",
+          "state"
+        ],
+        "title": "CatalogueObjectOut",
+        "type": "object"
+      },
+      "CataloguePage": {
+        "description": "One page of the catalogue, with the counters of all of it.\n\nThe counters are over the whole catalogue as it was read, never over the page\nor the filter: they are what \"what Flow knows, per dataset\" says.",
+        "properties": {
+          "containerWord": {
+            "description": "What this warehouse calls a container: dataset, schema.",
+            "title": "Containerword",
+            "type": "string"
+          },
+          "counters": {
+            "items": {
+              "$ref": "#/components/schemas/CatalogueCounter"
+            },
+            "title": "Counters",
+            "type": "array"
+          },
+          "hasMore": {
+            "default": false,
+            "title": "Hasmore",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CatalogueObjectOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          },
+          "pageSize": {
+            "title": "Pagesize",
+            "type": "integer"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/CatalogueCounter"
+          },
+          "unreadable": {
+            "description": "Containers the warehouse refused to describe: skipped, and said.",
+            "items": {
+              "$ref": "#/components/schemas/UnreadableContainerOut"
+            },
+            "title": "Unreadable",
+            "type": "array"
+          }
+        },
+        "required": [
+          "pageSize",
+          "containerWord",
+          "totals"
+        ],
+        "title": "CataloguePage",
+        "type": "object"
+      },
       "CatchUpBranchRequest": {
         "additionalProperties": false,
         "description": "Bring the stem's commits INTO side branch ``branch``.",
@@ -8894,6 +9073,14 @@
             },
             "maxItems": 20,
             "title": "Questions",
+            "type": "array"
+          },
+          "reads": {
+            "description": "The objects of its source this query reads: a container and an object each. Your statement, not a parse of the SQL: the catalogue shows an object as 'in a data table' from it.",
+            "items": {
+              "$ref": "#/components/schemas/QueryReadPayload"
+            },
+            "title": "Reads",
             "type": "array"
           },
           "returns": {
@@ -20529,6 +20716,149 @@
         "title": "LibrarySummary",
         "type": "object"
       },
+      "LiveRowsColumn": {
+        "description": "A column that is shown: its design, and the type the source gave it.",
+        "properties": {
+          "description": {
+            "default": "",
+            "title": "Description",
+            "type": "string"
+          },
+          "hidden": {
+            "default": false,
+            "description": "The source names the column personal: it is not read, and the rows carry no value for it.",
+            "title": "Hidden",
+            "type": "boolean"
+          },
+          "kind": {
+            "description": "The Flow kind of the column, from its published design.",
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "type": {
+            "default": "",
+            "description": "The type the source answered the column with.",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "kind",
+          "label"
+        ],
+        "title": "LiveRowsColumn",
+        "type": "object"
+      },
+      "LiveRowsPage": {
+        "description": "One page of rows read from the source, and what the read was.\n\n``items`` are the rows, each keyed by column name. A column the source\nnames personal is not in them: it is in ``columns`` with ``hidden`` set (and\nin ``hiddenColumns``), so the screen can say so in its place.",
+        "properties": {
+          "bytesScanned": {
+            "description": "What the source billed, 0 where it does not say.",
+            "title": "Bytesscanned",
+            "type": "integer"
+          },
+          "columns": {
+            "items": {
+              "$ref": "#/components/schemas/LiveRowsColumn"
+            },
+            "title": "Columns",
+            "type": "array"
+          },
+          "dateColumn": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The column the day was put on.",
+            "title": "Datecolumn"
+          },
+          "day": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The day the read was for, when one was asked.",
+            "title": "Day"
+          },
+          "fromCache": {
+            "default": false,
+            "title": "Fromcache",
+            "type": "boolean"
+          },
+          "hasMore": {
+            "default": false,
+            "title": "Hasmore",
+            "type": "boolean"
+          },
+          "hiddenColumns": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Hiddencolumns",
+            "type": "array"
+          },
+          "items": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          },
+          "pageSize": {
+            "title": "Pagesize",
+            "type": "integer"
+          },
+          "readAt": {
+            "description": "When the source answered.",
+            "format": "date-time",
+            "title": "Readat",
+            "type": "string"
+          },
+          "sourceName": {
+            "description": "The data source the rows were read from.",
+            "title": "Sourcename",
+            "type": "string"
+          }
+        },
+        "required": [
+          "pageSize",
+          "sourceName",
+          "readAt",
+          "bytesScanned"
+        ],
+        "title": "LiveRowsPage",
+        "type": "object"
+      },
       "LoginRequest": {
         "description": "Email + password login payload.",
         "properties": {
@@ -31916,6 +32246,17 @@
             "title": "Questions",
             "type": "array"
           },
+          "reads": {
+            "description": "The objects of its source the author says it reads (#2429 R3).",
+            "items": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "title": "Reads",
+            "type": "array"
+          },
           "returnCount": {
             "title": "Returncount",
             "type": "integer"
@@ -32076,6 +32417,28 @@
           "name"
         ],
         "title": "QueryParameterPayload",
+        "type": "object"
+      },
+      "QueryReadPayload": {
+        "additionalProperties": false,
+        "description": "One object of the source a query says it reads (#2429 R3, N4).",
+        "properties": {
+          "container": {
+            "description": "The dataset or schema the object is in, as the source names it.",
+            "title": "Container",
+            "type": "string"
+          },
+          "object": {
+            "description": "The table or view, as the source names it.",
+            "title": "Object",
+            "type": "string"
+          }
+        },
+        "required": [
+          "container",
+          "object"
+        ],
+        "title": "QueryReadPayload",
         "type": "object"
       },
       "QueryReturnPayload": {
@@ -47117,6 +47480,21 @@
               }
             ],
             "title": "Questions"
+          },
+          "reads": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/QueryReadPayload"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The objects of its source this query reads; replaces the list.",
+            "title": "Reads"
           },
           "returns": {
             "anyOf": [
@@ -64644,6 +65022,146 @@
         ]
       }
     },
+    "/api/v1/data-sources/{source_id}/catalogue": {
+      "get": {
+        "description": "What this source holds, and what Flow knows of each object (#2429 R3).\n\nThe catalogue is read from the source, one container at a time (no table is\nread, so it scans nothing); each object is said against what Flow holds of it:\na source table (a draft, or published and so verified), read by a query that\nsays so (`queries.reads`), or not described. The counters cover the whole\ncatalogue, never the page or the filter. Nothing is stored.",
+        "operationId": "read_data_source_catalogue_api_v1_data_sources__source_id__catalogue_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Source Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Only this dataset or schema.",
+            "in": "query",
+            "name": "container",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only this dataset or schema.",
+              "title": "Container"
+            }
+          },
+          {
+            "description": "Only objects in this state: source_table_verified, source_table_draft, in_data_table or not_described.",
+            "in": "query",
+            "name": "state",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only objects in this state: source_table_verified, source_table_draft, in_data_table or not_described.",
+              "title": "State"
+            }
+          },
+          {
+            "description": "Only objects whose name contains this.",
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only objects whose name contains this.",
+              "title": "Q"
+            }
+          },
+          {
+            "description": "Page size (max 200).",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Page size (max 200).",
+              "title": "Limit"
+            }
+          },
+          {
+            "description": "Opaque cursor from a previous response's nextCursor.",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Opaque cursor from a previous response's nextCursor.",
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CataloguePage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Read Data Source Catalogue",
+        "tags": [
+          "data-sources"
+        ]
+      }
+    },
     "/api/v1/data-sources/{source_id}/changes": {
       "get": {
         "description": "The work list of this source (#2137 · S4): its tables' pending approvals.\n\nNo list of its own — the approvals queue, filtered in the query to the\ntables that describe this source, newest first. Each item carries its\ncurrent readiness, so a change that breaks something says what.",
@@ -65749,6 +66267,111 @@
           }
         ],
         "summary": "Discard Data Table Draft",
+        "tags": [
+          "data-tables"
+        ]
+      }
+    },
+    "/api/v1/data-tables/{table_id}/live-rows": {
+      "get": {
+        "description": "One page of this source table's rows, read live from its source.\n\nNothing is stored in Flow: not a row, not a snapshot. The read is the\nruntime's, so it is of the PUBLISHED table, and it is under every limit of\nthe source (cost ceiling, time limit, datasets, personal columns, dated\ntables). A table that keeps its rows in Flow is refused\n(``not_a_source_table``).",
+        "operationId": "read_live_rows_api_v1_data_tables__table_id__live_rows_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "table_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Table Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The day to read, for a table the source only lets be read for a period.",
+            "in": "query",
+            "name": "date",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The day to read, for a table the source only lets be read for a period.",
+              "title": "Date"
+            }
+          },
+          {
+            "description": "Page size (max 200).",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Page size (max 200).",
+              "title": "Limit"
+            }
+          },
+          {
+            "description": "Opaque cursor from a previous response's nextCursor.",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Opaque cursor from a previous response's nextCursor.",
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LiveRowsPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Read Live Rows",
         "tags": [
           "data-tables"
         ]

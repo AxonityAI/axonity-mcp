@@ -413,10 +413,28 @@ export const FORBIDDEN: Rule[] = [
     path: /^\/api\/v1\/data-sources\/[^/]+\/used-by$/,
     methods: ["GET"],
   },
+  // The catalogue is the Insights screen's transient view across the live
+  // source and Flow's modelling state. The MCP's typed source/schema tools
+  // remain its reviewed modelling contract; exposing this mixed inspection
+  // page would add a second, unreviewed discovery surface.
+  {
+    label: "data source catalogue inspection (no MCP discovery surface)",
+    path: /^\/api\/v1\/data-sources\/[^/]+\/catalogue$/,
+    methods: ["GET"],
+  },
   // A table's reachability graph is likewise a screen-only model inspection.
   {
     label: "data table reach graph (no MCP graph API)",
     path: /^\/api\/v1\/data-tables\/[^/]+\/reaches$/,
+    methods: ["GET"],
+  },
+  // A live-row read executes against the connected source and can expose its
+  // current external records. Source limits make it token-permitted, but no
+  // reviewed MCP contract governs that runtime data-read surface; persisted
+  // table rows remain the connector's deliberate data-table API.
+  {
+    label: "live source-table rows (no MCP runtime data-read surface)",
+    path: /^\/api\/v1\/data-tables\/[^/]+\/live-rows$/,
     methods: ["GET"],
   },
   // Mailbox diagnostics and messages are operational delivery state and human
