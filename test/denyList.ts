@@ -29,6 +29,9 @@ export interface Rule {
 export const WRITE_METHODS = ["POST", "PUT", "PATCH", "DELETE"];
 
 export const FORBIDDEN: Rule[] = [
+  // `GET /measures/dimensions` is new on flow main (#2566), not part of this epic. The
+  // existing measures tools do not answer it; the tool follows with its owner.
+  { label: "new on main via #2566, tool follows with the owner", path: /^\/api\/v1\/measures\/dimensions$/, methods: ["GET"] },
   // The Flow-App (axonity-flow#1826 A1, main #2488) is an installed application
   // a person reviews and approves at a screen: the backend's own token table
   // closes every one of its routes, reads included, with "of a person at a

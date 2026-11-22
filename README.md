@@ -936,7 +936,7 @@ These are enforced by the backend, not merely by convention:
   schema; `test/conformance.test.ts` fails if a route or documented enum
   diverges (see `test/fixtures/README.md`).
 - **Every backend route is accounted for, and the build says so.**
-  `test/completeness.test.ts` partitions all 949 operations in the pinned
+  `test/completeness.test.ts` partitions all 950 operations in the pinned
   snapshot using four classifiers. For tenant-API routes it checks for
   *covered by a tool* or *excluded by a rule that carries a
   written reason*, with an explicit temporary exception for the unresolved
