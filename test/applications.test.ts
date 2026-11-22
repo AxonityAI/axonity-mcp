@@ -261,13 +261,19 @@ describe("what an application has learned", () => {
     expect(new ForbiddenError({ message: "Only administrators" }).message).toMatch(
       /ADMINISTRATOR ONLY/,
     );
+    // D12: the three knowledge writes are a person's act (category 3), so they
+    // say "ONLY A PERSON" and no longer promise an administrator's token works.
     for (const name of [
       "forget_application_knowledge",
       "restore_application_knowledge",
       "write_application_knowledge",
-      "set_application_executors",
     ]) {
-      expect(descriptions.get(name)).toMatch(/ADMINISTRATOR ONLY/);
+      expect(descriptions.get(name)).toMatch(/ONLY A PERSON/);
+      expect(descriptions.get(name)).not.toMatch(/ADMINISTRATOR ONLY|created by an administrator/);
     }
+    // Category 2: the executors are a proposal a person approves.
+    expect(descriptions.get("set_application_executors")).toMatch(
+      /PROPOSAL[\s\S]*NOT DONE YET[\s\S]*get_action_approval/,
+    );
   });
 });

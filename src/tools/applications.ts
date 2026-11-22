@@ -12,10 +12,13 @@
  * revoking one cuts a machine off; both are deny-listed. Nothing here returns a
  * token: an executor's answer carries only its prefix and expiry.
  *
- * **Who may write.** Linking executors and writing, forgetting or restoring
- * knowledge are `require_admin` on the platform, and a token acts with the
- * role of the person who created it — so these answer 403 unless that person
- * is an administrator, and `ForbiddenError` says so in words.
+ * **Who may write.** Linking executors is a PROPOSAL for a token: the call
+ * answers 202 (`NOT DONE YET`, an approval id) and a person approves it in
+ * Axonity (Approvals → Admin requests); the token's person must be an
+ * administrator, and `get_action_approval` shows how it ended. Writing,
+ * forgetting and restoring knowledge are a person's act and are refused to
+ * every token (403, `forbid_service_token`): the tools are here only so the
+ * refusal is one an agent can read, and say so.
  */
 
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -38,6 +41,20 @@ const ADMIN_ONLY =
   "is an administrator. Do not retry with the same token — use a token " +
   "created by an administrator, or ask an administrator (Digital Twin → " +
   "Applications).";
+
+const PROPOSES =
+  "THROUGH A TOKEN THIS IS A PROPOSAL: the token's person must be an " +
+  "administrator, and the call is not done — it answers 202 and your result " +
+  "starts NOT DONE YET with an approval id. A person approves it in Axonity " +
+  "(Approvals → Admin requests); poll get_action_approval and do not repeat " +
+  "the call (a second identical request returns the same approval).";
+
+const ONLY_A_PERSON =
+  "ONLY A PERSON: no token writes an application's knowledge, whatever its " +
+  "scopes or its person's role — the platform refuses every token with a 403 " +
+  "and a retry will not change that. What an application learns is written by " +
+  "a person in Axonity (Digital Twin → Applications); read it with " +
+  "list_application_knowledge.";
 
 const PAGE_NOTE =
   "THE RESPONSE IS ONE PAGE: { items, nextCursor, pageSize, hasMore }. While " +
@@ -83,7 +100,7 @@ export function registerApplicationTools(
       "Executor ids come from list_executors. An executor receives the " +
       "application's PUBLISHED limits, so a never-published application " +
       "gives it nothing yet." +
-      `\n\n${ADMIN_ONLY}`,
+      `\n\n${PROPOSES}`,
     {
       id: APPLICATION_ID,
       executorIds: z
@@ -199,7 +216,7 @@ export function registerApplicationTools(
       "\n- `lesson`: `{ text }`, at most 500 characters. " +
       "\nNever put a secret's value in an entry: a step types a secret with " +
       "`type_secret` and the secret's NAME." +
-      `\n\n${ADMIN_ONLY}`,
+      `\n\n${ONLY_A_PERSON}`,
     {
       id: APPLICATION_ID,
       kind: KIND.describe("What kind of entry this is."),
@@ -224,7 +241,7 @@ export function registerApplicationTools(
       "lesson. Not a delete: it is kept, marked forgotten, with its versions, " +
       "and restore_application_knowledge brings it back. Only the current " +
       "version of an entry can be forgotten." +
-      `\n\n${ADMIN_ONLY}`,
+      `\n\n${ONLY_A_PERSON}`,
     {
       id: APPLICATION_ID,
       knowledgeId: pathId.describe("The entry's id, from list_application_knowledge."),
@@ -244,7 +261,7 @@ export function registerApplicationTools(
       "you want back (from list_application_knowledge_versions), or the " +
       "forgotten entry's id to undo forget_application_knowledge. The " +
       "current version cannot be restored — it already is current." +
-      `\n\n${ADMIN_ONLY}`,
+      `\n\n${ONLY_A_PERSON}`,
     {
       id: APPLICATION_ID,
       knowledgeId: pathId

@@ -133,12 +133,16 @@ function isExcluded(operation: string): boolean {
  * `denyList.ts` (the badge of the oversight work lists), and
  * `GET /library/summary` — the counts on the Library hub, per kind — which
  * stays open here, next to `GET /publish-approvals/pending-count`, the other
- * count behind a badge: whether an agent needs it is a product decision.
+ * count behind a badge: whether an agent needs it is a product decision. The
+ * admin-request inbox brought the same badge, `GET /action-approvals/pending-count`
+ * (token-approval design, mcp #1): the list says what is pending, so it stays
+ * open here too.
  */
 const OPEN_FOR_DECISION_79: readonly string[] = [
   "DELETE /api/v1/audiences/{audience_id}",
   "DELETE /api/v1/data-tables/{table_id}/rows/{row_id}",
   "DELETE /api/v1/roles/{role_id}",
+  "GET /api/v1/action-approvals/pending-count",
   "GET /api/v1/agents/activity",
   "GET /api/v1/agents/framework-tools",
   "GET /api/v1/agents/{agent_id}/activity",

@@ -405,18 +405,29 @@ describe("who may write module settings, and where the tools stop", () => {
     expect(write()).toMatch(/Run actions/);
   });
 
-  // `human_only` (Mail's mailboxes, R2.2): no token of any kind writes such a
-  // setting, a personal one of an administrator included, so the sentence that
-  // says an administrator's token may write "including admin-classified
-  // fields" cannot stand alone. Sources: `domain/module_settings.py`
-  // `may_write_setting` (a machine principal with `human_only` is refused before
-  // any role is looked at) and `modules/manifest_schema.py` (`human_only`).
-  it("says a setting marked humanOnly is written by a person only, whatever the token", () => {
-    expect(write()).toMatch(/humanOnly/);
-    expect(write()).toMatch(/person in Axonity/i);
-    expect(write()).toMatch(/no token/i);
-    expect(registered().tool("read_module_settings_schema").description).toMatch(
-      /humanOnly[^.]*(person|human)/i,
-    );
+  // `token` per setting (flow `feat/module-setting-token-category`): `allow`,
+  // `approval` or `deny`, replacing the old `humanOnly`. Sources:
+  // `modules/manifest_schema.py` (`TokenCategory`, `human_only` is only the old
+  // spelling of `token: deny`) and `module_settings_service.py` (a PATCH that
+  // touches an `approval` field is one request, 202).
+  it("names the three token categories and the 202 an approval field gives", () => {
+    for (const text of [
+      write(),
+      registered().tool("read_module_settings_schema").description,
+    ]) {
+      expect(text).toMatch(/`allow`/);
+      expect(text).toMatch(/`approval`/);
+      expect(text).toMatch(/`deny`/);
+      expect(text).not.toMatch(/humanOnly/);
+    }
+    expect(registered().tool("read_module_settings_schema").description).toMatch(/\btoken\b[^.]*may do/);
+    expect(write()).toMatch(/NOT DONE YET/);
+    expect(write()).toMatch(/get_action_approval/);
+    expect(write()).toMatch(/mailboxes\[0\]\.address/);
+    expect(write()).toMatch(/person changes it in Axonity/i);
+  });
+
+  it("reads writeNeedsApproval off the settings response", () => {
+    expect(registered().tool("read_module_settings").description).toMatch(/writeNeedsApproval/);
   });
 });

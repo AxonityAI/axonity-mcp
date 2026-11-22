@@ -107,6 +107,28 @@ export function describeDetail(detail: unknown): string | undefined {
   return String(detail);
 }
 
+/** `["mailboxes", 0, "address"]` as `mailboxes[0].address`. */
+function pathOf(loc: unknown[]): string {
+  return loc
+    .map(String)
+    .reduce((out, part) => (/^\d+$/.test(part) ? `${out}[${part}]` : out ? `${out}.${part}` : part), "");
+}
+
+/** The backend's `fieldErrors` — `{loc, msg}` per field — as `path: reason` lines. */
+function describeFieldErrors(fieldErrors: unknown): string | undefined {
+  if (!Array.isArray(fieldErrors)) return undefined;
+  const lines = fieldErrors
+    .map((item) => {
+      if (typeof item !== "object" || item === null) return undefined;
+      const { loc, msg } = item as { loc?: unknown; msg?: unknown };
+      const where = Array.isArray(loc) ? pathOf(loc) : undefined;
+      const what = typeof msg === "string" ? msg : undefined;
+      return where && what ? `${where}: ${what}` : (what ?? where);
+    })
+    .filter((line): line is string => Boolean(line));
+  return lines.length ? lines.join("; ") : undefined;
+}
+
 /**
  * Render a response body for a human, whether it's the new structured
  * envelope, a bare FastAPI `detail` array/string, or something else entirely.
@@ -120,8 +142,16 @@ function describeBody(body: unknown): string | undefined {
   const parts: string[] = [];
   if (env.message) parts.push(env.message);
 
+  // `fieldErrors` names the field a refusal is about, as `loc` + `msg`; its path
+  // keeps list positions, so the agent reads `mailboxes[0].address` and can
+  // repair that one field. The `detail` sentences repeat the same reasons.
+  const fields = describeFieldErrors((body as { fieldErrors?: unknown }).fieldErrors);
   const detailText = describeDetail(env.detail);
-  if (detailText && detailText !== env.message) parts.push(detailText);
+  if (fields) {
+    parts.push(`Fix these fields: ${fields}`);
+  } else if (detailText && detailText !== env.message) {
+    parts.push(detailText);
+  }
 
   if (Array.isArray(env.affectedEntities) && env.affectedEntities.length > 0) {
     parts.push(`Affects: ${env.affectedEntities.map(String).join(", ")}`);
@@ -311,9 +341,15 @@ function forbiddenExplanation(said: string): string {
     );
   }
   return (
-    "Forbidden (403): this service token is not allowed to perform that action. " +
-    "A read-only token cannot create, update, delete, or request-publish, and no " +
-    "token may publish directly — use request_publish_* and let a human approve."
+    "Forbidden (403): this token is not allowed to perform that action. " +
+    "A read-only token cannot create, update, delete, or request-publish. " +
+    "What a token may do falls in three kinds: it DOES the action (reads, runs, " +
+    "drafts); it PROPOSES it — an administration change such as a member, a role, " +
+    "an audience, a mailbox or the executors of an application answers 202 \"NOT " +
+    "DONE YET\" and a person approves it in Axonity (Approvals → Admin requests); " +
+    "or it NEVER does it — publishing directly, approving, secrets, and writing " +
+    "an application's knowledge are a person's act, whatever the token. For " +
+    "publication use request_publish_* and let a human approve."
   );
 }
 

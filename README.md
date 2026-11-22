@@ -750,6 +750,20 @@ Both authority flags are always false through a token: a token never approves
 or rejects. A new decision also requires `status: "pending"`; the flags are
 not status checks or a guarantee that publication will succeed.
 
+### Admin requests (what a token only proposes)
+
+Some administration changes — a member, a role, an audience, a mailbox in Mail's
+settings, the executors of an application — are not done by a token: the call
+answers 202 and the tool result starts **`NOT DONE YET`** with an approval id. A
+person approves it in Axonity (Approvals → Admin requests). Poll
+`get_action_approval({ approvalId })` — or `list_action_approvals({ status?, view?,
+limit?, cursor? })` — which show `summary`, `status`, `statusReason`, `result` and
+`check` (what approving would do now). Do not repeat the call: a second identical
+request returns the same approval. A field that is wrong is a 422 naming it
+(`mailboxes[0].address: …`) and no request exists. No tool approves or rejects:
+a token never approves. Each module setting says what a token may do with it in
+its `token` field: `allow`, `approval` (a proposal) or `deny` (a person only).
+
 `request_publish_release({ workflowId, changeSummary? })` proposes a **release**:
 a workflow *and everything its run needs* — the agents it runs (each with its
 persona), their tools, the methods it pins, the memory scoped to those agents —
@@ -936,7 +950,7 @@ These are enforced by the backend, not merely by convention:
   schema; `test/conformance.test.ts` fails if a route or documented enum
   diverges (see `test/fixtures/README.md`).
 - **Every backend route is accounted for, and the build says so.**
-  `test/completeness.test.ts` partitions all 950 operations in the pinned
+  `test/completeness.test.ts` partitions all 955 operations in the pinned
   snapshot using four classifiers. For tenant-API routes it checks for
   *covered by a tool* or *excluded by a rule that carries a
   written reason*, with an explicit temporary exception for the unresolved
