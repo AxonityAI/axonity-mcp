@@ -40,7 +40,7 @@ it.each(TOOLS)("%s describes the statement tile (P&L)", (name) => {
   for (const word of [
     "`statement`", "`config.rows`", "`style`", "subtotal", "total", "`indent`",
     "`config.statementColumns`", "period_change", "ytd_share_change", "`config.shareOf`",
-    "20 lines", "L or XL",
+    "20 lines", "L, XL or one of T, W, R",
   ]) {
     expect(text, word).toContain(word);
   }
@@ -72,4 +72,21 @@ it.each(TOOLS)("%s forwards a statement tile as given", async (name) => {
     name === "create_dashboard" ? "/api/v1/dashboards" : "/api/v1/dashboards/d1",
     expect.objectContaining({ layout }),
   );
+});
+
+it.each(TOOLS)("%s describes the section mechanics and the arranging fields", (name) => {
+  const text = setup().descriptions.get(name)!;
+  for (const word of [
+    "`layout.overview`", "`section.answer`", "400", "`section.collapse`", "open", "closed",
+    "`section.phoneOrder`", "\"T\"", "\"W\"", "\"R\"", "worst status",
+  ]) {
+    expect(text, word).toContain(word);
+  }
+});
+
+it.each(TOOLS)("%s describes the viewer's period per tile and the marker lines", (name) => {
+  const text = setup().descriptions.get(name)!;
+  for (const word of ["tile.<id>", "split=", "marker line", "not saved"]) {
+    expect(text, word).toContain(word);
+  }
 });
