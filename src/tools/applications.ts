@@ -22,6 +22,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 
 import type { AxonityClient } from "../client.js";
+import { assertPlaceholderCredentials } from "./credentials.js";
 import { guard, jsonResult } from "./result.js";
 import { pathId, seg } from "../ids.js";
 
@@ -207,11 +208,14 @@ export function registerApplicationTools(
         .describe("The entry itself, in the shape of its kind (see above)."),
     },
     async ({ id, kind, entry }) =>
-      guard(async () =>
-        jsonResult(
+      guard(async () => {
+        // Knowledge is readable by every token and goes to the executors, so a
+        // real value typed into a step would be the tenant's from then on.
+        assertPlaceholderCredentials(entry, "An application's knowledge");
+        return jsonResult(
           await client.post(`${APPLICATIONS}/${seg(id)}/knowledge`, { kind, [kind]: entry }),
-        ),
-      ),
+        );
+      }),
   );
 
   server.tool(

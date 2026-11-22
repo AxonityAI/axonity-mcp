@@ -1052,12 +1052,16 @@ authority and the rights the field requires.
 
 ## Secrets
 - Never handle a real credential. A connector's \`authConfig\` takes placeholders
-  only ("{{ MY_SECRET }}" or ""); a human fills the real value in Axonity. This
-  is enforced — a write carrying something that looks like a real secret is
-  rejected before it leaves this connector.
-- You CAN read the catalogue: \`list_secrets\` (id, name, authType) and
-  \`read_secret\`. That is how you get the id for a connector's
-  \`authConfig.secretId\` — do not ask a human to copy one out of the UI.
+  only ("{{ MY_SECRET }}" or ""); a human fills the real value in Axonity. The
+  same holds for a header or query parameter whose name is a credential
+  (\`Authorization\`, \`api_key\`), a user and password in a URL, and a step
+  in an application's knowledge. This is enforced — a write carrying something
+  that looks like a real secret is rejected before it leaves this connector.
+- With a service token you can read the catalogue: \`list_secrets\` (id,
+  name, authType) and \`read_secret\`. That is how you get the id for a
+  connector's \`authConfig.secretId\` — do not ask a human to copy one out of
+  the UI. A personal token and the hosted connector cannot read it; ask your
+  human for the secret's id instead.
 - Before you wire a connector to a secret, check \`valueKeys\` on
   \`read_secret\`. An empty list means nobody has filled the secret in yet: the
   connector will author fine and fail at RUN time. Say so to your human, with the
