@@ -265,6 +265,14 @@ const MODULE_OFF_SENTENCE = /is switched off in this workspace/i;
  */
 const WIDENING_SENTENCE = /widen(ing)? a label/i;
 
+/**
+ * The platform's sentence for a right of a MODULE ("This needs the 'manage'
+ * right of the Mail module."). Such a right is held by module administrators
+ * only, and a service token always counts as a member, so no token setting
+ * fixes it — the scope advice would send agents and humans the wrong way.
+ */
+const MODULE_RIGHT_SENTENCE = /needs the '[^']+' right of the (.+?) module/i;
+
 /** The 403 explanation for a refusal whose body says why. */
 function forbiddenExplanation(said: string): string {
   if (MODULE_OFF_SENTENCE.test(said)) {
@@ -282,6 +290,16 @@ function forbiddenExplanation(said: string): string {
       "a colleague who maintains those audiences may do that — never an agent " +
       "or a token. Narrowing is always allowed. Keep the label as it is, or ask " +
       "a colleague to widen it in Axonity."
+    );
+  }
+  const moduleRight = MODULE_RIGHT_SENTENCE.exec(said);
+  if (moduleRight) {
+    return (
+      "Forbidden (403): MODULE RIGHT. This needs a right of the " +
+      `${moduleRight[1]} module that only an administrator holds; a service ` +
+      "token always counts as a member, so no token can do it, whatever its " +
+      "scopes. Not a mistake in your call; retrying will not help. Tell your " +
+      "human: an administrator can do it in Axonity."
     );
   }
   if (ADMIN_ONLY_SENTENCE.test(said)) {
