@@ -30,6 +30,7 @@ import type { AxonityClient } from "../client.js";
 import { currentSpelling, defineTool, formerName } from "./aliases.js";
 import { guard, jsonResult } from "./result.js";
 import { refuseWhileWorkflowWarns } from "./warningGate.js";
+import { pathId, seg } from "../ids.js";
 
 /** A required literal — an agent cannot satisfy it by filling in a default. */
 const CONFIRM = z
@@ -322,7 +323,11 @@ export function registerEntityTools(
       ...Object.fromEntries(
         listFilters.map((filter) => [
           filter.arg,
-          (filter.type === "boolean" ? z.boolean() : z.string())
+          (filter.type === "boolean"
+            ? z.boolean()
+            : /[a-z]Id$/.test(filter.arg)
+              ? pathId
+              : z.string())
             .optional()
             .describe(filter.description),
         ]),
@@ -373,9 +378,9 @@ export function registerEntityTools(
       `read_${singular}`,
       `Read one ${singular} by id, including its current draft and version. ` +
         `Read before you update — you need the current version.`,
-      { id: z.string().describe(`The ${singular}'s id.`) },
+      { id: pathId.describe(`The ${singular}'s id.`) },
       async ({ id }) =>
-        guard(async () => jsonResult(await client.get(`${basePath}/${id}`))),
+        guard(async () => jsonResult(await client.get(`${basePath}/${seg(id)}`))),
     );
   }
 
@@ -421,7 +426,7 @@ export function registerEntityTools(
         : "") +
       (def.updateWarning ? `\n\n${def.updateWarning}` : ""),
     {
-      id: z.string().describe(`The ${singular}'s id.`),
+      id: pathId.describe(`The ${singular}'s id.`),
       expectedVersion: z
         .number()
         .int()
@@ -434,8 +439,10 @@ export function registerEntityTools(
       guard(async () => {
         const current = currentSpelling(fields, def.formerFields);
         guardFields?.(current);
-        const body = { expectedVersion, ...current };
-        const path = `${basePath}/${id}`;
+        // `fields` first: the version this call was given is not a field the
+        // agent can overwrite from inside `fields`.
+        const body = { ...current, expectedVersion };
+        const path = `${basePath}/${seg(id)}`;
         const data =
           updateMethod === "PUT"
             ? await client.put(path, body)
@@ -462,7 +469,7 @@ export function registerEntityTools(
         `error tells you which).` +
         (def.deleteNote ? `\n\n${def.deleteNote}` : ""),
       {
-        id: z.string().describe(`The ${singular}'s id.`),
+        id: pathId.describe(`The ${singular}'s id.`),
         expectedVersion: z
           .number()
           .int()
@@ -471,7 +478,7 @@ export function registerEntityTools(
       },
       async ({ id, expectedVersion }) =>
         guard(async () => {
-          await client.del(`${basePath}/${id}`, { [deleteVersionParam]: expectedVersion });
+          await client.del(`${basePath}/${seg(id)}`, { [deleteVersionParam]: expectedVersion });
           return jsonResult({ deleted: true, id });
         }),
     );
@@ -502,7 +509,7 @@ export function registerEntityTools(
             `when it comes back: unarchive_${singular} afterwards.`
           : ""),
       {
-        id: z.string().describe(`The ${singular}'s id.`),
+        id: pathId.describe(`The ${singular}'s id.`),
         ...(def.restoreRename
           ? {
               name: z
@@ -520,8 +527,8 @@ export function registerEntityTools(
         guard(async () =>
           jsonResult(
             name === undefined
-              ? await client.post(`${basePath}/${id}/restore`)
-              : await client.post(`${basePath}/${id}/restore`, { name }),
+              ? await client.post(`${basePath}/${seg(id)}/restore`)
+              : await client.post(`${basePath}/${seg(id)}/restore`, { name }),
           ),
         ),
     );
@@ -547,10 +554,10 @@ export function registerEntityTools(
           `last published state. Fails if it has never been published — there is ` +
           `no published state to fall back to.` +
           (def.discardNote ? ` ${def.discardNote}` : ""),
-        { id: z.string().describe(`The ${singular}'s id.`) },
+        { id: pathId.describe(`The ${singular}'s id.`) },
         async ({ id }) =>
           guard(async () =>
-            jsonResult(await client.post(`${basePath}/${id}/discard-draft`)),
+            jsonResult(await client.post(`${basePath}/${seg(id)}/discard-draft`)),
           ),
       );
     }
@@ -567,7 +574,7 @@ export function registerEntityTools(
       `pending approval (with its readiness).` +
       (def.publishNote ? `\n\n${def.publishNote}` : ""),
     {
-      id: z.string().describe(`The ${singular}'s id.`),
+      id: pathId.describe(`The ${singular}'s id.`),
       changeSummary: z
         .string()
         .optional()
@@ -632,9 +639,9 @@ function registerArchiveTools(
       `\`changed: false\`. A ${singular} in the Trash is not found here: restore ` +
       `it first. Answers { id, archived, changed, archivedAt }. Archived is not ` +
       `deleted: delete_${singular} is the Trash.`,
-    { id: z.string().describe(`The ${singular}'s id.`) },
+    { id: pathId.describe(`The ${singular}'s id.`) },
     async ({ id }) =>
-      guard(async () => jsonResult(await client.post(`${basePath}/${id}/archive`))),
+      guard(async () => jsonResult(await client.post(`${basePath}/${seg(id)}/archive`))),
   );
 
   tool(
@@ -645,8 +652,8 @@ function registerArchiveTools(
       `archived is not an error: it answers \`changed: false\`. A ${singular} in ` +
       `the Trash is not found here: restore_${singular} it first. Answers ` +
       `{ id, archived, changed, archivedAt }.`,
-    { id: z.string().describe(`The ${singular}'s id.`) },
+    { id: pathId.describe(`The ${singular}'s id.`) },
     async ({ id }) =>
-      guard(async () => jsonResult(await client.post(`${basePath}/${id}/unarchive`))),
+      guard(async () => jsonResult(await client.post(`${basePath}/${seg(id)}/unarchive`))),
   );
 }

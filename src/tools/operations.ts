@@ -29,6 +29,7 @@ import { z } from "zod";
 
 import type { AxonityClient } from "../client.js";
 import { guard, jsonResult } from "./result.js";
+import { pathId, seg } from "../ids.js";
 
 /** Filters `GET /task-queue` and its export share, spelled as the routes take them. */
 const TASK_FILTERS = {
@@ -89,8 +90,7 @@ export function registerOperationsTools(
         .describe(
           'Who acted, e.g. "service_token" for external agents. Omit for everyone.',
         ),
-      serviceTokenId: z
-        .string()
+      serviceTokenId: pathId
         .optional()
         .describe("Narrow to one credential's actions."),
       entityType: z.string().optional().describe("Only events about this entity type."),
@@ -201,9 +201,9 @@ export function registerOperationsTools(
     "read_task_queue_item",
     "One background task in full — its state, its payload and why it is where " +
       "it is. The detail behind a row from list_task_queue.",
-    { taskId: z.string().describe("The task's id, from list_task_queue.") },
+    { taskId: pathId.describe("The task's id, from list_task_queue.") },
     async ({ taskId }) =>
-      guard(async () => jsonResult(await client.get(`/api/v1/task-queue/${taskId}`))),
+      guard(async () => jsonResult(await client.get(`/api/v1/task-queue/${seg(taskId)}`))),
   );
 
   server.tool(

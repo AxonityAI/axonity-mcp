@@ -22,6 +22,7 @@ import { z } from "zod";
 
 import type { AxonityClient } from "../client.js";
 import { guard, jsonResult } from "./result.js";
+import { pathId, seg } from "../ids.js";
 
 /** A required literal — an agent cannot satisfy it by filling in a default. */
 const CONFIRM = z
@@ -38,10 +39,10 @@ export function registerTriggerTools(
     "list_webhook_triggers",
     "List a workflow's webhook triggers. Secrets are never returned — a " +
       "trigger's token is shown only once, when it is created or rotated.",
-    { workflowId: z.string().describe("The workflow's id.") },
+    { workflowId: pathId.describe("The workflow's id.") },
     async ({ workflowId }) =>
       guard(async () =>
-        jsonResult(await client.get(`/api/v1/workflows/${workflowId}/webhook-triggers`)),
+        jsonResult(await client.get(`/api/v1/workflows/${seg(workflowId)}/webhook-triggers`)),
       ),
   );
 
@@ -51,9 +52,8 @@ export function registerTriggerTools(
       "plaintext token — shown ONCE and never retrievable again. Hand the token " +
       "to your human immediately; do not store it in an entity field.",
     {
-      workflowId: z.string().describe("The workflow's id."),
-      triggerId: z
-        .string()
+      workflowId: pathId.describe("The workflow's id."),
+      triggerId: pathId
         .describe("The id of the trigger node in the workflow document."),
       expectedInputSchema: z
         .record(z.unknown())
@@ -63,7 +63,7 @@ export function registerTriggerTools(
     async ({ workflowId, triggerId, expectedInputSchema }) =>
       guard(async () =>
         jsonResult(
-          await client.post(`/api/v1/workflows/${workflowId}/webhook-triggers`, {
+          await client.post(`/api/v1/workflows/${seg(workflowId)}/webhook-triggers`, {
             triggerId,
             ...(expectedInputSchema ? { expectedInputSchema } : {}),
           }),
@@ -77,12 +77,12 @@ export function registerTriggerTools(
       "The old token keeps working for a short grace period so callers can be " +
       "migrated.",
     {
-      webhookId: z.string().describe("The webhook trigger's id."),
+      webhookId: pathId.describe("The webhook trigger's id."),
       confirm: CONFIRM,
     },
     async ({ webhookId }) =>
       guard(async () =>
-        jsonResult(await client.post(`/api/v1/webhook-triggers/${webhookId}/rotate`)),
+        jsonResult(await client.post(`/api/v1/webhook-triggers/${seg(webhookId)}/rotate`)),
       ),
   );
 
@@ -91,12 +91,12 @@ export function registerTriggerTools(
     "Delete a webhook trigger. HARD delete — the row is removed and cannot be " +
       "restored, and any caller using its token starts failing immediately.",
     {
-      webhookId: z.string().describe("The webhook trigger's id."),
+      webhookId: pathId.describe("The webhook trigger's id."),
       confirm: CONFIRM,
     },
     async ({ webhookId }) =>
       guard(async () => {
-        await client.del(`/api/v1/webhook-triggers/${webhookId}`);
+        await client.del(`/api/v1/webhook-triggers/${seg(webhookId)}`);
         return jsonResult({ deleted: true, webhookId });
       }),
   );
@@ -106,10 +106,10 @@ export function registerTriggerTools(
   server.tool(
     "list_cron_schedules",
     "List a workflow's cron schedules, with their next and last fire times.",
-    { workflowId: z.string().describe("The workflow's id.") },
+    { workflowId: pathId.describe("The workflow's id.") },
     async ({ workflowId }) =>
       guard(async () =>
-        jsonResult(await client.get(`/api/v1/workflows/${workflowId}/cron-schedules`)),
+        jsonResult(await client.get(`/api/v1/workflows/${seg(workflowId)}/cron-schedules`)),
       ),
   );
 
@@ -139,9 +139,8 @@ export function registerTriggerTools(
       "from the parser that validates it. A malformed expression or an unknown " +
       "timezone is a 422.",
     {
-      workflowId: z.string().describe("The workflow's id."),
-      triggerId: z
-        .string()
+      workflowId: pathId.describe("The workflow's id."),
+      triggerId: pathId
         .describe(
           "The id of the trigger node in the workflow's PUBLISHED document. An " +
             "id that is not there is refused.",
@@ -170,7 +169,7 @@ export function registerTriggerTools(
     async ({ workflowId, triggerId, cronExpr, rules, timezone, enabled }) =>
       guard(async () =>
         jsonResult(
-          await client.post(`/api/v1/workflows/${workflowId}/cron-schedules`, {
+          await client.post(`/api/v1/workflows/${seg(workflowId)}/cron-schedules`, {
             triggerId,
             ...(cronExpr !== undefined ? { cronExpr } : {}),
             ...(rules !== undefined ? { rules } : {}),
@@ -188,14 +187,14 @@ export function registerTriggerTools(
       "from 'we do not do this any more'. Reach for delete_cron_schedule only " +
       "when the schedule is genuinely finished.",
     {
-      scheduleId: z.string().describe("The cron schedule's id."),
+      scheduleId: pathId.describe("The cron schedule's id."),
       enabled: z
         .boolean()
         .describe("true arms the schedule, false pauses it without losing it."),
     },
     async ({ scheduleId, enabled }) =>
       guard(async () =>
-        jsonResult(await client.patch(`/api/v1/cron-schedules/${scheduleId}`, { enabled })),
+        jsonResult(await client.patch(`/api/v1/cron-schedules/${seg(scheduleId)}`, { enabled })),
       ),
   );
 
@@ -208,10 +207,10 @@ export function registerTriggerTools(
       "consume the run it was going to make. " +
       "\n\nIt returns as soon as the run is queued, not when it finishes — " +
       "follow it with list_runs or read_run_outline.",
-    { scheduleId: z.string().describe("The cron schedule's id.") },
+    { scheduleId: pathId.describe("The cron schedule's id.") },
     async ({ scheduleId }) =>
       guard(async () =>
-        jsonResult(await client.post(`/api/v1/cron-schedules/${scheduleId}/run-now`)),
+        jsonResult(await client.post(`/api/v1/cron-schedules/${seg(scheduleId)}/run-now`)),
       ),
   );
 
@@ -236,12 +235,12 @@ export function registerTriggerTools(
       "how you stop a schedule for a while: it destroys the timetable an author " +
       "wrote and leaves nothing saying it ever existed.",
     {
-      scheduleId: z.string().describe("The cron schedule's id."),
+      scheduleId: pathId.describe("The cron schedule's id."),
       confirm: CONFIRM,
     },
     async ({ scheduleId }) =>
       guard(async () => {
-        await client.del(`/api/v1/cron-schedules/${scheduleId}`);
+        await client.del(`/api/v1/cron-schedules/${seg(scheduleId)}`);
         return jsonResult({ deleted: true, scheduleId });
       }),
   );
@@ -295,11 +294,11 @@ export function registerTriggerTools(
       "change either, edit the trigger element's `config` in the workflow and " +
       "publish — not create_/update_conditional_trigger." +
       AUTHORED_IN_THE_DOCUMENT,
-    { workflowId: z.string().describe("The workflow's id.") },
+    { workflowId: pathId.describe("The workflow's id.") },
     async ({ workflowId }) =>
       guard(async () =>
         jsonResult(
-          await client.get(`/api/v1/workflows/${workflowId}/conditional-triggers`),
+          await client.get(`/api/v1/workflows/${seg(workflowId)}/conditional-triggers`),
         ),
       ),
   );
@@ -338,14 +337,12 @@ export function registerTriggerTools(
       "on the trigger element's `config` in the workflow instead." +
       AUTHORED_IN_THE_DOCUMENT,
     {
-      workflowId: z.string().describe("The workflow's id."),
-      triggerId: z
-        .string()
+      workflowId: pathId.describe("The workflow's id."),
+      triggerId: pathId
         .describe(
           "The id of the trigger element in the workflow document — a UUID.",
         ),
-      agentId: z
-        .string()
+      agentId: pathId
         .describe(
           "The agent this start belongs to. Not what decides whether the beat " +
             "fires — the check on the trigger element does.",
@@ -369,7 +366,7 @@ export function registerTriggerTools(
     async ({ workflowId, triggerId, agentId, conditionText, repeatIntervalMinutes, enabled }) =>
       guard(async () =>
         jsonResult(
-          await client.post(`/api/v1/workflows/${workflowId}/conditional-triggers`, {
+          await client.post(`/api/v1/workflows/${seg(workflowId)}/conditional-triggers`, {
             // Required by the platform's body schema (ConditionalTriggerIn);
             // the route then overrides it with the path.
             workflowId,
@@ -395,10 +392,10 @@ export function registerTriggerTools(
       "it." +
       AUTHORED_IN_THE_DOCUMENT,
     {
-      triggerId: z.string().describe("The conditional trigger's id."),
+      triggerId: pathId.describe("The conditional trigger's id."),
       conditionText: z.string().min(1).max(2000).optional(),
       repeatIntervalMinutes: z.number().int().min(5).max(10080).optional(),
-      agentId: z.string().optional(),
+      agentId: pathId.optional(),
       enabled: z.boolean().optional(),
     },
     async ({ triggerId, conditionText, repeatIntervalMinutes, agentId, enabled }) =>
@@ -411,7 +408,7 @@ export function registerTriggerTools(
           ),
         );
         return jsonResult(
-          await client.patch(`/api/v1/conditional-triggers/${triggerId}`, body),
+          await client.patch(`/api/v1/conditional-triggers/${seg(triggerId)}`, body),
         );
       }),
   );
@@ -424,12 +421,12 @@ export function registerTriggerTools(
       "for good, remove the element (`remove_trigger`) and publish — that " +
       "deletes the row too.",
     {
-      triggerId: z.string().describe("The conditional trigger's id."),
+      triggerId: pathId.describe("The conditional trigger's id."),
       confirm: CONFIRM,
     },
     async ({ triggerId }) =>
       guard(async () => {
-        await client.del(`/api/v1/conditional-triggers/${triggerId}`);
+        await client.del(`/api/v1/conditional-triggers/${seg(triggerId)}`);
         return jsonResult({ deleted: true, triggerId });
       }),
   );

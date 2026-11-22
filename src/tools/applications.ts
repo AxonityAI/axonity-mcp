@@ -22,13 +22,15 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 
 import type { AxonityClient } from "../client.js";
+import { assertPlaceholderCredentials } from "./credentials.js";
 import { guard, jsonResult } from "./result.js";
+import { pathId, seg } from "../ids.js";
 
 const APPLICATIONS = "/api/v1/applications";
 const EXECUTORS = "/api/v1/executors";
 
-const APPLICATION_ID = z.string().describe("The application's id.");
-const EXECUTOR_ID = z.string().describe("The executor's id.");
+const APPLICATION_ID = pathId.describe("The application's id.");
+const EXECUTOR_ID = pathId.describe("The executor's id.");
 
 const ADMIN_ONLY =
   "ADMINISTRATOR ONLY on the platform: a token acts with the role of the " +
@@ -70,7 +72,7 @@ export function registerApplicationTools(
       `set.\n\n${ADMIN_ONLY}`,
     { id: APPLICATION_ID },
     async ({ id }) =>
-      guard(async () => jsonResult(await client.get(`${APPLICATIONS}/${id}/executors`))),
+      guard(async () => jsonResult(await client.get(`${APPLICATIONS}/${seg(id)}/executors`))),
   );
 
   server.tool(
@@ -91,7 +93,7 @@ export function registerApplicationTools(
     },
     async ({ id, executorIds }) =>
       guard(async () =>
-        jsonResult(await client.put(`${APPLICATIONS}/${id}/executors`, { executorIds })),
+        jsonResult(await client.put(`${APPLICATIONS}/${seg(id)}/executors`, { executorIds })),
       ),
   );
 
@@ -114,7 +116,7 @@ export function registerApplicationTools(
       "and which published limits it confirmed per application. Read-only, " +
       "and never a token.",
     { id: EXECUTOR_ID },
-    async ({ id }) => guard(async () => jsonResult(await client.get(`${EXECUTORS}/${id}`))),
+    async ({ id }) => guard(async () => jsonResult(await client.get(`${EXECUTORS}/${seg(id)}`))),
   );
 
   server.tool(
@@ -124,7 +126,7 @@ export function registerApplicationTools(
       `set_application_executors on the application.\n\n${ADMIN_ONLY}`,
     { id: EXECUTOR_ID },
     async ({ id }) =>
-      guard(async () => jsonResult(await client.get(`${EXECUTORS}/${id}/applications`))),
+      guard(async () => jsonResult(await client.get(`${EXECUTORS}/${seg(id)}/applications`))),
   );
 
   server.tool(
@@ -155,7 +157,7 @@ export function registerApplicationTools(
     async ({ id, kind, limit, cursor }) =>
       guard(async () =>
         jsonResult(
-          await client.get(`${APPLICATIONS}/${id}/knowledge`, { kind, limit, cursor }),
+          await client.get(`${APPLICATIONS}/${seg(id)}/knowledge`, { kind, limit, cursor }),
         ),
       ),
   );
@@ -167,13 +169,13 @@ export function registerApplicationTools(
       `restore_application_knowledge.\n\n${PAGE_NOTE}`,
     {
       id: APPLICATION_ID,
-      knowledgeId: z.string().describe("The entry's id, from list_application_knowledge."),
+      knowledgeId: pathId.describe("The entry's id, from list_application_knowledge."),
       ...PAGING,
     },
     async ({ id, knowledgeId, limit, cursor }) =>
       guard(async () =>
         jsonResult(
-          await client.get(`${APPLICATIONS}/${id}/knowledge/${knowledgeId}/versions`, {
+          await client.get(`${APPLICATIONS}/${seg(id)}/knowledge/${seg(knowledgeId)}/versions`, {
             limit,
             cursor,
           }),
@@ -206,11 +208,14 @@ export function registerApplicationTools(
         .describe("The entry itself, in the shape of its kind (see above)."),
     },
     async ({ id, kind, entry }) =>
-      guard(async () =>
-        jsonResult(
-          await client.post(`${APPLICATIONS}/${id}/knowledge`, { kind, [kind]: entry }),
-        ),
-      ),
+      guard(async () => {
+        // Knowledge is readable by every token and goes to the executors, so a
+        // real value typed into a step would be the tenant's from then on.
+        assertPlaceholderCredentials(entry, "An application's knowledge");
+        return jsonResult(
+          await client.post(`${APPLICATIONS}/${seg(id)}/knowledge`, { kind, [kind]: entry }),
+        );
+      }),
   );
 
   server.tool(
@@ -222,12 +227,12 @@ export function registerApplicationTools(
       `\n\n${ADMIN_ONLY}`,
     {
       id: APPLICATION_ID,
-      knowledgeId: z.string().describe("The entry's id, from list_application_knowledge."),
+      knowledgeId: pathId.describe("The entry's id, from list_application_knowledge."),
     },
     async ({ id, knowledgeId }) =>
       guard(async () =>
         jsonResult(
-          await client.post(`${APPLICATIONS}/${id}/knowledge/${knowledgeId}/forget`),
+          await client.post(`${APPLICATIONS}/${seg(id)}/knowledge/${seg(knowledgeId)}/forget`),
         ),
       ),
   );
@@ -242,14 +247,13 @@ export function registerApplicationTools(
       `\n\n${ADMIN_ONLY}`,
     {
       id: APPLICATION_ID,
-      knowledgeId: z
-        .string()
+      knowledgeId: pathId
         .describe("The id of the version to bring back, or of the forgotten entry."),
     },
     async ({ id, knowledgeId }) =>
       guard(async () =>
         jsonResult(
-          await client.post(`${APPLICATIONS}/${id}/knowledge/${knowledgeId}/restore`),
+          await client.post(`${APPLICATIONS}/${seg(id)}/knowledge/${seg(knowledgeId)}/restore`),
         ),
       ),
   );

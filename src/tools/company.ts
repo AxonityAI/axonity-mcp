@@ -29,6 +29,7 @@ import { z } from "zod";
 
 import type { AxonityClient } from "../client.js";
 import { guard, jsonResult } from "./result.js";
+import { pathId, seg } from "../ids.js";
 
 export function registerCompanyTools(
   server: McpServer,
@@ -74,7 +75,7 @@ export function registerCompanyTools(
       "apply_company_mutation is. Like every other write here it produces a " +
       "DRAFT; a human publishes it.",
     {
-      templateId: z.string().describe("The template's id, from list_templates."),
+      templateId: pathId.describe("The template's id, from list_templates."),
       companyName: z
         .string()
         .optional()
@@ -154,7 +155,7 @@ export function registerCompanyTools(
     { version: z.number().int().describe("The integer checkpoint number, e.g. 3.") },
     async ({ version }) =>
       guard(async () =>
-        jsonResult(await client.get(`/api/v1/company/versions/${version}`)),
+        jsonResult(await client.get(`/api/v1/company/versions/${seg(version)}`)),
       ),
   );
 
@@ -164,7 +165,7 @@ export function registerCompanyTools(
       "UUID from list_company_versions), not the checkpoint number. Changes only " +
       "the draft; what is live stays live until a human publishes.",
     {
-      versionId: z.string().describe("The version row's UUID."),
+      versionId: pathId.describe("The version row's UUID."),
       expectedVersion: z
         .number()
         .int()
@@ -173,7 +174,7 @@ export function registerCompanyTools(
     async ({ versionId, expectedVersion }) =>
       guard(async () =>
         jsonResult(
-          await client.post(`/api/v1/company/versions/${versionId}/restore`, {
+          await client.post(`/api/v1/company/versions/${seg(versionId)}/restore`, {
             expectedVersion,
           }),
         ),
@@ -279,7 +280,7 @@ export function registerCompanyTools(
     async ({ majorVersion, name }) =>
       guard(async () =>
         jsonResult(
-          await client.patch(`/api/v1/company/versions/major/${majorVersion}`, { name }),
+          await client.patch(`/api/v1/company/versions/major/${seg(majorVersion)}`, { name }),
         ),
       ),
   );

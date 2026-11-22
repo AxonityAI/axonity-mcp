@@ -279,7 +279,7 @@ describe("the route surface is fully decided (#59)", () => {
    */
   it("every deny rule carries a written reason", () => {
     const source = readFileSync(
-      fileURLToPath(new URL("./denyList.ts", import.meta.url)),
+      fileURLToPath(new URL("../src/denyList.ts", import.meta.url)),
       "utf8",
     );
     const start = source.indexOf("const FORBIDDEN");

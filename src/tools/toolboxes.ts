@@ -49,6 +49,7 @@ import { z } from "zod";
 import type { AxonityClient } from "../client.js";
 import { assertPlaceholderCredentials } from "./credentials.js";
 import { guard, jsonResult } from "./result.js";
+import { pathId, seg } from "../ids.js";
 
 /** A required literal — an agent cannot satisfy it by filling in a default. */
 const CONFIRM = z
@@ -136,7 +137,7 @@ export function registerToolboxTools(server: McpServer, client: AxonityClient): 
       "422, and so is an empty description. An archived box is not edited: " +
       "\"… is archived. Unarchive it first.\" — call unarchive_toolbox first.",
     {
-      toolboxId: z.string().describe("The toolbox's id."),
+      toolboxId: pathId.describe("The toolbox's id."),
       expectedVersion: z
         .number()
         .int()
@@ -150,7 +151,7 @@ export function registerToolboxTools(server: McpServer, client: AxonityClient): 
     async ({ toolboxId, expectedVersion, name, description }) =>
       guard(async () =>
         jsonResult(
-          await client.put(`/api/v1/toolboxes/${toolboxId}`, {
+          await client.put(`/api/v1/toolboxes/${seg(toolboxId)}`, {
             expectedVersion,
             ...(name !== undefined ? { name } : {}),
             ...(description !== undefined ? { description } : {}),
@@ -174,7 +175,7 @@ export function registerToolboxTools(server: McpServer, client: AxonityClient): 
       "401 from the partner API, which says nothing about what changed. " +
       "\n\nRead the box first for its `version`; a stale one is a 409.",
     {
-      toolboxId: z.string().describe("The toolbox's id."),
+      toolboxId: pathId.describe("The toolbox's id."),
       expectedVersion: z
         .number()
         .int()
@@ -187,7 +188,7 @@ export function registerToolboxTools(server: McpServer, client: AxonityClient): 
           // Note the spelling: this route takes the lock as `expected_version`,
           // where the tool/agent/workflow deletes take `expectedVersion`. A real
           // backend inconsistency, and not one a caller should have to know.
-          await client.del(`/api/v1/toolboxes/${toolboxId}`, {
+          await client.del(`/api/v1/toolboxes/${seg(toolboxId)}`, {
             expected_version: expectedVersion,
           }),
         ),
@@ -214,7 +215,7 @@ export function registerToolboxTools(server: McpServer, client: AxonityClient): 
       "Branching boxes) are locked: the API refuses and NAMES the tool it " +
       "refused — read that name rather than bisecting your selection by hand.",
     {
-      toolboxId: z.string().describe("The toolbox's id."),
+      toolboxId: pathId.describe("The toolbox's id."),
       toolIds: z
         .array(z.string())
         .describe(
@@ -224,7 +225,7 @@ export function registerToolboxTools(server: McpServer, client: AxonityClient): 
     },
     async ({ toolboxId, toolIds }) =>
       guard(async () =>
-        jsonResult(await client.put(`/api/v1/toolboxes/${toolboxId}/tools`, { toolIds })),
+        jsonResult(await client.put(`/api/v1/toolboxes/${seg(toolboxId)}/tools`, { toolIds })),
       ),
   );
 
@@ -248,9 +249,8 @@ export function registerToolboxTools(server: McpServer, client: AxonityClient): 
       "A platform-shipped tool cannot be moved; the API names it in the " +
       "refusal.",
     {
-      toolId: z.string().describe("The tool's id."),
-      toolboxId: z
-        .string()
+      toolId: pathId.describe("The tool's id."),
+      toolboxId: pathId
         .nullable()
         .describe(
           "Id of the toolbox to move it into, or null to take it out of its " +
@@ -260,7 +260,7 @@ export function registerToolboxTools(server: McpServer, client: AxonityClient): 
     },
     async ({ toolId, toolboxId }) =>
       guard(async () =>
-        jsonResult(await client.put(`/api/v1/tools/${toolId}/toolbox`, { toolboxId })),
+        jsonResult(await client.put(`/api/v1/tools/${seg(toolId)}/toolbox`, { toolboxId })),
       ),
   );
 
@@ -281,7 +281,7 @@ export function registerToolboxTools(server: McpServer, client: AxonityClient): 
       "versions, so it takes effect without a publication — and an archived box " +
       "is not edited here either.",
     {
-      toolboxId: z.string().describe("The toolbox's id."),
+      toolboxId: pathId.describe("The toolbox's id."),
       authConfig: z
         .record(z.unknown())
         .nullable()
@@ -296,7 +296,7 @@ export function registerToolboxTools(server: McpServer, client: AxonityClient): 
         // it runs on create_tool/create_connector. Same walk, same message.
         assertPlaceholderCredentials({ authConfig });
         return jsonResult(
-          await client.put(`/api/v1/toolboxes/${toolboxId}/auth`, { authConfig }),
+          await client.put(`/api/v1/toolboxes/${seg(toolboxId)}/auth`, { authConfig }),
         );
       }),
   );
@@ -310,10 +310,10 @@ export function registerToolboxTools(server: McpServer, client: AxonityClient): 
       "the warning can name them. " +
       "\n\nAn empty list is an answer: either the box has no shared credential, " +
       "or every tool in it carries its own. Read-only.",
-    { toolboxId: z.string().describe("The toolbox's id.") },
+    { toolboxId: pathId.describe("The toolbox's id.") },
     async ({ toolboxId }) =>
       guard(async () =>
-        jsonResult(await client.get(`/api/v1/toolboxes/${toolboxId}/dependent-tools`)),
+        jsonResult(await client.get(`/api/v1/toolboxes/${seg(toolboxId)}/dependent-tools`)),
       ),
   );
 
@@ -324,9 +324,9 @@ export function registerToolboxTools(server: McpServer, client: AxonityClient): 
       "both are refused while an agent holds the box, and the agents named " +
       "there are these. An agent that holds only single tools of the box " +
       "(`toolIds`) is not listed. Read-only.",
-    { toolboxId: z.string().describe("The toolbox's id.") },
+    { toolboxId: pathId.describe("The toolbox's id.") },
     async ({ toolboxId }) =>
-      guard(async () => jsonResult(await client.get(`/api/v1/toolboxes/${toolboxId}/agents`))),
+      guard(async () => jsonResult(await client.get(`/api/v1/toolboxes/${seg(toolboxId)}/agents`))),
   );
 
   server.tool(
@@ -337,8 +337,8 @@ export function registerToolboxTools(server: McpServer, client: AxonityClient): 
       "none), viaToolboxAgents (live agents that hold that whole toolbox, so " +
       "reach the tool through it) }. An agent that holds the tool's whole box " +
       "is counted under `viaToolboxAgents`, not under `agents`. Read-only.",
-    { id: z.string().describe("The tool's id.") },
+    { id: pathId.describe("The tool's id.") },
     async ({ id }) =>
-      guard(async () => jsonResult(await client.get(`/api/v1/tools/${id}/used-by`))),
+      guard(async () => jsonResult(await client.get(`/api/v1/tools/${seg(id)}/used-by`))),
   );
 }
