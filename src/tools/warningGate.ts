@@ -15,6 +15,7 @@
  */
 
 import type { AxonityClient } from "../client.js";
+import { seg } from "../ids.js";
 
 interface ValidationIssue {
   code?: string;
@@ -26,7 +27,7 @@ export async function refuseWhileWorkflowWarns(
   client: AxonityClient,
   workflowId: string,
 ): Promise<void> {
-  const verdict = (await client.post(`/api/v1/workflows/${workflowId}/validate`)) as {
+  const verdict = (await client.post(`/api/v1/workflows/${seg(workflowId)}/validate`)) as {
     issues?: ValidationIssue[];
   } | null;
   const warnings = (verdict?.issues ?? []).filter((i) => i?.severity === "warning");

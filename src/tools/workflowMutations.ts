@@ -24,6 +24,7 @@ import { z } from "zod";
 import type { AxonityClient } from "../client.js";
 import { AxonityApiError } from "../errors.js";
 import { guard, jsonResult } from "./result.js";
+import { pathId, seg } from "../ids.js";
 
 /** A required literal — an agent cannot satisfy it by filling in a default. */
 const CONFIRM = z
@@ -257,7 +258,7 @@ export async function catalogVerdict(
   workflowId: string,
 ): Promise<Record<string, unknown>> {
   try {
-    const v = await client.post<ValidateResponse>(`/api/v1/workflows/${workflowId}/validate`);
+    const v = await client.post<ValidateResponse>(`/api/v1/workflows/${seg(workflowId)}/validate`);
     const issues = Array.isArray(v?.issues) ? v.issues : [];
     const kept = issues.slice(0, MAX_VALIDATION_ISSUES);
     return {
@@ -357,7 +358,7 @@ export function registerWorkflowMutations(
       "PRODUCING step's output; a downstream description changing by itself is this " +
       "rule at work, and the inputs it re-derived are listed.",
     {
-      id: z.string().describe("The workflow's id."),
+      id: pathId.describe("The workflow's id."),
       expectedVersion: z
         .number()
         .int()
@@ -387,7 +388,7 @@ export function registerWorkflowMutations(
         for (const [index, body] of bodies.entries()) {
           try {
             last = await client.post<MutationResponse>(
-              `/api/v1/workflows/${id}/mutations`,
+              `/api/v1/workflows/${seg(id)}/mutations`,
               { type: body.type, payload: body.payload, expectedVersion: version },
             );
           } catch (cause) {
@@ -424,7 +425,7 @@ export function registerWorkflowMutations(
       "unchanged passes. So read, edit, write is safe, and re-linking a " +
       "workflow is a separate call.",
     {
-      id: z.string().describe("The workflow's id."),
+      id: pathId.describe("The workflow's id."),
       expectedVersion: z
         .number()
         .int()
@@ -437,7 +438,7 @@ export function registerWorkflowMutations(
     async ({ id, expectedVersion, document, returnDocument }) =>
       guard(async () => {
         const response = await client.put<MutationResponse>(
-          `/api/v1/workflows/${id}`,
+          `/api/v1/workflows/${seg(id)}`,
           { expectedVersion, document },
         );
         // One document written, so appliedCount is 1 — the same shape as a
@@ -479,11 +480,11 @@ export function registerWorkflowMutations(
       "\n\nAn empty `triggers` list means the workflow has never been " +
       "published: the contract is read from the published document. That is an " +
       "answer, not an error.",
-    { workflowId: z.string().describe("The workflow's id.") },
+    { workflowId: pathId.describe("The workflow's id.") },
     async ({ workflowId }) =>
       guard(async () =>
         jsonResult(
-          await client.get(`/api/v1/workflows/${workflowId}/trigger-parameters`),
+          await client.get(`/api/v1/workflows/${seg(workflowId)}/trigger-parameters`),
         ),
       ),
   );
@@ -498,7 +499,7 @@ export function registerWorkflowMutations(
       workflows: z
         .array(
           z.object({
-            id: z.string().describe("The workflow's id."),
+            id: pathId.describe("The workflow's id."),
             expectedVersion: z
               .number()
               .int()

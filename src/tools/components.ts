@@ -36,6 +36,7 @@ import { z } from "zod";
 
 import type { AxonityClient } from "../client.js";
 import { guard, jsonResult } from "./result.js";
+import { pathId, seg } from "../ids.js";
 
 export function registerComponentTools(
   server: McpServer,
@@ -69,11 +70,11 @@ export function registerComponentTools(
       "out when it is higher than you want. " +
       "\n\nAn unknown workflow id is a 404, not an empty list: a workflow that " +
       "names nothing and a workflow that does not exist are different answers.",
-    { workflowId: z.string().describe("The workflow's id.") },
+    { workflowId: pathId.describe("The workflow's id.") },
     async ({ workflowId }) =>
       guard(async () =>
         jsonResult(
-          await client.get(`/api/v1/workflows/${workflowId}/components`),
+          await client.get(`/api/v1/workflows/${seg(workflowId)}/components`),
         ),
       ),
   );
@@ -96,15 +97,14 @@ export function registerComponentTools(
       "\n\nAGENTS ONLY today — `kind` accepts nothing else, and the backend " +
       "refuses anything else rather than half-doing it.",
     {
-      workflowId: z.string().describe("The workflow that should get its own copy."),
+      workflowId: pathId.describe("The workflow that should get its own copy."),
       kind: z
         .literal("agent")
         .describe(
           "What is being duplicated. Only `agent` is supported; the route " +
             "declares it as a constant, not as an open vocabulary.",
         ),
-      entityId: z
-        .string()
+      entityId: pathId
         .min(1)
         .max(200)
         .describe("The shared component's id, from list_workflow_components."),
@@ -113,7 +113,7 @@ export function registerComponentTools(
       guard(async () =>
         jsonResult(
           await client.post(
-            `/api/v1/workflows/${workflowId}/components/duplicate`,
+            `/api/v1/workflows/${seg(workflowId)}/components/duplicate`,
             { kind, entityId },
           ),
         ),

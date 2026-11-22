@@ -20,6 +20,7 @@ import { z } from "zod";
 
 import type { AxonityClient } from "../client.js";
 import { guard, jsonResult } from "./result.js";
+import { pathId, seg } from "../ids.js";
 
 const AUDIENCES = "/api/v1/audiences";
 const ROLES = "/api/v1/roles";
@@ -68,8 +69,8 @@ export function registerAccessTools(server: McpServer, client: AxonityClient): v
     "One audience: its name, description, and whether it is inside the " +
       "workspace (`internal`). Read-only. An audience is whom knowledge is " +
       "meant for — see list_audiences.",
-    { id: z.string().describe("The audience's id, from list_audiences.") },
-    async ({ id }) => guard(async () => jsonResult(await client.get(`${AUDIENCES}/${id}`))),
+    { id: pathId.describe("The audience's id, from list_audiences.") },
+    async ({ id }) => guard(async () => jsonResult(await client.get(`${AUDIENCES}/${seg(id)}`))),
   );
 
   server.tool(
@@ -98,8 +99,8 @@ export function registerAccessTools(server: McpServer, client: AxonityClient): v
     "One role: up to which level it reads, for which audiences, which " +
       "audiences it maintains, and how many colleagues hold it. Read-only. " +
       "The audiences are ids — read_audience or list_audiences names them.",
-    { id: z.string().describe("The role's id, from list_roles.") },
-    async ({ id }) => guard(async () => jsonResult(await client.get(`${ROLES}/${id}`))),
+    { id: pathId.describe("The role's id, from list_roles.") },
+    async ({ id }) => guard(async () => jsonResult(await client.get(`${ROLES}/${seg(id)}`))),
   );
 
   server.tool(
@@ -108,8 +109,8 @@ export function registerAccessTools(server: McpServer, client: AxonityClient): v
       "answer \"can this person read that?\": read each role with read_role. " +
       "With several roles, the widest applies. The colleague's id comes from " +
       "list_users.",
-    { userId: z.string().describe("The colleague's user id, from list_users.") },
+    { userId: pathId.describe("The colleague's user id, from list_users.") },
     async ({ userId }) =>
-      guard(async () => jsonResult(await client.get(`/api/v1/users/${userId}/roles`))),
+      guard(async () => jsonResult(await client.get(`/api/v1/users/${seg(userId)}/roles`))),
   );
 }

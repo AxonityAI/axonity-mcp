@@ -48,6 +48,7 @@ import { z } from "zod";
 
 import type { AxonityClient } from "../client.js";
 import { guard, jsonResult } from "./result.js";
+import { pathId, seg } from "../ids.js";
 
 const BASE = "/api/v1/data-tables";
 
@@ -96,7 +97,7 @@ export function registerDataTableTools(
       "\n\nThis writes the DRAFT. A run reads the published table, so the row " +
       "is not live until the table is published (request_publish_data_table).",
     {
-      id: z.string().describe("The table's id."),
+      id: pathId.describe("The table's id."),
       values: z
         .record(z.unknown())
         .describe(
@@ -105,7 +106,7 @@ export function registerDataTableTools(
         ),
     },
     async ({ id, values }) =>
-      guard(async () => jsonResult(await client.post(`${BASE}/${id}/rows`, { values }))),
+      guard(async () => jsonResult(await client.post(`${BASE}/${seg(id)}/rows`, { values }))),
   );
 
   server.tool(
@@ -120,7 +121,7 @@ export function registerDataTableTools(
       "columns actually moved — plus the table's new `version`. " +
       "\n\nThis writes the DRAFT; publish before a run can see it.",
     {
-      id: z.string().describe("The table's id."),
+      id: pathId.describe("The table's id."),
       ...MATCH,
       changes: z
         .record(z.unknown())
@@ -133,7 +134,7 @@ export function registerDataTableTools(
       guard(async () =>
         jsonResult(
           await client.patch(
-            `${BASE}/${id}/rows`,
+            `${BASE}/${seg(id)}/rows`,
             { changes },
             { match_column: matchColumn, match_value: matchValue },
           ),
@@ -152,7 +153,7 @@ export function registerDataTableTools(
       "it until the table is published again, which is the only undo. " +
       "\n\nThe response also carries the table's new `version` and `total`.",
     {
-      id: z.string().describe("The table's id."),
+      id: pathId.describe("The table's id."),
       ...MATCH,
       confirm: z
         .literal(true)
@@ -164,7 +165,7 @@ export function registerDataTableTools(
     async ({ id, matchColumn, matchValue }) =>
       guard(async () =>
         jsonResult(
-          await client.del(`${BASE}/${id}/rows`, {
+          await client.del(`${BASE}/${seg(id)}/rows`, {
             match_column: matchColumn,
             match_value: matchValue,
           }),
@@ -193,7 +194,7 @@ export function registerDataTableTools(
       "through a different set of rows. Start again from the first page — that " +
       "is the correct response, not an error to work around.",
     {
-      tableId: z.string().describe("The table's id."),
+      tableId: pathId.describe("The table's id."),
       q: z
         .string()
         .optional()
@@ -223,7 +224,7 @@ export function registerDataTableTools(
         // The page envelope is forwarded WHOLE — unwrapping to `items` would
         // rebuild the silent truncation this tool exists to avoid.
         jsonResult(
-          await client.get(`${BASE}/${tableId}/rows`, { q, limit, cursor }),
+          await client.get(`${BASE}/${seg(tableId)}/rows`, { q, limit, cursor }),
         ),
       ),
   );
@@ -244,9 +245,9 @@ export function registerDataTableTools(
       "(`filledBy` is `author`, `workflow` or `source`) — its rows come from " +
       "an author or a workflow, or stay in their data source, and there is " +
       "nothing to run.",
-    { id: z.string().describe("The table's id.") },
+    { id: pathId.describe("The table's id.") },
     async ({ id }) =>
-      guard(async () => jsonResult(await client.post(`${BASE}/${id}/refresh`))),
+      guard(async () => jsonResult(await client.post(`${BASE}/${seg(id)}/refresh`))),
   );
 
   server.tool(
@@ -266,8 +267,8 @@ export function registerDataTableTools(
       "has been saved and not published has granted nothing yet. " +
       "\n\n`publishedMajorVersion: null` means the table has never been " +
       "published and nothing here is live.",
-    { id: z.string().describe("The table's id.") },
+    { id: pathId.describe("The table's id.") },
     async ({ id }) =>
-      guard(async () => jsonResult(await client.get(`${BASE}/${id}/tools`))),
+      guard(async () => jsonResult(await client.get(`${BASE}/${seg(id)}/tools`))),
   );
 }

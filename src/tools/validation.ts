@@ -14,6 +14,7 @@ import { z } from "zod";
 import type { AxonityClient } from "../client.js";
 import { guard, jsonResult } from "./result.js";
 import { refuseWhileWorkflowWarns } from "./warningGate.js";
+import { pathId, seg } from "../ids.js";
 
 export function registerValidationTools(
   server: McpServer,
@@ -44,8 +45,7 @@ export function registerValidationTools(
       "before telling anyone a workflow is ready. Call this after " +
       "apply_workflow_mutations and before request_publish_workflow.",
     {
-      workflowId: z
-        .string()
+      workflowId: pathId
         .optional()
         .describe(
           "Validate this STORED workflow against the tenant catalog. Omit if you " +
@@ -77,7 +77,7 @@ export function registerValidationTools(
         return jsonResult(
           workflowId === undefined
             ? await client.post("/api/v1/workflows/validate", { document })
-            : await client.post(`/api/v1/workflows/${workflowId}/validate`),
+            : await client.post(`/api/v1/workflows/${seg(workflowId)}/validate`),
         );
       }),
   );
@@ -89,7 +89,7 @@ export function registerValidationTools(
       "instead of guessing field names. Stateless, and safe for read-only service tokens.",
     {
       document: z.record(z.unknown()).describe("The workflow document."),
-      stepId: z.string().describe("The step whose reachable inputs you want."),
+      stepId: pathId.describe("The step whose reachable inputs you want."),
     },
     async ({ document, stepId }) =>
       guard(async () =>
@@ -285,10 +285,10 @@ export function registerApprovalTools(
       ONLY_YOUR_OWN_OR_ADMIN +
       WHAT_A_REQUEST_SAYS +
       CURRENT_REQUEST_VERSION,
-    { approvalId: z.string().describe("The approval's id, from request_publish_* or list_publish_approvals.") },
+    { approvalId: pathId.describe("The approval's id, from request_publish_* or list_publish_approvals.") },
     async ({ approvalId }) =>
       guard(async () =>
-        jsonResult(await client.get(`/api/v1/publish-approvals/${approvalId}`)),
+        jsonResult(await client.get(`/api/v1/publish-approvals/${seg(approvalId)}`)),
       ),
   );
 
@@ -342,8 +342,7 @@ export function registerApprovalTools(
                   "so its act/observe tools are rebuilt when it is approved. " +
                   "`flow` is the old word for `method` and is sent as it.",
               ),
-            entityId: z
-              .string()
+            entityId: pathId
               .optional()
               .describe(
                 "The entity's id. Omit ONLY for company, which is a singleton " +
@@ -410,8 +409,7 @@ export function registerApprovalTools(
       "what is live, request_publish_application next to this release — or " +
       "the workflow goes live on the tools of the older version.",
     {
-      workflowId: z
-        .string()
+      workflowId: pathId
         .describe("The workflow to release. Its closure is computed by the server."),
       changeSummary: z
         .string()
@@ -490,13 +488,12 @@ export function registerApprovalTools(
       WHAT_A_REQUEST_SAYS +
       CURRENT_REQUEST_VERSION,
     {
-      releaseId: z
-        .string()
+      releaseId: pathId
         .describe("The release's id, from request_publish_release or list_publish_releases."),
     },
     async ({ releaseId }) =>
       guard(async () =>
-        jsonResult(await client.get(`/api/v1/publish-approvals/release/${releaseId}`)),
+        jsonResult(await client.get(`/api/v1/publish-approvals/release/${seg(releaseId)}`)),
       ),
   );
 
@@ -538,7 +535,7 @@ export function registerExecutionTools(
         .optional()
         .describe("Parameters passed into the entry-point function."),
       timeout: z.number().int().min(1).max(120).optional().describe("Seconds. Default 30."),
-      toolId: z.string().optional().describe("An existing tool id to run in context of."),
+      toolId: pathId.optional().describe("An existing tool id to run in context of."),
     },
     async ({ imports, functions, classes, inputParams, timeout, toolId }) =>
       guard(async () =>
@@ -569,7 +566,7 @@ export function registerExecutionTools(
       "platform-shipped (locked) tool, 422 for a connector, a builtin-backed " +
       "validator, or a tool with an empty implementation.",
     {
-      toolId: z.string().describe("The saved tool's id."),
+      toolId: pathId.describe("The saved tool's id."),
       inputParams: z
         .record(z.unknown())
         .optional()
@@ -582,7 +579,7 @@ export function registerExecutionTools(
     async ({ toolId, inputParams }) =>
       guard(async () =>
         jsonResult(
-          await client.post(`/api/v1/tools/${toolId}/dry-run`, {
+          await client.post(`/api/v1/tools/${seg(toolId)}/dry-run`, {
             inputParams: inputParams ?? {},
           }),
         ),
@@ -599,7 +596,7 @@ export function registerExecutionTools(
       "exists on the backend precisely so a client like this one can never reach " +
       "it, since it would otherwise let a caller exfiltrate a decrypted secret).",
     {
-      toolId: z.string().describe("The connector's tool id — must already be saved."),
+      toolId: pathId.describe("The connector's tool id — must already be saved."),
       inputParams: z
         .record(z.unknown())
         .optional()
@@ -608,7 +605,7 @@ export function registerExecutionTools(
     async ({ toolId, inputParams }) =>
       guard(async () =>
         jsonResult(
-          await client.post(`/api/v1/tools/${toolId}/execute-connector`, {
+          await client.post(`/api/v1/tools/${seg(toolId)}/execute-connector`, {
             ...(inputParams ? { inputParams } : {}),
           }),
         ),

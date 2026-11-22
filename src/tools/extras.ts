@@ -15,6 +15,7 @@ import type { AxonityClient } from "../client.js";
 import { assertPlaceholderCredentials } from "./credentials.js";
 import { defineTool } from "./aliases.js";
 import { detachResult, guard, jsonResult } from "./result.js";
+import { pathId, seg } from "../ids.js";
 
 /**
  * The persona is the agent's `persona` field (axonity-flow#2176): the
@@ -43,10 +44,10 @@ export function registerPersonaTools(
       "`list_persona_versions`, `list_deleted_persona_versions`, " +
       "`list_personas` and `list_deleted_personas`: a persona has no id, " +
       "versions or list of its own any more.",
-    { agentId: z.string().describe("The agent's id.") },
+    { agentId: pathId.describe("The agent's id.") },
     async ({ agentId }) =>
       guard(async () => {
-        const agent = (await client.get(`/api/v1/agents/${agentId}`)) as {
+        const agent = (await client.get(`/api/v1/agents/${seg(agentId)}`)) as {
           persona?: string | null;
           version?: number;
         };
@@ -76,7 +77,7 @@ export function registerPersonaTools(
       "persona's history is the agent's versions, and it goes live with " +
       "`request_publish_agent`.",
     {
-      agentId: z.string().describe("The agent's id."),
+      agentId: pathId.describe("The agent's id."),
       expectedVersion: z
         .number()
         .int()
@@ -86,7 +87,7 @@ export function registerPersonaTools(
     async ({ agentId, expectedVersion, persona }) =>
       guard(async () =>
         jsonResult(
-          await client.put(`/api/v1/agents/${agentId}`, { expectedVersion, persona }),
+          await client.put(`/api/v1/agents/${seg(agentId)}`, { expectedVersion, persona }),
         ),
       ),
   );
@@ -120,9 +121,8 @@ export function registerAgentTeamTools(
       "which then reads as no team. A copy of an agent lands in its " +
       "original's team.",
     {
-      agentId: z.string().describe("The agent's id."),
-      capabilityId: z
-        .string()
+      agentId: pathId.describe("The agent's id."),
+      capabilityId: pathId
         .max(255)
         .nullable()
         .describe(
@@ -131,7 +131,7 @@ export function registerAgentTeamTools(
     },
     async ({ agentId, capabilityId }) =>
       guard(async () =>
-        jsonResult(await client.put(`/api/v1/agents/${agentId}/team`, { capabilityId })),
+        jsonResult(await client.put(`/api/v1/agents/${seg(agentId)}/team`, { capabilityId })),
       ),
   );
 }
@@ -227,7 +227,9 @@ export function registerConnectorTools(
       guard(async () => {
         assertPlaceholderCredentials(fields);
         return jsonResult(
-          await client.post("/api/v1/tools", { type: "connector", ...fields }),
+          // `fields` first, so a `type` inside it cannot turn this into
+          // another kind of tool.
+          await client.post("/api/v1/tools", { ...fields, type: "connector" }),
         );
       }),
   );
@@ -239,7 +241,7 @@ export function registerConnectorTools(
       CONNECTOR_SHAPE +
       CONNECTOR_EFFECT_AND_FILE,
     {
-      id: z.string().describe("The connector (tool) id."),
+      id: pathId.describe("The connector (tool) id."),
       expectedVersion: z.number().int().describe("Version last read — 409 if stale."),
       fields: z.record(z.unknown()).describe("Fields to change (camelCase)."),
     },
@@ -247,10 +249,10 @@ export function registerConnectorTools(
       guard(async () => {
         assertPlaceholderCredentials(fields);
         return jsonResult(
-          await client.put(`/api/v1/tools/${id}`, {
+          await client.put(`/api/v1/tools/${seg(id)}`, {
+            ...fields,
             expectedVersion,
             type: "connector",
-            ...fields,
           }),
         );
       }),
@@ -335,7 +337,7 @@ export function registerAttachTools(
      */
     readBack?: string,
   ) => {
-    const shape = { [firstArg]: z.string(), [secondArg]: z.string() };
+    const shape = { [firstArg]: pathId, [secondArg]: pathId };
 
     server.tool(
       `attach_${subject}_to_${target}`,
@@ -375,7 +377,7 @@ export function registerAttachTools(
   link(
     "skill",
     "agent",
-    (agentId, skillId) => `/api/v1/agents/${agentId}/skills-v2/${skillId}`,
+    (agentId, skillId) => `/api/v1/agents/${seg(agentId)}/skills-v2/${seg(skillId)}`,
     "agentId",
     "skillId",
     "list_agent_skills",
@@ -388,7 +390,7 @@ export function registerAttachTools(
   link(
     "skill",
     "workflow",
-    (workflowId, skillId) => `/api/v1/workflows/${workflowId}/skills-v2/${skillId}`,
+    (workflowId, skillId) => `/api/v1/workflows/${seg(workflowId)}/skills-v2/${seg(skillId)}`,
     "workflowId",
     "skillId",
     "list_workflow_skills",
@@ -396,7 +398,7 @@ export function registerAttachTools(
   link(
     "policy",
     "agent",
-    (agentId, policyId) => `/api/v1/agents/${agentId}/policies/${policyId}`,
+    (agentId, policyId) => `/api/v1/agents/${seg(agentId)}/policies/${seg(policyId)}`,
     "agentId",
     "policyId",
     "list_agent_policies",
@@ -404,7 +406,7 @@ export function registerAttachTools(
   link(
     "reference",
     "agent",
-    (agentId, refId) => `/api/v1/agents/${agentId}/reference-docs/${refId}`,
+    (agentId, refId) => `/api/v1/agents/${seg(agentId)}/reference-docs/${seg(refId)}`,
     "agentId",
     "refId",
     "list_agent_reference_docs",
@@ -419,7 +421,7 @@ export function registerAttachTools(
     "reference",
     "workflow",
     (workflowId, refId) =>
-      `/api/v1/workflows/${workflowId}/reference-docs/${refId}`,
+      `/api/v1/workflows/${seg(workflowId)}/reference-docs/${seg(refId)}`,
     "workflowId",
     "refId",
     "list_workflow_reference_docs",
@@ -455,9 +457,8 @@ export function registerAttachTools(
         `rather than to the agent. Without it you see the agent on its own, ` +
         `which is not what a run of that workflow assembles.`,
       {
-        agentId: z.string().describe("The agent's id."),
-        workflowId: z
-          .string()
+        agentId: pathId.describe("The agent's id."),
+        workflowId: pathId
           .optional()
           .describe(
             "Compose the runtime view for this workflow. Omit for the agent's " +
@@ -493,12 +494,12 @@ export function registerAttachTools(
     );
   };
 
-  listLinks("skill", "skills", (id) => `/api/v1/agents/${id}/skills-v2`, "skills");
-  listLinks("policy", "policies", (id) => `/api/v1/agents/${id}/policies`, "policies");
+  listLinks("skill", "skills", (id) => `/api/v1/agents/${seg(id)}/skills-v2`, "skills");
+  listLinks("policy", "policies", (id) => `/api/v1/agents/${seg(id)}/policies`, "policies");
   listLinks(
     "reference_doc",
     "reference_docs",
-    (id) => `/api/v1/agents/${id}/reference-docs`,
+    (id) => `/api/v1/agents/${seg(id)}/reference-docs`,
     "references",
   );
 
@@ -540,7 +541,7 @@ export function registerAttachTools(
         `\n\nReturns IDENTITY by default; pass verbosity: "full" for whole ` +
         `bodies, which ${fullCost}.`,
       {
-        workflowId: z.string().describe("The workflow's id."),
+        workflowId: pathId.describe("The workflow's id."),
         verbosity: z
           .enum(["identity", "full"])
           .optional()
@@ -564,7 +565,7 @@ export function registerAttachTools(
   listWorkflowLinks(
     "skill",
     "skills",
-    (id) => `/api/v1/workflows/${id}/skills-v2`,
+    (id) => `/api/v1/workflows/${seg(id)}/skills-v2`,
     "skills",
     "a skill's playbook makes expensive",
     "skill",
@@ -572,7 +573,7 @@ export function registerAttachTools(
   listWorkflowLinks(
     "reference_doc",
     "reference_docs",
-    (id) => `/api/v1/workflows/${id}/reference-docs`,
+    (id) => `/api/v1/workflows/${seg(id)}/reference-docs`,
     "references",
     "a reference doc's content makes expensive",
     "reference",
@@ -621,13 +622,13 @@ export function registerDependencyTools(
             "which workflows call this one with a Run a workflow step. `flow` is " +
             "the old word for `method` and is read as it.",
         ),
-      entityId: z.string().describe("That entity's id."),
+      entityId: pathId.describe("That entity's id."),
     },
     async ({ entityKind, entityId }) =>
       guard(async () =>
         jsonResult(
           await client.get(
-            `/api/v1/workflows/using/${entityKind === "flow" ? "method" : entityKind}/${entityId}`,
+            `/api/v1/workflows/using/${seg(entityKind === "flow" ? "method" : entityKind)}/${seg(entityId)}`,
           ),
         ),
       ),
@@ -649,7 +650,7 @@ export function registerDependencyTools(
       entityKind: z
         .enum(["skill", "policy", "reference_doc"])
         .describe("Which library item you are about to change."),
-      entityId: z.string().describe("That item's id."),
+      entityId: pathId.describe("That item's id."),
     },
     async ({ entityKind, entityId }) =>
       guard(async () => {
@@ -672,7 +673,7 @@ export function registerDependencyTools(
               `use list_workflows_using.`,
           );
         }
-        return jsonResult(await client.get(`${base}/${entityId}/dependent-agents`));
+        return jsonResult(await client.get(`${base}/${seg(entityId)}/dependent-agents`));
       }),
   );
 }
@@ -703,7 +704,7 @@ export function registerCatalogTools(server: McpServer, client: AxonityClient): 
       "runs a method only once it is (request_publish_method). `name` names the " +
       "copy; left out, it is called \"<original name> (copy)\".",
     {
-      methodId: z.string().describe("The method's id."),
+      methodId: pathId.describe("The method's id."),
       name: z
         .string()
         .optional()
@@ -715,7 +716,7 @@ export function registerCatalogTools(server: McpServer, client: AxonityClient): 
         // which is why a bare POST was a 422.
         jsonResult(
           await client.post(
-            `/api/v1/methods/${methodId}/clone`,
+            `/api/v1/methods/${seg(methodId)}/clone`,
             name === undefined ? {} : { name },
           ),
         ),
@@ -723,7 +724,7 @@ export function registerCatalogTools(server: McpServer, client: AxonityClient): 
     {
       name: "clone_flow",
       shape: {
-        flowId: z.string().describe("The method's id (this tool's old spelling)."),
+        flowId: pathId.describe("The method's id (this tool's old spelling)."),
         name: z
           .string()
           .optional()
@@ -736,10 +737,10 @@ export function registerCatalogTools(server: McpServer, client: AxonityClient): 
   server.tool(
     "clone_prompt_snippet",
     "Duplicate a prompt snippet into a new, independent copy.",
-    { snippetId: z.string().describe("The prompt snippet's id.") },
+    { snippetId: pathId.describe("The prompt snippet's id.") },
     async ({ snippetId }) =>
       guard(async () =>
-        jsonResult(await client.post(`/api/v1/prompt-snippets/${snippetId}/clone`)),
+        jsonResult(await client.post(`/api/v1/prompt-snippets/${seg(snippetId)}/clone`)),
       ),
   );
 
@@ -794,10 +795,10 @@ export function registerCatalogTools(server: McpServer, client: AxonityClient): 
     "read_template",
     "Read one template from the general catalogue by id — its full definition, " +
       "which is what you author a new entity from. Read-only.",
-    { templateId: z.string().describe("The template's id, from list_templates.") },
+    { templateId: pathId.describe("The template's id, from list_templates.") },
     async ({ templateId }) =>
       guard(async () =>
-        jsonResult(await client.get(`/api/v1/templates/${templateId}`)),
+        jsonResult(await client.get(`/api/v1/templates/${seg(templateId)}`)),
       ),
   );
 }

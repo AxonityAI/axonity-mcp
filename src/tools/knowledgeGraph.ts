@@ -29,6 +29,7 @@ import { z } from "zod";
 
 import type { AxonityClient } from "../client.js";
 import { guard, jsonResult } from "./result.js";
+import { pathId, seg } from "../ids.js";
 
 const KNOWLEDGE = "/api/v1/knowledge";
 
@@ -85,7 +86,7 @@ export async function searchKnowledge(
 ): Promise<Record<string, unknown>> {
   const start = (await client.get(`${KNOWLEDGE}/search`, { q })) as SearchStart;
   const began = now();
-  let run = (await client.get(`/api/v1/runs/${start.id}`)) as RunState;
+  let run = (await client.get(`/api/v1/runs/${seg(start.id)}`)) as RunState;
   const stateOf = (r: RunState) => {
     if (typeof r?.status !== "string") {
       throw new Error("The platform returned a run without a status.");
@@ -105,7 +106,7 @@ export async function searchKnowledge(
       };
     }
     await sleep(POLL_EVERY_MS);
-    run = (await client.get(`/api/v1/runs/${start.id}`)) as RunState;
+    run = (await client.get(`/api/v1/runs/${seg(start.id)}`)) as RunState;
   }
 
   const step = run.stepStates?.[SEARCH_STEP];
@@ -118,7 +119,7 @@ export async function searchKnowledge(
   // was "" on a run whose answer passed the gate.
   let answer = step?.structuredOutputs?.[SEARCH_ANSWER_OUTPUT];
   if (isValueMarker(answer)) {
-    answer = await client.get(`/api/v1/runs/${start.id}/values/${answer.$run_value}`);
+    answer = await client.get(`/api/v1/runs/${seg(start.id)}/values/${seg(answer.$run_value)}`);
   }
   if (typeof answer !== "string" || answer.trim() === "") {
     throw new Error("The search run completed without an answer from its search step.");
@@ -199,8 +200,7 @@ export function registerKnowledgeGraphTools(
       PAGE_NOTE +
       CLEARANCE_NOTE,
     {
-      topicId: z
-        .string()
+      topicId: pathId
         .describe("The topic's id, from list_knowledge_topics or a search."),
       limit: LIMIT,
       cursor: CURSOR,
@@ -208,7 +208,7 @@ export function registerKnowledgeGraphTools(
     async ({ topicId, limit, cursor }) =>
       guard(async () =>
         jsonResult(
-          await client.get(`${KNOWLEDGE}/topics/${topicId}/facts`, { limit, cursor }),
+          await client.get(`${KNOWLEDGE}/topics/${seg(topicId)}/facts`, { limit, cursor }),
         ),
       ),
   );
@@ -226,9 +226,9 @@ export function registerKnowledgeGraphTools(
       "and `events[].runId`. A fact this token may not read answers as not " +
       "found, exactly like one that does not exist." +
       CLEARANCE_NOTE,
-    { id: z.string().describe("The fact's id, from a search or a topic.") },
+    { id: pathId.describe("The fact's id, from a search or a topic.") },
     async ({ id }) =>
-      guard(async () => jsonResult(await client.get(`${KNOWLEDGE}/facts/${id}`))),
+      guard(async () => jsonResult(await client.get(`${KNOWLEDGE}/facts/${seg(id)}`))),
   );
 
   server.tool(
@@ -239,9 +239,9 @@ export function registerKnowledgeGraphTools(
       "its score is pinned, how many facts rest on it, and its history. A " +
       "fact's passages name their source by id." +
       CLEARANCE_NOTE,
-    { id: z.string().describe("The source's id, from a fact's passages.") },
+    { id: pathId.describe("The source's id, from a fact's passages.") },
     async ({ id }) =>
-      guard(async () => jsonResult(await client.get(`${KNOWLEDGE}/sources/${id}`))),
+      guard(async () => jsonResult(await client.get(`${KNOWLEDGE}/sources/${seg(id)}`))),
   );
 
   server.tool(
@@ -272,10 +272,10 @@ export function registerKnowledgeGraphTools(
       "at most five, so the answer is always complete (`nextCursor` is " +
       "always null). Read-only. Use it to step sideways from a topic." +
       CLEARANCE_NOTE,
-    { nodeId: z.string().describe("A topic or group id, from the tree or a search.") },
+    { nodeId: pathId.describe("A topic or group id, from the tree or a search.") },
     async ({ nodeId }) =>
       guard(async () =>
-        jsonResult(await client.get(`${KNOWLEDGE}/tree/${nodeId}/related`)),
+        jsonResult(await client.get(`${KNOWLEDGE}/tree/${seg(nodeId)}/related`)),
       ),
   );
 
@@ -304,7 +304,7 @@ const MAINTAIN_NOTE =
   "their name. A refusal means that person may not, not that the fact is " +
   "wrong. Returns the fact's card as it is now.";
 
-const FACT_ID = z.string().describe("The fact's id, from a search, a topic or read_fact.");
+const FACT_ID = pathId.describe("The fact's id, from a search, a topic or read_fact.");
 
 /** Confirm, reject, correct, archive, restore, relabel: one fact, as the token's person. */
 function registerFactMaintenanceTools(server: McpServer, client: AxonityClient): void {
@@ -326,14 +326,14 @@ function registerFactMaintenanceTools(server: McpServer, client: AxonityClient):
         .describe("Why it is removed, in a sentence; kept with the fact."),
     },
     async ({ id, reason }) =>
-      guard(async () => jsonResult(await client.post(`${facts}/${id}/archive`, { reason }))),
+      guard(async () => jsonResult(await client.post(`${facts}/${seg(id)}/archive`, { reason }))),
   );
 
   server.tool(
     "restore_fact",
     "Bring back an archived fact, and its topic with it when that went too." + MAINTAIN_NOTE,
     { id: FACT_ID },
-    async ({ id }) => guard(async () => jsonResult(await client.post(`${facts}/${id}/restore`))),
+    async ({ id }) => guard(async () => jsonResult(await client.post(`${facts}/${seg(id)}/restore`))),
   );
 
   server.tool(
@@ -343,7 +343,7 @@ function registerFactMaintenanceTools(server: McpServer, client: AxonityClient):
       "Only for a fact that is still open (draft, not confirmed, active)." +
       MAINTAIN_NOTE,
     { id: FACT_ID },
-    async ({ id }) => guard(async () => jsonResult(await client.post(`${facts}/${id}/confirm`))),
+    async ({ id }) => guard(async () => jsonResult(await client.post(`${facts}/${seg(id)}/confirm`))),
   );
 
   server.tool(
@@ -358,7 +358,7 @@ function registerFactMaintenanceTools(server: McpServer, client: AxonityClient):
     },
     async ({ id, reason }) =>
       guard(async () =>
-        jsonResult(await client.post(`${facts}/${id}/reject`, { reason: reason ?? "" })),
+        jsonResult(await client.post(`${facts}/${seg(id)}/reject`, { reason: reason ?? "" })),
       ),
   );
 
@@ -380,7 +380,7 @@ function registerFactMaintenanceTools(server: McpServer, client: AxonityClient):
     },
     async ({ id, kind, value, since }) =>
       guard(async () =>
-        jsonResult(await client.post(`${facts}/${id}/correct`, { kind, value, since })),
+        jsonResult(await client.post(`${facts}/${seg(id)}/correct`, { kind, value, since })),
       ),
   );
 
@@ -401,7 +401,7 @@ function registerFactMaintenanceTools(server: McpServer, client: AxonityClient):
     },
     async ({ id, level, audienceIds }) =>
       guard(async () =>
-        jsonResult(await client.post(`${facts}/${id}/relabel`, { level, audienceIds })),
+        jsonResult(await client.post(`${facts}/${seg(id)}/relabel`, { level, audienceIds })),
       ),
   );
 
@@ -416,6 +416,6 @@ function registerFactMaintenanceTools(server: McpServer, client: AxonityClient):
       value: z.string().min(1).max(2000).describe("The right value."),
     },
     async ({ id, value }) =>
-      guard(async () => jsonResult(await client.post(`${facts}/${id}/right-version`, { value }))),
+      guard(async () => jsonResult(await client.post(`${facts}/${seg(id)}/right-version`, { value }))),
   );
 }

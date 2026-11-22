@@ -8,6 +8,7 @@
  */
 
 import type { AxonityConfig } from "./config.js";
+import { forbids } from "./denyList.js";
 import { AxonityApiError, errorForStatus, skewErrorFor } from "./errors.js";
 
 export type Json = Record<string, unknown>;
@@ -31,8 +32,21 @@ export type Query = Record<string, QueryScalar | QueryScalar[] | undefined>;
 export class AxonityClient {
   constructor(private readonly config: AxonityConfig) {}
 
-  private url(path: string, query?: Query): string {
-    const base = `${this.config.apiUrl}${path.startsWith("/") ? path : `/${path}`}`;
+  private url(method: string, path: string, query?: Query): string {
+    const route = path.startsWith("/") ? path : `/${path}`;
+    checkPath(route);
+    // The connector's own boundary, at run time and not only in its tests.
+    if (forbids(method, route)) {
+      throw new AxonityApiError(
+        `${method} ${route} is not allowed from this connector: it is a person's ` +
+          "act, or outside what the connector may do. No tool should build this call.",
+        0,
+      );
+    }
+    const base = `${this.config.apiUrl}${route}`;
+    // The last word: the URL the parser makes must still be the path we built.
+    const prefix = new URL(this.config.apiUrl).pathname.replace(/\/+$/, "");
+    if (new URL(base).pathname !== `${prefix}${route}`) throw pathError(route);
     if (!query) return base;
 
     const params = new URLSearchParams();
@@ -62,9 +76,10 @@ export class AxonityClient {
     // writes the body and puts its boundary in the Content-Type, which a
     // header set here would overwrite. Everything else is JSON.
     const form = body instanceof FormData;
+    const url = this.url(method, path, query);
     let resp: Response;
     try {
-      resp = await fetch(this.url(path, query), {
+      resp = await fetch(url, {
         method,
         headers: {
           Authorization: `Bearer ${this.config.token}`,
@@ -154,6 +169,33 @@ export class AxonityClient {
   del<T = unknown>(path: string, query?: Query): Promise<T> {
     return this.request<T>("DELETE", path, undefined, query);
   }
+}
+
+/**
+ * A path is the route a tool means, nothing more. Ids are encoded into their
+ * segment (`seg` in ids.ts); what is left here must not be able to resolve to
+ * another route: no query or fragment, no backslash or whitespace, no empty
+ * segment, and no dot segment — written plainly or percent-encoded.
+ */
+function checkPath(path: string): void {
+  if (/[?#\\\s]/.test(path)) throw pathError(path);
+  for (const part of path.slice(1).split("/")) {
+    let decoded: string;
+    try {
+      decoded = decodeURIComponent(part);
+    } catch {
+      throw pathError(path);
+    }
+    if (part === "" || decoded === "." || decoded === "..") throw pathError(path);
+  }
+}
+
+function pathError(path: string): AxonityApiError {
+  return new AxonityApiError(
+    `Refused to call ${JSON.stringify(path)}: an id in this path is not a single ` +
+      "path segment. Pass the id exactly as a read or list returned it.",
+    0,
+  );
 }
 
 function safeJson(text: string): unknown {

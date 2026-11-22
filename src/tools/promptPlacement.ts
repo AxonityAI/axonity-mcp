@@ -17,6 +17,7 @@ import { z } from "zod";
 import type { AxonityClient } from "../client.js";
 import { defineTool } from "./aliases.js";
 import { detachResult, guard, jsonResult } from "./result.js";
+import { pathId, seg } from "../ids.js";
 
 /** The two prompt channels a snippet can be placed in. */
 const TARGET = z
@@ -28,10 +29,10 @@ const TARGET = z
 
 /** The old spelling of a step id and a method id, which an old tool name still takes. */
 const FORMER_STEP_ID = {
-  flowStepId: z.string().describe("The method step's id (this tool's old spelling)."),
+  flowStepId: pathId.describe("The method step's id (this tool's old spelling)."),
 };
 const FORMER_METHOD_ID = {
-  flowId: z.string().describe("The method's id (this tool's old spelling)."),
+  flowId: pathId.describe("The method's id (this tool's old spelling)."),
 };
 const toStepId = ({ flowStepId, ...rest }: Record<string, unknown>) => ({
   ...rest,
@@ -49,10 +50,10 @@ export function registerPromptPlacementTools(
       "prompt stacks, each entry with its link id and display order. This is how " +
       "you see a step's current prompt composition before changing it. Excludes " +
       "wildcard snippets (see list_wildcard_prompts). Read-only.",
-    { methodStepId: z.string().describe("The method step's id.") },
+    { methodStepId: pathId.describe("The method step's id.") },
     async ({ methodStepId }: { methodStepId: string }) =>
       guard(async () =>
-        jsonResult(await client.get(`/api/v1/method-steps/${methodStepId}/prompts`)),
+        jsonResult(await client.get(`/api/v1/method-steps/${seg(methodStepId)}/prompts`)),
       ),
     {
       name: "list_flow_step_prompts",
@@ -70,8 +71,8 @@ export function registerPromptPlacementTools(
       "snippet alone does nothing. Returns the created link (with its linkId) so " +
       "you can reorder or detach it later.",
     {
-      methodStepId: z.string().describe("The method step's id."),
-      snippetId: z.string().describe("The prompt snippet's id (a UUID)."),
+      methodStepId: pathId.describe("The method step's id."),
+      snippetId: pathId.describe("The prompt snippet's id (a UUID)."),
       target: TARGET,
       displayOrder: z
         .number()
@@ -93,7 +94,7 @@ export function registerPromptPlacementTools(
     }) =>
       guard(async () =>
         jsonResult(
-          await client.post(`/api/v1/method-steps/${methodStepId}/prompts`, {
+          await client.post(`/api/v1/method-steps/${seg(methodStepId)}/prompts`, {
             snippetId,
             target,
             ...(displayOrder === undefined ? {} : { displayOrder }),
@@ -104,7 +105,7 @@ export function registerPromptPlacementTools(
       name: "attach_prompt_snippet_to_flow_step",
       shape: {
         ...FORMER_STEP_ID,
-        snippetId: z.string().describe("The prompt snippet's id (a UUID)."),
+        snippetId: pathId.describe("The prompt snippet's id (a UUID)."),
         target: TARGET,
         displayOrder: z
           .number()
@@ -125,7 +126,7 @@ export function registerPromptPlacementTools(
       "linkId (from list_method_step_prompts or the attach response), NOT the " +
       "snippet id. Send only what you are changing.",
     {
-      linkId: z.string().describe("The attachment's link id (not the snippet id)."),
+      linkId: pathId.describe("The attachment's link id (not the snippet id)."),
       target: z
         .enum(["system", "user"])
         .optional()
@@ -151,7 +152,7 @@ export function registerPromptPlacementTools(
         if (target !== undefined) body.target = target;
         if (displayOrder !== undefined) body.displayOrder = displayOrder;
         return jsonResult(
-          await client.patch(`/api/v1/method-step-prompts/${linkId}`, body),
+          await client.patch(`/api/v1/method-step-prompts/${seg(linkId)}`, body),
         );
       }),
     { name: "update_flow_step_prompt" },
@@ -165,7 +166,7 @@ export function registerPromptPlacementTools(
       "ordering with this list. Read the step first (list_method_step_prompts) so " +
       "you include every snippet — omitting one is a reorder, not a safe no-op.",
     {
-      methodStepId: z.string().describe("The method step's id."),
+      methodStepId: pathId.describe("The method step's id."),
       snippetIds: z
         .array(z.string())
         .min(1)
@@ -175,7 +176,7 @@ export function registerPromptPlacementTools(
     async ({ methodStepId, snippetIds }: { methodStepId: string; snippetIds: string[] }) =>
       guard(async () =>
         jsonResult(
-          await client.put(`/api/v1/method-steps/${methodStepId}/prompts/order`, {
+          await client.put(`/api/v1/method-steps/${seg(methodStepId)}/prompts/order`, {
             snippetIds,
           }),
         ),
@@ -203,10 +204,10 @@ export function registerPromptPlacementTools(
       "answers 204 with no body, so the result confirms the call was accepted and " +
       "nothing more — read the stack back with list_method_step_prompts to see what " +
       "is actually attached.",
-    { linkId: z.string().describe("The attachment's link id (not the snippet id).") },
+    { linkId: pathId.describe("The attachment's link id (not the snippet id).") },
     async ({ linkId }: { linkId: string }) =>
       guard(async () =>
-        detachResult(await client.del(`/api/v1/method-step-prompts/${linkId}`), {
+        detachResult(await client.del(`/api/v1/method-step-prompts/${seg(linkId)}`), {
           readBack: "list_method_step_prompts",
           request: { linkId },
         }),
@@ -223,11 +224,11 @@ export function registerPromptPlacementTools(
       "methodId are listed; one without is left out. This is how you discover the " +
       "methodStepIds you need before placing prompts, and how you see a " +
       "workflow's whole prompt composition. Read-only.",
-    { workflowId: z.string().describe("The workflow's id.") },
+    { workflowId: pathId.describe("The workflow's id.") },
     async ({ workflowId }) =>
       guard(async () =>
         jsonResult(
-          await client.get(`/api/v1/workflows/${workflowId}/prompt-stacks`),
+          await client.get(`/api/v1/workflows/${seg(workflowId)}/prompt-stacks`),
         ),
       ),
   );
@@ -239,10 +240,10 @@ export function registerPromptPlacementTools(
       "to its steps and their system/user prompt stacks (methodStepId, the step's " +
       "name as `flowStepName`, link ids, order), plus the tenant's wildcard " +
       "prompts. Read-only.",
-    { methodId: z.string().describe("The method's id.") },
+    { methodId: pathId.describe("The method's id.") },
     async ({ methodId }: { methodId: string }) =>
       guard(async () =>
-        jsonResult(await client.get(`/api/v1/methods/${methodId}/prompt-stacks`)),
+        jsonResult(await client.get(`/api/v1/methods/${seg(methodId)}/prompt-stacks`)),
       ),
     {
       name: "read_flow_prompt_stacks",

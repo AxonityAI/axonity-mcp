@@ -27,6 +27,7 @@ import { z } from "zod";
 import type { AxonityClient } from "../client.js";
 import { redactCredentials } from "./credentials.js";
 import { guard, jsonResult } from "./result.js";
+import { pathId, seg } from "../ids.js";
 
 /**
  * Redact credential-shaped entries out of a secret's `metadata`, and say so.
@@ -93,11 +94,11 @@ export function registerSecretTools(server: McpServer, client: AxonityClient): v
       "yet, and the connector will fail at run time, not at author time. " +
       "Credential-shaped entries in `metadata` are withheld — see " +
       "`metadataRedacted` in the response for which and why.",
-    { secretId: z.string().describe("The secret's id (from list_secrets).") },
+    { secretId: pathId.describe("The secret's id (from list_secrets).") },
     async ({ secretId }) =>
       guard(async () =>
         jsonResult(
-          redactSecretMetadata(await client.get(`/api/v1/secrets/${secretId}`)),
+          redactSecretMetadata(await client.get(`/api/v1/secrets/${seg(secretId)}`)),
         ),
       ),
   );
@@ -111,8 +112,8 @@ export function registerSecretTools(server: McpServer, client: AxonityClient): v
       "deleted. A module setting only an administrator may change is named to " +
       "those who may see it, and shown as `a module setting` to anyone else. " +
       "Read-only: it answers names, never a value.",
-    { secretId: z.string().describe("The secret's id (from list_secrets).") },
+    { secretId: pathId.describe("The secret's id (from list_secrets).") },
     async ({ secretId }) =>
-      guard(async () => jsonResult(await client.get(`/api/v1/secrets/${secretId}/used-by`))),
+      guard(async () => jsonResult(await client.get(`/api/v1/secrets/${seg(secretId)}/used-by`))),
   );
 }

@@ -33,11 +33,12 @@ import { z } from "zod";
 
 import type { AxonityClient } from "../client.js";
 import { guard, jsonResult } from "./result.js";
+import { pathId, seg } from "../ids.js";
 
 const SOURCES = "/api/v1/data-sources";
 const MEASURES = "/api/v1/measures";
 
-const SOURCE_ID = z.string().describe("The data source's id.");
+const SOURCE_ID = pathId.describe("The data source's id.");
 
 export function registerDataSourceTools(
   server: McpServer,
@@ -70,7 +71,7 @@ export function registerDataSourceTools(
       "no access). Read `message` — the call itself succeeded.",
     { id: SOURCE_ID },
     async ({ id }) =>
-      guard(async () => jsonResult(await client.post(`${SOURCES}/${id}/test`))),
+      guard(async () => jsonResult(await client.post(`${SOURCES}/${seg(id)}/test`))),
   );
 
   server.tool(
@@ -87,7 +88,7 @@ export function registerDataSourceTools(
       "the whole project.",
     { id: SOURCE_ID },
     async ({ id }) =>
-      guard(async () => jsonResult(await client.get(`${SOURCES}/${id}/schema`))),
+      guard(async () => jsonResult(await client.get(`${SOURCES}/${seg(id)}/schema`))),
   );
 
   server.tool(
@@ -128,7 +129,7 @@ export function registerDataSourceTools(
     async ({ id, sql, maxRows }) =>
       guard(async () =>
         jsonResult(
-          await client.post(`${SOURCES}/${id}/query`, {
+          await client.post(`${SOURCES}/${seg(id)}/query`, {
             sql,
             ...(maxRows !== undefined ? { maxRows } : {}),
           }),
@@ -206,7 +207,7 @@ export function registerMeasureTools(
       "month, week and day: what a time window (shift, to_date, rolling, " +
       "running) can be measured in.",
     {
-      tableId: z.string().describe("The table's id — any table but a source table."),
+      tableId: pathId.describe("The table's id — any table but a source table."),
       useDraft: z
         .boolean()
         .optional()
@@ -217,7 +218,7 @@ export function registerMeasureTools(
     },
     async ({ tableId, useDraft }) =>
       guard(async () =>
-        jsonResult(await client.get(`${MEASURES}/tables/${tableId}`, { useDraft })),
+        jsonResult(await client.get(`${MEASURES}/tables/${seg(tableId)}`, { useDraft })),
       ),
   );
 
@@ -341,9 +342,9 @@ export function registerMeasureTools(
       "published, so every number it gives is a draft preview " +
       "(`certified: false` on query_measures) — request_publish_measure is " +
       "what changes that.",
-    { id: z.string().describe("The measure's id.") },
+    { id: pathId.describe("The measure's id.") },
     async ({ id }) =>
-      guard(async () => jsonResult(await client.get(`${MEASURES}/${id}/live-versions`))),
+      guard(async () => jsonResult(await client.get(`${MEASURES}/${seg(id)}/live-versions`))),
   );
 
   server.tool(
@@ -353,7 +354,7 @@ export function registerMeasureTools(
       "\n\n`matched` in the answer is how many rows matched before the limit, " +
       "so you can say \"10 of 312\" rather than imply there are ten.",
     {
-      tableId: z.string().describe("The dynamic table's id."),
+      tableId: pathId.describe("The dynamic table's id."),
       sortBy: z.string().optional().describe("The column to order by."),
       descending: z
         .boolean()
@@ -393,7 +394,7 @@ export function registerDashboardTools(
     "Make a copy of a dashboard, owned by you. The copy starts as a separate " +
       "dashboard: changing it does not touch the original.",
     {
-      id: z.string().describe("The dashboard to copy."),
+      id: pathId.describe("The dashboard to copy."),
       name: z
         .string()
         .optional()
@@ -402,7 +403,7 @@ export function registerDashboardTools(
     async ({ id, name }) =>
       guard(async () =>
         jsonResult(
-          await client.post(`/api/v1/dashboards/${id}/duplicate`, name ? { name } : {}),
+          await client.post(`/api/v1/dashboards/${seg(id)}/duplicate`, name ? { name } : {}),
         ),
       ),
   );

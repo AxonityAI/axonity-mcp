@@ -5,11 +5,9 @@ import { z } from "zod";
 
 import type { AxonityClient } from "../client.js";
 import { guard, jsonResult } from "./result.js";
+import { pathId, seg } from "../ids.js";
 
-// A dot segment would be normalized by URL even after encodeURIComponent.
-const id = z.string().refine((value) => value !== "." && value !== "..", {
-  message: "A module identifier cannot be a URL dot segment.",
-}).describe("Module identifier — the id returned by list_modules.");
+const id = pathId.describe("Module identifier — the id returned by list_modules.");
 const key = z.string().describe("Setting key — a field key from read_module_settings_schema.");
 const expectedRevision = z.string().nullable().describe(
   "Expected revision — the field's revision from read_module_settings, including an inherited " +
@@ -98,7 +96,7 @@ export function registerModuleTools(server: McpServer, client: AxonityClient): v
       "choose valid values instead of assuming module-specific keys.",
     { id },
     async ({ id }) => guard(async () =>
-      jsonResult(await client.get(`/api/v1/modules/${encodeURIComponent(id)}/settings/schema`))),
+      jsonResult(await client.get(`/api/v1/modules/${seg(id)}/settings/schema`))),
   );
 
   server.tool(
@@ -108,7 +106,7 @@ export function registerModuleTools(server: McpServer, client: AxonityClient): v
       "This tool has no installation, role, user or personal-resolution selector.",
     { id },
     async ({ id }) => guard(async () =>
-      jsonResult(await client.get(`/api/v1/modules/${encodeURIComponent(id)}/settings`, { level: "workspace" }))),
+      jsonResult(await client.get(`/api/v1/modules/${seg(id)}/settings`, { level: "workspace" }))),
   );
 
   server.tool(
@@ -142,7 +140,7 @@ export function registerModuleTools(server: McpServer, client: AxonityClient): v
     },
     async ({ id, changes }) => guard(async () =>
       jsonResult(await client.patch(
-        `/api/v1/modules/${encodeURIComponent(id)}/settings`, { changes }, { level: "workspace" },
+        `/api/v1/modules/${seg(id)}/settings`, { changes }, { level: "workspace" },
       ))),
   );
 }
