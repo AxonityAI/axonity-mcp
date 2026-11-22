@@ -90,3 +90,17 @@ it.each(TOOLS)("%s describes the viewer's period per tile and the marker lines",
     expect(text, word).toContain(word);
   }
 });
+
+it.each(TOOLS)("%s says what the backend and the screen actually do (review of axonity-flow#2587)", (name) => {
+  const text = setup().descriptions.get(name)!;
+  // A gap under a short tile beside a tall one stays: "never" was not true.
+  expect(text).not.toContain("never sees holes");
+  expect(text).toContain("a gap under a short tile beside a tall one stays");
+  // A statement reads the dashboard's period; the backend refuses its own.
+  expect(text).toContain("a statement sets no period, start, end, measure or statusMeasure");
+  // The drill needs a table, named on the tile: a line's own table does not travel.
+  expect(text).not.toContain("tableId?");
+  expect(text).toContain("`config.tableId` on the tile");
+  // Null is not "empty": the field is left out.
+  expect(text).toContain("leave a field out to clear it; null is refused");
+});
