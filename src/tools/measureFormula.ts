@@ -37,6 +37,7 @@ import { z } from "zod";
 
 import type { AxonityClient } from "../client.js";
 import { guard, jsonResult } from "./result.js";
+import { pathId, seg } from "../ids.js";
 
 const MEASURES = "/api/v1/measures";
 
@@ -298,8 +299,7 @@ export function registerMeasureFormulaTools(
           "The formula, as text (`divide([cm1], [net_revenue])`) or as the " +
             "stored tree.",
         ),
-      measureId: z
-        .string()
+      measureId: pathId
         .optional()
         .describe(
           "The measure being edited, when there is one — it is what makes a " +
@@ -359,7 +359,7 @@ export function registerMeasureFormulaTools(
       "list_measure_influences({ useDraft: false }) or read_measure_tree. " +
       "Its formula parts are `dependsOn`, never an influence.",
     {
-      id: z.string().describe("The measure's id."),
+      id: pathId.describe("The measure's id."),
       useDraftChain: z
         .boolean()
         .optional()
@@ -372,7 +372,7 @@ export function registerMeasureFormulaTools(
     },
     async ({ id, useDraftChain }) =>
       guard(async () => {
-        const measure = (await client.get(`${MEASURES}/${id}`)) as MeasureDetail;
+        const measure = (await client.get(`${MEASURES}/${seg(id)}`)) as MeasureDetail;
         return jsonResult({
           ...measure,
           ...(await explainFormula(client, measure, useDraftChain ?? false)),

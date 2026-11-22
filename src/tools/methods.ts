@@ -13,6 +13,7 @@ import { z } from "zod";
 
 import type { AxonityClient } from "../client.js";
 import { guard, jsonResult } from "./result.js";
+import { pathId, seg } from "../ids.js";
 
 export function registerMethodTools(server: McpServer, client: AxonityClient): void {
   server.tool(
@@ -27,8 +28,8 @@ export function registerMethodTools(server: McpServer, client: AxonityClient): v
       "(still being built, and it does not); `steps` are the author's own names " +
       "for the steps. For the platform's default method — the one a step runs " +
       "when it names none — it is the agent steps that name no method. Read-only.",
-    { id: z.string().describe("The method's id.") },
+    { id: pathId.describe("The method's id.") },
     async ({ id }) =>
-      guard(async () => jsonResult(await client.get(`/api/v1/methods/${id}/used-by`))),
+      guard(async () => jsonResult(await client.get(`/api/v1/methods/${seg(id)}/used-by`))),
   );
 }

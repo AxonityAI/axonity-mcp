@@ -8,8 +8,9 @@
  * of the UI". That is the gap these two tools close, and all they close.
  *
  * Reading is safe by construction on the backend: no secrets route ever returns
- * a decrypted value, and both GETs are open to any authenticated caller,
- * read-only tokens included (`backend/src/routes/secrets.py`). WRITES stay out
+ * a decrypted value. Both GETs are open to a service token, read-only ones
+ * included; a personal token and the hosted connector do not get them
+ * (`backend/src/routes/secrets.py`, the token route table). WRITES stay out
  * of this connector — the backend refuses them from a service token, and the
  * value-less half of that story is axonity-mcp#39 / axonity-flow#910.
  *
@@ -27,18 +28,24 @@ import { z } from "zod";
 import type { AxonityClient } from "../client.js";
 import { redactCredentials } from "./credentials.js";
 import { guard, jsonResult } from "./result.js";
+import { pathId, seg } from "../ids.js";
 
 /**
  * Redact credential-shaped entries out of a secret's `metadata`, and say so.
  *
- * Exported for testing. Anything that is not an object with a `metadata` key
- * passes through untouched — the backend owns this response shape, and a
- * connector that silently reshapes it is the drift this repo keeps closing.
+ * Exported for testing. A list (what `list_secrets` answers) is redacted row
+ * by row: its rows carry the same `metadata`, and a credential the single read
+ * withholds must not come back through the catalogue. Anything that is not an
+ * object with a `metadata` key passes through untouched — the backend owns
+ * this response shape, and a connector that silently reshapes it is the drift
+ * this repo keeps closing.
  */
 export function redactSecretMetadata(response: unknown): unknown {
-  if (typeof response !== "object" || response === null || Array.isArray(response)) {
-    return response;
+  if (Array.isArray(response)) {
+    const rows = response.map(redactSecretMetadata);
+    return rows.some((row, i) => row !== response[i]) ? rows : response;
   }
+  if (typeof response !== "object" || response === null) return response;
 
   const source = response as Record<string, unknown>;
   if (source.metadata === undefined || source.metadata === null) return response;
@@ -81,7 +88,8 @@ export function registerSecretTools(server: McpServer, client: AxonityClient): v
       "it fails at execution time; this connector has no tool for it. Check " +
       "read_secret_used_by before you rebind a connector away from a secret.",
     {},
-    async () => guard(async () => jsonResult(await client.get("/api/v1/secrets"))),
+    async () =>
+      guard(async () => jsonResult(redactSecretMetadata(await client.get("/api/v1/secrets")))),
   );
 
   server.tool(
@@ -93,11 +101,11 @@ export function registerSecretTools(server: McpServer, client: AxonityClient): v
       "yet, and the connector will fail at run time, not at author time. " +
       "Credential-shaped entries in `metadata` are withheld — see " +
       "`metadataRedacted` in the response for which and why.",
-    { secretId: z.string().describe("The secret's id (from list_secrets).") },
+    { secretId: pathId.describe("The secret's id (from list_secrets).") },
     async ({ secretId }) =>
       guard(async () =>
         jsonResult(
-          redactSecretMetadata(await client.get(`/api/v1/secrets/${secretId}`)),
+          redactSecretMetadata(await client.get(`/api/v1/secrets/${seg(secretId)}`)),
         ),
       ),
   );
@@ -111,8 +119,8 @@ export function registerSecretTools(server: McpServer, client: AxonityClient): v
       "deleted. A module setting only an administrator may change is named to " +
       "those who may see it, and shown as `a module setting` to anyone else. " +
       "Read-only: it answers names, never a value.",
-    { secretId: z.string().describe("The secret's id (from list_secrets).") },
+    { secretId: pathId.describe("The secret's id (from list_secrets).") },
     async ({ secretId }) =>
-      guard(async () => jsonResult(await client.get(`/api/v1/secrets/${secretId}/used-by`))),
+      guard(async () => jsonResult(await client.get(`/api/v1/secrets/${seg(secretId)}/used-by`))),
   );
 }

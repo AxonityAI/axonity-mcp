@@ -51,6 +51,7 @@ import { z } from "zod";
 import type { AxonityClient } from "../client.js";
 import { guard, jsonResult } from "./result.js";
 import { readLocalFile } from "./runInputFiles.js";
+import { pathId, seg } from "../ids.js";
 
 const CONFIRM = z
   .literal(true)
@@ -202,9 +203,8 @@ export function registerRunTools(
       "\n\nA chat with the Dashboard Analyst is not a workflow run: start one " +
       "with start_conversation.",
     {
-      workflowId: z.string().describe("The workflow's id."),
-      triggerId: z
-        .string()
+      workflowId: pathId.describe("The workflow's id."),
+      triggerId: pathId
         .optional()
         .describe(
           "Which start to fire, from read_workflow_trigger_parameters' " +
@@ -261,7 +261,7 @@ export function registerRunTools(
             ? await readTriggerInputFile(triggerInputPath)
             : triggerInput;
         return jsonResult(
-          await client.post(`/api/v1/workflows/${workflowId}/runs`, {
+          await client.post(`/api/v1/workflows/${seg(workflowId)}/runs`, {
             ...(triggerId ? { triggerId } : {}),
             ...(input ? { triggerInput: input } : {}),
             ...(manualPhases === undefined ? {} : { manualPhases }),
@@ -274,9 +274,9 @@ export function registerRunTools(
     "cancel_run",
     "Cancel an in-flight run. Stops further steps; already-completed steps and " +
       "their side effects are not undone.",
-    { runId: z.string().describe("The run's id.") },
+    { runId: pathId.describe("The run's id.") },
     async ({ runId }) =>
-      guard(async () => jsonResult(await client.post(`/api/v1/runs/${runId}/cancel`))),
+      guard(async () => jsonResult(await client.post(`/api/v1/runs/${seg(runId)}/cancel`))),
   );
 
   server.tool(
@@ -285,12 +285,12 @@ export function registerRunTools(
       "with it. Prefer archive_run unless a human has asked for deletion. For " +
       "many at once use bulk_delete_runs.",
     {
-      runId: z.string().describe("The run's id."),
+      runId: pathId.describe("The run's id."),
       confirm: CONFIRM,
     },
     async ({ runId }) =>
       guard(async () => {
-        await client.del(`/api/v1/runs/${runId}`);
+        await client.del(`/api/v1/runs/${seg(runId)}`);
         return jsonResult({ deleted: true, runId });
       }),
   );
@@ -398,7 +398,7 @@ export function registerRunTools(
       "deliberately keeps no copy of that list." +
       WHOSE_AND_WHERE_A_ROW_IS,
     {
-      workflowId: z.string().describe("The workflow's id."),
+      workflowId: pathId.describe("The workflow's id."),
       status: z
         .array(z.string())
         .optional()
@@ -434,7 +434,7 @@ export function registerRunTools(
         // hasMore/nextCursor and recreate, one layer up, exactly the silent
         // truncation this tool exists to make visible (#37).
         jsonResult(
-          await client.get(`/api/v1/workflows/${workflowId}/runs`, {
+          await client.get(`/api/v1/workflows/${seg(workflowId)}/runs`, {
             // This route reads a REPEATED key (?status=a&status=b); the
             // tenant-wide `list_runs` reads one comma-separated string. A real
             // backend difference, so each tool sends what its route declares.
@@ -470,7 +470,7 @@ export function registerRunTools(
       "and read it with read_run_invocation_messages. read_run_trace is not " +
       "where a conversation's tool calls are.",
     {
-      runId: z.string().describe("The run's id."),
+      runId: pathId.describe("The run's id."),
       includeSnapshot: z
         .boolean()
         .optional()
@@ -484,7 +484,7 @@ export function registerRunTools(
     async ({ runId, includeSnapshot }) =>
       guard(async () =>
         jsonResult(
-          await client.get(`/api/v1/runs/${runId}`, {
+          await client.get(`/api/v1/runs/${seg(runId)}`, {
             includeSnapshot: includeSnapshot === true,
           }),
         ),
@@ -549,8 +549,7 @@ export function registerRunTools(
           "Opaque continuation cursor from the previous response's nextCursor. " +
             "Omit for the first page. Do not parse or construct one.",
         ),
-      agentId: z
-        .string()
+      agentId: pathId
         .optional()
         .describe(
           "An agent's id (a UUID): only the items that belong to that agent. " +
@@ -572,10 +571,10 @@ export function registerRunTools(
       "answer to 'why did it decide that?' when the trace shows the decision " +
       "but not what it was reading. " +
       "\n\nAn empty list is an answer: this run wrote nothing to session memory.",
-    { runId: z.string().describe("The run's id.") },
+    { runId: pathId.describe("The run's id.") },
     async ({ runId }) =>
       guard(async () =>
-        jsonResult(await client.get(`/api/v1/runs/${runId}/session-memory`)),
+        jsonResult(await client.get(`/api/v1/runs/${seg(runId)}/session-memory`)),
       ),
   );
 
@@ -588,12 +587,12 @@ export function registerRunTools(
       "\n\nThe file id is scoped to THIS run's session folder: one borrowed " +
       "from another run is a 404, not someone else's file.",
     {
-      runId: z.string().describe("The run's id."),
-      fileId: z.string().describe("The file's id, from list_run_session_memory."),
+      runId: pathId.describe("The run's id."),
+      fileId: pathId.describe("The file's id, from list_run_session_memory."),
     },
     async ({ runId, fileId }) =>
       guard(async () =>
-        jsonResult(await client.get(`/api/v1/runs/${runId}/session-memory/${fileId}`)),
+        jsonResult(await client.get(`/api/v1/runs/${seg(runId)}/session-memory/${seg(fileId)}`)),
       ),
   );
 
@@ -614,7 +613,7 @@ export function registerRunTools(
       "read_run_item_results reads the item RESULTS. Nothing is dropped in " +
       "silence.",
     {
-      runId: z.string().describe("The run's id."),
+      runId: pathId.describe("The run's id."),
       itemCap: z
         .number()
         .int()
@@ -627,7 +626,7 @@ export function registerRunTools(
     async ({ runId, itemCap }) =>
       guard(async () =>
         jsonResult(
-          await client.get(`/api/v1/runs/${runId}/outline`, { item_cap: itemCap }),
+          await client.get(`/api/v1/runs/${seg(runId)}/outline`, { item_cap: itemCap }),
         ),
       ),
   );
@@ -649,9 +648,8 @@ export function registerRunTools(
       "\n\nOne step at a time: `stepId` is required, because \"the rest of the " +
       "run\" is what read_run_outline already answered.",
     {
-      runId: z.string().describe("The run's id."),
-      stepId: z
-        .string()
+      runId: pathId.describe("The run's id."),
+      stepId: pathId
         .describe(
           "The fan-out step whose items to continue listing — the step's id " +
             "from the outline, not an item's.",
@@ -674,7 +672,7 @@ export function registerRunTools(
     async ({ runId, stepId, offset, limit }) =>
       guard(async () =>
         jsonResult(
-          await client.get(`/api/v1/runs/${runId}/outline/items`, {
+          await client.get(`/api/v1/runs/${seg(runId)}/outline/items`, {
             step_id: stepId,
             offset,
             limit,
@@ -692,14 +690,13 @@ export function registerRunTools(
       "\n\nThe digest is scoped to THIS run: one you saw in another run is not " +
       "readable here, and asking gives a 404 rather than someone else's value.",
     {
-      runId: z.string().describe("The run's id."),
-      digest: z
-        .string()
+      runId: pathId.describe("The run's id."),
+      digest: pathId
         .describe("The value's digest, from the marker in read_run's `stepStates`."),
     },
     async ({ runId, digest }) =>
       guard(async () =>
-        jsonResult(await client.get(`/api/v1/runs/${runId}/values/${digest}`)),
+        jsonResult(await client.get(`/api/v1/runs/${seg(runId)}/values/${seg(digest)}`)),
       ),
   );
 
@@ -718,15 +715,14 @@ export function registerRunTools(
       "period) and the charts it showed (`show_visual` — the tile it put on " +
       "screen), so you can check an answer against the figures it was given.",
     {
-      runId: z.string().describe("The run's id."),
-      invocationId: z
-        .string()
+      runId: pathId.describe("The run's id."),
+      invocationId: pathId
         .describe("The invocation's id, from read_run's `agentInvocations`."),
     },
     async ({ runId, invocationId }) =>
       guard(async () =>
         jsonResult(
-          await client.get(`/api/v1/runs/${runId}/invocations/${invocationId}/messages`),
+          await client.get(`/api/v1/runs/${seg(runId)}/invocations/${seg(invocationId)}/messages`),
         ),
       ),
   );
@@ -738,17 +734,17 @@ export function registerRunTools(
       "work out WHY a run behaved as it did. " +
       "\n\nNot for a CONVERSATION: a chat's tool calls live in its transcript " +
       "(read_run_invocation_messages), and this trace is typically empty for one.",
-    { runId: z.string().describe("The run's id.") },
+    { runId: pathId.describe("The run's id.") },
     async ({ runId }) =>
-      guard(async () => jsonResult(await client.get(`/api/v1/runs/${runId}/trace`))),
+      guard(async () => jsonResult(await client.get(`/api/v1/runs/${seg(runId)}/trace`))),
   );
 
   server.tool(
     "read_run_cost",
     "Read a run's token and cost breakdown, per agent and model.",
-    { runId: z.string().describe("The run's id.") },
+    { runId: pathId.describe("The run's id.") },
     async ({ runId }) =>
-      guard(async () => jsonResult(await client.get(`/api/v1/runs/${runId}/cost`))),
+      guard(async () => jsonResult(await client.get(`/api/v1/runs/${seg(runId)}/cost`))),
   );
 
   // ---- Why a run is parked, and what it did ------------------------------
@@ -773,12 +769,12 @@ export function registerRunTools(
       "wake already resolved and be about to resume, or it waits on something " +
       "with no wake-task — a person, a FOR EACH batch, a callback still running.",
     {
-      runId: z.string().describe("The run's id."),
+      runId: pathId.describe("The run's id."),
       limit: z.number().int().optional().describe("How many to return. Default 50."),
     },
     async ({ runId, limit }) =>
       guard(async () =>
-        jsonResult(await client.get(`/api/v1/runs/${runId}/waiting-on`, { limit })),
+        jsonResult(await client.get(`/api/v1/runs/${seg(runId)}/waiting-on`, { limit })),
       ),
   );
 
@@ -796,7 +792,7 @@ export function registerRunTools(
       "none and reads as \"no failures\". For the totals alone use " +
       "read_run_items_summary — it is one call instead of a walk.",
     {
-      runId: z.string().describe("The launch's run id."),
+      runId: pathId.describe("The launch's run id."),
       outcome: z
         .enum(["all", "failed", "skipped"])
         .optional()
@@ -817,7 +813,7 @@ export function registerRunTools(
     async ({ runId, outcome, limit, cursor }) =>
       guard(async () =>
         jsonResult(
-          await client.get(`/api/v1/runs/${runId}/items`, { outcome, limit, cursor }),
+          await client.get(`/api/v1/runs/${seg(runId)}/items`, { outcome, limit, cursor }),
         ),
       ),
   );
@@ -828,10 +824,10 @@ export function registerRunTools(
       "ONE call, with no paging. Ask this before list_run_items: it answers " +
       "\"did anything fail?\" outright, where counting a page answers it wrongly. " +
       "A launch that never fanned out reports zeroes.",
-    { runId: z.string().describe("The launch's run id.") },
+    { runId: pathId.describe("The launch's run id.") },
     async ({ runId }) =>
       guard(async () =>
-        jsonResult(await client.get(`/api/v1/runs/${runId}/items/summary`)),
+        jsonResult(await client.get(`/api/v1/runs/${seg(runId)}/items/summary`)),
       ),
   );
 
@@ -843,12 +839,12 @@ export function registerRunTools(
       "run set in motion beyond its own steps — a run can look idle while its " +
       "children are doing all the work.",
     {
-      runId: z.string().describe("The run's id."),
+      runId: pathId.describe("The run's id."),
       limit: z.number().int().optional().describe("How many to return. Default 200."),
     },
     async ({ runId, limit }) =>
       guard(async () =>
-        jsonResult(await client.get(`/api/v1/runs/${runId}/tasks`, { limit })),
+        jsonResult(await client.get(`/api/v1/runs/${seg(runId)}/tasks`, { limit })),
       ),
   );
 
@@ -860,13 +856,13 @@ export function registerRunTools(
       "whole run. Get the batchId from list_run_tasks or the step's state in " +
       "read_run.",
     {
-      runId: z.string().describe("The run's id."),
-      batchId: z.string().describe("The FOR EACH batch's id."),
+      runId: pathId.describe("The run's id."),
+      batchId: pathId.describe("The FOR EACH batch's id."),
     },
     async ({ runId, batchId }) =>
       guard(async () =>
         jsonResult(
-          await client.get(`/api/v1/runs/${runId}/for-each/${batchId}/progress`),
+          await client.get(`/api/v1/runs/${seg(runId)}/for-each/${seg(batchId)}/progress`),
         ),
       ),
   );
@@ -884,14 +880,14 @@ export function registerRunTools(
       "decision to make, not yours — answer your own test runs, and ask before " +
       "answering someone else's. Returns the run's updated detail.",
     {
-      runId: z.string().describe("The run's id."),
-      stepId: z.string().describe("The suspended step's id, from list_todo_steps or read_run."),
+      runId: pathId.describe("The run's id."),
+      stepId: pathId.describe("The suspended step's id, from list_todo_steps or read_run."),
       answer: z.string().describe("The answer text the step is waiting for."),
     },
     async ({ runId, stepId, answer }) =>
       guard(async () =>
         jsonResult(
-          await client.post(`/api/v1/runs/${runId}/steps/${stepId}/answer`, { answer }),
+          await client.post(`/api/v1/runs/${seg(runId)}/steps/${seg(stepId)}/answer`, { answer }),
         ),
       ),
   );
@@ -915,8 +911,8 @@ export function registerRunTools(
       "is deliberately not available here — that step exists to get a human's " +
       "review, and an agent approving it would often be approving its own plan.",
     {
-      runId: z.string().describe("The run's id."),
-      stepId: z.string().describe("The parked step's id, from list_todo_steps or read_run."),
+      runId: pathId.describe("The run's id."),
+      stepId: pathId.describe("The parked step's id, from list_todo_steps or read_run."),
       selectedBranch: z
         .string()
         .optional()
@@ -939,7 +935,7 @@ export function registerRunTools(
     async ({ runId, stepId, selectedBranch, output, structuredOutputs }) =>
       guard(async () =>
         jsonResult(
-          await client.post(`/api/v1/runs/${runId}/steps/${stepId}/complete`, {
+          await client.post(`/api/v1/runs/${seg(runId)}/steps/${seg(stepId)}/complete`, {
             ...(selectedBranch !== undefined ? { selectedBranch } : {}),
             ...(output !== undefined ? { output } : {}),
             ...(structuredOutputs !== undefined ? { structuredOutputs } : {}),
@@ -962,12 +958,12 @@ export function registerRunTools(
       "conversation someone else opened, because a dashboard chat belongs to " +
       "the person who opened it. Needs a token with the `operate` scope.",
     {
-      runId: z.string().describe("The conversation run's id."),
+      runId: pathId.describe("The conversation run's id."),
       message: z.string().min(1).describe("The user turn to submit."),
     },
     async ({ runId, message }) =>
       guard(async () =>
-        jsonResult(await client.post(`/api/v1/runs/${runId}/message`, { message })),
+        jsonResult(await client.post(`/api/v1/runs/${seg(runId)}/message`, { message })),
       ),
   );
 
@@ -1025,8 +1021,7 @@ export function registerRunTools(
       "does not exist or is not shared with that person; 403 with the module's " +
       "own sentence when the `insights` module is switched off here.",
     {
-      dashboardId: z
-        .string()
+      dashboardId: pathId
         .min(1)
         .optional()
         .describe(
@@ -1172,8 +1167,7 @@ export function registerRunTools(
       "'author' scope\" (it has other write scopes, e.g. only `operate`) or " +
       "\"This service token is read-only\"; 422 for an oversized focus.",
     {
-      dashboardId: z
-        .string()
+      dashboardId: pathId
         .min(1)
         .describe("The dashboard the question is about, from list_dashboards."),
       message: z
@@ -1229,17 +1223,17 @@ export function registerRunTools(
     "archive_run",
     "Archive a run — hides it from the default run list without deleting it. " +
       "Reversible with unarchive_run.",
-    { runId: z.string().describe("The run's id.") },
+    { runId: pathId.describe("The run's id.") },
     async ({ runId }) =>
-      guard(async () => jsonResult(await client.post(`/api/v1/runs/${runId}/archive`))),
+      guard(async () => jsonResult(await client.post(`/api/v1/runs/${seg(runId)}/archive`))),
   );
 
   server.tool(
     "unarchive_run",
     "Restore an archived run to the default run list.",
-    { runId: z.string().describe("The run's id.") },
+    { runId: pathId.describe("The run's id.") },
     async ({ runId }) =>
-      guard(async () => jsonResult(await client.post(`/api/v1/runs/${runId}/unarchive`))),
+      guard(async () => jsonResult(await client.post(`/api/v1/runs/${seg(runId)}/unarchive`))),
   );
 
   server.tool(

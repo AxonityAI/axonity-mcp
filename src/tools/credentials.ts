@@ -3,17 +3,24 @@
  *
  * A connector's `authConfig` must carry PLACEHOLDERS only — a human fills the
  * real secret in Axonity, and the value never passes through an agent. This
- * module enforces that on every path that can write a connector.
+ * module enforces that on every path that writes a tool, a connector, a
+ * toolbox's shared auth or an application's knowledge, and redacts the same
+ * places in what comes back (a secret's `metadata`).
  *
  * Two independent defences, mirroring the backend's `secret_scrub` module:
  *
  * 1. **Structural** — credential-ish leaves (`clientSecret`, `apiKey`, …) must
  *    be a placeholder. Applied only to keys that actually name a credential, so
  *    legitimate neighbours (`authType: "bearer"`, `tokenUrl: "https://…"`)
- *    are left alone. The earlier guard required EVERY value to be a placeholder,
- *    which rejected correct connectors while missing nested ones entirely.
+ *    are left alone. Inside `authConfig` the credential flag carries down into
+ *    a nested object (`password: { value }`); everywhere, a `{ key, value }`
+ *    pair whose key names a credential (an `Authorization` header, an
+ *    `api_key` query parameter) is a credential.
  * 2. **Shape scan** — every string leaf, at any depth, is swept for known secret
  *    formats, catching a credential parked in a field nobody thought to name.
+ *
+ * The write check and the read redaction are ONE walk (`walkCredentials`) with
+ * a different action per hit, so the two cannot drift apart.
  *
  * Findings name WHERE and WHAT KIND, never the matched value — an error message
  * is not a safe place to echo a secret.
@@ -21,7 +28,15 @@
 
 /** Keys whose value is a credential. Matched case- and separator-insensitively. */
 const CREDENTIAL_KEY =
-  /(secret|password|passphrase|token|credential|apikey|privatekey|signingkey|authorization|clientkey)/;
+  /(secret|password|passphrase|passwd|pwd|token|credential|apikey|privatekey|signingkey|authorization|clientkey|accesskey|accountkey|subscriptionkey|cookie)/;
+
+/**
+ * Short names that are a credential only as the WHOLE key. As a substring
+ * `pass` is in `passthrough` and `bypass`. A bare `key` is left out on
+ * purpose: it names a keyboard key in an executor step and a header name in a
+ * pair; the pair rule below is what catches `{ key: "Authorization", value }`.
+ */
+const CREDENTIAL_WORD = /^(pass|pw)$/;
 
 /**
  * Suffixes that make a credential-ish key a LOCATOR rather than the secret
@@ -48,51 +63,125 @@ const SECRET_PATTERNS: [string, RegExp][] = [
 /** Empty, or a `{{ … }}` template the human replaces in Axonity. */
 export function isPlaceholder(value: unknown): boolean {
   if (value === "" || value === null || value === undefined) return true;
-  return typeof value === "string" && /^\s*\{\{.*\}\}\s*$/.test(value);
+  // ONE template and nothing around it: `{{a}} hunter2 {{b}}` is a value.
+  return typeof value === "string" && /^\s*\{\{[^{}]*\}\}\s*$/.test(value);
+}
+
+function normalize(key: string): string {
+  return key.replace(/[_\-\s]/g, "").toLowerCase();
+}
+
+function isLocatorKey(key: string): boolean {
+  return LOCATOR_SUFFIX.test(normalize(key));
 }
 
 function isCredentialKey(key: string): boolean {
-  const normalized = key.replace(/[_\-\s]/g, "").toLowerCase();
+  const normalized = normalize(key);
   if (LOCATOR_SUFFIX.test(normalized)) return false;
-  return CREDENTIAL_KEY.test(normalized);
+  return CREDENTIAL_KEY.test(normalized) || CREDENTIAL_WORD.test(normalized);
+}
+
+/** The keys that NAME the value of a `{ key, value }` pair. */
+const PAIR_LABEL = ["key", "name", "header", "field", "label", "target"];
+
+/**
+ * The label of a `{ key|name|…, value }` pair, when the object is one. An
+ * executor step that types a secret BY NAME (`type_secret`) is a reference,
+ * not a value, so it is not a pair here.
+ */
+function pairLabel(node: Record<string, unknown>): string | undefined {
+  if (!("value" in node)) return undefined;
+  if (node.action === "type_secret") return undefined;
+  for (const key of PAIR_LABEL) {
+    if (typeof node[key] === "string") return node[key] as string;
+  }
+  return undefined;
 }
 
 /**
- * Walk `value` depth-first and collect every violation as `path: reason`.
- * Exported for testing; `assertPlaceholderCredentials` is the enforcement point.
+ * How strictly a subtree is read.
+ *
+ * - `strict` — `authConfig` and a secret's `metadata`: every credential-named
+ *   leaf must be a placeholder, and the flag carries down into nested objects.
+ * - `pairs` — the rest of a write (a connector's `implementation`, a tool's
+ *   parameter schema, an application's knowledge): the shape scan and the
+ *   pair rule only. A tool's parameter schema says `password: { type, description }`
+ *   and that is not a credential; a header pair `Authorization: Bearer …` is.
+ *   A key named `authConfig` inside it is read `strict`.
  */
-export function findCredentialViolations(value: unknown, path = "authConfig"): string[] {
-  const findings: string[] = [];
+export type WalkMode = "strict" | "pairs";
 
-  const walk = (node: unknown, at: string, keyIsCredential: boolean): void => {
+/** What a walk found at one place: where, and in words, why. */
+export type OnHit = (at: string, reason: string, node: unknown) => unknown;
+
+/**
+ * The one walk. Visits every leaf of `value` and calls `onHit` where a real
+ * credential sits; the leaf is replaced by what `onHit` returns. The check
+ * returns the node unchanged and records a finding, the redaction returns
+ * `REDACTION`.
+ */
+export function walkCredentials(
+  value: unknown,
+  path: string,
+  mode: WalkMode,
+  onHit: OnHit,
+): unknown {
+  const join = (at: string, key: string) => (at ? `${at}.${key}` : key);
+
+  const walk = (node: unknown, at: string, keyIsCredential: boolean, m: WalkMode): unknown => {
     if (Array.isArray(node)) {
-      node.forEach((item, i) => walk(item, `${at}[${i}]`, keyIsCredential));
-      return;
+      return node.map((item, i) => walk(item, `${at}[${i}]`, keyIsCredential, m));
     }
 
     if (node !== null && typeof node === "object") {
-      for (const [key, child] of Object.entries(node as Record<string, unknown>)) {
-        walk(child, `${at}.${key}`, isCredentialKey(key));
+      const source = node as Record<string, unknown>;
+      const label = pairLabel(source);
+      const pairIsCredential = label !== undefined && isCredentialKey(label);
+      const out: Record<string, unknown> = {};
+      for (const [key, child] of Object.entries(source)) {
+        const childMode: WalkMode = key === "authConfig" ? "strict" : m;
+        let flag: boolean;
+        if (key === "value" && pairIsCredential) flag = true;
+        else if (label !== undefined && PAIR_LABEL.includes(key)) flag = false;
+        else if (childMode === "strict") {
+          // The flag carries down, except into a locator (`secretId`, `type`).
+          flag = !isLocatorKey(key) && (keyIsCredential || isCredentialKey(key));
+        } else flag = false;
+        out[key] = walk(child, join(at, key), flag, childMode);
       }
-      return;
+      return out;
     }
 
     if (typeof node === "string") {
       for (const [label, pattern] of SECRET_PATTERNS) {
-        if (pattern.test(node)) {
-          findings.push(`${at}: looks like a real ${label}`);
-          return;
-        }
+        if (pattern.test(node)) return onHit(at, `looks like a real ${label}`, node);
       }
     }
 
     // A credential-named leaf must be a placeholder whatever its type.
     if (keyIsCredential && !isPlaceholder(node)) {
-      findings.push(`${at}: must be a placeholder, not a real value`);
+      return onHit(at, "must be a placeholder, not a real value", node);
     }
+    return node;
   };
 
-  walk(value, path, false);
+  return walk(value, path, false, mode);
+}
+
+/**
+ * Every violation in `value`, as `path: reason`. Exported for testing;
+ * `assertPlaceholderCredentials` is the enforcement point.
+ */
+export function findCredentialViolations(
+  value: unknown,
+  path = "authConfig",
+  mode: WalkMode = "strict",
+): string[] {
+  const findings: string[] = [];
+  walkCredentials(value, path, mode, (at, reason, node) => {
+    findings.push(`${at}: ${reason}`);
+    return node;
+  });
   return findings;
 }
 
@@ -119,56 +208,30 @@ export interface Redaction {
  */
 export function redactCredentials(value: unknown, path = "metadata"): Redaction {
   const redactedPaths: string[] = [];
-
-  const walk = (node: unknown, at: string, keyIsCredential: boolean): unknown => {
-    if (Array.isArray(node)) {
-      return node.map((item, i) => walk(item, `${at}[${i}]`, keyIsCredential));
-    }
-
-    if (node !== null && typeof node === "object") {
-      const out: Record<string, unknown> = {};
-      for (const [key, child] of Object.entries(node as Record<string, unknown>)) {
-        out[key] = walk(child, `${at}.${key}`, isCredentialKey(key));
-      }
-      return out;
-    }
-
-    if (typeof node === "string" && SECRET_PATTERNS.some(([, re]) => re.test(node))) {
-      redactedPaths.push(at);
-      return REDACTION;
-    }
-
-    // A credential-named leaf goes whatever its type — but a placeholder or an
-    // empty string is not a credential, and blanking it would hide that the
-    // field is unfilled, which is exactly what a reader is checking for.
-    if (keyIsCredential && !isPlaceholder(node)) {
-      redactedPaths.push(at);
-      return REDACTION;
-    }
-
-    return node;
-  };
-
-  return { value: walk(value, path, false), redactedPaths };
+  const redacted = walkCredentials(value, path, "strict", (at) => {
+    redactedPaths.push(at);
+    return REDACTION;
+  });
+  return { value: redacted, redactedPaths };
 }
 
 /**
- * Throw if a connector's fields carry anything that looks like a real
- * credential. Safe to call with any tool's fields — it is a no-op when there is
- * no `authConfig`, which is what makes it cheap to apply to `create_tool` and
- * `update_tool` as well as the connector-specific verbs.
+ * Throw if a write carries anything that looks like a real credential: in its
+ * `authConfig` (strict), and anywhere else in it (known shapes and credential
+ * pairs). Safe to call with any tool's fields, a toolbox's `{ authConfig }` or
+ * an application's knowledge entry — `what` names the thing in the message.
  */
-export function assertPlaceholderCredentials(fields: Record<string, unknown>): void {
-  const authConfig = fields.authConfig;
-  if (authConfig === undefined || authConfig === null) return;
-
-  const findings = findCredentialViolations(authConfig);
+export function assertPlaceholderCredentials(
+  fields: Record<string, unknown>,
+  what = "A connector",
+): void {
+  const findings = findCredentialViolations(fields, "", "pairs");
   if (findings.length === 0) return;
 
   throw new Error(
-    "authConfig must contain placeholders only — a human fills real secrets in " +
-      "the Axonity tool editor, and a credential must never pass through an " +
-      `agent. Use "{{ MY_SECRET }}" or "" instead.\n\n${findings
+    `${what} must carry placeholders only — a human fills real secrets in ` +
+      "Axonity, and a credential must never pass through an agent. Use " +
+      `"{{ MY_SECRET }}" or "", or point at a secret by its id or name.\n\n${findings
         .map((f) => `  - ${f}`)
         .join("\n")}`,
   );

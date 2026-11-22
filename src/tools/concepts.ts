@@ -28,6 +28,7 @@ import { z } from "zod";
 
 import type { AxonityClient } from "../client.js";
 import { guard, jsonResult } from "./result.js";
+import { pathId, seg } from "../ids.js";
 
 const BASE = "/api/v1/concepts";
 const LINKS = "/api/v1/concept-links";
@@ -145,7 +146,7 @@ export function registerConceptTools(
       "field." +
       PUBLISHING,
     {
-      id: z.string().describe("The concept's id (from list_concepts)."),
+      id: pathId.describe("The concept's id (from list_concepts)."),
       kind: KIND.optional(),
       name: NAME.optional(),
       meaning: MEANING.optional(),
@@ -155,7 +156,7 @@ export function registerConceptTools(
       scope: SCOPE.optional(),
     },
     async ({ id, ...changes }) =>
-      guard(async () => jsonResult(await client.patch(`${BASE}/${id}`, changes))),
+      guard(async () => jsonResult(await client.patch(`${BASE}/${seg(id)}`, changes))),
   );
 
   server.tool(
@@ -166,12 +167,12 @@ export function registerConceptTools(
       "published again without it." +
       PUBLISHING,
     {
-      id: z.string().describe("The concept's id."),
+      id: pathId.describe("The concept's id."),
       confirm: z
         .literal(true)
         .describe("Must be true. Acknowledges the definition is removed from the draft."),
     },
-    async ({ id }) => guard(async () => jsonResult(await client.del(`${BASE}/${id}`))),
+    async ({ id }) => guard(async () => jsonResult(await client.del(`${BASE}/${seg(id)}`))),
   );
 
   // ---- links: one word, everything it means (axonity-mcp#92) ------------

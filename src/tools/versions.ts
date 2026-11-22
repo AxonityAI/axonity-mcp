@@ -36,6 +36,7 @@ import { z } from "zod";
 import type { AxonityClient } from "../client.js";
 import { defineTool, formerName } from "./aliases.js";
 import { guard, jsonResult } from "./result.js";
+import { pathId, seg } from "../ids.js";
 
 /** A required literal — an agent cannot satisfy it by filling in a default. */
 const CONFIRM = z
@@ -92,7 +93,7 @@ export function registerVersionTools(
       `versions (named releases). Use this to find the versionId you need for ` +
       `restore_${singular}_version.`,
     {
-      id: z.string().describe(`The ${singular}'s id.`),
+      id: pathId.describe(`The ${singular}'s id.`),
       type: z
         .enum(["checkpoint", "major", "all"])
         .optional()
@@ -103,7 +104,7 @@ export function registerVersionTools(
     async ({ id, type, limit, offset }) =>
       guard(async () =>
         jsonResult(
-          await client.get(`${basePath}/${id}/versions`, { type, limit, offset }),
+          await client.get(`${basePath}/${seg(id)}/versions`, { type, limit, offset }),
         ),
       ),
   );
@@ -114,7 +115,7 @@ export function registerVersionTools(
       `integer like 3, from the \`version\` field in list_${singular}_versions) — ` +
       `not by its versionId. Use it to diff two versions before rolling back.`,
     {
-      id: z.string().describe(`The ${singular}'s id.`),
+      id: pathId.describe(`The ${singular}'s id.`),
       version: z
         .number()
         .int()
@@ -122,7 +123,7 @@ export function registerVersionTools(
     },
     async ({ id, version }) =>
       guard(async () =>
-        jsonResult(await client.get(`${basePath}/${id}/versions/${version}`)),
+        jsonResult(await client.get(`${basePath}/${seg(id)}/versions/${seg(version)}`)),
       ),
   );
 
@@ -135,8 +136,8 @@ export function registerVersionTools(
         `It changes only the draft — what is live stays live until a human ` +
           `approves a new publish.`),
     {
-      id: z.string().describe(`The ${singular}'s id.`),
-      versionId: z.string().describe("The version row's UUID."),
+      id: pathId.describe(`The ${singular}'s id.`),
+      versionId: pathId.describe("The version row's UUID."),
       expectedVersion: z
         .number()
         .int()
@@ -145,7 +146,7 @@ export function registerVersionTools(
     async ({ id, versionId, expectedVersion }) =>
       guard(async () =>
         jsonResult(
-          await client.post(`${basePath}/${id}/versions/${versionId}/restore`, {
+          await client.post(`${basePath}/${seg(id)}/versions/${seg(versionId)}/restore`, {
             expectedVersion,
           }),
         ),
@@ -159,13 +160,13 @@ export function registerVersionTools(
       `cannot be targeted this way. Recoverable with ` +
       `restore_deleted_${singular}_version until it is purged for good.`,
     {
-      id: z.string().describe(`The ${singular}'s id.`),
-      versionId: z.string().describe("The version row's UUID (not the checkpoint number)."),
+      id: pathId.describe(`The ${singular}'s id.`),
+      versionId: pathId.describe("The version row's UUID (not the checkpoint number)."),
       confirm: CONFIRM,
     },
     async ({ id, versionId }) =>
       guard(async () => {
-        await client.del(`${basePath}/${id}/versions/${versionId}`);
+        await client.del(`${basePath}/${seg(id)}/versions/${seg(versionId)}`);
         return jsonResult({ deleted: true, id, versionId });
       }),
   );
@@ -175,9 +176,9 @@ export function registerVersionTools(
     `List a ${singular}'s deleted version rows — restore candidates for ` +
       `restore_deleted_${singular}_version. Deleted version numbers stay ` +
       `reserved (not reused), so gaps in the numbering are expected, not corruption.`,
-    { id: z.string().describe(`The ${singular}'s id.`) },
+    { id: pathId.describe(`The ${singular}'s id.`) },
     async ({ id }) =>
-      guard(async () => jsonResult(await client.get(`${basePath}/${id}/versions/deleted`))),
+      guard(async () => jsonResult(await client.get(`${basePath}/${seg(id)}/versions/deleted`))),
   );
 
   tool(
@@ -187,15 +188,14 @@ export function registerVersionTools(
       `restore_${singular}_version); it only makes the row visible/restorable ` +
       `again. Takes no version check.`,
     {
-      id: z.string().describe(`The ${singular}'s id.`),
-      versionId: z
-        .string()
+      id: pathId.describe(`The ${singular}'s id.`),
+      versionId: pathId
         .describe(`The version row's UUID, from list_deleted_${singular}_versions.`),
     },
     async ({ id, versionId }) =>
       guard(async () =>
         jsonResult(
-          await client.post(`${basePath}/${id}/versions/${versionId}/restore-deleted`),
+          await client.post(`${basePath}/${seg(id)}/versions/${seg(versionId)}/restore-deleted`),
         ),
       ),
   );
@@ -210,7 +210,7 @@ export function registerVersionTools(
       `approves a request_publish_${singular}. Renaming an existing major ` +
       `version is name_${singular}_major_version; this creates one.`,
     {
-      id: z.string().describe(`The ${singular}'s id.`),
+      id: pathId.describe(`The ${singular}'s id.`),
       name: z
         .string()
         .min(1)
@@ -224,7 +224,7 @@ export function registerVersionTools(
     async ({ id, name, description }) =>
       guard(async () =>
         jsonResult(
-          await client.post(`${basePath}/${id}/versions`, {
+          await client.post(`${basePath}/${seg(id)}/versions`, {
             name,
             ...(description ? { description } : {}),
           }),
@@ -240,10 +240,10 @@ export function registerVersionTools(
       `safe to call before a run of edits. Returns the draft's major version ` +
       `number and name. Use create_${singular}_major_version when you want a ` +
       `NAMED release instead.`,
-    { id: z.string().describe(`The ${singular}'s id.`) },
+    { id: pathId.describe(`The ${singular}'s id.`) },
     async ({ id }) =>
       guard(async () =>
-        jsonResult(await client.post(`${basePath}/${id}/versions/ensure`)),
+        jsonResult(await client.post(`${basePath}/${seg(id)}/versions/ensure`)),
       ),
   );
 
@@ -254,7 +254,7 @@ export function registerVersionTools(
       `list_${singular}_versions), not a checkpoint or a versionId. This only ` +
       `renames; it does not create, publish, or roll anything back.`,
     {
-      id: z.string().describe(`The ${singular}'s id.`),
+      id: pathId.describe(`The ${singular}'s id.`),
       majorVersion: z
         .number()
         .int()
@@ -265,7 +265,7 @@ export function registerVersionTools(
       guard(async () =>
         jsonResult(
           await client.patch(
-            `${basePath}/${id}/versions/major/${majorVersion}`,
+            `${basePath}/${seg(id)}/versions/major/${seg(majorVersion)}`,
             { name },
           ),
         ),
@@ -277,14 +277,14 @@ export function registerVersionTools(
     `Read the LIVE published version of a ${singular} — what the runtime ` +
       `actually uses, as opposed to the draft that read_${singular} returns. ` +
       `Diff the two to see what a pending publish would change.`,
-    { id: z.string().describe(`The ${singular}'s id.`) },
+    { id: pathId.describe(`The ${singular}'s id.`) },
     async ({ id }) =>
       guard(async () =>
         jsonResult(
           await client.get(
             publishedPath === "entity"
-              ? `${basePath}/${id}/published`
-              : `${basePath}/${id}/versions/published`,
+              ? `${basePath}/${seg(id)}/published`
+              : `${basePath}/${seg(id)}/versions/published`,
           ),
         ),
       ),

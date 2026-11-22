@@ -19,10 +19,11 @@ import { z } from "zod";
 
 import type { AxonityClient } from "../client.js";
 import { guard, jsonResult } from "./result.js";
+import { pathId, seg } from "../ids.js";
 
 const QUERIES = "/api/v1/queries";
 
-const QUERY_ID = z.string().describe("The query's id (list_queries).");
+const QUERY_ID = pathId.describe("The query's id (list_queries).");
 
 export function registerQueryTools(
   server: McpServer,
@@ -70,7 +71,7 @@ export function registerQueryTools(
     async ({ id, values, maxRows }) =>
       guard(async () =>
         jsonResult(
-          await client.post(`${QUERIES}/${id}/test`, {
+          await client.post(`${QUERIES}/${seg(id)}/test`, {
             values: values ?? {},
             ...(maxRows !== undefined ? { maxRows } : {}),
           }),
@@ -92,7 +93,7 @@ export function registerQueryTools(
       "`toolIds` — ordinary tool granting.",
     { id: QUERY_ID },
     async ({ id }) =>
-      guard(async () => jsonResult(await client.get(`${QUERIES}/${id}/usage`))),
+      guard(async () => jsonResult(await client.get(`${QUERIES}/${seg(id)}/usage`))),
   );
 
   server.tool(
@@ -102,6 +103,6 @@ export function registerQueryTools(
       "no agent can call it yet — request_publish_query is what changes that.",
     { id: QUERY_ID },
     async ({ id }) =>
-      guard(async () => jsonResult(await client.get(`${QUERIES}/${id}/live-versions`))),
+      guard(async () => jsonResult(await client.get(`${QUERIES}/${seg(id)}/live-versions`))),
   );
 }
