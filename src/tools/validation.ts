@@ -162,7 +162,8 @@ export function registerValidationTools(
  *    (`own_requests`, `visible_requests`, `ALL_IS_FOR_ADMINISTRATORS`) and the
  *    route's `view` description (`routes/publish_approvals.py`, `_VIEW`);
  *    a service token is `role="member"` (`auth/dependencies.py`,
- *    `_resolve_service_token`), so it is never an administrator;
+ *    `_resolve_service_token`); the platform is changing that so a token follows
+ *    the role of its creator (feat/token-follows-creator-role);
  *  - `origin`: `domain/approval_visibility.py:origin_of`;
  *  - `requestedByName`: `services/publish_approval_service.py:_requester_names`
  *    (a person's name, an agent's name; a service token and a deleted agent
@@ -186,8 +187,8 @@ const WHOSE_REQUESTS =
   "is the requests you sent through your own tokens, and for a service token " +
   "only the ones that token sent itself, so every row of `mine` has `origin: " +
   "mcp`. `all` is every request of the workspace, whatever it came through: " +
-  "administrators only, anyone else gets a 403, and a service token is never an " +
-  "administrator.";
+  "administrators only, anyone else gets a 403; a token acts with the role of " +
+  "the person who created it.";
 
 const WHAT_A_REQUEST_SAYS =
   "\n\nEACH REQUEST SAYS WHERE IT CAME FROM AND WHETHER YOU MAY DECIDE IT: " +

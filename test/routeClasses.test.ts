@@ -214,7 +214,7 @@ describe("a hosted text never talks of scopes or service tokens the backend does
 
   it("read_application_executors: administrator only, by the person's role", () => {
     const d = flat("read_application_executors");
-    expect(d).toContain("ADMINISTRATOR ONLY on the platform: a 403 unless the person this token acts as is an administrator");
+    expect(d).toContain("ADMINISTRATOR ONLY on the platform: a token acts with the role of the person who created it");
     expect(d).toContain("Do not retry");
   });
 

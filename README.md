@@ -527,8 +527,9 @@ across these routes — the tool parameter names say which.
     `list_application_knowledge_versions`; `forget_application_knowledge`,
     `restore_application_knowledge` and `write_application_knowledge` to
     correct it. Linking executors and changing knowledge are reserved for a
-    workspace administrator on the platform, and a service token always
-    counts as a member, so today those answer with a refusal that says so.
+    workspace administrator on the platform, and a token acts with the role
+    of the person who created it, so they answer with a refusal that says so
+    unless that person is an administrator.
 - **Who may read what** (labels, audiences, roles): every policy, skill,
   reference doc and table carries a label — `level` (public, internal,
   confidential) and `audienceIds`, whom it is meant for. `list_audiences` /
@@ -739,7 +740,7 @@ human-only actions in Axonity.
 **Approvals are read per person.** `view` is `mine` unless you ask for `all`:
 `mine` is the requests you sent through your own tokens (a service token sees only
 the ones it sent itself), `all` is every request of the workspace and is for
-administrators — anyone else gets a 403, and a service token never is one.
+administrators — anyone else gets a 403; a token acts with the role of the person who created it.
 `list_publish_releases` takes the same `view`. Opening one request by id works for
 your own and, for an administrator, any; someone else's is a 404. Each request
 says `origin` (`mcp`, `agent` or `screen`), `requestedByName`, `canDecide`

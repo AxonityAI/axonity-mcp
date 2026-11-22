@@ -170,6 +170,8 @@ describe("an admin-only refusal is reported as one", () => {
     const err = errorForStatus(403, body);
     expect(err).toBeInstanceOf(ForbiddenError);
     expect(err.message).toMatch(/ADMINISTRATOR ONLY/);
+    expect(err.message).toMatch(/role of the person who created it/);
+    expect(err.message).not.toMatch(/no token can/);
     expect(err.message).toMatch(/Only administrators can perform this action/);
     expect(err.message).not.toMatch(/read-only token/);
   });
@@ -185,7 +187,9 @@ describe("an admin-only refusal is reported as one", () => {
     const err = errorForStatus(403, { error: "forbidden", code: "forbidden", retryable: false, message: said });
     expect(err).toBeInstanceOf(ForbiddenError);
     expect(err.message).toMatch(/MODULE RIGHT/);
-    expect(err.message).toMatch(/of the Mail module that only an administrator holds/);
+    expect(err.message).toMatch(/needs an administrator right of the Mail module/);
+    expect(err.message).toMatch(/role of the person who created it/);
+    expect(err.message).not.toMatch(/no token can/);
     expect(err.message).toContain(said);
     expect(err.message).not.toMatch(/read-only token/);
   });

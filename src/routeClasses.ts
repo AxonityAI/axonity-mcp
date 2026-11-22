@@ -258,17 +258,6 @@ export const SERVICE_TOKEN_WORDING: readonly Wording[] = [
       "run_service.py _refuse_a_token_a_conversation: a personal token may only continue a " +
       "Dashboard Analyst conversation it started itself (trigger_input carries the token id).",
   },
-  {
-    // applications.ts ADMIN_ONLY on read_application_executors
-    match: /a service token always counts as a member/i,
-    becomes:
-      "ADMINISTRATOR ONLY on the platform: a 403 unless the person this token acts as is an " +
-      "administrator of this workspace.",
-    why:
-      "A personal token carries its person's live role (dependencies.py resolve_personal_token, " +
-      "role=identity.role), and GET /applications/{id}/executors is `lezen` in the table with " +
-      "require_admin on the route (routes/applications.py).",
-  },
 ];
 
 /**

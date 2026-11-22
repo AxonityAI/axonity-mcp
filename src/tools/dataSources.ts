@@ -19,8 +19,7 @@
  * and the rest of the generic family).
  *
  * **Who may write.** These routes were administrator-only when they arrived,
- * and a service token always resolves as a member, so every write answered
- * 403. The platform lifted that (axonity-flow#1855): a data source is created
+ * so a token of a non-administrator got a 403 on every write. The platform lifted that (axonity-flow#1855): a data source is created
  * like any other object now. `ForbiddenError` still says "administrator only"
  * in words when some other route answers that way.
  *
