@@ -13,11 +13,9 @@
  * token: an executor's answer carries only its prefix and expiry.
  *
  * **Who may write.** Linking executors and writing, forgetting or restoring
- * knowledge are `require_admin` on the platform, and a service token always
- * resolves as a member — so today these answer 403 for every token, and
- * `ForbiddenError` says so in words. The tools are here so the refusal names
- * its reason rather than the tool being missing, and so they work the day the
- * platform opens them.
+ * knowledge are `require_admin` on the platform, and a token acts with the
+ * role of the person who created it — so these answer 403 unless that person
+ * is an administrator, and `ForbiddenError` says so in words.
  */
 
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -33,10 +31,11 @@ const APPLICATION_ID = z.string().describe("The application's id.");
 const EXECUTOR_ID = z.string().describe("The executor's id.");
 
 const ADMIN_ONLY =
-  "ADMINISTRATOR ONLY on the platform, and a service token always counts as " +
-  "a member: today this is refused for every token with a 403 that says so. " +
-  "Do not retry — tell your human; an administrator does it in Axonity " +
-  "(Digital Twin → Applications).";
+  "ADMINISTRATOR ONLY on the platform: a token acts with the role of the " +
+  "person who created it, so this is refused with a 403 unless that person " +
+  "is an administrator. Do not retry with the same token — use a token " +
+  "created by an administrator, or ask an administrator (Digital Twin → " +
+  "Applications).";
 
 const PAGE_NOTE =
   "THE RESPONSE IS ONE PAGE: { items, nextCursor, pageSize, hasMore }. While " +

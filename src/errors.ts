@@ -242,11 +242,11 @@ export class AuthError extends AxonityApiError {
  * The backend's sentence for a route behind `require_admin`.
  *
  * Matched on the words because the envelope's `code` is plain `forbidden` for
- * this and for a missing scope alike, and the two need opposite advice: a
- * scope can be granted on the token, administrator rights cannot — a service
- * token always resolves as a member. Telling an agent "a read-only token
- * cannot…" here sends it and its human to the token settings for something no
- * token setting fixes (#78).
+ * this and for a missing scope alike, and the two need different advice: a
+ * scope can be granted on the token, an administrator right comes from the
+ * ROLE of the person who created the token (a token acts with that role, live
+ * on every request). Telling an agent "a read-only token cannot…" here sends
+ * it and its human to the token's scopes for something no scope fixes (#78).
  */
 const ADMIN_ONLY_SENTENCE = /only (administrators|an administrator)\b/i;
 
@@ -264,6 +264,14 @@ const MODULE_OFF_SENTENCE = /is switched off in this workspace/i;
  * audiences may do it; a token never can, whatever its scopes (axonity-mcp#88).
  */
 const WIDENING_SENTENCE = /widen(ing)? a label/i;
+
+/**
+ * The platform's sentence for a right of a MODULE ("This needs the 'manage'
+ * right of the Mail module."). Such a right needs an administrator, and a
+ * token acts with the role of the person who created it, so no scope fixes it:
+ * only a token created by an administrator, or an administrator, can.
+ */
+const MODULE_RIGHT_SENTENCE = /needs the '[^']+' right of the (.+?) module/i;
 
 /** The 403 explanation for a refusal whose body says why. */
 function forbiddenExplanation(said: string): string {
@@ -284,13 +292,22 @@ function forbiddenExplanation(said: string): string {
       "a colleague to widen it in Axonity."
     );
   }
+  const moduleRight = MODULE_RIGHT_SENTENCE.exec(said);
+  if (moduleRight) {
+    return (
+      `Forbidden (403): MODULE RIGHT. This needs an administrator right of ` +
+      `the ${moduleRight[1]} module. A token acts with the role of the person ` +
+      "who created it, so use a token created by an administrator, or ask an " +
+      "administrator. Scopes do not change this; retrying with the same token " +
+      "will not help."
+    );
+  }
   if (ADMIN_ONLY_SENTENCE.test(said)) {
     return (
-      "Forbidden (403): ADMINISTRATOR ONLY. This action is reserved for a " +
-      "workspace administrator, and a service token always counts as a " +
-      "member — so no token can do it, whatever its scopes. This is not a " +
-      "mistake in your call and retrying will not help. Tell your human: " +
-      "an administrator can do it in Axonity."
+      "Forbidden (403): ADMINISTRATOR ONLY. This needs an administrator " +
+      "right. A token acts with the role of the person who created it, so " +
+      "use a token created by an administrator, or ask an administrator. " +
+      "Scopes do not change this; retrying with the same token will not help."
     );
   }
   return (

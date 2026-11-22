@@ -170,6 +170,8 @@ describe("an admin-only refusal is reported as one", () => {
     const err = errorForStatus(403, body);
     expect(err).toBeInstanceOf(ForbiddenError);
     expect(err.message).toMatch(/ADMINISTRATOR ONLY/);
+    expect(err.message).toMatch(/role of the person who created it/);
+    expect(err.message).not.toMatch(/no token can/);
     expect(err.message).toMatch(/Only administrators can perform this action/);
     expect(err.message).not.toMatch(/read-only token/);
   });
@@ -178,6 +180,18 @@ describe("an admin-only refusal is reported as one", () => {
     const err = errorForStatus(403, "This service token is read-only");
     expect(err.message).toMatch(/read-only token cannot/);
     expect(err.message).not.toMatch(/ADMINISTRATOR ONLY/);
+  });
+
+  it("explains a module right as administrator-only, not as a token problem", () => {
+    const said = "This needs the 'manage' right of the Mail module.";
+    const err = errorForStatus(403, { error: "forbidden", code: "forbidden", retryable: false, message: said });
+    expect(err).toBeInstanceOf(ForbiddenError);
+    expect(err.message).toMatch(/MODULE RIGHT/);
+    expect(err.message).toMatch(/needs an administrator right of the Mail module/);
+    expect(err.message).toMatch(/role of the person who created it/);
+    expect(err.message).not.toMatch(/no token can/);
+    expect(err.message).toContain(said);
+    expect(err.message).not.toMatch(/read-only token/);
   });
 
   it("reaches the agent as a tool error, not a crash", async () => {

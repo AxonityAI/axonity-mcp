@@ -9,8 +9,8 @@
  * itself. That is all this file is for: reading the vocabulary.
  *
  * **Reading only.** Creating or changing an audience or a role, and giving a
- * colleague a role, are `require_admin` on the platform, and a service token
- * always resolves as a member. Whether a token may ever do that is an open
+ * colleague a role, are `require_admin` on the platform, and a token acts with
+ * the role of the person who created it. Whether a token may do that is an open
  * decision in #88 (S3); until it is taken those routes are not in the pinned
  * snapshot, so they are neither covered nor excluded here.
  */
