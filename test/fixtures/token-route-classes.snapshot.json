@@ -426,7 +426,8 @@
     "class": "lezen"
   },
   "GET /api/v1/apps/starter/download/{ticket}": {
-    "class": "lezen"
+    "class": "dicht",
+    "why": "it is ignored, not refused. Listed only so the conformance test sees every route."
   },
   "GET /api/v1/apps/status": {
     "class": "lezen"
@@ -849,6 +850,9 @@
     "class": "lezen"
   },
   "GET /api/v1/measures/deleted": {
+    "class": "lezen"
+  },
+  "GET /api/v1/measures/dimensions": {
     "class": "lezen"
   },
   "GET /api/v1/measures/formula-spec": {
