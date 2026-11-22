@@ -284,7 +284,13 @@ describe("the old names still work for one release, as an alias that says so", (
     // These two names describe the Flow-App product, not the retired `flow`
     // entity name that the aliases preserve. They are the explicit B153 app
     // discovery/validation tools; every remaining match must be an alias.
-    const flowAppTools = ["list_flow_app_status", "validate_flow_app_manifest"];
+    const flowAppTools = [
+      "check_flow_app_manifest",
+      "get_flow_app_authoring_contract",
+      "get_flow_app_starter",
+      "list_flow_app_status",
+      "validate_flow_app_manifest",
+    ];
     expect(flowNamed.sort()).toEqual([...Object.keys(RENAMED), ...flowAppTools].sort());
   });
 

@@ -29,6 +29,9 @@ export interface Rule {
 export const WRITE_METHODS = ["POST", "PUT", "PATCH", "DELETE"];
 
 export const FORBIDDEN: Rule[] = [
+  // `GET /measures/dimensions` is new on flow main (#2566), not part of this epic. The
+  // existing measures tools do not answer it; the tool follows with its owner.
+  { label: "new on main via #2566, tool follows with the owner", path: /^\/api\/v1\/measures\/dimensions$/, methods: ["GET"] },
   // The Flow-App (axonity-flow#1826 A1, main #2488) is an installed application
   // a person reviews and approves at a screen: the backend's own token table
   // closes every one of its routes, reads included, with "of a person at a
@@ -37,6 +40,11 @@ export const FORBIDDEN: Rule[] = [
   // refusal. Recorded rather than left to be rediscovered by whoever wonders
   // why the pinned schema has routes the connector does not call.
   { label: "Flow-App (a person at a screen)", path: /\/flow-apps(\/|$)/ },
+  // The starter archive (#1826 starter kit): `GET /apps/starter/download/{ticket}` answers
+  // a gzip tarball for one person, once, for a few minutes. It is not JSON, a tool result
+  // carries text, and an archive pasted into a model's context is no use to it. The agent
+  // downloads the link `get_flow_app_starter` returns with its own shell and unpacks it.
+  { label: "starter archive (binary, single-use, fetched by the agent's shell)", path: /\/apps\/starter\/download\//, methods: ["GET"] },
   // Opening an app (#1826 A2, main #2495): `GET /apps/{slug}/frame` answers
   // where the shell points the frame of an app, for the person whose session
   // asks. The route's own docstring: "A session only: closed to personal and

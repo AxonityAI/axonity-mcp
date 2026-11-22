@@ -2058,6 +2058,46 @@
         "title": "AppOpenQuestion",
         "type": "object"
       },
+      "AppPreviewSchema": {
+        "description": "One app of the branch in the \"only apps\" preview.",
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "sourceSha": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcesha"
+          },
+          "status": {
+            "enum": [
+              "new",
+              "changed",
+              "unchanged"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "name",
+          "status"
+        ],
+        "title": "AppPreviewSchema",
+        "type": "object"
+      },
       "AppRegisterRequest": {
         "description": "GitHub's App-Manifest redirect parameters, relayed by the FE.\n\n``state`` is the signed token minted by ``GET/POST /app/register-url``; it —\nnot this request body — is what authorizes the registration. ``code`` is\nthe one-time manifest-conversion code GitHub issues on App creation.",
         "properties": {
@@ -2607,6 +2647,43 @@
           "status"
         ],
         "title": "ApprovalDecisionResponse",
+        "type": "object"
+      },
+      "ApprovedElsewhereSchema": {
+        "description": "The same code, approved in another workspace of this installation.",
+        "properties": {
+          "decidedAt": {
+            "format": "date-time",
+            "title": "Decidedat",
+            "type": "string"
+          },
+          "decidedByName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decidedbyname"
+          },
+          "sameManifest": {
+            "description": "Whether the rights (the manifest hash) matched too, not only the code.",
+            "title": "Samemanifest",
+            "type": "boolean"
+          },
+          "workspaceName": {
+            "title": "Workspacename",
+            "type": "string"
+          }
+        },
+        "required": [
+          "workspaceName",
+          "decidedAt",
+          "sameManifest"
+        ],
+        "title": "ApprovedElsewhereSchema",
         "type": "object"
       },
       "ArchiveEntityResponse": {
@@ -21348,6 +21425,18 @@
         "title": "ManagedObjectRequest",
         "type": "object"
       },
+      "ManifestCheck": {
+        "additionalProperties": false,
+        "properties": {
+          "manifest": {
+            "additionalProperties": true,
+            "title": "Manifest",
+            "type": "object"
+          }
+        },
+        "title": "ManifestCheck",
+        "type": "object"
+      },
       "ManifestValidationError": {
         "description": "One canonical manifest refusal, at its wire path.",
         "properties": {
@@ -22149,6 +22238,88 @@
         "title": "MeasureDetail",
         "type": "object"
       },
+      "MeasureDimension": {
+        "description": "One column a measure can be split by, named by the concept that describes it.",
+        "properties": {
+          "column": {
+            "title": "Column",
+            "type": "string"
+          },
+          "concept": {
+            "description": "The name of the concept that describes the column.",
+            "title": "Concept",
+            "type": "string"
+          },
+          "key": {
+            "description": "What to send as splitBy, and as a filter's column after a click on a group: `column` for the measure's own table, `table.column` for a connected one.",
+            "title": "Key",
+            "type": "string"
+          },
+          "kind": {
+            "description": "The column's kind: a category (text, choice, yes-no, email, url).",
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "description": "The concept's name: what a viewer reads.",
+            "title": "Label",
+            "type": "string"
+          },
+          "meaning": {
+            "description": "The concept's meaning, for a tooltip. May be empty.",
+            "title": "Meaning",
+            "type": "string"
+          },
+          "table": {
+            "title": "Table",
+            "type": "string"
+          },
+          "tableId": {
+            "title": "Tableid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "concept",
+          "meaning",
+          "table",
+          "tableId",
+          "column",
+          "kind"
+        ],
+        "title": "MeasureDimension",
+        "type": "object"
+      },
+      "MeasureDimensionsResponse": {
+        "description": "What a measure can be split by (E1). Bounded by the concepts table's cap.",
+        "properties": {
+          "conceptsPublished": {
+            "description": "False when the workspace has no published concepts: then no column is described, and `dimensions` is empty.",
+            "title": "Conceptspublished",
+            "type": "boolean"
+          },
+          "dimensions": {
+            "items": {
+              "$ref": "#/components/schemas/MeasureDimension"
+            },
+            "title": "Dimensions",
+            "type": "array"
+          },
+          "measure": {
+            "title": "Measure",
+            "type": "string"
+          }
+        },
+        "required": [
+          "measure",
+          "conceptsPublished",
+          "dimensions"
+        ],
+        "title": "MeasureDimensionsResponse",
+        "type": "object"
+      },
       "MeasureFilterPayload": {
         "additionalProperties": false,
         "description": "One condition a row must meet to count.",
@@ -22539,6 +22710,47 @@
         "title": "MeasureLimitPayload",
         "type": "object"
       },
+      "MeasureOtherGroup": {
+        "description": "The groups beyond a split's limit, as one (design O6).",
+        "properties": {
+          "against": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "With `against`: the other measure over the same rest, recalculated the same way — {value, delta, change, changeKind}.",
+            "title": "Against"
+          },
+          "groupCount": {
+            "description": "How many groups were folded into it.",
+            "title": "Groupcount",
+            "type": "integer"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The measure over the rest's rows, recalculated; null when it has no value.",
+            "title": "Value"
+          }
+        },
+        "required": [
+          "value",
+          "groupCount"
+        ],
+        "title": "MeasureOtherGroup",
+        "type": "object"
+      },
       "MeasurePartPayload": {
         "additionalProperties": false,
         "description": "One side of a ratio: a sum, a count, or a count of distinct values.",
@@ -22649,7 +22861,7 @@
             "default": [],
             "description": "Extra conditions, on top of the measure's own.",
             "items": {
-              "$ref": "#/components/schemas/MeasureFilterPayload"
+              "$ref": "#/components/schemas/QuestionFilterPayload"
             },
             "maxItems": 20,
             "title": "Filters",
@@ -22690,6 +22902,12 @@
             "title": "Measure",
             "type": "string"
           },
+          "other": {
+            "default": false,
+            "description": "With a split: also the groups beyond `limit`, as ONE group in `other`, recalculated over their rows — so the rest of a ratio is the ratio of the rest, never a sum of ratios. A tile shows 'Other' from it and never adds groups up itself.",
+            "title": "Other",
+            "type": "boolean"
+          },
           "period": {
             "anyOf": [
               {
@@ -22726,14 +22944,14 @@
           "splitBy": {
             "anyOf": [
               {
-                "maxLength": 64,
+                "maxLength": 320,
                 "type": "string"
               },
               {
                 "type": "null"
               }
             ],
-            "description": "A column to split the measure by.",
+            "description": "A column to split the measure by: of its own table, or `table.column` of a connected one (a dimension's key).",
             "title": "Splitby"
           },
           "start": {
@@ -23061,6 +23279,17 @@
             "title": "Ok",
             "type": "boolean"
           },
+          "other": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MeasureOtherGroup"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "With `other`: the groups beyond `limit` as one group, recalculated over their rows. Null when not asked for, or when no group lies beyond the limit."
+          },
           "parts": {
             "anyOf": [
               {
@@ -23123,6 +23352,26 @@
               "type": "object"
             },
             "title": "Series",
+            "type": "array"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MeasureSource"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Where the home table's rows come from (the source line). Null with `ok` false."
+          },
+          "sources": {
+            "default": [],
+            "description": "The source of every table this number reads, home first (as `tables`).",
+            "items": {
+              "$ref": "#/components/schemas/MeasureSource"
+            },
+            "title": "Sources",
             "type": "array"
           },
           "status": {
@@ -23263,6 +23512,127 @@
           }
         },
         "title": "MeasureRangeMethodPayload",
+        "type": "object"
+      },
+      "MeasureSource": {
+        "description": "Where one table's rows come from, in the viewer's terms (E1, the source line).",
+        "properties": {
+          "freshAsOf": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the newest row was written. Null when nothing was loaded, and always null for source (read live, never loaded).",
+            "title": "Freshasof"
+          },
+          "kind": {
+            "description": "Who writes the rows: entered (an author keeps them), workflow, query (a query fills them from a data source) or source (they stay in the data source and are read live).",
+            "enum": [
+              "entered",
+              "workflow",
+              "query",
+              "source"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "lastDate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The newest date on the time axis among the table's rows. Null when not loaded.",
+            "title": "Lastdate"
+          },
+          "lastLoadAttemptAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the last fill of a query table was tried; else null.",
+            "title": "Lastloadattemptat"
+          },
+          "lastLoadFailed": {
+            "default": false,
+            "description": "True when the last fill of a query table failed; the rows are the fill's before it.",
+            "title": "Lastloadfailed",
+            "type": "boolean"
+          },
+          "loaded": {
+            "description": "False when the table holds no rows: say so, and show no date.",
+            "title": "Loaded",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "The data source's name for query and source; else the table's name.",
+            "title": "Name",
+            "type": "string"
+          },
+          "system": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The data source's type (bigquery, postgres, …) for query and source; else null.",
+            "title": "System"
+          },
+          "table": {
+            "title": "Table",
+            "type": "string"
+          },
+          "tableId": {
+            "title": "Tableid",
+            "type": "string"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For entered: the published version the rows are read from; else null.",
+            "title": "Version"
+          },
+          "versionDate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For entered: when that version was published; else null.",
+            "title": "Versiondate"
+          }
+        },
+        "required": [
+          "tableId",
+          "table",
+          "kind",
+          "name",
+          "loaded"
+        ],
+        "title": "MeasureSource",
         "type": "object"
       },
       "MeasureSummary": {
@@ -29975,6 +30345,14 @@
             "title": "Appslug",
             "type": "string"
           },
+          "approvedElsewhere": {
+            "description": "Where this bundle hash was approved in another workspace of the installation, the matching rights first. A fact to read, never a decision: empty when none, when the code is blocked, or when the lookup failed.",
+            "items": {
+              "$ref": "#/components/schemas/ApprovedElsewhereSchema"
+            },
+            "title": "Approvedelsewhere",
+            "type": "array"
+          },
           "blockReason": {
             "anyOf": [
               {
@@ -32856,6 +33234,72 @@
           }
         },
         "title": "QueryUsage",
+        "type": "object"
+      },
+      "QuestionFilterPayload": {
+        "additionalProperties": false,
+        "description": "A tile's own filter: a column of the measure's table, or ``table.column``.",
+        "properties": {
+          "column": {
+            "description": "The column the condition reads: a column of the measure's own table, or `table.column` of a connected one (a dimension's key).",
+            "maxLength": 320,
+            "title": "Column",
+            "type": "string"
+          },
+          "operator": {
+            "description": "equals, not_equals, in, not_in, greater_than, less_than, at_least or at_most. The last four need a number or date column.",
+            "maxLength": 32,
+            "title": "Operator",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "items": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "boolean"
+                    }
+                  ]
+                },
+                "maxItems": 200,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the column is compared with; a list for in and not_in.",
+            "title": "Value"
+          }
+        },
+        "required": [
+          "column",
+          "operator"
+        ],
+        "title": "QuestionFilterPayload",
         "type": "object"
       },
       "QueueDispatchHealth": {
@@ -42005,9 +42449,55 @@
         "title": "SuspendRunResponse",
         "type": "object"
       },
+      "SyncAppsPreviewResponse": {
+        "description": "``GET /config/environments/sync/apps`` — what \"only apps\" would do, nothing written.\n\n``problems`` is the refusal the press would give, in the deploy's own words\n(empty when it would go through); ``apps`` stays listed beside it so a\nrefusal says which app it is about.",
+        "properties": {
+          "apps": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/AppPreviewSchema"
+            },
+            "title": "Apps",
+            "type": "array"
+          },
+          "branch": {
+            "title": "Branch",
+            "type": "string"
+          },
+          "commit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Commit"
+          },
+          "problems": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Problems",
+            "type": "array"
+          }
+        },
+        "required": [
+          "branch"
+        ],
+        "title": "SyncAppsPreviewResponse",
+        "type": "object"
+      },
       "SyncEnvironmentRequest": {
         "description": "``POST /config/environments/sync`` — load this workspace's own branch.\n\nFor the environment NO promotion rule advances: the button that says \"take\nwhat my branch has now\". ``full`` is the one thing it asks, and it asks it\nper press because it describes THIS sync: ``true`` means the branch is the\nwhole configuration, so what it no longer carries leaves the workspace too\n(reversibly); ``false`` adds and updates only.\n\nThere is no branch, ref or repo field, and that is the point: what gets\nloaded is the link the operator set up, never something a request body\nnames. The same reason ``targetTenantId`` is a guard and not a selector\neverywhere else on this surface.",
         "properties": {
+          "appsOnly": {
+            "default": false,
+            "title": "Appsonly",
+            "type": "boolean"
+          },
           "full": {
             "default": false,
             "title": "Full",
@@ -57840,6 +58330,82 @@
         ]
       }
     },
+    "/api/v1/apps/authoring": {
+      "get": {
+        "operationId": "authoring_api_v1_apps_authoring_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Authoring Api V1 Apps Authoring Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Authoring",
+        "tags": [
+          "apps"
+        ]
+      }
+    },
+    "/api/v1/apps/manifest/check": {
+      "post": {
+        "operationId": "check_api_v1_apps_manifest_check_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManifestCheck"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Check Api V1 Apps Manifest Check Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Check",
+        "tags": [
+          "apps"
+        ]
+      }
+    },
     "/api/v1/apps/manifest/validate": {
       "post": {
         "description": "Validate one manifest with the parser used by config import, without writing.",
@@ -57882,6 +58448,75 @@
           }
         ],
         "summary": "Validate App Manifest",
+        "tags": [
+          "apps"
+        ]
+      }
+    },
+    "/api/v1/apps/starter": {
+      "get": {
+        "operationId": "starter_api_v1_apps_starter_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Starter Api V1 Apps Starter Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Starter",
+        "tags": [
+          "apps"
+        ]
+      }
+    },
+    "/api/v1/apps/starter/download/{ticket}": {
+      "get": {
+        "description": "The starter package, for whoever holds a ticket: the ticket is the credential.\n\nThere is no session here, as for ``/app-files``: the shell that runs ``curl`` holds none, and\nthe hosted MCP cannot hand it a bearer. What stands in for one is the ticket: 256 bits, issued\nto a signed-in person (audit line), good for one download and five minutes, and checked by one\natomic statement. Every way of not holding one answers the same 404, and the IP is rate-limited\nbefore the database is asked. The package is the same for everybody and holds no secret.",
+        "operationId": "download_api_v1_apps_starter_download__ticket__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ticket",
+            "required": true,
+            "schema": {
+              "title": "Ticket",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Download",
         "tags": [
           "apps"
         ]
@@ -61656,7 +62291,7 @@
     },
     "/api/v1/config/environments/sync": {
       "post": {
-        "description": "Load this workspace's own linked branch into it, on request.\n\nThe button for the environment nothing promotes into. ``full`` is the\noperator's answer to \"everything, or only what changed\" — asked per press\nrather than stored, because it is what THIS sync should do.\n\nAn INTERACTIVE ADMIN SESSION is what makes an explicit ``full`` legitimate:\nit is a person answering, not a request body asking for deletions. Every\nother deploy path leaves the answer to the workspace's own stored setting,\nso a deploy credential can never ask for removals (#616 C2 still applies on\ntop — a protected environment takes an admin session, which this is).\n\nRefused (422) when a promotion rule owns this environment: that one is\nadvanced by promoting its source into it. Returns the deploy's own summary,\n``removed`` included — a sync that deletes says so in its result.",
+        "description": "Load this workspace's own linked branch into it, on request.\n\nThe button for the environment nothing promotes into. ``full`` is the\noperator's answer to \"everything, or only what changed\" — asked per press\nrather than stored, because it is what THIS sync should do.\n\nAn INTERACTIVE ADMIN SESSION is what makes an explicit ``full`` legitimate:\nit is a person answering, not a request body asking for deletions. Every\nother deploy path leaves the answer to the workspace's own stored setting,\nso a deploy credential can never ask for removals (#616 C2 still applies on\ntop — a protected environment takes an admin session, which this is).\n\nRefused (422) when a promotion rule owns this environment: that one is\nadvanced by promoting its source into it. Returns the deploy's own summary,\n``removed`` included — a sync that deletes says so in its result.\n\n``appsOnly`` loads only the apps of the branch and leaves the configuration\nand the plug-ins alone: 422 for a protected environment, and\nfor ``full`` asked together with it.",
         "operationId": "sync_environment_api_v1_config_environments_sync_post",
         "requestBody": {
           "content": {
@@ -61696,6 +62331,33 @@
           }
         ],
         "summary": "Sync Environment",
+        "tags": [
+          "config-deploy"
+        ]
+      }
+    },
+    "/api/v1/config/environments/sync/apps": {
+      "get": {
+        "description": "What syncing only the apps of this workspace's own branch would do. Writes nothing.\n\nThe apps of the branch with their status (new, changed, unchanged), and the\nrefusal the press would give — the same check the deploy runs, so a \"no\"\nhere is the \"no\" there. A refusal is part of the answer (200 with\n``problems``), not an error: the screen shows the names beside the list.\n422 for a protected environment, which does not know the mode; 404 when\nnothing is connected. Admin-only, scoped to the caller's own tenant.",
+        "operationId": "preview_sync_apps_api_v1_config_environments_sync_apps_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncAppsPreviewResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Preview Sync Apps",
         "tags": [
           "config-deploy"
         ]
@@ -74623,6 +75285,68 @@
           }
         ],
         "summary": "List Deleted Measures",
+        "tags": [
+          "measures"
+        ]
+      }
+    },
+    "/api/v1/measures/dimensions": {
+      "get": {
+        "description": "What a measure can be split by, each named by the concept on its column (E1).\n\nA READ, open to every member like the numbers themselves. Declared before\n``/{measure_id}``, or a request for it would be read as a request for the\nmeasure called \"dimensions\". Bounded by nature: only columns a concept\ndescribes, and the concepts table is capped at the write.",
+        "operationId": "read_measure_dimensions_api_v1_measures_dimensions_get",
+        "parameters": [
+          {
+            "description": "The measure's name.",
+            "in": "query",
+            "name": "measure",
+            "required": true,
+            "schema": {
+              "description": "The measure's name.",
+              "maxLength": 64,
+              "minLength": 1,
+              "title": "Measure",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "useDraft",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Usedraft",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeasureDimensionsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Read Measure Dimensions",
         "tags": [
           "measures"
         ]
