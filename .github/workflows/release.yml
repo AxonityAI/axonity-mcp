@@ -6,7 +6,8 @@ name: Release
 # Hoe:
 #   1. de CI-workflow (ci.yml) draait als eerste job; faalt die, dan stopt alles
 #   2. de release-job bouwt en test opnieuw op Node 24 en pakt het tarball in
-#      (npm pack --dry-run) — nog vóór de versie beweegt
+#      (npm pack --dry-run) en start de bin uit het echte tarball één keer
+#      (scripts/smoke-packed-bin.mjs) — nog vóór de versie beweegt
 #   3. scripts/next-version.mjs kiest patch / minor / major uit de commits sinds
 #      de vorige tag
 #   4. versiecommit + tag v<versie> gaan in één atomaire push naar main
@@ -89,6 +90,13 @@ jobs:
         run: npm run build
       - if: steps.fresh.outputs.latest == 'true'
         run: npm pack --dry-run
+      # Het echte tarball: uitpakken, de bin moet uitvoerbaar zijn en met de
+      # node-shebang beginnen, en één keer starten (--version). 1.0.0 tot 1.1.0
+      # gingen uit met een bin zonder uitvoerrecht ("Permission denied" →
+      # "Connection closed" bij elke MCP). Faalt dit: geen tag, niets op npm.
+      - name: Smoke op het tarball
+        if: steps.fresh.outputs.latest == 'true'
+        run: npm run smoke:bin
 
       - name: Volgende versie
         id: next
