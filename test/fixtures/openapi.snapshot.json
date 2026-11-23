@@ -1,6 +1,261 @@
 {
   "components": {
     "schemas": {
+      "ActionApprovalAccepted": {
+        "description": "The answer to a route of category 2 that a token called: asked, not done.",
+        "properties": {
+          "approval": {
+            "$ref": "#/components/schemas/ActionApprovalItem"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "status": {
+            "const": "pending_approval",
+            "default": "pending_approval",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "approval",
+          "message"
+        ],
+        "title": "ActionApprovalAccepted",
+        "type": "object"
+      },
+      "ActionApprovalCheck": {
+        "description": "The check re-run when the request is READ, so the answer is never a stale one.",
+        "properties": {
+          "outcome": {
+            "enum": [
+              "ok",
+              "changed",
+              "expired"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "required": [
+          "outcome"
+        ],
+        "title": "ActionApprovalCheck",
+        "type": "object"
+      },
+      "ActionApprovalItem": {
+        "description": "A request as shown in the inbox and returned to whoever asked.",
+        "properties": {
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "canDecide": {
+            "title": "Candecide",
+            "type": "boolean"
+          },
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/ActionChangeItem"
+            },
+            "title": "Changes",
+            "type": "array"
+          },
+          "check": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ActionApprovalCheck"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "createdAt": {
+            "title": "Createdat",
+            "type": "string"
+          },
+          "decidedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decidedat"
+          },
+          "decidedByName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decidedbyname"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "origin": {
+            "enum": [
+              "mcp",
+              "agent",
+              "screen"
+            ],
+            "title": "Origin",
+            "type": "string"
+          },
+          "ownerName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ownername"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "title": "Payload",
+            "type": "object"
+          },
+          "requestedByKind": {
+            "enum": [
+              "service_token",
+              "user"
+            ],
+            "title": "Requestedbykind",
+            "type": "string"
+          },
+          "requestedVia": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requestedvia"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result"
+          },
+          "routeKey": {
+            "title": "Routekey",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "approved",
+              "rejected",
+              "expired"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "statusReason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Statusreason"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "target": {
+            "additionalProperties": true,
+            "title": "Target",
+            "type": "object"
+          },
+          "targetLabel": {
+            "title": "Targetlabel",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "action",
+          "routeKey",
+          "target",
+          "targetLabel",
+          "summary",
+          "payload",
+          "status",
+          "requestedByKind",
+          "origin",
+          "canDecide",
+          "createdAt"
+        ],
+        "title": "ActionApprovalItem",
+        "type": "object"
+      },
+      "ActionChangeItem": {
+        "description": "One changed field in words: ``Role  member → admin``. ``before`` is empty when it is new.",
+        "properties": {
+          "after": {
+            "title": "After",
+            "type": "string"
+          },
+          "before": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Before"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "after"
+        ],
+        "title": "ActionChangeItem",
+        "type": "object"
+      },
       "ActionVerdictCounts": {
         "description": "How a workflow's judged rules fared across its runs (story 3).",
         "properties": {
@@ -46045,6 +46300,25 @@
           }
         },
         "title": "UnpublishResponse",
+        "type": "object"
+      },
+      "UnpublishWorkflowRequest": {
+        "description": "Optional body of ``POST /api/v1/workflows/{workflow_id}/unpublish``.\n\n``reason`` is why the workflow is taken off the air, in the words of whoever asks. It is\nstored on the audit event of the unpublication and, for a token's request, shown to the\nperson who decides. The screen sends no body: a person needs to give no reason.",
+        "properties": {
+          "reason": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "title": "UnpublishWorkflowRequest",
         "type": "object"
       },
       "UnreadableContainerOut": {
@@ -104026,7 +104300,7 @@
     },
     "/api/v1/workflows/{workflow_id}/unpublish": {
       "post": {
-        "description": "Unpublish the current live workflow version.\n\nClears the workflow's published_document. After unpublish,\nthe workflow has no live version.",
+        "description": "Unpublish the current live workflow version.\n\nClears the workflow's published_document. After unpublish,\nthe workflow has no live version. A person does it at once; a token\nonly ASKS (``202``, action ``workflows.unpublish``) and a person\napproves — refused (``409``, naming each) while a start of the\nworkflow is still switched on.",
         "operationId": "unpublish_workflow_api_v1_workflows__workflow_id__unpublish_post",
         "parameters": [
           {
@@ -104040,12 +104314,37 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/UnpublishWorkflowRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/UnpublishResponse"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/UnpublishResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ActionApprovalAccepted"
+                    }
+                  ],
+                  "title": "Response Unpublish Workflow Api V1 Workflows  Workflow Id  Unpublish Post"
                 }
               }
             },

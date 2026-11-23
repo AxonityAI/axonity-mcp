@@ -626,8 +626,10 @@ function registerArchiveTools(
       (versioned
         ? `The versions and the publication are not touched, and no version is ` +
           `needed. Only a draft can be archived: a published ${singular} is ` +
-          `refused ("Unpublish it first"), and a person unpublishes it in ` +
-          `Axonity — no tool does.`
+          `refused ("Unpublish it first"), and ` +
+          (singular === "workflow"
+            ? `unpublish_workflow asks for that: a person approves, then archive.`
+            : `a person unpublishes it in Axonity — no tool does.`)
         : `No version is needed.`) +
       ` One the platform ships is refused too.` +
       (def.archiveGuard === "in_use"

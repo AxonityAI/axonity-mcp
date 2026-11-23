@@ -340,7 +340,12 @@ describe("archive: what the backend refuses, said before the call", () => {
       // backend's `refuse_published_item` has nothing to find (review S1).
       if (e.publishable !== false) {
         expect(d, e.singular).toMatch(/Only a draft can be archived/);
-        expect(d, e.singular).toMatch(/a person unpublishes it in Axonity/);
+        // A workflow alone has a tool that asks for it (axonity-flow#2626).
+        expect(d, e.singular).toMatch(
+          e.singular === "workflow"
+            ? /unpublish_workflow asks for that: a person approves/
+            : /a person unpublishes it in Axonity — no tool does/,
+        );
       }
     }
   });

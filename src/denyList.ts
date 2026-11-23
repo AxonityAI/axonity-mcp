@@ -92,7 +92,16 @@ export const FORBIDDEN: Rule[] = [
   // here is what makes `request_publish_*` legible as the path rather than a
   // limitation. Making a draft live is where an agent's work starts affecting
   // real runs, and somebody accountable says when that happens.
-  { label: "direct publish/unpublish", path: /\/(publish|unpublish)$/ },
+  { label: "direct publish", path: /\/publish$/ },
+  // Taking something off the air is as much a person's decision. The ONE exception is the
+  // workflow's (axonity-flow#2626): a token's call there is no unpublication but a REQUEST a
+  // person approves (202, `action_approvals`), refused while a start of the workflow is on;
+  // `archive_workflow` refuses a published workflow, so without it an agent could clean up
+  // nothing it published. Every other kind's unpublish stays closed.
+  {
+    label: "direct unpublish",
+    path: /^(?!\/api\/v1\/workflows\/[^/]+\/unpublish$).*\/unpublish$/,
+  },
   // The same act under another name: `POST /agents/{id}/publish-release`
   // (axonity-flow#2382) publishes an agent and the parts it needs at once,
   // with no approval row — "a person only", and `forbid_service_token` on the
