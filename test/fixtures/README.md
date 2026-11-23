@@ -11,6 +11,25 @@ diff in review.
 
 ## Provenance
 
+- **Approvals paging (platform-onderhoud, blok a), 2026-11-23, not released.**
+  A PARTIAL pin, on purpose: only `GET /api/v1/publish-approvals` (new
+  `origin`, `entityType`, `agentId`, `cursor`; `limit` without a maximum, the
+  backend caps it), `GET /api/v1/publish-approvals/summary` (new) and the
+  schemas they reference (`PublishApprovalListResponse` with `nextCursor`;
+  `PublishApprovalSummary`, `ApprovalStatusCounts`, `ApprovalOriginCounts`,
+  `ApprovalKindCount`, `ApprovalAgentCount`) were copied from a dump of Flow
+  `d6bcc55d2` (PR #2608, not merged). The dump is the checkout's own
+  `scripts/dump_openapi.py` and `scripts/dump_token_route_classes.py`, run with
+  `env -i`, `ENVIRONMENT=development` and an unreachable database URL; nothing
+  else of it was taken, because Flow `main` has moved since the previous pin by
+  eight operations this connector has not decided yet (`/action-approvals*`,
+  `/data-tables/{id}/replacement/*`) and deciding them is not this change. The
+  token table gains the one row `GET /api/v1/publish-approvals/summary`
+  (`lezen`), as the dump has it; `src/generated/tokenRouteClasses.ts` is
+  regenerated. OpenAPI now has 951 operations (950 -> 951), 3,091,230 bytes,
+  SHA-256 `282b9e435de724c01005c57639fb85b48b2780bf2482a901413da61d0bddc633`.
+  Re-take the whole pin on Flow `main` after #2608 merges.
+
 - **Methods (R6 of agent-first), 2026-11-19, not released.** The complete OpenAPI
   and token-route tables come from Flow `main` `e00df9b36` (Methods, #2491, with
   the Tools merge and the Flow-App frame, #2495, in it): this is the pin the

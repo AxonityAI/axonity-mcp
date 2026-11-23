@@ -238,6 +238,55 @@ const VIEW = z
       "anyone else gets a 403.",
   );
 
+/**
+ * The filters of the publish queue (axonity-flow #2608, `routes/publish_approvals.py`
+ * `list_approvals` and `summarize_approvals`; `domain/approval_filter.py`). The
+ * list and its summary take the same four, so both tools share one shape. The
+ * enum values are the route's: `origin` is `ApprovalOrigin`, `entityType` is
+ * `ApprovalEntityType` (`schemas/publish_approval.py`);
+ * `test/approvalsPaging.test.ts` holds them to the pinned OpenAPI snapshot.
+ */
+const QUEUE_FILTERS = {
+  status: z
+    .enum(["pending", "approved", "rejected"])
+    .optional()
+    .describe("Filter by status. Omit for all."),
+  origin: z
+    .enum(["mcp", "agent", "screen"])
+    .optional()
+    .describe(
+      "Where the requests came from: `mcp` (a token), `agent` (an internal " +
+        "agent) or `screen`. Omit for all.",
+    ),
+  entityType: z
+    .enum([
+      "method",
+      "workflow",
+      "agent",
+      "tool",
+      "skill",
+      "policy",
+      "reference_doc",
+      "prompt_snippet",
+      "output_schema",
+      "data_table",
+      "application",
+      "table_database",
+      "toolbox",
+      "measure",
+      "query",
+      "data_source",
+      "company",
+    ])
+    .optional()
+    .describe("Only requests that would publish this kind of thing. Omit for all."),
+  agentId: z
+    .string()
+    .uuid()
+    .optional()
+    .describe("Only what this internal agent proposed (its id). Omit for all."),
+};
+
 export function registerApprovalTools(
   server: McpServer,
   client: AxonityClient,
@@ -245,11 +294,18 @@ export function registerApprovalTools(
   server.tool(
     "list_publish_approvals",
     "List the publish approvals you may see, with their status — how you find out " +
-      "whether a request_publish_* was approved or rejected. Optionally filter " +
-      "by status, and page through with limit/offset: the answer carries " +
-      "`total` and `hasMore`, so raise `offset` by `limit` until `hasMore` is " +
-      "false. Approving and rejecting " +
-      "are human-only actions in Axonity; no tool can do them. " +
+      "whether a request_publish_* was approved or rejected. Approving and rejecting " +
+      "are human-only actions in Axonity; no tool can do them." +
+      "\n\nTHE QUEUE CAN HOLD THOUSANDS OF REQUESTS, SO READ IT A PAGE AT A TIME " +
+      "AND NOT ALL AT ONCE. One call answers one page (`limit`, 50 by default) " +
+      "with `total` (how many match the whole filter), `hasMore` and " +
+      "`nextCursor`: send `nextCursor` back as `cursor` for the next page, and " +
+      "stop when it is null. Do not walk every page to answer a count or to find " +
+      "one request: narrow first with `status`, `origin`, `entityType` or " +
+      "`agentId` (each narrows the query and its `total`), and ask " +
+      "publish_approvals_summary for the numbers per status, source, kind and " +
+      "agent — it counts without reading a row. `offset` still pages the older " +
+      "way, read only when no `cursor` is sent." +
       WHOSE_REQUESTS +
       WHAT_A_REQUEST_SAYS +
       CURRENT_REQUEST_VERSION +
@@ -258,18 +314,62 @@ export function registerApprovalTools(
       "requester saw, and `readinessChanged` says whether it moved. So a blocker " +
       "you saw an hour ago may already be resolved — and 'ready' means ready now.",
     {
-      status: z
-        .enum(["pending", "approved", "rejected"])
-        .optional()
-        .describe("Filter by status. Omit for all."),
+      ...QUEUE_FILTERS,
       view: VIEW,
       limit: z.number().int().min(1).max(200).optional().describe("Default 50."),
-      offset: z.number().int().min(0).optional().describe("Default 0."),
+      cursor: z
+        .string()
+        .optional()
+        .describe(
+          "`nextCursor` from the previous page, as it came. Omit for the first page.",
+        ),
+      offset: z
+        .number()
+        .int()
+        .min(0)
+        .optional()
+        .describe("The older way to page; read only without a `cursor`. Default 0."),
     },
-    async ({ status, view, limit, offset }) =>
+    async ({ status, origin, entityType, agentId, view, limit, cursor, offset }) =>
       guard(async () =>
         jsonResult(
-          await client.get("/api/v1/publish-approvals", { status, view, limit, offset }),
+          await client.get("/api/v1/publish-approvals", {
+            status,
+            origin,
+            entityType,
+            agentId,
+            view,
+            limit,
+            cursor,
+            offset,
+          }),
+        ),
+      ),
+  );
+
+  server.tool(
+    "publish_approvals_summary",
+    "Count the publish approvals you may see, without reading them: `total`, " +
+      "`byStatus` (pending, approved, rejected), `byOrigin` (mcp, agent, screen), " +
+      "`byKind` (per `entityType`) and `byAgent` (per internal agent, with its " +
+      "name; null for one since deleted). Read this before list_publish_approvals " +
+      "when the question is how many, or to choose the filter that finds what you " +
+      "want. It takes the list's filters, and each count keeps every filter but " +
+      "its own: `byStatus` ignores `status`, `byOrigin` ignores `origin`, and so " +
+      "on, so a number is what choosing it would list; `total` is the count under " +
+      "every filter but `status`." +
+      WHOSE_REQUESTS,
+    { ...QUEUE_FILTERS, view: VIEW },
+    async ({ status, origin, entityType, agentId, view }) =>
+      guard(async () =>
+        jsonResult(
+          await client.get("/api/v1/publish-approvals/summary", {
+            status,
+            origin,
+            entityType,
+            agentId,
+            view,
+          }),
         ),
       ),
   );
