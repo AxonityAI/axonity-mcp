@@ -229,15 +229,16 @@ describe("the guide says how each list pages, as the route answers (K1, review o
     for (const line of paragraph.split("\n")) expect(line.length, line).toBeLessThanOrEqual(84);
   });
 
-  it("says list_publish_approvals pages by offset and answers total and hasMore", async () => {
+  it("says list_publish_approvals pages by nextCursor and answers total and hasMore", async () => {
     const { CONVENTIONS } = await import("../src/tools/conventions.js");
     const params = snapshot.paths["/api/v1/publish-approvals"].get.parameters!.map((p) => p.name);
-    expect(params).toEqual(expect.arrayContaining(["limit", "offset"]));
+    expect(params).toEqual(expect.arrayContaining(["limit", "cursor", "offset"]));
     const answer = Object.keys(
       snapshot.components.schemas.PublishApprovalListResponse.properties ?? {},
     );
-    expect(answer).toEqual(expect.arrayContaining(["hasMore", "total"]));
-    expect(CONVENTIONS).toMatch(/`list_publish_approvals`[^.]*`offset`[^.]*`hasMore`/);
+    expect(answer).toEqual(expect.arrayContaining(["hasMore", "total", "nextCursor"]));
+    expect(CONVENTIONS).toMatch(/`list_publish_approvals`[^.]*`nextCursor`[^.]*`hasMore`/);
+    expect(CONVENTIONS).toMatch(/`publish_approvals_summary`/);
     const { registerApprovalTools } = await import("../src/tools/validation.js");
     let d = "";
     registerApprovalTools(

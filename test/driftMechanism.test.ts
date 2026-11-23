@@ -248,10 +248,10 @@ describe("the connector asks the deploy what it can do (M2)", () => {
     expect(message).toMatch(/update this connector/);
   });
 
-  it("degrades silently on a backend too old to serve /contract", async () => {
-    // The route landed in axonity-flow#806. An older backend 404s, and that is
-    // not a problem to announce — it is the situation `BackendVersionSkewError`
-    // still covers reactively.
+  it("degrades to every tool, with one warning, on a backend too old to serve /contract", async () => {
+    // The route landed in axonity-flow#806. An older backend 404s; every tool
+    // stays (`BackendVersionSkewError` still covers a missing route
+    // reactively), and the warning says the check could not run.
     const log = vi.fn();
     const result = await reportContractSkew(
       contractClient(() => {
@@ -262,7 +262,8 @@ describe("the connector asks the deploy what it can do (M2)", () => {
     );
 
     expect(result).toBe("unavailable");
-    expect(log).not.toHaveBeenCalled();
+    expect(log).toHaveBeenCalledTimes(1);
+    expect(log.mock.calls[0][0]).toMatch(/no contract route/);
   });
 
   it("says so, once, when the check itself fails for another reason", async () => {
@@ -278,7 +279,8 @@ describe("the connector asks the deploy what it can do (M2)", () => {
     expect(result).toBe("unavailable");
     expect(log).toHaveBeenCalledTimes(1);
     // A diagnostic that cannot run must not read as a verdict about the deploy.
-    expect(log.mock.calls[0][0]).toMatch(/diagnostic, not a dependency/);
+    expect(log.mock.calls[0][0]).toMatch(/could not read the backend contract.*503/);
+    expect(log.mock.calls[0][0]).toMatch(/Offering every tool/);
   });
 
   it("gives up rather than holding startup open", async () => {
@@ -294,7 +296,8 @@ describe("the connector asks the deploy what it can do (M2)", () => {
     );
 
     expect(result).toBe("timeout");
-    expect(log).not.toHaveBeenCalled();
+    expect(log).toHaveBeenCalledTimes(1);
+    expect(log.mock.calls[0][0]).toMatch(/in time/);
   });
 
   it("needs no write scope — the check issues GETs only", async () => {

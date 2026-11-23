@@ -1,9 +1,11 @@
 name: CI
 
+# On a pull request this runs by itself. On main it runs as the first job of
+# release.yml (workflow_call), so a merge is tested once and the release waits
+# for it — a second, separate run on push would only duplicate the work.
 on:
-  push:
-    branches: [main]
   pull_request:
+  workflow_call:
 
 jobs:
   build-test:
@@ -30,3 +32,7 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+      # Pack the build, unpack it, and start the bin once the way npx does.
+      # Releases 1.0.0 to 1.1.0 shipped a bin without the execute bit, and every
+      # Axonity MCP failed with "Connection closed"; this turns a PR red first.
+      - run: npm run smoke:bin

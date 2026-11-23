@@ -1083,6 +1083,9 @@
   "GET /api/v1/publish-approvals/release/{release_id}": {
     "class": "lezen"
   },
+  "GET /api/v1/publish-approvals/summary": {
+    "class": "lezen"
+  },
   "GET /api/v1/publish-approvals/{approval_id}": {
     "class": "lezen"
   },

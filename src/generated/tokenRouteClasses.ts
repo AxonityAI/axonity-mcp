@@ -325,6 +325,7 @@ export const TOKEN_ROUTE_CLASSES: Readonly<Record<string, TokenRoute>> = {
   "GET /api/v1/publish-approvals/pending-count": { class: "lezen" },
   "GET /api/v1/publish-approvals/release": { class: "lezen" },
   "GET /api/v1/publish-approvals/release/{release_id}": { class: "lezen" },
+  "GET /api/v1/publish-approvals/summary": { class: "lezen" },
   "GET /api/v1/publish-approvals/{approval_id}": { class: "lezen" },
   "GET /api/v1/queries": { class: "lezen" },
   "GET /api/v1/queries/deleted": { class: "lezen" },
