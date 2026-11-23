@@ -217,7 +217,8 @@ const TILE_PERIOD_NOTE =
   "The viewer may also choose a closed month/quarter without changing the " +
   "saved layout; query it with period null and start/end dates, end inclusive. " +
   "hidden hides the viewer's selector and keeps layout.period. A tile's own " +
-  "period or fixed start/end dates take precedence.";
+  "period or fixed start/end dates take precedence (not on a statement tile, " +
+  "which reads the dashboard's period).";
 
 /** Number comparisons and expected bands are validated by the backend. */
 const TILE_NUMBER_NOTE =
@@ -235,6 +236,55 @@ const TILE_NUMBER_NOTE =
   "`config.showExpected` is a boolean, only on number or trend tiles, " +
   "to request the measure's expected band. The period and comparison " +
   "caption come from the answer; caption remains context, with no variables.";
+
+/** Section mechanics and arranging (axonity-flow#2576 parts 5 and 8) — validated by the backend. */
+const LAYOUT_ARRANGING_NOTE =
+  "\n\nSECTIONS — the status chip of a section is computed: the worst status " +
+  "of its tiles that have limits, with the reason; no tile with limits, no " +
+  "chip; a `section.status` an author typed still wins. Its \"Follow up\" " +
+  "links the tiles outside their limits. `section.answer` is the one-sentence " +
+  "answer slot above the tiles (plain text, at most 400 characters; empty " +
+  "shows nothing; leave a field out to clear it; null is refused). `section.collapse` is open or closed (how a foldable " +
+  "section opens; absent = not foldable). `section.phoneOrder` is a list of " +
+  "tile ids in the order a phone shows them; tiles not named follow in " +
+  "desktop order, an id no longer in the section is skipped, a repeated id is " +
+  "refused. `layout.overview` (true) puts a summary at the top: each titled " +
+  "section with its chip and answer, clickable. SIZES besides S, M, L, XL: " +
+  "\"T\" tall 1×2, \"W\" three wide 3×1, \"R\" a full row as high as its " +
+  "content; every type takes them. In View the tile before a gap at the end " +
+  "of a row widens to fill it and the order never changes, so a gap under " +
+  "a short tile beside a tall one stays." +
+  "\n\nTHE VIEWER — bars per group with `against` or `compare` draw the plan " +
+  "and last year as a marker line on each bar. A viewer may keep a period on " +
+  "one tile from the drill panel; it is not saved, only carried in the link " +
+  "(`?period=…&tile.<id>=…&split=<id>`), and never changes a section's " +
+  "status, answer or the overview.";
+
+/** The statement tile (P&L), axonity-flow#2576 part 1 — validated by the backend. */
+const TILE_STATEMENT_NOTE =
+  "\n\nA STATEMENT TILE (`statement`, size L, XL or one of T, W, R — R grows " +
+  "with its lines) is a P&L: lines of " +
+  "measures. `config.rows` is the list of lines, at most 20 lines, each " +
+  "`{label, measure, style?, indent?}`: `measure` by NAME, `style` " +
+  "line (default), subtotal (bold) or total (bold, ruled above), `indent` 0–2. " +
+  "A line has no period of its own, and a statement sets no period, start, " +
+  "end, measure or statusMeasure: every line reads the dashboard's period " +
+  "(or the one a viewer keeps on the tile) and its own measure. " +
+  "`config.statementColumns` picks and orders " +
+  "the columns from: period, period_last_year, period_change, period_share, " +
+  "period_share_change, ytd, ytd_last_year, ytd_change, ytd_share, " +
+  "ytd_share_change — `period` is the dashboard's period, `ytd` the year up to " +
+  "that period's last day, `_change` the change against last year, `_share` " +
+  "the share of the `config.shareOf` row (the LABEL of one of its lines) and " +
+  "`_share_change` how that share moved, in percentage points. Omitted: period, " +
+  "period_change, ytd, ytd_change, plus ytd_share and ytd_share_change when " +
+  "shareOf is set; a share column needs shareOf. Values keep their sign: a " +
+  "cost stored as a negative amount reads with a minus, and a change is " +
+  "coloured by the measure's own direction. Each line's measure counts as " +
+  "named by the dashboard (it cannot be renamed or deleted while there). " +
+  "Set `config.tableId` on the tile for its lines to open the drill panel; " +
+  "without it a line is plain text. " +
+  "The lines are set here; Edit does not offer the type.";
 
 /**
  * What writing a measure takes (axonity-flow#1908). The contract, not a manual:
@@ -910,13 +960,15 @@ export const ENTITIES: EntityDef[] = [
       "tile shows the status. While a tile names a measure as its " +
       "`statusMeasure`, that measure cannot be renamed or deleted." +
       "\n\n" +
-      TILE_PERIOD_NOTE + TILE_NUMBER_NOTE,
+      TILE_PERIOD_NOTE + TILE_NUMBER_NOTE + TILE_STATEMENT_NOTE +
+      LAYOUT_ARRANGING_NOTE,
     updateWarning:
       "NO DRAFT: a saved dashboard is what everyone it is shared with sees. " +
       "`layout` is replaced WHOLE when sent — read first and send it complete. " +
       "A tile may carry `config.statusMeasure`: the measure whose limits give " +
       "it its status, when that is not the measure it shows. " +
-      TILE_PERIOD_NOTE + TILE_NUMBER_NOTE,
+      TILE_PERIOD_NOTE + TILE_NUMBER_NOTE + TILE_STATEMENT_NOTE +
+      LAYOUT_ARRANGING_NOTE,
   },
 ];
 
