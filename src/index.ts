@@ -86,6 +86,7 @@ import {
 } from "./tools/validation.js";
 import { type VersionedEntity, registerVersionTools } from "./tools/versions.js";
 import { registerWorkflowMutations } from "./tools/workflowMutations.js";
+import { registerWorkflowUnpublishTool } from "./tools/workflowUnpublish.js";
 
 /**
  * What fills a table (axonity-flow#2013). The inline `provenance` bag is gone:
@@ -1092,6 +1093,7 @@ export function registerAll(
   registerCompanyTools(server as McpServer, client);
   registerSecretTools(server as McpServer, client);
   registerSubworkflowTools(server as McpServer, client);
+  registerWorkflowUnpublishTool(server as McpServer, client);
   registerToolboxTools(server as McpServer, client);
   registerOperationsTools(server as McpServer, client);
   registerModuleTools(server as McpServer, client);

@@ -270,7 +270,8 @@ has run cleanly once, at its current version.
   reads it — and out of \`list_*\` unless \`archived\` is \`include\` or \`only\`;
   its row says \`archivedAt\`. It is not edited until it is unarchived. On a
   kind with versions only a draft can be archived: a published one is refused
-  until a person unpublishes it in Axonity, and archiving touches no version
+  until a person unpublishes it in Axonity (a workflow: \`unpublish_workflow\`
+  asks for it, a person approves), and archiving touches no version
   (a data source and a dashboard have no versions, so none of that applies to them). Do not archive by
   sending a \`status\` to \`update_*\`: \`agent\`, \`tool\`, \`skill\`, \`policy\`,
   \`reference_doc\`, \`output_schema\`, \`data_table\`, \`measure\`, \`query\`,

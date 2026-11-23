@@ -11,6 +11,25 @@ diff in review.
 
 ## Provenance
 
+- **Unpublish a workflow (platform-onderhoud), 2026-11-23, not released.**
+  A PARTIAL pin, like the approvals one below: only
+  `POST /api/v1/workflows/{workflow_id}/unpublish` (new optional body
+  `UnpublishWorkflowRequest` with `reason`; the answer is now
+  `UnpublishResponse` or `ActionApprovalAccepted`) and the schemas it newly
+  references (`UnpublishWorkflowRequest`, `ActionApprovalAccepted`,
+  `ActionApprovalItem`, `ActionApprovalCheck`, `ActionChangeItem`) were copied
+  from a dump of Flow branch `jonathan-deramaix/unpublish-workflow`
+  (axonity-flow#2626, not merged), with the checkout's own
+  `scripts/dump_openapi.py` and `scripts/dump_token_route_classes.py`, run with
+  `env -i`, `ENVIRONMENT=development` and an unreachable database URL. The
+  token table changes the one row of that route from `dicht` to
+  `configuratie`; `src/generated/tokenRouteClasses.ts` is regenerated. OpenAPI
+  keeps 951 operations, 3,099,198 bytes, SHA-256
+  `a324dcf2bece80fb552c17d96674a3d0d8ed90bf17be34b842722fb1b39d1b7f`; the
+  token table has 983 rows, 110,170 bytes, SHA-256
+  `d2c268eaf47271a91fb69a9febb6d6702b4243c349c2cc6772ae850636fee252`.
+  Re-take the whole pin on Flow `main` after #2626 merges.
+
 - **Approvals paging (platform-onderhoud, blok a), 2026-11-23, not released.**
   A PARTIAL pin, on purpose: only `GET /api/v1/publish-approvals` (new
   `origin`, `entityType`, `agentId`, `cursor`; `limit` without a maximum, the
