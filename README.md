@@ -1070,13 +1070,18 @@ response shape — and not descriptions, so backend docstring churn does not cry
 wolf. CI cannot run it (it needs the backend checkout), so this is the one gate
 that stays by hand.
 
-**At startup, the connector asks the deploy what it mounts.** It calls
-`GET /api/v1/contract` once before accepting its first tool call and, if this
-backend lacks a route this build needs, says which on stderr — instead of
-failing on the twentieth call, mid-task. It is a diagnostic and never a
-dependency: a backend too old to serve `/contract`, an unreachable one, or a
-slow one all degrade to the previous behaviour and the connector starts
-normally. The result is cached on the `contractHash` the route returns, so an
+**At startup, the connector asks the deploy what it mounts, and offers only
+what it can serve.** It calls `GET /api/v1/contract` once before registering
+its tools. A tool that needs a route this backend does not mount is left out
+whole — never offered half-working — and the server instructions say once
+which tools are switched off and that the environment needs an update (the
+routes are listed on stderr too). So an older backend gets fewer tools, not
+tools that fail mid-task. If the contract cannot be read (a backend too old to
+serve `/contract`, an unreachable or slow one), every tool is offered, with a
+warning in the instructions and on stderr: an unreadable contract is far more
+often a passing network or token problem than an old backend, and cutting tools
+on a guess would break ones that work. The connector never fails to start over
+it. A clean result is cached on the `contractHash` the route returns, so an
 unchanged deploy costs one request.
 
 **Not here: a scheduled job.** Watching for drift on a timer belongs in
