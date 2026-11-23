@@ -128,6 +128,11 @@ it.each(TOOLS)("%s says what the backend refuses on a frame", (name) => {
   expect(text).toContain("a section without `frame` looks as it does today");
   // A copy of the dashboard keeps its hero pointing at the copied tile.
   expect(text).toContain("a copy keeps its hero");
+  // Bars set no grain: auto may open per week, so bars per month ask month (W1 5773d74c3).
+  expect(text).toContain("`config.grain` month");
+  expect(text).toContain("grain_too_fine");
+  expect(text).toContain("unless frame is true they are refused");
+  expect(text).not.toContain("trend and bars for auto");
 });
 
 it.each(TOOLS)("%s forwards a dashboard of frames as given", async (name) => {

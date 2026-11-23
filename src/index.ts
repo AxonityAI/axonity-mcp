@@ -228,7 +228,10 @@ const TILE_NUMBER_NOTE =
   "This sets it against another number, never its status. Quantity and " +
   "filter compatibility are checked when queried. `config.sparkline` is " +
   "none, trend (default), bullet or bars; bullet requires config.against. " +
-  "none/bullet ask for grain none, trend and bars for auto. Only number tiles accept " +
+  "none/bullet ask for grain none, trend for auto; bars sets no grain of its " +
+  "own: `config.grain` decides (auto = the finest grain with at most 60 " +
+  "points, so this year to October opens per week; set month for bars per " +
+  "month). Only number tiles accept " +
   "against or sparkline. compare and against are independent: set " +
   "`compare: \"none\"` explicitly for the basis comparison alone. " +
   "For an S card with both comparisons, omit the trend or choose M; the " +
@@ -259,14 +262,17 @@ const LAYOUT_ARRANGING_NOTE =
   "`section.frame` (true) draws the section as a frame; a section without " +
   "`frame` looks as it does today, so frames and plain sections mix on one " +
   "dashboard. `section.hero` is the id of the hero: a number tile of that " +
-  "section, drawn large per month with its plan (`config.against`) and last " +
-  "year; give it `sparkline` bars to draw the months as bars with the plan " +
-  "per month. Every other tile of the section is a figure beside the hero, " +
+  "section, drawn large with its plan (`config.against`) and last year; give " +
+  "it `sparkline` bars and `config.grain` month to draw the months as bars " +
+  "with the plan per month. The plan per bucket comes only with against, a " +
+  "grain and no split; a grain finer than the plan's own (a plan set per " +
+  "month has no weeks) gives no plan per bucket but `against.seriesCode` " +
+  "grain_too_fine with `seriesError`, and the total stays. Every other tile of the section is a figure beside the hero, " +
   "at most 3 figures beside its hero. Without `hero` it is a short frame: its " +
   "status and the figures it has, again at most 3. `section.coming` is one " +
   "line under the frame, plain text of at most 200 characters, e.g. " +
   "\"Coming to this pillar: margin per market\"; absent shows no line. hero " +
-  "and coming are only on a frame: on another section they are refused. " +
+  "and coming are only on a frame: unless frame is true they are refused. " +
   "null on frame, hero or coming is refused — leave the field out. With " +
   "`layout.overview` each frame becomes a card at the top. When the " +
   "dashboard is copied, a copy keeps its hero (pointing at the copied tile)." +
