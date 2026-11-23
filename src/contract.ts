@@ -27,6 +27,9 @@ import { join } from "node:path";
 
 import type { AxonityClient } from "./client.js";
 import { AxonityApiError, ROUTES_ADDED_IN, SKEW_EITHER_WAY } from "./errors.js";
+// A cycle (routeClasses reads PROBE_ARGS from here), safe because each side
+// uses the other only inside functions, never while the module loads.
+import { routesPerTool } from "./routeClasses.js";
 
 /** `GET /api/v1/contract`. `routes` are "METHOD /path/{template}" strings. */
 export interface ContractResponse {
@@ -325,19 +328,78 @@ export interface ContractCheckOptions {
   ignoreCache?: boolean;
 }
 
+/** What the startup check concluded, and what the server should do about it. */
+export interface BackendPlan {
+  status: "ok" | "missing" | "unavailable" | "cached" | "timeout";
+  /**
+   * Tools to leave out, each with the routes it needs that the backend does
+   * not mount. A tool is left out WHOLE when any one of its routes is missing:
+   * a tool that works for some arguments and 404s for others is worse than
+   * one that is plainly not there.
+   */
+  hidden: Map<string, string[]>;
+  /** Appended to the server instructions, so the agent reads it once. */
+  notice?: string;
+}
+
+/** How many tool names the notice spells out before it says "and N more". */
+const NOTICE_NAMES = 40;
+
+/** The sentence an agent reads when tools were left out. */
+export function missingToolsNotice(
+  hidden: Map<string, string[]>,
+  build: string,
+  environment: string,
+): string {
+  const names = [...hidden.keys()].sort();
+  const shown = names.slice(0, NOTICE_NAMES).join(", ");
+  const more = names.length > NOTICE_NAMES ? ` and ${names.length - NOTICE_NAMES} more` : "";
+  const routes = [...new Set([...hidden.values()].flat())];
+  const fix =
+    skewDirection(routes) === SKEW_EITHER_WAY
+      ? "Tell your human the backend and this connector are out of step: update the Axonity environment, or this connector."
+      : "If you need one, tell your human to update the Axonity environment.";
+  return (
+    `This Axonity backend (build ${build}, ${environment}) does not have ` +
+    `${names.length} tool(s) of this connector, so they are switched off: ` +
+    `${shown}${more}. ${fix}`
+  );
+}
+
+/** What an agent reads when the check could not run, and every tool stays. */
+export const CONTRACT_UNREADABLE_NOTICE =
+  "The connector could not read which routes this Axonity backend serves, so every tool is " +
+  "offered. On an older backend some may fail with a version message; if one does, tell your " +
+  "human to update the Axonity environment.";
+
 /**
- * Ask the deploy what it mounts, and say — once, at startup — whether this
- * build needs anything it does not have.
+ * Ask the deploy what it mounts, and decide which tools to offer.
  *
- * Returns what it concluded, so a caller (and a test) can tell "checked, all
- * present" from "could not check". Never throws.
+ * Contract readable: every tool whose routes are all mounted is offered, the
+ * rest are left out and named — on stderr for the human, in the returned
+ * `notice` for the agent.
+ *
+ * Contract NOT readable (no `/contract` route, network, auth, timeout): every
+ * tool is offered, with a warning. The other choice — a pinned list of tools
+ * known to work on "old" backends — was rejected: it is a hand-kept list
+ * (exactly what #48 M2 removed), every known deploy already serves
+ * `/contract` (axonity-flow#806 predates them), and an unreadable contract is
+ * far more often a passing network or token problem on a CURRENT backend,
+ * where cutting tools on a guess would break what works. A tool that then
+ * hits a missing route still fails with the skew message from `errors.ts`.
+ *
+ * Never throws.
  */
-export async function reportContractSkew(
+export async function followBackendContract(
   client: AxonityClient,
   register: (server: ProbeServer, client: AxonityClient) => void,
   options: ContractCheckOptions,
-): Promise<"ok" | "missing" | "unavailable" | "cached" | "timeout"> {
+): Promise<BackendPlan> {
   const log = options.log ?? ((message: string) => console.error(message));
+  const everything = (status: BackendPlan["status"], why: string): BackendPlan => {
+    log(`Axonity: ${why} Offering every tool; ones the backend lacks will fail.`);
+    return { status, hidden: new Map(), notice: CONTRACT_UNREADABLE_NOTICE };
+  };
 
   let contract: ContractResponse | undefined;
   try {
@@ -346,53 +408,71 @@ export async function reportContractSkew(
       options.timeoutMs ?? 5_000,
     );
   } catch (cause) {
-    // A backend too old to serve /contract must degrade to today's behaviour,
-    // not announce a problem it cannot substantiate. 404/405 is exactly that
-    // backend; anything else (401, network) will surface on the first real call
-    // with a better message than this check could write.
     const status = cause instanceof AxonityApiError ? cause.status : 0;
-    if (status !== 404 && status !== 405 && status !== 0) {
-      log(
-        `Axonity: could not read the backend contract (${status}). ` +
-          "Continuing — this is a diagnostic, not a dependency.",
-      );
-    }
-    return "unavailable";
+    const what =
+      status === 404 || status === 405
+        ? "this backend has no contract route (older than axonity-flow#806)"
+        : status
+          ? `reading the backend contract failed (${status})`
+          : `reading the backend contract failed (${(cause as Error)?.message ?? "network"})`;
+    return everything("unavailable", `could not read the backend contract: ${what}.`);
   }
 
-  if (contract === undefined) return "timeout";
+  if (contract === undefined) {
+    return everything("timeout", "could not read the backend contract in time.");
+  }
 
   const routes = Array.isArray(contract.routes)
     ? contract.routes.filter((entry): entry is string => typeof entry === "string")
     : [];
-  if (routes.length === 0) return "unavailable";
+  if (routes.length === 0) {
+    return everything("unavailable", "could not read the backend contract: it lists no routes.");
+  }
 
   const hash = typeof contract.contractHash === "string" ? contract.contractHash : "";
   if (!options.ignoreCache && hash && readCachedHash(options.apiUrl) === hash) {
-    return "cached";
+    return { status: "cached", hidden: new Map() };
   }
 
-  const missing = missingFromContract(await collectCalledRoutes(register), routes);
+  const hidden = new Map<string, string[]>();
+  for (const [tool, calls] of await routesPerTool(register)) {
+    const missing = missingFromContract(calls, routes);
+    if (missing.length > 0) hidden.set(tool, missing);
+  }
 
-  if (missing.length === 0) {
+  if (hidden.size === 0) {
     // Only a CLEAN result is cached. Caching a problem would report it once and
     // then go quiet, which is worse than never having checked.
     if (hash) writeCachedHash(options.apiUrl, hash);
-    return "ok";
+    return { status: "ok", hidden };
   }
 
   const build =
     typeof contract.buildVersion === "string" ? contract.buildVersion : "unknown";
   const environment =
     typeof contract.environment === "string" ? contract.environment : "unknown";
+  const missing = [...new Set([...hidden.values()].flat())].sort();
 
   log(
     `Axonity: this backend does not have ${missing.length} route(s) this ` +
       `connector needs.\n` +
       `  Backend: ${build} (${environment}) at ${options.apiUrl}\n` +
       missing.map((route) => `  - ${attribute(route)}`).join("\n") +
-      `\n${skewDirection(missing)} Tools that use those routes will fail; ` +
-      `everything else works.`,
+      `\n${skewDirection(missing)}\n` +
+      `Switched off for this session (${hidden.size}): ` +
+      `${[...hidden.keys()].sort().join(", ")}. Everything else works.`,
   );
-  return "missing";
+  return { status: "missing", hidden, notice: missingToolsNotice(hidden, build, environment) };
+}
+
+/**
+ * The startup check as a verdict only. Kept for callers that want the status
+ * without the plan; it is `followBackendContract` underneath.
+ */
+export async function reportContractSkew(
+  client: AxonityClient,
+  register: (server: ProbeServer, client: AxonityClient) => void,
+  options: ContractCheckOptions,
+): Promise<BackendPlan["status"]> {
+  return (await followBackendContract(client, register, options)).status;
 }

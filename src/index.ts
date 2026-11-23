@@ -31,7 +31,7 @@ import { loadConfig, loadHttpConfig, transportOf } from "./config.js";
 import { startHostedServer } from "./http.js";
 import { forPersonalTokens, routesPerTool } from "./routeClasses.js";
 import { TOKEN_ROUTE_CLASSES } from "./generated/tokenRouteClasses.js";
-import { type ProbeServer, reportContractSkew } from "./contract.js";
+import { type BackendPlan, type ProbeServer, followBackendContract } from "./contract.js";
 import { registerConventions } from "./tools/conventions.js";
 import { registerEntityContractTools } from "./tools/entityContract.js";
 import {
@@ -1124,9 +1124,32 @@ export function registerEntrySurface(server: McpServer, client: AxonityClient): 
 /** What the hosted connector replays per request beside its tools, the same as the local one. */
 export const HOSTED_SURFACE = { instructions: SERVER_INSTRUCTIONS, registerEntry: registerEntrySurface };
 
-export function buildServer(client: AxonityClient): McpServer {
-  const server = new McpServer(SERVER_INFO, { instructions: SERVER_INSTRUCTIONS });
-  registerAll(server, client);
+/**
+ * A server that registers every tool except `hidden` — the tools whose routes
+ * the backend does not mount (`followBackendContract`). Skipping at `.tool()`
+ * keeps every registrar unaware of it: none of them uses the return value.
+ */
+function withoutTools(server: ServerLike, hidden: ReadonlySet<string>): ServerLike {
+  if (hidden.size === 0) return server;
+  const tool = (name: string, ...rest: unknown[]) =>
+    hidden.has(name) ? undefined : (server.tool as (...a: unknown[]) => unknown).call(server, name, ...rest);
+  return { tool: tool as ServerLike["tool"] };
+}
+
+/**
+ * The local server. `plan` is what the startup contract check decided: which
+ * tools to leave out, and a notice for the instructions. Without one, every
+ * tool is offered and the instructions are the measured text alone.
+ */
+export function buildServer(
+  client: AxonityClient,
+  plan: Partial<Pick<BackendPlan, "hidden" | "notice">> = {},
+): McpServer {
+  const instructions = plan.notice
+    ? `${SERVER_INSTRUCTIONS}\n\n${plan.notice}`
+    : SERVER_INSTRUCTIONS;
+  const server = new McpServer(SERVER_INFO, { instructions });
+  registerAll(withoutTools(server, new Set(plan.hidden?.keys() ?? [])), client);
   registerEntrySurface(server, client);
   return server;
 }
@@ -1170,20 +1193,21 @@ async function main(): Promise<void> {
   }
   const config = loadConfig();
   const client = new AxonityClient(config);
-  const server = buildServer(client);
 
-  // Ask the deploy what it mounts BEFORE the transport is connected, so a
-  // missing route is reported at startup rather than on the twentieth tool call
-  // (#48 M2). It cannot fail and cannot hang: every path inside degrades to
-  // today's behaviour and the whole thing is bounded by a timeout.
+  // Ask the deploy what it mounts BEFORE any tool is registered, and offer only
+  // the tools it can serve: an older backend gets fewer tools and one clear
+  // notice, never a tool that 404s mid-task. It cannot fail and cannot hang:
+  // an unreadable contract offers every tool with a warning, and the whole
+  // check is bounded by a timeout.
   // `registerAll` wants McpServer's overloaded `.tool()`; the probe server has
   // the one four-argument form every registrar here actually uses. The cast is
   // the same one every test that drives registerAll makes.
-  await reportContractSkew(
+  const plan = await followBackendContract(
     client,
     (probe, probeClient) => registerAll(probe as never, probeClient),
     { apiUrl: config.apiUrl },
   );
+  const server = buildServer(client, plan);
 
   const transport = new StdioServerTransport();
   await server.connect(transport);
