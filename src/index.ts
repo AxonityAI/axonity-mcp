@@ -539,7 +539,11 @@ const QUERY_NOTE =
   "with each input written `:name`; read_data_source_schema spells the " +
   "tables), `grain` (what ONE ROW is, as a sentence — \"one row per month " +
   "per country\"), `questions` (how somebody would ask for this, at most " +
-  "20), `parameters` and `returns`. " +
+  "20), `parameters`, `returns` and `reads`. " +
+  "\n\n`reads` (`[{ container, object }]`) is the objects of the source " +
+  "the query reads, each a `container` (dataset or schema) and an `object` " +
+  "(table or view) as the source names them — your statement, not a parse " +
+  "of the SQL; the catalogue shows an object as 'in a data table' from it. " +
   "\n\n`parameters` (at most 20): `[{ name, label?, kind, description?, " +
   "required?, default?, choiceOptions? }]`. `kind` is text, number, date, " +
   "datetime, time, yes-no or choice — one value, never a list or an " +
@@ -839,9 +843,9 @@ export const ENTITIES: EntityDef[] = [
       "live for every agent that holds it.",
     updateWarning:
       QUERY_NOTE +
-      " On an update, `parameters`, `returns` and `questions` are replaced " +
+      " On an update, `parameters`, `returns`, `questions` and `reads` are replaced " +
       "WHOLE when sent: read first and send the complete list, each item " +
-      "with its `id` so it stays the same item.",
+      "of the first three with its `id` so it stays the same item.",
   },
   {
     // A program an agent operates through an executor (axonity-flow#1901),

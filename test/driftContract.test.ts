@@ -734,3 +734,25 @@ describe("a release reads with the caller's clearance (axonity-flow#2386)", () =
     expect(text).toMatch(/`ready` and the counts/);
   });
 });
+
+describe("a query says which objects of its source it reads (axonity-flow#2526)", () => {
+  // `reads` is on the create and update bodies; on an update it replaces the
+  // list, like `parameters`, `returns` and `questions`. The snapshot carries
+  // the field, so the tool text is held to it.
+  const schemas = snapshot.components.schemas;
+
+  it.each(["create_query", "update_query"])("%s names `reads`", (name) => {
+    expect(schemas.CreateQueryRequest?.properties?.reads).toBeDefined();
+    expect(schemas.UpdateQueryRequest?.properties?.reads?.description ?? "").toMatch(
+      /replaces the list/,
+    );
+    const text = all().descriptions.get(name) ?? "";
+    expect(text).toMatch(/`reads`/);
+    expect(text).toMatch(/in a data table/);
+  });
+
+  it("update_query says `reads` is replaced whole", () => {
+    const text = all().descriptions.get("update_query") ?? "";
+    expect(text).toMatch(/`questions` and `reads` are replaced/);
+  });
+});
