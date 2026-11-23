@@ -972,8 +972,10 @@ npm run build   # emits dist/
    (`npm pack --dry-run`) *before* the version moves — anything that fails
    there leaves no version commit, no tag and nothing on npm.
 3. `scripts/next-version.mjs` picks the bump from the commits since the last
-   tag: **major** if a commit says `BREAKING` (capitals) or uses a `!` type
-   (`feat!:`), **minor** if one starts with `feat:` / `feat(scope):` (also as a
+   tag: **major** only for a line starting `BREAKING CHANGE:` (or
+   `BREAKING-CHANGE:`), or a `!` type in the subject (`feat!:`) or as a
+   `* feat!:` line in a squash-merge body — the word BREAKING in ordinary text
+   does not count; **minor** if one starts with `feat:` / `feat(scope):` (also as a
    `* feat…` line inside a squash-merge body), otherwise **patch**. No commits
    since the tag means no release.
 4. `github-actions[bot]` commits the version (`0.37.0 [skip ci]`) and tag

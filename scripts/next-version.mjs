@@ -3,8 +3,12 @@
  * Welke versie de volgende release krijgt, afgeleid uit de commits sinds de
  * vorige tag. `.github/workflows/release.yml` roept dit aan na elke merge op main.
  *
- *   major  een commit met het woord BREAKING (hoofdletters), of een type met `!`
- *          (`feat!:`, `fix(api)!:`)
+ *   major  een regel die begint met `BREAKING CHANGE:` of `BREAKING-CHANGE:`
+ *          (de voettekst uit Conventional Commits), of een type met `!` in het
+ *          onderwerp (`feat!:`, `fix(api)!:`) of als `* feat!:` in een
+ *          squash-body. Het woord BREAKING ergens in lopende tekst telt NIET:
+ *          zo werd de eerste automatische release 1.0.0, omdat de body van
+ *          die PR "major bij BREAKING" uitlegde.
  *   minor  een commit met het conventionele voorvoegsel `feat:` / `feat(scope):`
  *   patch  al het andere
  *   none   geen commits sinds de tag (er is niets nieuws om te publiceren)
@@ -27,18 +31,23 @@ import { fileURLToPath } from "node:url";
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
 
 // `type(scope)!: …`, aan het begin van een regel, eventueel na een lijstteken.
-const CONVENTIONAL = /^\s*(?:[*-]\s+)?([a-z]+)(?:\([^)]*\))?(!)?:\s/;
+const CONVENTIONAL = /^\s*([*-]\s+)?([a-z]+)(?:\([^)]*\))?(!)?:\s/;
+// De voettekst die een brekende wijziging aankondigt, aan het begin van een regel.
+const BREAKING_FOOTER = /^BREAKING[ -]CHANGE:/;
 const RANK = { none: 0, patch: 1, minor: 2, major: 3 };
 
 /** De bump die één commitbericht (titel + body) vraagt. */
 export function bumpForMessage(message) {
-  if (/\bBREAKING\b/.test(message)) return "major";
   let bump = "patch";
-  for (const line of message.split("\n")) {
+  const lines = message.split("\n");
+  for (const [index, line] of lines.entries()) {
+    if (BREAKING_FOOTER.test(line)) return "major";
     const match = CONVENTIONAL.exec(line);
     if (!match) continue;
-    if (match[2] === "!") return "major";
-    if (match[1] === "feat") bump = "minor";
+    const [, listed, type, bang] = match;
+    // `!` telt in het onderwerp, of op een lijstregel van een squash-body.
+    if (bang === "!" && (index === 0 || listed)) return "major";
+    if (type === "feat") bump = "minor";
   }
   return bump;
 }

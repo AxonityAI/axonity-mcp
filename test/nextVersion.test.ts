@@ -24,14 +24,42 @@ describe("bumpForMessage", () => {
     expect(bumpForMessage("fix: x\n\nwe deden feat werk")).toBe("patch");
   });
 
-  it("is major for BREAKING or a type with !", () => {
+  it("is major for a BREAKING CHANGE footer or a type with ! in the subject", () => {
     expect(bumpForMessage("feat!: weg met oude namen")).toBe("major");
     expect(bumpForMessage("fix(api)!: ander antwoord")).toBe("major");
     expect(bumpForMessage("feat: x\n\nBREAKING CHANGE: tools hernoemd")).toBe("major");
+    expect(bumpForMessage("feat: x\n\nBREAKING-CHANGE: tools hernoemd")).toBe("major");
   });
 
-  it("only takes BREAKING in capitals", () => {
+  it("is major for a type with ! listed in a squash-merge body", () => {
+    expect(bumpForMessage("fix: iets (#9)\n\n* feat!: oude namen weg (#8)")).toBe("major");
+  });
+
+  it("does not take BREAKING in prose for a breaking change", () => {
     expect(bumpForMessage("fix: niet meer breaking voor oude clients")).toBe("patch");
+    expect(bumpForMessage("docs: x\n\nmajor bij BREAKING of !")).toBe("patch");
+    expect(bumpForMessage("docs: x\n\nBREAKING CHANGE staat hier niet als voettekst")).toBe("patch");
+    expect(bumpForMessage("fix: x\n\nzie BREAKING CHANGE: in de spec")).toBe("patch");
+  });
+
+  it("does not take a ! type in plain body prose for a breaking change", () => {
+    expect(bumpForMessage("fix: x\n\nfix!: als voorbeeld in een zin")).toBe("patch");
+  });
+
+  // De squash-body van #134 maakte van de eerste automatische release 1.0.0.
+  it("is patch for the real squash message of #134", () => {
+    const message = [
+      "ci: publiceer automatisch naar npm bij elke merge op main (#134)",
+      "",
+      "release.yml draait na de CI, bouwt/test/pakt in, kiest de versie met",
+      "scripts/next-version.mjs (patch, minor bij feat, major bij BREAKING of !),",
+      "pusht versiecommit + tag atomair als github-actions[bot] en publiceert via",
+      "npm Trusted Publishing (OIDC, geen token). publish.yml en scripts/release.sh",
+      "zijn weg: één publicatiepad.",
+      "",
+      "Co-authored-by: Claude Opus 5.5 <noreply@anthropic.com>",
+    ].join("\n");
+    expect(bumpForMessage(message)).toBe("patch");
   });
 });
 
