@@ -52,7 +52,7 @@ approval of each call is the guard.
 
 ## Tools
 
-585 tools total (28 of them the old `flow` names, see Methods below). `axonity_conventions` (read this first) covers the authoring
+586 tools total (28 of them the old `flow` names, see Methods below). `axonity_conventions` (read this first) covers the authoring
 rules — drafts vs live, optimistic locking, per-entity fields, delete/restore,
 and how to tell a retryable error from one that will never succeed.
 `axonity_semantic_conventions` is its counterpart for one job only: building a
@@ -732,10 +732,20 @@ for an active run; null otherwise).
 
 ### Approvals
 
-`list_publish_approvals({ status?, view?, limit?, offset? })` and
-`get_publish_approval({ approvalId })` — how you find out whether a
+`list_publish_approvals({ status?, origin?, entityType?, agentId?, view?, limit?, cursor?, offset? })`
+and `get_publish_approval({ approvalId })` — how you find out whether a
 `request_publish_*` was approved or rejected. Approving and rejecting are
 human-only actions in Axonity.
+
+**The queue is read a page at a time.** It can hold thousands of requests, so one
+call answers one page (50 by default, 200 at most) with `total`, `hasMore` and
+`nextCursor`; send `nextCursor` back as `cursor` until it is null. `offset` still
+works for a caller that pages by it. Narrow the list with `status`, `origin`
+(`mcp`, `agent`, `screen`), `entityType` or `agentId`; each narrows the query and
+its `total`. `publish_approvals_summary({ status?, origin?, entityType?, agentId?, view? })`
+counts without reading a row — `total`, `byStatus`, `byOrigin`, `byKind`,
+`byAgent` — and each count keeps every filter but its own, so a number is what
+choosing it would list.
 
 **Approvals are read per person.** `view` is `mine` unless you ask for `all`:
 `mine` is the requests you sent through your own tokens (a service token sees only
@@ -936,7 +946,7 @@ These are enforced by the backend, not merely by convention:
   schema; `test/conformance.test.ts` fails if a route or documented enum
   diverges (see `test/fixtures/README.md`).
 - **Every backend route is accounted for, and the build says so.**
-  `test/completeness.test.ts` partitions all 950 operations in the pinned
+  `test/completeness.test.ts` partitions all 951 operations in the pinned
   snapshot using four classifiers. For tenant-API routes it checks for
   *covered by a tool* or *excluded by a rule that carries a
   written reason*, with an explicit temporary exception for the unresolved

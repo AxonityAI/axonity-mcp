@@ -235,8 +235,10 @@ has run cleanly once, at its current version.
   and wrongly. Follow \`nextCursor\` until it is null. And that route lists
   LAUNCHES: a 4,415-item FOR EACH is ONE entry carrying \`forEachProgress\`, so
   rows are not runs. \`list_runs\` pages the same way, by \`nextCursor\` with
-  \`hasMore\`. \`list_publish_approvals\` pages by \`offset\` and answers \`total\`
-  and \`hasMore\`: raise \`offset\` by \`limit\` until \`hasMore\` is false.
+  \`hasMore\`. \`list_publish_approvals\` pages the same way, by \`nextCursor\`,
+  and answers \`total\` and \`hasMore\`; the queue can hold thousands, so narrow
+  it (\`status\`, \`origin\`, \`entityType\`, \`agentId\`) and count with
+  \`publish_approvals_summary\` rather than reading every page.
 
 ## Delete is recoverable — but not everything is
 - \`delete_*\` soft-deletes: the entity disappears from \`list_*\` but is not gone.

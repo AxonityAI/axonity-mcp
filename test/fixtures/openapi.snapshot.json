@@ -2625,6 +2625,36 @@
         "title": "ApplicationResponse",
         "type": "object"
       },
+      "ApprovalAgentCount": {
+        "description": "How many requests one internal agent proposed.",
+        "properties": {
+          "agentId": {
+            "title": "Agentid",
+            "type": "string"
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "required": [
+          "agentId",
+          "count"
+        ],
+        "title": "ApprovalAgentCount",
+        "type": "object"
+      },
       "ApprovalDecisionResponse": {
         "description": "Response after approving or rejecting an approval.",
         "properties": {
@@ -2647,6 +2677,88 @@
           "status"
         ],
         "title": "ApprovalDecisionResponse",
+        "type": "object"
+      },
+      "ApprovalKindCount": {
+        "description": "How many requests are about one kind of thing.",
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "entityType": {
+            "enum": [
+              "method",
+              "workflow",
+              "agent",
+              "tool",
+              "skill",
+              "policy",
+              "reference_doc",
+              "prompt_snippet",
+              "output_schema",
+              "data_table",
+              "application",
+              "table_database",
+              "toolbox",
+              "measure",
+              "query",
+              "data_source",
+              "company"
+            ],
+            "title": "Entitytype",
+            "type": "string"
+          }
+        },
+        "required": [
+          "entityType",
+          "count"
+        ],
+        "title": "ApprovalKindCount",
+        "type": "object"
+      },
+      "ApprovalOriginCounts": {
+        "description": "How many requests per source.",
+        "properties": {
+          "agent": {
+            "default": 0,
+            "title": "Agent",
+            "type": "integer"
+          },
+          "mcp": {
+            "default": 0,
+            "title": "Mcp",
+            "type": "integer"
+          },
+          "screen": {
+            "default": 0,
+            "title": "Screen",
+            "type": "integer"
+          }
+        },
+        "title": "ApprovalOriginCounts",
+        "type": "object"
+      },
+      "ApprovalStatusCounts": {
+        "description": "How many requests per status.",
+        "properties": {
+          "approved": {
+            "default": 0,
+            "title": "Approved",
+            "type": "integer"
+          },
+          "pending": {
+            "default": 0,
+            "title": "Pending",
+            "type": "integer"
+          },
+          "rejected": {
+            "default": 0,
+            "title": "Rejected",
+            "type": "integer"
+          }
+        },
+        "title": "ApprovalStatusCounts",
         "type": "object"
       },
       "ApprovedElsewhereSchema": {
@@ -32297,7 +32409,7 @@
         "type": "object"
       },
       "PublishApprovalListResponse": {
-        "description": "Paginated approvals list — same shape as the version lists (#678 B7).",
+        "description": "Paginated approvals list — same shape as the version lists (#678 B7).\n\n``total`` counts the whole filter, not the page. ``next_cursor`` continues\nthe list on the shared keyset cursor (send it back as ``cursor``); ``None``\non the last page. It was added beside the older offset paging, which still\nworks, so a caller that knows only ``approvals``/``total``/``has_more``\nreads what it always read.",
         "properties": {
           "approvals": {
             "items": {
@@ -32310,6 +32422,17 @@
             "title": "Hasmore",
             "type": "boolean"
           },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          },
           "total": {
             "title": "Total",
             "type": "integer"
@@ -32321,6 +32444,44 @@
           "hasMore"
         ],
         "title": "PublishApprovalListResponse",
+        "type": "object"
+      },
+      "PublishApprovalSummary": {
+        "description": "The counts over the queue, for the filters and the counters above the list.\n\nCOUNTs only, no row loaded. Each count keeps every filter asked EXCEPT its\nown, so a chip's number is what choosing it would show: ``by_status``\nignores ``status``, ``by_origin`` ignores ``origin``, and so on. ``total``\nis the count under every filter but the status — the sum of ``by_status``.",
+        "properties": {
+          "byAgent": {
+            "items": {
+              "$ref": "#/components/schemas/ApprovalAgentCount"
+            },
+            "title": "Byagent",
+            "type": "array"
+          },
+          "byKind": {
+            "items": {
+              "$ref": "#/components/schemas/ApprovalKindCount"
+            },
+            "title": "Bykind",
+            "type": "array"
+          },
+          "byOrigin": {
+            "$ref": "#/components/schemas/ApprovalOriginCounts"
+          },
+          "byStatus": {
+            "$ref": "#/components/schemas/ApprovalStatusCounts"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "byStatus",
+          "byOrigin",
+          "byKind",
+          "byAgent"
+        ],
+        "title": "PublishApprovalSummary",
         "type": "object"
       },
       "PublishRequest": {
@@ -85507,7 +85668,7 @@
     },
     "/api/v1/publish-approvals": {
       "get": {
-        "description": "List the approvals you may see, optionally filtered by status. Paginated.\n\n``view=mine`` (default): your own MCP requests. ``view=all``: the whole\nworkspace's, with each request's ``origin`` — administrators only.",
+        "description": "One page of the approvals you may see, newest first (B-NB8).\n\n``view=mine`` (default): your own MCP requests. ``view=all``: the whole\nworkspace's, with each request's ``origin`` — administrators only.\n\nEvery filter narrows the query, and ``total`` counts the whole filter.\nFollow ``nextCursor``; ``offset`` still works for a caller that pages by it.\nAn oversized ``limit`` is capped, not refused.",
         "operationId": "list_approvals_api_v1_publish_approvals_get",
         "parameters": [
           {
@@ -85548,23 +85709,128 @@
             }
           },
           {
+            "description": "Where it came from: mcp (a token), agent (an internal agent) or screen.",
+            "in": "query",
+            "name": "origin",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "mcp",
+                    "agent",
+                    "screen"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Where it came from: mcp (a token), agent (an internal agent) or screen.",
+              "title": "Origin"
+            }
+          },
+          {
+            "description": "What kind of thing it would publish.",
+            "in": "query",
+            "name": "entityType",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "method",
+                    "workflow",
+                    "agent",
+                    "tool",
+                    "skill",
+                    "policy",
+                    "reference_doc",
+                    "prompt_snippet",
+                    "output_schema",
+                    "data_table",
+                    "application",
+                    "table_database",
+                    "toolbox",
+                    "measure",
+                    "query",
+                    "data_source",
+                    "company"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "What kind of thing it would publish.",
+              "title": "Entitytype"
+            }
+          },
+          {
+            "description": "Only what this internal agent proposed.",
+            "in": "query",
+            "name": "agentId",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only what this internal agent proposed.",
+              "title": "Agentid"
+            }
+          },
+          {
+            "description": "Page size (default 50, capped at 200).",
             "in": "query",
             "name": "limit",
             "required": false,
             "schema": {
-              "default": 50,
-              "maximum": 200,
-              "minimum": 1,
-              "title": "Limit",
-              "type": "integer"
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Page size (default 50, capped at 200).",
+              "title": "Limit"
             }
           },
           {
+            "description": "Opaque continuation cursor from a previous response's nextCursor. Omit for the first page.",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Opaque continuation cursor from a previous response's nextCursor. Omit for the first page.",
+              "title": "Cursor"
+            }
+          },
+          {
+            "description": "The older way to page, read only without a cursor.",
             "in": "query",
             "name": "offset",
             "required": false,
             "schema": {
               "default": 0,
+              "description": "The older way to page, read only without a cursor.",
               "minimum": 0,
               "title": "Offset",
               "type": "integer"
@@ -86116,6 +86382,155 @@
           }
         ],
         "summary": "Reject Release",
+        "tags": [
+          "publish-approvals"
+        ]
+      }
+    },
+    "/api/v1/publish-approvals/summary": {
+      "get": {
+        "description": "The counts above the queue — per status, source, kind and agent. COUNTs only.\n\nTakes the list's filters. Each count keeps every filter but its own, so a\nnumber is what choosing it would show. Declared BEFORE ``/{approval_id}``.",
+        "operationId": "summarize_approvals_api_v1_publish_approvals_summary_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "pending",
+                    "approved",
+                    "rejected"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "description": "mine = the requests you sent through one of your own tokens; all = every request of the workspace, whatever it came through (administrators only, 403 otherwise).",
+            "in": "query",
+            "name": "view",
+            "required": false,
+            "schema": {
+              "default": "mine",
+              "description": "mine = the requests you sent through one of your own tokens; all = every request of the workspace, whatever it came through (administrators only, 403 otherwise).",
+              "enum": [
+                "mine",
+                "all"
+              ],
+              "title": "View",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "origin",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "mcp",
+                    "agent",
+                    "screen"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Origin"
+            }
+          },
+          {
+            "in": "query",
+            "name": "entityType",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "method",
+                    "workflow",
+                    "agent",
+                    "tool",
+                    "skill",
+                    "policy",
+                    "reference_doc",
+                    "prompt_snippet",
+                    "output_schema",
+                    "data_table",
+                    "application",
+                    "table_database",
+                    "toolbox",
+                    "measure",
+                    "query",
+                    "data_source",
+                    "company"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Entitytype"
+            }
+          },
+          {
+            "in": "query",
+            "name": "agentId",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Agentid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishApprovalSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Summarize Approvals",
         "tags": [
           "publish-approvals"
         ]
