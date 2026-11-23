@@ -20,7 +20,7 @@
  * token. stdio stays the default.
  */
 
-import { realpathSync } from "node:fs";
+import { readFileSync, realpathSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -1156,7 +1156,14 @@ async function mainHttp(): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  assertNoExtraArguments(process.argv.slice(2));
+  const argv = process.argv.slice(2);
+  if (isVersionRequest(argv)) {
+    // dist/index.js → ../package.json, in the repo and in the installed package.
+    const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")) as { version: string };
+    console.log(pkg.version);
+    return;
+  }
+  assertNoExtraArguments(argv);
   if (transportOf() === "http") {
     await mainHttp();
     return;
@@ -1203,6 +1210,15 @@ export function isEntryPoint(moduleUrl: string, argv1: string | undefined): bool
   }
 }
 
+/**
+ * `axonity-mcp --version` prints the package version and exits. It is the one
+ * argument accepted, so the release smoke (scripts/smoke-packed-bin.mjs) can
+ * start the packed bin once without a token or a network.
+ */
+export function isVersionRequest(argv: string[]): boolean {
+  return argv.length === 1 && argv[0] === "--version";
+}
+
 export function assertNoExtraArguments(argv: string[]): void {
   if (argv.length === 0) return;
   throw new Error(
@@ -1210,6 +1226,7 @@ export function assertNoExtraArguments(argv: string[]): void {
       "This MCP server does not accept command-line arguments.",
       "Usage:",
       "  axonity-mcp",
+      "  axonity-mcp --version",
       "",
       "Pass configuration through environment variables instead:",
       "  AXONITY_TOKEN (required): the service token.",

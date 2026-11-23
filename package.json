@@ -34,6 +34,8 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "postbuild": "node scripts/make-bin-executable.mjs",
+    "smoke:bin": "node scripts/smoke-packed-bin.mjs",
     "dev": "tsx src/index.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
