@@ -1,9 +1,11 @@
 name: CI
 
+# On a pull request this runs by itself. On main it runs as the first job of
+# release.yml (workflow_call), so a merge is tested once and the release waits
+# for it — a second, separate run on push would only duplicate the work.
 on:
-  push:
-    branches: [main]
   pull_request:
+  workflow_call:
 
 jobs:
   build-test:

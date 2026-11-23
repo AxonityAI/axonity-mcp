@@ -963,35 +963,60 @@ npm run build   # emits dist/
 
 ## Releasing
 
-**One command.**
+**Merging to `main` is the release.** Nobody runs anything.
 
-```bash
-npm run release:minor     # or release:patch / release:major
-```
+`.github/workflows/release.yml` runs on every push to `main`:
 
-That is the whole procedure. It refuses to start unless you are on `main` with
-nothing uncommitted, resets `main` to exactly what is on GitHub, then installs,
-tests and builds *before* touching the version — so anything that can fail,
-fails while there is still nothing to undo. Only then does it bump, push, tag,
-publish, and read the version back from npm to confirm it landed.
+1. CI (`ci.yml`) runs first; if it fails, nothing else happens.
+2. The release job installs, typechecks, tests, builds and packs the tarball
+   (`npm pack --dry-run`) *before* the version moves — anything that fails
+   there leaves no version commit, no tag and nothing on npm.
+3. `scripts/next-version.mjs` picks the bump from the commits since the last
+   tag: **major** if a commit says `BREAKING` (capitals) or uses a `!` type
+   (`feat!:`), **minor** if one starts with `feat:` / `feat(scope):` (also as a
+   `* feat…` line inside a squash-merge body), otherwise **patch**. No commits
+   since the tag means no release.
+4. `github-actions[bot]` commits the version (`0.37.0 [skip ci]`) and tag
+   `v0.37.0` to `main` in one atomic push.
+5. Then `npm publish --provenance --access public` via **npm Trusted
+   Publishing**: GitHub hands npm a short-lived OIDC token for this workflow,
+   so there is no `NPM_TOKEN` and no 2FA prompt. (A stored token cannot ship
+   this package: npm does not let a 2FA-bypassing token publish it. That is why
+   publishing used to be manual.)
 
-You need to be logged in first, once per machine. Run it in a real terminal:
-`npm login` prints a URL and waits for the browser, so an editor's two-minute
-command timeout will kill it mid-flow.
+Two merges close together never publish at the same time (`concurrency:
+release`); the newest waiting run takes all commits along. The bot's own push
+does not start the workflow again — pushes made with `GITHUB_TOKEN` never start
+workflows, and the commit also carries `[skip ci]`.
 
-```bash
-npm login
-npm whoami                # confirm the account
-```
+**If the publish step fails after the tag went up** (npm down, Trusted
+Publishing not set up yet): fix the cause, then Actions → Release → *Run
+workflow*. With no new commits it sees the tagged version missing from npm and
+publishes that exact tag.
 
-**Why a script and not a list of steps.** The list used to live here, and the
-ORDER was load-bearing: sync first, or the version bump lands on a stale
-checkout. That went wrong twice in one week, identically both times — the bump
-was made on a tree missing the last merge, the branch push was refused, and the
-tag went up anyway. Recovering meant deleting a published tag and hard-resetting,
-which is not something a release should ever require. The script pushes the
-branch *before* the tag for the same reason: a refused push then leaves nothing
-behind.
+### One-time setup on npmjs.com
+
+On <https://www.npmjs.com/package/@axonity-ai/mcp> → **Settings** → **Trusted
+Publisher** → **GitHub Actions**, fill in:
+
+| Field | Value |
+| --- | --- |
+| Organization or user | `AxonityAI` |
+| Repository | `axonity-mcp` |
+| Workflow filename | `release.yml` |
+| Environment | *(leave empty)* |
+
+Save. Optionally, under **Publishing access**, choose "Require two-factor
+authentication and disallow tokens" — Trusted Publishing keeps working, and no
+token can publish behind its back.
+
+### Branch protection
+
+`main` has no branch protection and no rulesets today, so the bot's push goes
+through. If `main` is protected later, a classic rule with *Require a pull
+request before merging* refuses that push. Use a **ruleset** instead and add
+the GitHub Actions app to its bypass list, or the release stops at the push
+(red run, nothing published).
 
 **Check the contract before a release that matters.** Shipping with a stale
 snapshot is how the connector fell nine operations behind the backend without
@@ -1003,12 +1028,8 @@ npm run check:contract          # expects ../axonity-flow; override with AXONITY
 
 It dumps the schema from a local `axonity-flow` checkout and diffs it against
 `test/fixtures/openapi.snapshot.json`, naming every operation that moved. It
-runs here rather than in CI because the publish runs here — a gate in CI cannot
-stop a local `npm publish`.
-
-After releasing, optionally cut a GitHub release for the tag. That triggers
-`Verify release`, which rebuilds and packs the tagged commit without publishing
-— it catches a tag cut from a state CI cannot install.
+needs an `axonity-flow` checkout, so it is not part of the release workflow:
+run it on the branch before merging.
 
 Keep npm 11 locally: Node 20 bundles npm 10, whose resolver writes an
 incompatible lockfile tree. CI pins npm 11 for the same reason.
@@ -1016,7 +1037,7 @@ incompatible lockfile tree. CI pins npm 11 for the same reason.
 The package bundles its dependencies (`bundleDependencies`): the tarball carries
 the tree `npm ci` installed from `package-lock.json`, so whoever installs it —
 Axonity's image and Windows package included — runs the versions the tests ran
-on, not whatever the ranges allow that day. `scripts/release.sh` runs `npm ci`
+on, not whatever the ranges allow that day. The release workflow runs `npm ci`
 before it publishes, which is what makes the tree the lock's;
 `test/bundledDependencies.test.ts` fails if a dependency is left out or the tree
 on disk is not the lock's. A tarball is about ten times larger for it (3.1 MB
@@ -1030,11 +1051,12 @@ regenerated it — and once it wasn't: it sat nine operations behind the backend
 while the whole suite stayed green, because a snapshot that has not seen a route
 cannot report it missing.
 
-**Before a release, check it** (see §Releasing): `npm run check:contract` dumps
+**Before merging, check it** (see §Releasing): `npm run check:contract` dumps
 the schema from a local `axonity-flow` checkout and names every operation that
 moved. It compares the contract surface — query parameters, request body,
 response shape — and not descriptions, so backend docstring churn does not cry
-wolf. This is the gate that counts, because the publish runs here too.
+wolf. CI cannot run it (it needs the backend checkout), so this is the one gate
+that stays by hand.
 
 **At startup, the connector asks the deploy what it mounts.** It calls
 `GET /api/v1/contract` once before accepting its first tool call and, if this

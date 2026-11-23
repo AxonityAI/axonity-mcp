@@ -1,0 +1,157 @@
+name: Release
+
+# Elke merge op main wordt automatisch gepubliceerd naar npm. Dit is het ENIGE
+# publicatiepad: scripts/release.sh en de oude "Verify release" zijn weg.
+#
+# Hoe:
+#   1. de CI-workflow (ci.yml) draait als eerste job; faalt die, dan stopt alles
+#   2. de release-job bouwt en test opnieuw op Node 24 en pakt het tarball in
+#      (npm pack --dry-run) — nog vóór de versie beweegt
+#   3. scripts/next-version.mjs kiest patch / minor / major uit de commits sinds
+#      de vorige tag
+#   4. versiecommit + tag v<versie> gaan in één atomaire push naar main
+#   5. pas dan npm publish, via npm Trusted Publishing (OIDC): geen token, geen
+#      2FA-prompt. Dat lost op waarom dit eerder niet kon: een NPM_TOKEN dat 2FA
+#      omzeilt mag dit pakket niet publiceren.
+#
+# Eenmalig op npmjs.com nodig: zie README §Releasing.
+#
+# Geen lus: de versiecommit wordt gepusht met GITHUB_TOKEN, en een push met dat
+# token start geen workflows. Voor de zekerheid draagt de commit ook [skip ci]
+# en slaat de job een push van github-actions[bot] over.
+
+on:
+  push:
+    branches: [main]
+  # Handmatig opnieuw proberen (Actions → Release → Run workflow), bv. nadat
+  # Trusted Publishing is ingesteld of een publicatie haperde.
+  workflow_dispatch:
+
+# Twee merges kort na elkaar publiceren nooit tegelijk. Een lopende release
+# wordt niet afgebroken; de nieuwste wachtende run neemt alle commits mee.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    if: github.actor != 'github-actions[bot]'
+    uses: ./.github/workflows/ci.yml
+
+  release:
+    needs: ci
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # versiecommit + tag pushen
+      id-token: write # OIDC-token voor npm Trusted Publishing en provenance
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # De hele geschiedenis en de tags: next-version leest de commits
+          # sinds de vorige tag.
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          # Trusted Publishing vraagt Node >= 22.14 en npm >= 11.5.1.
+          node-version: 24
+          cache: npm
+
+      # Zelfde pin als ci.yml — dezelfde resolver overal.
+      - run: npm install -g npm@11
+
+      # Is main intussen verder dan deze run? Dan neemt de run van die nieuwere
+      # merge (die achter deze in de rij wacht) alles mee, en zou de push hier
+      # toch geweigerd worden.
+      - name: Nog de nieuwste stand van main?
+        id: fresh
+        run: |
+          git fetch origin main --tags
+          if [ "$(git rev-parse origin/main)" != "$GITHUB_SHA" ]; then
+            echo "main staat op $(git rev-parse --short origin/main), deze run op ${GITHUB_SHA::7}: de nieuwere run publiceert."
+            echo "latest=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "latest=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Eerst bewijzen dat het verscheepbaar is. Faalt hier iets, dan is er
+      # nog geen versiecommit, geen tag en niets op npm.
+      - if: steps.fresh.outputs.latest == 'true'
+        run: npm ci
+      - if: steps.fresh.outputs.latest == 'true'
+        run: npm run typecheck
+      - if: steps.fresh.outputs.latest == 'true'
+        run: npm test
+      - if: steps.fresh.outputs.latest == 'true'
+        run: npm run build
+      - if: steps.fresh.outputs.latest == 'true'
+        run: npm pack --dry-run
+
+      - name: Volgende versie
+        id: next
+        if: steps.fresh.outputs.latest == 'true'
+        run: |
+          node scripts/next-version.mjs | tee -a "$GITHUB_OUTPUT"
+
+      - name: Versiecommit en tag
+        if: steps.next.outputs.bump != '' && steps.next.outputs.bump != 'none'
+        env:
+          VERSION: ${{ steps.next.outputs.version }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          npm version "$VERSION" --no-git-tag-version
+          git add package.json package-lock.json
+          git commit -m "$VERSION [skip ci]"
+          git tag -a "v$VERSION" -m "v$VERSION"
+          # Atomair: de commit en de tag landen samen, of geen van beide.
+          git push --atomic origin "HEAD:main" "v$VERSION"
+
+      - name: Publiceren naar npm
+        if: steps.next.outputs.bump != '' && steps.next.outputs.bump != 'none'
+        run: npm publish --provenance --access public
+
+      # Inhalen: de vorige run pushte zijn tag maar de publicatie haperde (bv.
+      # Trusted Publishing nog niet ingesteld). Zonder nieuwe commits is er dan
+      # geen bump, en zou die versie nooit op npm komen. Een herstart
+      # (Run workflow) publiceert ze alsnog, vanaf precies die tag.
+      - name: Haperde de vorige publicatie? Dan alsnog
+        id: catchup
+        if: steps.next.outputs.bump == 'none'
+        env:
+          PREVIOUS: ${{ steps.next.outputs.previous }}
+        run: |
+          name="$(node -p "require('./package.json').name")"
+          if [ -n "$(npm view "$name@$PREVIOUS" version 2>/dev/null || true)" ]; then
+            echo "$PREVIOUS staat al op npm."
+            echo "published=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "$PREVIOUS is getagd maar niet op npm: nu publiceren."
+            npm publish --provenance --access public
+            echo "published=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Samenvatting
+        if: always()
+        env:
+          BUMP: ${{ steps.next.outputs.bump }}
+          VERSION: ${{ steps.next.outputs.version }}
+          LATEST: ${{ steps.fresh.outputs.latest }}
+          PREVIOUS: ${{ steps.next.outputs.previous }}
+          CAUGHT_UP: ${{ steps.catchup.outputs.published }}
+          STATUS: ${{ job.status }}
+        run: |
+          if [ "$STATUS" != "success" ]; then
+            echo "Mislukt: zie de rode stap. Faalde het vóór 'Versiecommit en tag', dan is er niets getagd of gepubliceerd. Faalde 'Publiceren naar npm', dan staat de tag er al: los de oorzaak op en kies Run workflow om ze alsnog te publiceren." >> "$GITHUB_STEP_SUMMARY"
+          elif [ "$LATEST" = "false" ]; then
+            echo "Overgeslagen: een nieuwere merge op main publiceert." >> "$GITHUB_STEP_SUMMARY"
+          elif [ "$CAUGHT_UP" = "true" ]; then
+            echo "Ingehaald: $PREVIOUS alsnog gepubliceerd." >> "$GITHUB_STEP_SUMMARY"
+          elif [ "$BUMP" = "none" ]; then
+            echo "Niets nieuws sinds de vorige tag; niets gepubliceerd." >> "$GITHUB_STEP_SUMMARY"
+          elif [ -n "$VERSION" ]; then
+            echo "Release $VERSION ($BUMP): https://www.npmjs.com/package/@axonity-ai/mcp/v/$VERSION" >> "$GITHUB_STEP_SUMMARY"
+          fi
