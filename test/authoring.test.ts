@@ -531,9 +531,10 @@ describe("request_publish_bulk", () => {
       { tool: (n: string, d: string) => { descriptions[n] = d; } } as never,
       fakeClient() as never,
     );
-    for (const tool of ["list_publish_approvals", "get_publish_approval"]) {
-      expect(descriptions[tool], tool).toMatch(/recomputed/);
-      expect(descriptions[tool], tool).toMatch(/readinessAtRequest/);
-    }
+    // Only the single read carries readiness since axonity-flow #2619; the list
+    // sends you there (test/approvalsListNoReadiness.test.ts).
+    expect(descriptions.get_publish_approval).toMatch(/recomputed/);
+    expect(descriptions.get_publish_approval).toMatch(/readinessAtRequest/);
+    expect(descriptions.list_publish_approvals).toMatch(/get_publish_approval/);
   });
 });
