@@ -46,12 +46,14 @@ const SETTINGS_RESPONSE =
   "Returns the workspace settings object {moduleId, level, subjectId, fields}. " +
   "Each field is {key, revision, hasOverride, value, effectiveIsSet, effectiveValue, " +
   "sourceLevel, locked, ownLocked, followsDeploy, hasDeployment, deploymentValue, " +
-  "mayWrite, roleConflict, needsChoice, sources, via, changedAt, actorLabel}. " +
+  "mayWrite, writeNeedsApproval, roleConflict, needsChoice, sources, via, changedAt, actorLabel}. " +
   "hasOverride distinguishes no workspace override from an explicit null value; " +
   "effectiveIsSet distinguishes no effective value from an effective JSON null. " +
   "hasDeployment says whether deploymentValue exists. locked is the effective lock; " +
   "ownLocked belongs to this workspace context. mayWrite reports current write " +
-  "permission; roleConflict and needsChoice report resolution state. " +
+  "permission; writeNeedsApproval is true when a write through a token is only a " +
+  "proposal a person approves (the field's `token` is `approval`); " +
+  "roleConflict and needsChoice report resolution state. " +
   "sources is a list of {level, subjectId, value, locked, via, changedAt, actorLabel} " +
   "records filtered by the server for this caller. via, changedAt and actorLabel " +
   "are filled in by the server and may be null. ";
@@ -79,15 +81,20 @@ export function registerModuleTools(server: McpServer, client: AxonityClient): v
     "read_module_settings_schema",
     "Read the module's live setting-field schema before changing settings. Returns " +
       "{moduleId, fields, rights}. fields is a list of {key, kind, label, description, " +
-      "group, levels, right, lockable, perEnvironment, staysHome, humanOnly, " +
+      "group, levels, right, lockable, perEnvironment, staysHome, token, " +
       "agentReadsText, to, rolesCombine, default, hasDefault, choiceOptions, " +
       "choiceLabels, fields, item}. kind and " +
       "label describe the value type and human name; hasDefault distinguishes an " +
       "absent default from JSON null. group is the heading a screen shows the " +
       "setting under, and choiceLabels the label it shows for an option (the " +
-      "stored value is always the option, never the label). humanOnly is true on a " +
-      "setting only a person at a screen writes: no token of any kind writes it, " +
-      "a personal token included; reading it is unchanged. fields and item describe " +
+      "stored value is always the option, never the label). token says what a token " +
+      "may do with that setting when it writes it: `allow` (the default) — the " +
+      "token writes it, within its owner's rights and its scope; `approval` — the " +
+      "token only PROPOSES the write: update_module_settings answers 202 and a " +
+      "person approves it in Axonity (Approvals → Admin requests), Mail's " +
+      "mailboxes are such a field; `deny` — no token writes it, a personal token of " +
+      "an administrator included, and a person changes it in Axonity. Reading it " +
+      "is unchanged in all three. fields and item describe " +
       "nested object/list " +
       "values with {name, kind, label, description, required, choiceOptions, " +
       "choiceLabels, to, fields, item}. rights is a list of {id, role}. The server filters what " +
@@ -119,13 +126,24 @@ export function registerModuleTools(server: McpServer, client: AxonityClient): v
       "override and own lock; follow_deploy uses the server's latest deployed value " +
       "and preserves the own lock. The backend validates field rights, levels, locks " +
       "and revisions, rejects duplicate keys, and derives who made the change, and through which route, from " +
-      "the authenticated request. Who may write: a service token with the author scope, " +
-      "or a personal token whose owner is an administrator of this workspace; a personal " +
+      "the authenticated request. Who may write: a service token needs the author scope AND an " +
+      "owner who is an administrator of this workspace right now (checked live on " +
+      "every call, so a member's author token is refused, for writing and for " +
+      "proposing alike); a personal token also needs an owner who is an administrator; a personal " +
       "token writes with that person's rights, needs the token's 'Run actions' choice, and " +
       "the save is recorded under that person. " +
       "Either can write permitted workspace fields, including admin-classified fields, " +
-      "except a field the schema marks humanOnly: no token writes that one, a personal " +
-      "token of an administrator included, and a person changes it in Axonity. " +
+      "within what each field's `token` says (read_module_settings_schema): `allow` " +
+      "writes it; `approval` does NOT write it — the call answers 202 and the text " +
+      "starts NOT DONE YET with an approval id, a person approves in Axonity " +
+      "(Approvals → Admin requests), and you poll get_action_approval and never repeat " +
+      "the call (a second identical request returns the same approval); `deny`: no " +
+      "token writes that one, a personal token of an administrator included, and a " +
+      "person changes it in Axonity. A whole PATCH is ONE request when any change in " +
+      "it needs approval: nothing is applied until it is approved, and then all of it. " +
+      "The patch is checked before a request is made: a field that is wrong is a 422 " +
+      "that names it, e.g. `mailboxes[0].address: <reason>` — fix that field and send " +
+      "again; no request exists then. " +
       "Only the workspace level is written here: installation, role and personal settings " +
       "are changed by a person in Axonity in the browser, never through a token. " +
       "A stale revision is refused: reread settings before deciding what to save. " +

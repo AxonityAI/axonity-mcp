@@ -5,10 +5,51 @@
 
 import { AxonityApiError } from "../errors.js";
 
+/**
+ * The backend's 202 for a route a token may only PROPOSE: `{status:
+ * "pending_approval", message, approval}`. Recognised by its body, which is the
+ * one thing every such route shares, so one wording serves every tool.
+ */
+function pendingApproval(
+  data: unknown,
+): { id: string; summary?: string; action?: string } | undefined {
+  if (typeof data !== "object" || data === null) return undefined;
+  const { status, approval } = data as { status?: unknown; approval?: unknown };
+  if (status !== "pending_approval" || typeof approval !== "object" || approval === null) {
+    return undefined;
+  }
+  const { id, summary, action } = approval as Record<string, unknown>;
+  if (typeof id !== "string") return undefined;
+  return {
+    id,
+    ...(typeof summary === "string" ? { summary } : {}),
+    ...(typeof action === "string" ? { action } : {}),
+  };
+}
+
+/**
+ * What an agent is told when a call was ASKED, not done. Deliberately not JSON
+ * and not an error: a client that reads any 2xx as "done" must not be able to
+ * read this as done, and an agent that retries a "failure" makes a second
+ * request for nothing.
+ */
+export function notDoneYet(approval: { id: string; summary?: string; action?: string }): string {
+  return (
+    "NOT DONE YET — this waits for a person's approval in Axonity " +
+    "(Approvals → Admin requests). " +
+    `Approval id ${approval.id}; poll get_action_approval. ` +
+    "Do not retry: a second identical request returns the same approval." +
+    (approval.summary ? `\nAsked: ${approval.summary}` : "")
+  );
+}
+
 /** A tool result carrying a JSON payload as pretty text. */
 export function jsonResult(data: unknown) {
+  const asked = pendingApproval(data);
   return {
-    content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }],
+    content: [
+      { type: "text" as const, text: asked ? notDoneYet(asked) : JSON.stringify(data, null, 2) },
+    ],
   };
 }
 

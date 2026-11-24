@@ -73,6 +73,7 @@ import { registerTrashTools } from "./tools/trash.js";
 import { registerRunTools } from "./tools/runs.js";
 import { SERVER_INSTRUCTIONS } from "./instructions.js";
 import { registerNewFlowAppPrompt } from "./prompts/newFlowApp.js";
+import { registerActionApprovalTools } from "./tools/actionApprovals.js";
 import { registerFlowAppResources } from "./resources/flowApp.js";
 import { registerRunInputFileTools } from "./tools/runInputFiles.js";
 import { registerSecretTools } from "./tools/secrets.js";
@@ -1079,6 +1080,7 @@ export function registerAll(
   registerValidationTools(server as McpServer, client);
   registerExecutionTools(server as McpServer, client);
   registerApprovalTools(server as McpServer, client);
+  registerActionApprovalTools(server as McpServer, client);
   registerTriggerTools(server as McpServer, client);
   registerRunTools(server as McpServer, client, { hosted: options.hosted === true });
   registerRunInputFileTools(server as McpServer, client, { hosted: options.hosted === true });

@@ -32,8 +32,7 @@
     "why": "delete: configuration without an approval step"
   },
   "DELETE /api/v1/audiences/{audience_id}": {
-    "class": "dicht",
-    "why": "delete: configuration without an approval step"
+    "class": "configuratie"
   },
   "DELETE /api/v1/concept-links": {
     "class": "dicht",
@@ -122,8 +121,7 @@
     "why": "credentials, secrets, platform, deployment, configuration"
   },
   "DELETE /api/v1/flow-apps/{app_id}": {
-    "class": "dicht",
-    "why": "of a person at a screen, reads included"
+    "class": "configuratie"
   },
   "DELETE /api/v1/me/tokens/{token_id}": {
     "class": "dicht",
@@ -206,8 +204,7 @@
     "why": "delete: configuration without an approval step"
   },
   "DELETE /api/v1/roles/{role_id}": {
-    "class": "dicht",
-    "why": "delete: configuration without an approval step"
+    "class": "configuratie"
   },
   "DELETE /api/v1/runs/{run_id}": {
     "class": "dicht",
@@ -262,8 +259,7 @@
     "why": "purge"
   },
   "DELETE /api/v1/users/{user_id}": {
-    "class": "dicht",
-    "why": "delete: configuration without an approval step"
+    "class": "configuratie"
   },
   "DELETE /api/v1/webhook-triggers/{webhook_id}": {
     "class": "dicht",
@@ -312,6 +308,15 @@
   "GET /api/v1/_test/stub-stats": {
     "class": "dicht",
     "why": "no authentication of its own: a token never reaches the gate"
+  },
+  "GET /api/v1/action-approvals": {
+    "class": "lezen"
+  },
+  "GET /api/v1/action-approvals/pending-count": {
+    "class": "lezen"
+  },
+  "GET /api/v1/action-approvals/{approval_id}": {
+    "class": "lezen"
   },
   "GET /api/v1/agent-templates": {
     "class": "lezen"
@@ -1593,12 +1598,10 @@
     "why": "credentials, secrets, platform, deployment, configuration"
   },
   "PATCH /api/v1/knowledge/source-types/{key}": {
-    "class": "dicht",
-    "why": "knowledge upkeep"
+    "class": "configuratie"
   },
   "PATCH /api/v1/knowledge/sources/{source_id}": {
-    "class": "dicht",
-    "why": "knowledge upkeep"
+    "class": "configuratie"
   },
   "PATCH /api/v1/me/settings/{module_id}": {
     "class": "dicht",
@@ -1685,16 +1688,13 @@
     "class": "configuratie"
   },
   "PATCH /api/v1/tenant-settings/concurrent-run-cap": {
-    "class": "dicht",
-    "why": "administration settings"
+    "class": "configuratie"
   },
   "PATCH /api/v1/tenant-settings/for-each-rate": {
-    "class": "dicht",
-    "why": "administration settings"
+    "class": "configuratie"
   },
   "PATCH /api/v1/tenant-settings/model-tier-map": {
-    "class": "dicht",
-    "why": "administration settings"
+    "class": "configuratie"
   },
   "PATCH /api/v1/toolboxes/{toolbox_id}/versions/major/{major_version}": {
     "class": "dicht",
@@ -1704,8 +1704,7 @@
     "class": "configuratie"
   },
   "PATCH /api/v1/users/{user_id}": {
-    "class": "dicht",
-    "why": "members and credentials"
+    "class": "configuratie"
   },
   "PATCH /api/v1/workflows/{workflow_id}": {
     "class": "configuratie"
@@ -1752,6 +1751,14 @@
   "POST /api/v1/_test/wake/{run_id}": {
     "class": "dicht",
     "why": "credentials, secrets, platform, deployment, configuration"
+  },
+  "POST /api/v1/action-approvals/{approval_id}/approve": {
+    "class": "dicht",
+    "why": "a token never approves"
+  },
+  "POST /api/v1/action-approvals/{approval_id}/reject": {
+    "class": "dicht",
+    "why": "a token never approves"
   },
   "POST /api/v1/action-verdicts/{verdict_id}/mark": {
     "class": "dicht",
@@ -1868,11 +1875,11 @@
   },
   "POST /api/v1/applications/{application_id}/knowledge": {
     "class": "dicht",
-    "why": "application executors and knowledge"
+    "why": "application knowledge"
   },
   "POST /api/v1/applications/{application_id}/knowledge/{knowledge_id}/forget": {
     "class": "dicht",
-    "why": "application executors and knowledge"
+    "why": "application knowledge"
   },
   "POST /api/v1/applications/{application_id}/knowledge/{knowledge_id}/restore": {
     "class": "dicht",
@@ -1919,8 +1926,7 @@
     "class": "lezen"
   },
   "POST /api/v1/audiences": {
-    "class": "dicht",
-    "why": "administration settings"
+    "class": "configuratie"
   },
   "POST /api/v1/auth/admin-login": {
     "class": "dicht",
@@ -2063,8 +2069,7 @@
     "why": "credentials, secrets, platform, deployment, configuration"
   },
   "POST /api/v1/config/environments/rollback": {
-    "class": "dicht",
-    "why": "credentials, secrets, platform, deployment, configuration"
+    "class": "configuratie"
   },
   "POST /api/v1/config/environments/sync": {
     "class": "dicht",
@@ -2326,20 +2331,16 @@
     "why": "consultant"
   },
   "POST /api/v1/flow-apps/{app_id}/restore": {
-    "class": "dicht",
-    "why": "of a person at a screen, reads included"
+    "class": "configuratie"
   },
   "POST /api/v1/flow-apps/{app_id}/versions/{version_id}/accept": {
-    "class": "dicht",
-    "why": "of a person at a screen, reads included"
+    "class": "configuratie"
   },
   "POST /api/v1/flow-apps/{entity_id}/archive": {
-    "class": "dicht",
-    "why": "of a person at a screen, reads included"
+    "class": "configuratie"
   },
   "POST /api/v1/flow-apps/{entity_id}/unarchive": {
-    "class": "dicht",
-    "why": "of a person at a screen, reads included"
+    "class": "configuratie"
   },
   "POST /api/v1/folders/ensure": {
     "class": "dicht",
@@ -2410,8 +2411,7 @@
     "why": "knowledge upkeep"
   },
   "POST /api/v1/knowledge/source-types": {
-    "class": "dicht",
-    "why": "knowledge upkeep"
+    "class": "configuratie"
   },
   "POST /api/v1/knowledge/tips/shown": {
     "class": "dicht",
@@ -2849,8 +2849,7 @@
     "why": "restore: configuration without an approval step"
   },
   "POST /api/v1/roles": {
-    "class": "dicht",
-    "why": "administration settings"
+    "class": "configuratie"
   },
   "POST /api/v1/run-input-files": {
     "class": "actie"
@@ -3196,8 +3195,7 @@
     "why": "no authentication of its own: a token never reaches the gate"
   },
   "POST /api/v1/users": {
-    "class": "dicht",
-    "why": "members and credentials"
+    "class": "configuratie"
   },
   "POST /api/v1/users/{user_id}/reset-link": {
     "class": "dicht",
@@ -3310,12 +3308,10 @@
     "class": "configuratie"
   },
   "PUT /api/v1/applications/{application_id}/executors": {
-    "class": "dicht",
-    "why": "application executors and knowledge"
+    "class": "configuratie"
   },
   "PUT /api/v1/audiences/{audience_id}": {
-    "class": "dicht",
-    "why": "administration settings"
+    "class": "configuratie"
   },
   "PUT /api/v1/briefs/profiles": {
     "class": "dicht",
@@ -3368,20 +3364,17 @@
     "why": "credentials, secrets, platform, deployment, configuration"
   },
   "PUT /api/v1/executors/{executor_id}/applications": {
-    "class": "dicht",
-    "why": "credentials, secrets, platform, deployment, configuration"
+    "class": "configuratie"
   },
   "PUT /api/v1/flow-apps/{app_id}/availability": {
-    "class": "dicht",
-    "why": "of a person at a screen, reads included"
+    "class": "configuratie"
   },
   "PUT /api/v1/knowledge/learning/topic": {
     "class": "dicht",
     "why": "knowledge upkeep"
   },
   "PUT /api/v1/knowledge/settings": {
-    "class": "dicht",
-    "why": "knowledge upkeep"
+    "class": "configuratie"
   },
   "PUT /api/v1/measure-influences": {
     "class": "dicht",
@@ -3395,8 +3388,7 @@
     "why": "attachment rows, not proven to be draft-only"
   },
   "PUT /api/v1/modules/{module_id}/enabled": {
-    "class": "dicht",
-    "why": "refuses every token, a personal one included, and a switch is no draft"
+    "class": "configuratie"
   },
   "PUT /api/v1/output-schemas/{schema_id}": {
     "class": "configuratie"
@@ -3431,8 +3423,7 @@
     "class": "configuratie"
   },
   "PUT /api/v1/roles/{role_id}": {
-    "class": "dicht",
-    "why": "administration settings"
+    "class": "configuratie"
   },
   "PUT /api/v1/screen-state/{screen}": {
     "class": "dicht",
@@ -3453,8 +3444,7 @@
     "why": "no draft: saved directly"
   },
   "PUT /api/v1/tenant-settings/system-agent-models/{slug}": {
-    "class": "dicht",
-    "why": "administration settings"
+    "class": "configuratie"
   },
   "PUT /api/v1/test-api/echo": {
     "class": "dicht",
@@ -3480,8 +3470,7 @@
     "why": "tool toolbox membership is read live"
   },
   "PUT /api/v1/users/{user_id}/roles": {
-    "class": "dicht",
-    "why": "members and credentials"
+    "class": "configuratie"
   },
   "PUT /api/v1/workflows/{workflow_id}": {
     "class": "configuratie"

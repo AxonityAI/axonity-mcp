@@ -115,6 +115,13 @@ export const FORBIDDEN: Rule[] = [
     label: "approve/reject an approval",
     path: /\/publish-approvals\/[^/]+\/(approve|reject)$/,
   },
+  // The same rule for the requests a token only PROPOSES (administration
+  // changes, 202 "NOT DONE YET"): the backend closes both decision routes to
+  // every token — "a token never approves" — and so does this client.
+  {
+    label: "approve/reject an admin request",
+    path: /\/action-approvals\/[^/]+\/(approve|reject)$/,
+  },
   // A RELEASE decision is the same act one level up, and the rule above cannot
   // see it: its `[^/]+` matches ONE segment, while the release route carries
   // two (`/publish-approvals/release/{id}/approve`). Worth its own rule

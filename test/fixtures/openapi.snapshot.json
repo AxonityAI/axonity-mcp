@@ -55,6 +55,73 @@
         "title": "ActionApprovalCheck",
         "type": "object"
       },
+      "ActionApprovalCount": {
+        "description": "How many requests wait for a decision.",
+        "properties": {
+          "actions": {
+            "title": "Actions",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "actions"
+        ],
+        "title": "ActionApprovalCount",
+        "type": "object"
+      },
+      "ActionApprovalDecisionResponse": {
+        "description": "The answer to approving or rejecting a request.",
+        "properties": {
+          "forDecider": {
+            "additionalProperties": true,
+            "title": "Fordecider",
+            "type": "object"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "approved",
+              "rejected",
+              "expired"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "statusReason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Statusreason"
+          }
+        },
+        "required": [
+          "id",
+          "status"
+        ],
+        "title": "ActionApprovalDecisionResponse",
+        "type": "object"
+      },
       "ActionApprovalItem": {
         "description": "A request as shown in the inbox and returned to whoever asked.",
         "properties": {
@@ -224,6 +291,22 @@
           "createdAt"
         ],
         "title": "ActionApprovalItem",
+        "type": "object"
+      },
+      "ActionApprovalRejection": {
+        "description": "The body of a rejection.",
+        "properties": {
+          "reason": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "ActionApprovalRejection",
         "type": "object"
       },
       "ActionChangeItem": {
@@ -3486,6 +3569,38 @@
         "title": "AuthUser",
         "type": "object"
       },
+      "AuthoringContractAnswer": {
+        "description": "What an author of an app builds against: the surface, the manifest schema, the answers.",
+        "properties": {
+          "contractHash": {
+            "title": "Contracthash",
+            "type": "string"
+          },
+          "manifestSchema": {
+            "additionalProperties": true,
+            "title": "Manifestschema",
+            "type": "object"
+          },
+          "results": {
+            "additionalProperties": true,
+            "title": "Results",
+            "type": "object"
+          },
+          "surface": {
+            "additionalProperties": true,
+            "title": "Surface",
+            "type": "object"
+          }
+        },
+        "required": [
+          "surface",
+          "manifestSchema",
+          "results",
+          "contractHash"
+        ],
+        "title": "AuthoringContractAnswer",
+        "type": "object"
+      },
       "AuthoringRulesResponse": {
         "description": "A set of authoring rules this deploy serves, over HTTP.\n\nThe same shape as :class:`PromptPlacementResponse` and for the same\nreason: an author — a person in the screen or an agent through the\nconnector — reads the platform's own words instead of a copy that\ndrifted. ``rulesVersion`` is a content hash over the text, so a client\ncaches on \"same version → nothing to re-fetch\".",
         "properties": {
@@ -6210,7 +6325,7 @@
         "type": "object"
       },
       "ConcurrentRunCapUpdate": {
-        "description": "Body for ``PATCH /concurrent-run-cap``.",
+        "description": "Body for ``PATCH /tenant-settings/concurrent-run-cap``.\n\nHere, not in the route file, because the action registry (``domain/admin_actions``) validates\nan approved request with the SAME model the route used.",
         "properties": {
           "cap": {
             "maximum": 1000.0,
@@ -16409,7 +16524,7 @@
         "type": "object"
       },
       "FanOutRateUpdate": {
-        "description": "Body for ``PATCH /for-each-rate``. ``0`` removes the default.",
+        "description": "Body for ``PATCH /tenant-settings/for-each-rate``. ``0`` removes the default.\n\nHere, not in the route file, for the same reason as :class:`ConcurrentRunCapUpdate`: the action\nregistry validates an approved request with the SAME model the route used.",
         "properties": {
           "ratePerMinute": {
             "maximum": 100000.0,
@@ -18970,11 +19085,6 @@
             "title": "Hasdefault",
             "type": "boolean"
           },
-          "humanOnly": {
-            "default": false,
-            "title": "Humanonly",
-            "type": "boolean"
-          },
           "item": {
             "anyOf": [
               {
@@ -19076,6 +19186,16 @@
               }
             ],
             "title": "To"
+          },
+          "token": {
+            "default": "allow",
+            "enum": [
+              "allow",
+              "approval",
+              "deny"
+            ],
+            "title": "Token",
+            "type": "string"
           }
         },
         "required": [
@@ -21802,6 +21922,68 @@
           }
         },
         "title": "ManifestCheck",
+        "type": "object"
+      },
+      "ManifestCheckAnswer": {
+        "description": "Whether the things a manifest grants exist in this workspace, and what is wrong if not.",
+        "properties": {
+          "problems": {
+            "items": {
+              "$ref": "#/components/schemas/ManifestProblem"
+            },
+            "title": "Problems",
+            "type": "array"
+          },
+          "tables": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ManifestTableFound"
+            },
+            "title": "Tables",
+            "type": "object"
+          },
+          "valid": {
+            "title": "Valid",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "valid",
+          "problems",
+          "tables"
+        ],
+        "title": "ManifestCheckAnswer",
+        "type": "object"
+      },
+      "ManifestProblem": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "ManifestProblem",
+        "type": "object"
+      },
+      "ManifestTableFound": {
+        "properties": {
+          "columns": {
+            "items": {},
+            "title": "Columns",
+            "type": "array"
+          }
+        },
+        "required": [
+          "columns"
+        ],
+        "title": "ManifestTableFound",
         "type": "object"
       },
       "ManifestValidationError": {
@@ -26002,6 +26184,11 @@
               }
             ],
             "title": "Via"
+          },
+          "writeNeedsApproval": {
+            "default": false,
+            "title": "Writeneedsapproval",
+            "type": "boolean"
           }
         },
         "required": [
@@ -27762,6 +27949,42 @@
           "commonClasses"
         ],
         "title": "PackageInfoResponse",
+        "type": "object"
+      },
+      "Page_ActionApprovalItem_": {
+        "properties": {
+          "hasMore": {
+            "default": false,
+            "title": "Hasmore",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ActionApprovalItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          },
+          "pageSize": {
+            "title": "Pagesize",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "pageSize"
+        ],
+        "title": "Page[ActionApprovalItem]",
         "type": "object"
       },
       "Page_ActionVerdictItem_": {
@@ -42028,6 +42251,46 @@
         "title": "StartRunBody",
         "type": "object"
       },
+      "StarterAnswer": {
+        "description": "The metadata of this build's starter package and the one-time link to download it.",
+        "properties": {
+          "buildVersion": {
+            "title": "Buildversion",
+            "type": "string"
+          },
+          "contractHash": {
+            "title": "Contracthash",
+            "type": "string"
+          },
+          "downloadUrl": {
+            "title": "Downloadurl",
+            "type": "string"
+          },
+          "expiresAt": {
+            "format": "date-time",
+            "title": "Expiresat",
+            "type": "string"
+          },
+          "kitVersion": {
+            "title": "Kitversion",
+            "type": "string"
+          },
+          "surface": {
+            "title": "Surface",
+            "type": "string"
+          }
+        },
+        "required": [
+          "buildVersion",
+          "surface",
+          "kitVersion",
+          "contractHash",
+          "downloadUrl",
+          "expiresAt"
+        ],
+        "title": "StarterAnswer",
+        "type": "object"
+      },
       "StepEventResponse": {
         "description": "One call of the agent that is not a hand-back, as a sentence.",
         "properties": {
@@ -53070,6 +53333,328 @@
         ]
       }
     },
+    "/api/v1/action-approvals": {
+      "get": {
+        "description": "The requests you may see, newest first, optionally filtered by status.",
+        "operationId": "list_action_approvals_api_v1_action_approvals_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "pending",
+                    "approved",
+                    "rejected",
+                    "expired"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "description": "mine = the requests you sent through one of your own tokens; all = every request of the workspace (administrators only, 403 otherwise).",
+            "in": "query",
+            "name": "view",
+            "required": false,
+            "schema": {
+              "default": "mine",
+              "description": "mine = the requests you sent through one of your own tokens; all = every request of the workspace (administrators only, 403 otherwise).",
+              "enum": [
+                "mine",
+                "all"
+              ],
+              "title": "View",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Limit"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_ActionApprovalItem_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Action Approvals",
+        "tags": [
+          "action-approvals"
+        ]
+      }
+    },
+    "/api/v1/action-approvals/pending-count": {
+      "get": {
+        "description": "How many requests wait for a decision: COUNTs, no rows loaded.\n\nA request that has expired but is not yet opened still counts: the badge reads the table, and\nonly reading the request itself finds out that it ended (A.4).",
+        "operationId": "pending_count_api_v1_action_approvals_pending_count_get",
+        "parameters": [
+          {
+            "description": "mine = the requests you sent through one of your own tokens; all = every request of the workspace (administrators only, 403 otherwise).",
+            "in": "query",
+            "name": "view",
+            "required": false,
+            "schema": {
+              "default": "mine",
+              "description": "mine = the requests you sent through one of your own tokens; all = every request of the workspace (administrators only, 403 otherwise).",
+              "enum": [
+                "mine",
+                "all"
+              ],
+              "title": "View",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionApprovalCount"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Pending Count",
+        "tags": [
+          "action-approvals"
+        ]
+      }
+    },
+    "/api/v1/action-approvals/{approval_id}": {
+      "get": {
+        "description": "One request, with what approving would do now (``check``).\n\nYour own, or any for an administrator.",
+        "operationId": "get_action_approval_api_v1_action_approvals__approval_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "approval_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Approval Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionApprovalItem"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Action Approval",
+        "tags": [
+          "action-approvals"
+        ]
+      }
+    },
+    "/api/v1/action-approvals/{approval_id}/approve": {
+      "post": {
+        "description": "Approve → run the action as you, if the token's owner and the target still allow it.\n\n``expired`` comes back when the token or its owner's right is gone (nothing ran); 409 when the\ntarget changed since the request (it stays pending, and you can reject it).",
+        "operationId": "approve_action_approval_api_v1_action_approvals__approval_id__approve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "approval_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Approval Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionApprovalDecisionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Approve Action Approval",
+        "tags": [
+          "action-approvals"
+        ]
+      }
+    },
+    "/api/v1/action-approvals/{approval_id}/reject": {
+      "post": {
+        "description": "Reject → nothing runs, and the reason (required) goes back to whoever asked.",
+        "operationId": "reject_action_approval_api_v1_action_approvals__approval_id__reject_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "approval_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Approval Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActionApprovalRejection"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionApprovalDecisionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Reject Action Approval",
+        "tags": [
+          "action-approvals"
+        ]
+      }
+    },
     "/api/v1/action-verdicts/{verdict_id}/mark": {
       "post": {
         "description": "A person says the verdict was right or wrong.",
@@ -57378,7 +57963,7 @@
         ]
       },
       "put": {
-        "description": "Replace the executors this application runs on.",
+        "description": "Replace the executors this application runs on.\n\nA token (its owner an administrator) gets ``202`` and a request a person approves (flow #1).",
         "operationId": "set_application_executors_api_v1_applications__application_id__executors_put",
         "parameters": [
           {
@@ -57407,7 +57992,15 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApplicationExecutorsResponse"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ApplicationExecutorsResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ActionApprovalAccepted"
+                    }
+                  ],
+                  "title": "Response Set Application Executors Api V1 Applications  Application Id  Executors Put"
                 }
               }
             },
@@ -58773,9 +59366,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Authoring Api V1 Apps Authoring Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/AuthoringContractAnswer"
                 }
               }
             },
@@ -58811,9 +59402,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Check Api V1 Apps Manifest Check Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/ManifestCheckAnswer"
                 }
               }
             },
@@ -58896,9 +59485,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Starter Api V1 Apps Starter Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/StarterAnswer"
                 }
               }
             },
@@ -59155,6 +59742,7 @@
         ]
       },
       "post": {
+        "description": "Add a label. A token (its owner an administrator) gets ``202`` and a request (flow #1).",
         "operationId": "create_audience_api_v1_audiences_post",
         "requestBody": {
           "content": {
@@ -59171,7 +59759,15 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/AudienceResponse"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/AudienceResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ActionApprovalAccepted"
+                    }
+                  ],
+                  "title": "Response Create Audience Api V1 Audiences Post"
                 }
               }
             },
@@ -59225,6 +59821,16 @@
           }
         ],
         "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionApprovalAccepted"
+                }
+              }
+            },
+            "description": "Accepted"
+          },
           "204": {
             "description": "Successful Response"
           },
@@ -59324,7 +59930,15 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/AudienceResponse"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/AudienceResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ActionApprovalAccepted"
+                    }
+                  ],
+                  "title": "Response Update Audience Api V1 Audiences  Audience Id  Put"
                 }
               }
             },
@@ -62652,7 +63266,15 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RollbackResponse"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/RollbackResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ActionApprovalAccepted"
+                    }
+                  ],
+                  "title": "Response Rollback To Previous Version Api V1 Config Environments Rollback Post"
                 }
               }
             },
@@ -70741,7 +71363,7 @@
         ]
       },
       "put": {
-        "description": "Replace the applications this executor may operate (#1901).",
+        "description": "Replace the applications this executor may operate (#1901).\n\nA token (its owner an administrator) gets ``202`` and a request a person approves (flow #1).",
         "operationId": "set_executor_applications_api_v1_executors__executor_id__applications_put",
         "parameters": [
           {
@@ -70770,7 +71392,15 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ExecutorApplicationsResponse"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ExecutorApplicationsResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ActionApprovalAccepted"
+                    }
+                  ],
+                  "title": "Response Set Executor Applications Api V1 Executors  Executor Id  Applications Put"
                 }
               }
             },
@@ -71452,7 +72082,15 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/DeleteFlowAppResponse"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/DeleteFlowAppResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ActionApprovalAccepted"
+                    }
+                  ],
+                  "title": "Response Delete Flow App Api V1 Flow Apps  App Id  Delete"
                 }
               }
             },
@@ -71557,7 +72195,15 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/FlowAppResponse"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/FlowAppResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ActionApprovalAccepted"
+                    }
+                  ],
+                  "title": "Response Set Flow App Availability Api V1 Flow Apps  App Id  Availability Put"
                 }
               }
             },
@@ -71606,7 +72252,15 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RestoreEntityResponse"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/RestoreEntityResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ActionApprovalAccepted"
+                    }
+                  ],
+                  "title": "Response Restore Flow App Api V1 Flow Apps  App Id  Restore Post"
                 }
               }
             },
@@ -71750,7 +72404,15 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/FlowAppVersionResponse"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/FlowAppVersionResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ActionApprovalAccepted"
+                    }
+                  ],
+                  "title": "Response Accept Flow App Version Api V1 Flow Apps  App Id  Versions  Version Id  Accept Post"
                 }
               }
             },
@@ -71780,7 +72442,7 @@
     },
     "/api/v1/flow-apps/{entity_id}/archive": {
       "post": {
-        "description": "Archive: out of use and out of the lists; versions untouched.\n\nOnly a draft can be archived. Idempotent — archiving an archived item\nsucceeds with ``changed=false``.",
+        "description": "Archive: out of use and out of the lists; versions untouched.\n\nA token (its owner an administrator) gets ``202`` and a request a person approves (flow #1).",
         "operationId": "archive_flow_app_api_v1_flow_apps__entity_id__archive_post",
         "parameters": [
           {
@@ -71799,7 +72461,15 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ArchiveEntityResponse"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ArchiveEntityResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ActionApprovalAccepted"
+                    }
+                  ],
+                  "title": "Response Archive Flow App Api V1 Flow Apps  Entity Id  Archive Post"
                 }
               }
             },
@@ -71829,7 +72499,7 @@
     },
     "/api/v1/flow-apps/{entity_id}/unarchive": {
       "post": {
-        "description": "Unarchive: back in use, in the state it had (Draft or Published).",
+        "description": "Unarchive: back in use, in the state it had.",
         "operationId": "unarchive_flow_app_api_v1_flow_apps__entity_id__unarchive_post",
         "parameters": [
           {
@@ -71848,7 +72518,15 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ArchiveEntityResponse"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ArchiveEntityResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ActionApprovalAccepted"
+                    }
+                  ],
+                  "title": "Response Unarchive Flow App Api V1 Flow Apps  Entity Id  Unarchive Post"
                 }
               }
             },
@@ -74010,7 +74688,7 @@
         ]
       },
       "put": {
-        "description": "Change the rows named in the body; ``null`` returns a row to its start value.",
+        "description": "Change the rows named in the body; ``null`` returns a row to its start value.\n\nA token (its owner an administrator) gets ``202`` and a request a person approves (flow #1).",
         "operationId": "update_settings_api_v1_knowledge_settings_put",
         "requestBody": {
           "content": {
@@ -74027,7 +74705,15 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/KnowledgeSettingsView"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/KnowledgeSettingsView"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ActionApprovalAccepted"
+                    }
+                  ],
+                  "title": "Response Update Settings Api V1 Knowledge Settings Put"
                 }
               }
             },
@@ -74101,7 +74787,15 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SourceTypeView"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/SourceTypeView"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ActionApprovalAccepted"
+                    }
+                  ],
+                  "title": "Response Create Source Type Api V1 Knowledge Source Types Post"
                 }
               }
             },
@@ -74159,7 +74853,15 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SourceTypeView"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/SourceTypeView"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ActionApprovalAccepted"
+                    }
+                  ],
+                  "title": "Response Update Source Type Api V1 Knowledge Source Types  Key  Patch"
                 }
               }
             },
@@ -74264,7 +74966,15 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SourceCard"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/SourceCard"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ActionApprovalAccepted"
+                    }
+                  ],
+                  "title": "Response Update Source Api V1 Knowledge Sources  Source Id  Patch"
                 }
               }
             },
@@ -79159,7 +79869,7 @@
     },
     "/api/v1/modules/{module_id}/enabled": {
       "put": {
-        "description": "Switch a PLUG-IN of the caller's workspace on or off: the workspace administrator's (C48).\n\nA plug-in is deployed from the workspace's repository and starts off; this is\nthe one switch that makes it available. A platform module is not switched\nhere (``PUT /api/v1/platform/modules/{id}``, a platform administrator), and\nthe installation's emergency stop is not lifted here either. The service\ndecides who may, again, so no route can be wired to the wrong rule.",
+        "description": "Switch a PLUG-IN of the caller's workspace on or off: the workspace administrator's (C48).\n\nA plug-in is deployed from the workspace's repository and starts off; this is\nthe one switch that makes it available. A platform module is not switched\nhere (``PUT /api/v1/platform/modules/{id}``, a platform administrator), and\nthe installation's emergency stop is not lifted here either. The service\ndecides who may, again, so no route can be wired to the wrong rule.\n\nA token (its owner an administrator) gets ``202`` for a plug-in and a request a person approves\n(flow #1); for a platform module it gets ``403``.",
         "operationId": "switch_plugin_api_v1_modules__module_id__enabled_put",
         "parameters": [
           {
@@ -79187,7 +79897,15 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ModuleResponse"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ModuleResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ActionApprovalAccepted"
+                    }
+                  ],
+                  "title": "Response Switch Plugin Api V1 Modules  Module Id  Enabled Put"
                 }
               }
             },
@@ -79293,6 +80011,7 @@
         ]
       },
       "patch": {
+        "description": "Write settings. A token of an administrator that patches a setting it may only PROPOSE\n(``token=\"approval\"``, e.g. Mail's mailboxes) gets ``202`` and one request a person approves;\nthe patch is checked first, so a field error is a ``422`` and no request exists.",
         "operationId": "patch_settings_api_v1_modules__module_id__settings_patch",
         "parameters": [
           {
@@ -79368,7 +80087,15 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ModuleSettingsResponse"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ModuleSettingsResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ActionApprovalAccepted"
+                    }
+                  ],
+                  "title": "Response Patch Settings Api V1 Modules  Module Id  Settings Patch"
                 }
               }
             },
@@ -89895,6 +90622,7 @@
         ]
       },
       "post": {
+        "description": "Add a role. A token (its owner an administrator) gets ``202`` and a request (flow #1).",
         "operationId": "create_role_api_v1_roles_post",
         "requestBody": {
           "content": {
@@ -89911,7 +90639,15 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RoleResponse"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/RoleResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ActionApprovalAccepted"
+                    }
+                  ],
+                  "title": "Response Create Role Api V1 Roles Post"
                 }
               }
             },
@@ -89965,6 +90701,16 @@
           }
         ],
         "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionApprovalAccepted"
+                }
+              }
+            },
+            "description": "Accepted"
+          },
           "204": {
             "description": "Successful Response"
           },
@@ -90064,7 +90810,15 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RoleResponse"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/RoleResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ActionApprovalAccepted"
+                    }
+                  ],
+                  "title": "Response Update Role Api V1 Roles  Role Id  Put"
                 }
               }
             },
@@ -97311,7 +98065,7 @@
         ]
       },
       "patch": {
-        "description": "Persist a new per-tenant concurrent-run cap (MLP-2 #330).\n\nAdmin-only via :func:`src.auth.dependencies.require_admin` — the\nconcurrent-run cap is a tenant-DoS knob (value 1 freezes every\nfan-out for every member). Reads on the GET routes stay open to\nevery member so the live indicator on dashboards is observable.\nBounded at [1, 1000] in the service layer. Audit-logged.",
+        "description": "Persist a new per-tenant concurrent-run cap (MLP-2 #330).\n\nAn administrator at a screen sets it at once. A token (its owner an administrator) gets ``202``\nand a request a person approves (flow #1): the cap is a tenant-DoS knob (value 1 freezes every\nfan-out for every member), so it never changes without a person saying yes. Reads on the GET\nroutes stay open to every member so the live indicator on dashboards is observable.\nBounded at [1, 1000] in the service layer. Audit-logged.",
         "operationId": "update_concurrent_run_cap_api_v1_tenant_settings_concurrent_run_cap_patch",
         "requestBody": {
           "content": {
@@ -97328,11 +98082,29 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConcurrentRunCapResponse"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ConcurrentRunCapResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ActionApprovalAccepted"
+                    }
+                  ],
+                  "title": "Response Update Concurrent Run Cap Api V1 Tenant Settings Concurrent Run Cap Patch"
                 }
               }
             },
             "description": "Successful Response"
+          },
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionApprovalAccepted"
+                }
+              }
+            },
+            "description": "Asked; a person approves."
           },
           "422": {
             "content": {
@@ -97383,7 +98155,7 @@
         ]
       },
       "patch": {
-        "description": "Set (or clear, with ``0``) the tenant-default fan-out pace.\n\nAdmin-only, like the concurrency cap and for the same reason: a low\nvalue throttles every fan-out in the tenant. Reads stay open to\nevery member so an operator looking at a slow launch can confirm it\nis paced rather than stuck.",
+        "description": "Set (or clear, with ``0``) the tenant-default fan-out pace.\n\nAdmin-only, like the concurrency cap and for the same reason: a low\nvalue throttles every fan-out in the tenant. A token (its owner an\nadministrator) gets ``202`` and a request a person approves (flow #1).\nReads stay open to every member so an operator looking at a slow\nlaunch can confirm it is paced rather than stuck.",
         "operationId": "update_for_each_rate_api_v1_tenant_settings_for_each_rate_patch",
         "requestBody": {
           "content": {
@@ -97400,7 +98172,15 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/FanOutRateResponse"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/FanOutRateResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ActionApprovalAccepted"
+                    }
+                  ],
+                  "title": "Response Update For Each Rate Api V1 Tenant Settings For Each Rate Patch"
                 }
               }
             },
@@ -97455,7 +98235,7 @@
         ]
       },
       "patch": {
-        "description": "Replace the tier map for the authenticated tenant.\n\nAdministrator-only, like every other write on this router. It was the one\nthat was not: any member could reassign which model each tier runs on,\nwhich decides what every agent in the workspace costs and how well it\nthinks. Its two siblings here — the concurrent-run cap and the fan-out rate\n— were already admin-gated, so this was an oversight rather than a policy.\n\nValidation runs through ``TenantSettingsService`` (Pydantic + audit\n+ router cache invalidation).  Returns the persisted tier map so\nthe FE can refresh its local state without a follow-up GET.",
+        "description": "Replace the tier map for the authenticated tenant.\n\nAdministrator-only, like every other write on this router: which model each tier runs on\ndecides what every agent in the workspace costs and how well it thinks. A token (its owner an\nadministrator) gets ``202`` and a request a person approves (flow #1).\n\nValidation runs through ``TenantSettingsService`` (Pydantic + audit\n+ router cache invalidation).  Returns the persisted tier map so\nthe FE can refresh its local state without a follow-up GET.",
         "operationId": "update_model_tier_map_api_v1_tenant_settings_model_tier_map_patch",
         "requestBody": {
           "content": {
@@ -97472,7 +98252,15 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ModelTierMap"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ModelTierMap"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ActionApprovalAccepted"
+                    }
+                  ],
+                  "title": "Response Update Model Tier Map Api V1 Tenant Settings Model Tier Map Patch"
                 }
               }
             },
@@ -97533,7 +98321,7 @@
     },
     "/api/v1/tenant-settings/system-agent-models/{slug}": {
       "put": {
-        "description": "This workspace's own choice for one system agent; both fields empty clears it.\n\nAdministrator-only, like the tier map: it decides what the platform's own\nagents cost here and how well they think.",
+        "description": "This workspace's own choice for one system agent; both fields empty clears it.\n\nAdministrator-only, like the tier map: it decides what the platform's own\nagents cost here and how well they think. A token (its owner an administrator)\ngets ``202`` and a request a person approves (flow #1).",
         "operationId": "set_system_agent_model_api_v1_tenant_settings_system_agent_models__slug__put",
         "parameters": [
           {
@@ -97561,11 +98349,18 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/SystemAgentModelResponse"
-                  },
-                  "title": "Response Set System Agent Model Api V1 Tenant Settings System Agent Models  Slug  Put",
-                  "type": "array"
+                  "anyOf": [
+                    {
+                      "items": {
+                        "$ref": "#/components/schemas/SystemAgentModelResponse"
+                      },
+                      "type": "array"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ActionApprovalAccepted"
+                    }
+                  ],
+                  "title": "Response Set System Agent Model Api V1 Tenant Settings System Agent Models  Slug  Put"
                 }
               }
             },
@@ -101517,7 +102312,15 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/AddMemberResponse"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/AddMemberResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ActionApprovalAccepted"
+                    }
+                  ],
+                  "title": "Response Add Tenant Member Api V1 Users Post"
                 }
               }
             },
@@ -101619,6 +102422,16 @@
           }
         ],
         "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionApprovalAccepted"
+                }
+              }
+            },
+            "description": "Accepted"
+          },
           "204": {
             "description": "Successful Response"
           },
@@ -101673,7 +102486,15 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TenantMemberItem"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/TenantMemberItem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ActionApprovalAccepted"
+                    }
+                  ],
+                  "title": "Response Update Tenant Member Api V1 Users  User Id  Patch"
                 }
               }
             },
@@ -101827,7 +102648,15 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/MemberRolesResponse"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/MemberRolesResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ActionApprovalAccepted"
+                    }
+                  ],
+                  "title": "Response Set Member Roles Api V1 Users  User Id  Roles Put"
                 }
               }
             },

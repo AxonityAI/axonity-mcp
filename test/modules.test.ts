@@ -346,9 +346,9 @@ describe("who may write module settings, and where the tools stop", () => {
   const write = () => registered().tool("update_module_settings").description;
 
   it("names both token kinds that may write the workspace level", () => {
-    expect(write()).toMatch(/service token with the author scope/i);
+    expect(write()).toMatch(/service token needs the author scope/i);
     expect(write()).toMatch(/personal token/i);
-    expect(write()).toMatch(/owner is an administrator/i);
+    expect(write()).toMatch(/owner who is an administrator/i);
     expect(write()).toMatch(/with that person's rights/i);
   });
 
@@ -405,18 +405,40 @@ describe("who may write module settings, and where the tools stop", () => {
     expect(write()).toMatch(/Run actions/);
   });
 
-  // `human_only` (Mail's mailboxes, R2.2): no token of any kind writes such a
-  // setting, a personal one of an administrator included, so the sentence that
-  // says an administrator's token may write "including admin-classified
-  // fields" cannot stand alone. Sources: `domain/module_settings.py`
-  // `may_write_setting` (a machine principal with `human_only` is refused before
-  // any role is looked at) and `modules/manifest_schema.py` (`human_only`).
-  it("says a setting marked humanOnly is written by a person only, whatever the token", () => {
-    expect(write()).toMatch(/humanOnly/);
-    expect(write()).toMatch(/person in Axonity/i);
-    expect(write()).toMatch(/no token/i);
-    expect(registered().tool("read_module_settings_schema").description).toMatch(
-      /humanOnly[^.]*(person|human)/i,
-    );
+  // `token` per setting (flow `feat/module-setting-token-category`): `allow`,
+  // `approval` or `deny`, replacing the old `humanOnly`. Sources:
+  // `modules/manifest_schema.py` (`TokenCategory`, `human_only` is only the old
+  // spelling of `token: deny`) and `module_settings_service.py` (a PATCH that
+  // touches an `approval` field is one request, 202).
+  it("names the three token categories and the 202 an approval field gives", () => {
+    for (const text of [
+      write(),
+      registered().tool("read_module_settings_schema").description,
+    ]) {
+      expect(text).toMatch(/`allow`/);
+      expect(text).toMatch(/`approval`/);
+      expect(text).toMatch(/`deny`/);
+      expect(text).not.toMatch(/humanOnly/);
+    }
+    expect(registered().tool("read_module_settings_schema").description).toMatch(/\btoken\b[^.]*may do/);
+    expect(write()).toMatch(/NOT DONE YET/);
+    expect(write()).toMatch(/get_action_approval/);
+    expect(write()).toMatch(/mailboxes\[0\]\.address/);
+    expect(write()).toMatch(/person changes it in Axonity/i);
+  });
+
+  // Backend `module_settings.py` setting_write: a service token writes (allow)
+  // or proposes (approval) at workspace level only with `author` AND an owner
+  // who is an administrator of the workspace right now.
+  it("says a service token needs author AND an owner who is now an administrator, for allow and approval", () => {
+    expect(write()).toMatch(/service token[^.]*`?author`?[^.]*AND[^.]*(owner|person)[^.]*administrator/i);
+    expect(write()).toMatch(/now|live/i);
+    expect(write()).toMatch(/for writing and for proposing alike/);
+    expect(write()).not.toMatch(/a service token with the author scope, or/);
+    expect(write()).toMatch(/member's author token is refused/);
+  });
+
+  it("reads writeNeedsApproval off the settings response", () => {
+    expect(registered().tool("read_module_settings").description).toMatch(/writeNeedsApproval/);
   });
 });
