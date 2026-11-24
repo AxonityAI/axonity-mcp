@@ -406,6 +406,85 @@ describe("no workflow goes to approval while it has warnings", () => {
     );
   });
 
+  it("lets a release through when its changed agent is a member", async () => {
+    const { server, handlers } = fakeServer();
+    const client = clientAnswering({
+      issues: [{
+        code: "agent_has_unpublished_changes",
+        message: "Step Mail: agent has changes that are not published",
+        severity: "warning",
+        stepIds: ["mail"],
+      }],
+    });
+    client.get = vi.fn(async () => ({
+      document: {
+        steps: { all: [{ id: "mail", type: "agent", contract: {
+          owners: [{ id: "agent-1", type: "agent" }],
+        } }] },
+      },
+    })) as never;
+    registerApprovalTools(server as never, client as unknown as AxonityClient);
+
+    await handlers.get("request_publish_release")!({ workflowId: "wf-1" });
+
+    expect(client.post).toHaveBeenCalledWith("/api/v1/publish-approvals/release", {
+      workflowId: "wf-1",
+    });
+  });
+
+  it("lets a release through when its orchestrator owns the warned agent step", async () => {
+    const { server, handlers } = fakeServer();
+    const client = clientAnswering({
+      issues: [{
+        code: "agent_has_unpublished_changes",
+        message: "Step Mail: this process's Owner has changes that are not published",
+        severity: "warning",
+        stepIds: ["mail"],
+      }],
+    });
+    client.get = vi.fn(async () => ({
+      document: {
+        orchestratorAgentId: "agent-owner",
+        steps: { all: [{ id: "mail", type: "agent", contract: { owners: [] } }] },
+      },
+    })) as never;
+    registerApprovalTools(server as never, client as unknown as AxonityClient);
+
+    await handlers.get("request_publish_release")!({ workflowId: "wf-1" });
+
+    expect(client.post).toHaveBeenCalledWith("/api/v1/publish-approvals/release", {
+      workflowId: "wf-1",
+    });
+  });
+
+  it("still refuses an agent-change warning that names no release member", async () => {
+    const { server, handlers } = fakeServer();
+    const client = clientAnswering({
+      issues: [{
+        code: "agent_has_unpublished_changes",
+        message: "Step Mail: agent has changes that are not published",
+        severity: "warning",
+        stepIds: ["mail"],
+      }],
+    });
+    client.get = vi.fn(async () => ({
+      document: {
+        steps: { all: [{ id: "mail", type: "agent", contract: {
+          owners: [{ id: "team-1", type: "team" }],
+        } }] },
+      },
+    })) as never;
+    registerApprovalTools(server as never, client as unknown as AxonityClient);
+
+    const result = await handlers.get("request_publish_release")!({ workflowId: "wf-1" });
+
+    expect(result.isError).toBe(true);
+    expect(client.post).not.toHaveBeenCalledWith(
+      "/api/v1/publish-approvals/release",
+      expect.anything(),
+    );
+  });
+
   it("lets a release through when only errors remain — the release may resolve them", async () => {
     const { server, handlers } = fakeServer();
     const client = clientAnswering({

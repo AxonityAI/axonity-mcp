@@ -519,7 +519,7 @@ export function registerApprovalTools(
     },
     async ({ workflowId, changeSummary }) =>
       guard(async () => {
-        await refuseWhileWorkflowWarns(client, workflowId);
+        await refuseWhileWorkflowWarns(client, workflowId, { release: true });
         return jsonResult(
           await client.post("/api/v1/publish-approvals/release", {
             workflowId,
