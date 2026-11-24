@@ -26,6 +26,7 @@ interface ValidationIssue {
 }
 
 type WorkflowDocument = {
+  orchestratorAgentId?: unknown;
   steps?: { all?: unknown[] };
 };
 
@@ -39,12 +40,12 @@ function isReleaseMemberAgentWarning(issue: ValidationIssue, document: WorkflowD
     if (!step || typeof step !== "object") return false;
     const item = step as { id?: unknown; contract?: { owners?: unknown } };
     if (typeof item.id !== "string" || !warnedSteps.has(item.id)) return false;
-    if (!Array.isArray(item.contract?.owners)) return false;
-    return item.contract.owners.some((owner) =>
+    const hasAgentOwner = Array.isArray(item.contract?.owners) && item.contract.owners.some((owner) =>
       !!owner && typeof owner === "object" &&
       (owner as { type?: unknown; id?: unknown }).type === "agent" &&
       typeof (owner as { id?: unknown }).id === "string",
     );
+    return hasAgentOwner || typeof document.orchestratorAgentId === "string";
   });
 }
 
@@ -62,10 +63,11 @@ export async function refuseWhileWorkflowWarns(
   if (!options.release) throwForWarnings(workflowId, warnings);
 
   // Flow's stored-workflow validation deliberately only names the warned step,
-  // not the member id. The draft is authoritative for that step's owners, and
-  // every agent owner is in a workflow release closure. Do not suppress a
-  // warning unless that relation is explicit; an unreadable or changed shape
-  // must remain a gate rather than becoming a guessed exception.
+  // not the member id. The draft is authoritative for that step's agent owner
+  // (or its orchestrator fallback), and both are in a workflow release
+  // closure. Do not suppress a warning unless that relation is explicit; an
+  // unreadable or changed shape must remain a gate rather than becoming a
+  // guessed exception.
   const workflow = (await client.get(`/api/v1/workflows/${seg(workflowId)}`)) as {
     document?: WorkflowDocument;
   } | null;
