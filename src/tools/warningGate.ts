@@ -10,8 +10,9 @@
  *
  * Errors are not refused here: the server's own readiness already names them
  * as blockers, and some resolve by the very release being requested (a tool
- * that is only unpublished is published by it). A warning has no such path —
- * nothing the approval does makes it go away.
+ * that is only unpublished is published by it). The same is true of the one
+ * warning Flow can prove belongs to the release: a changed agent that owns a
+ * warned step is one of the release's members.
  */
 
 import type { AxonityClient } from "../client.js";
@@ -21,11 +22,36 @@ interface ValidationIssue {
   code?: string;
   message?: string;
   severity?: string;
+  stepIds?: string[];
+}
+
+type WorkflowDocument = {
+  steps?: { all?: unknown[] };
+};
+
+function isReleaseMemberAgentWarning(issue: ValidationIssue, document: WorkflowDocument): boolean {
+  if (issue.code !== "agent_has_unpublished_changes" || !issue.stepIds?.length) return false;
+
+  const steps = document.steps?.all;
+  if (!Array.isArray(steps)) return false;
+  const warnedSteps = new Set(issue.stepIds);
+  return steps.some((step) => {
+    if (!step || typeof step !== "object") return false;
+    const item = step as { id?: unknown; contract?: { owners?: unknown } };
+    if (typeof item.id !== "string" || !warnedSteps.has(item.id)) return false;
+    if (!Array.isArray(item.contract?.owners)) return false;
+    return item.contract.owners.some((owner) =>
+      !!owner && typeof owner === "object" &&
+      (owner as { type?: unknown; id?: unknown }).type === "agent" &&
+      typeof (owner as { id?: unknown }).id === "string",
+    );
+  });
 }
 
 export async function refuseWhileWorkflowWarns(
   client: AxonityClient,
   workflowId: string,
+  options: { release?: boolean } = {},
 ): Promise<void> {
   const verdict = (await client.post(`/api/v1/workflows/${seg(workflowId)}/validate`)) as {
     issues?: ValidationIssue[];
@@ -33,6 +59,25 @@ export async function refuseWhileWorkflowWarns(
   const warnings = (verdict?.issues ?? []).filter((i) => i?.severity === "warning");
   if (warnings.length === 0) return;
 
+  if (!options.release) throwForWarnings(workflowId, warnings);
+
+  // Flow's stored-workflow validation deliberately only names the warned step,
+  // not the member id. The draft is authoritative for that step's owners, and
+  // every agent owner is in a workflow release closure. Do not suppress a
+  // warning unless that relation is explicit; an unreadable or changed shape
+  // must remain a gate rather than becoming a guessed exception.
+  const workflow = (await client.get(`/api/v1/workflows/${seg(workflowId)}`)) as {
+    document?: WorkflowDocument;
+  } | null;
+  const blocking = warnings.filter(
+    (warning) => !isReleaseMemberAgentWarning(warning, workflow?.document ?? {}),
+  );
+  if (blocking.length === 0) return;
+
+  throwForWarnings(workflowId, blocking);
+}
+
+function throwForWarnings(workflowId: string, warnings: ValidationIssue[]): never {
   const lines = warnings.map((w) => `- ${w.code ?? "warning"}: ${w.message ?? ""}`);
   throw new Error(
     `Workflow ${workflowId} still has ${warnings.length} warning(s), so it is ` +
