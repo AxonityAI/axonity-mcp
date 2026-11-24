@@ -383,6 +383,9 @@ const NOT_PUBLISHING: Record<string, string> = {
     "request_publish_bulk — asking in bulk is still asking; deciding in bulk is forbidden",
   "POST /api/v1/publish-approvals/release":
     "request_publish_release — proposes a release; approving it is forbidden above",
+  "POST /api/v1/workflows/{workflow_id}/unpublish":
+    "unpublish_workflow — for a token it creates ONE request a person approves " +
+    "(axonity-flow#2626, action_approvals); nothing goes live, and nothing stops until approved",
 };
 
 /** The publishing writes the deny list does not forbid. */

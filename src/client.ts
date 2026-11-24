@@ -32,6 +32,15 @@ export type Query = Record<string, QueryScalar | QueryScalar[] | undefined>;
 export class AxonityClient {
   constructor(private readonly config: AxonityConfig) {}
 
+  /**
+   * The address of a page of the Axonity app on this deploy, for a link a tool hands a person
+   * (`/digitaltwin/approvals/admin`). The app and its API share one host. Builds a string, calls
+   * nothing.
+   */
+  appUrl(path: string): string {
+    return `${this.config.apiUrl}${path.startsWith("/") ? path : `/${path}`}`;
+  }
+
   private url(method: string, path: string, query?: Query): string {
     const route = path.startsWith("/") ? path : `/${path}`;
     checkPath(route);

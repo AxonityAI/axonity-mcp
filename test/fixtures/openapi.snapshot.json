@@ -46565,6 +46565,25 @@
         "title": "UnpublishResponse",
         "type": "object"
       },
+      "UnpublishWorkflowRequest": {
+        "description": "Optional body of ``POST /api/v1/workflows/{workflow_id}/unpublish``.\n\n``reason`` is why the workflow is taken off the air, in the words of whoever asks. It is\nstored on the audit event of the unpublication and, for a token's request, shown to the\nperson who decides. The screen sends no body: a person needs to give no reason.",
+        "properties": {
+          "reason": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "title": "UnpublishWorkflowRequest",
+        "type": "object"
+      },
       "UnreadableContainerOut": {
         "description": "A dataset or schema the last reading of the catalogue could not read (#2137 · S3).",
         "properties": {
@@ -105110,7 +105129,7 @@
     },
     "/api/v1/workflows/{workflow_id}/unpublish": {
       "post": {
-        "description": "Unpublish the current live workflow version.\n\nClears the workflow's published_document. After unpublish,\nthe workflow has no live version.",
+        "description": "Unpublish the current live workflow version.\n\nClears the workflow's published_document. After unpublish,\nthe workflow has no live version. A person does it at once; a token\nonly ASKS (``202``, action ``workflows.unpublish``) and a person\napproves — refused (``409``, naming each) while a start of the\nworkflow is still switched on.",
         "operationId": "unpublish_workflow_api_v1_workflows__workflow_id__unpublish_post",
         "parameters": [
           {
@@ -105124,12 +105143,37 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/UnpublishWorkflowRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/UnpublishResponse"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/UnpublishResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ActionApprovalAccepted"
+                    }
+                  ],
+                  "title": "Response Unpublish Workflow Api V1 Workflows  Workflow Id  Unpublish Post"
                 }
               }
             },

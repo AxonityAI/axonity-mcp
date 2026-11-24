@@ -939,7 +939,7 @@ export const TOKEN_ROUTE_CLASSES: Readonly<Record<string, TokenRoute>> = {
   "POST /api/v1/workflows/{workflow_id}/restore": { class: "dicht", why: "restore: configuration without an approval step" },
   "POST /api/v1/workflows/{workflow_id}/runs": { class: "actie" },
   "POST /api/v1/workflows/{workflow_id}/skills-v2/{skill_id}": { class: "dicht", why: "attachment rows, not proven to be draft-only" },
-  "POST /api/v1/workflows/{workflow_id}/unpublish": { class: "dicht", why: "direct publish: only the approval request" },
+  "POST /api/v1/workflows/{workflow_id}/unpublish": { class: "configuratie" },
   "POST /api/v1/workflows/{workflow_id}/validate": { class: "lezen" },
   "POST /api/v1/workflows/{workflow_id}/versions": { class: "configuratie" },
   "POST /api/v1/workflows/{workflow_id}/versions/ensure": { class: "configuratie" },

@@ -87,7 +87,9 @@ Read this before creating or updating anything.
    entities at once (taking a tenant live) is \`request_publish_bulk\`, up to 200
    in one call; it is not transactional, so read the per-entry results.
 8. \`list_publish_approvals\` / \`get_publish_approval\` to see whether it was
-   approved or rejected. Readiness there is recomputed as you read it
+   approved or rejected. The list carries no readiness (\`readiness\` and
+   \`readinessChanged\` are null on a row); open the request with
+   \`get_publish_approval\` before you decide anything. That read recomputes it
    (\`readiness\` now, \`readinessAtRequest\` then, \`readinessChanged\` if it
    moved), so a blocker you saw earlier may already be gone.
 
@@ -268,7 +270,8 @@ has run cleanly once, at its current version.
   reads it — and out of \`list_*\` unless \`archived\` is \`include\` or \`only\`;
   its row says \`archivedAt\`. It is not edited until it is unarchived. On a
   kind with versions only a draft can be archived: a published one is refused
-  until a person unpublishes it in Axonity, and archiving touches no version
+  until a person unpublishes it in Axonity (a workflow: \`unpublish_workflow\`
+  asks for it, a person approves), and archiving touches no version
   (a data source and a dashboard have no versions, so none of that applies to them). Do not archive by
   sending a \`status\` to \`update_*\`: \`agent\`, \`tool\`, \`skill\`, \`policy\`,
   \`reference_doc\`, \`output_schema\`, \`data_table\`, \`measure\`, \`query\`,

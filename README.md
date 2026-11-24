@@ -737,6 +737,11 @@ and `get_publish_approval({ approvalId })` — how you find out whether a
 `request_publish_*` was approved or rejected. Approving and rejecting are
 human-only actions in Axonity.
 
+**The list carries no readiness.** A row of the queue has `readiness` and
+`readinessChanged` set to null; the queue does not compute them per row. Open the
+request with `get_publish_approval` before you judge it: that read recomputes its
+readiness as the entity stands now, and approving computes it fresh again.
+
 **The queue is read a page at a time.** It can hold thousands of requests, so one
 call answers one page (50 by default, 200 at most) with `total`, `hasMore` and
 `nextCursor`; send `nextCursor` back as `cursor` until it is null. `offset` still

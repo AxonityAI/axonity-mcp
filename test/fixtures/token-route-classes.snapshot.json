@@ -3267,8 +3267,7 @@
     "why": "attachment rows, not proven to be draft-only"
   },
   "POST /api/v1/workflows/{workflow_id}/unpublish": {
-    "class": "dicht",
-    "why": "direct publish: only the approval request"
+    "class": "configuratie"
   },
   "POST /api/v1/workflows/{workflow_id}/validate": {
     "class": "lezen"

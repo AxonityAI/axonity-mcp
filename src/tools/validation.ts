@@ -309,10 +309,11 @@ export function registerApprovalTools(
       WHOSE_REQUESTS +
       WHAT_A_REQUEST_SAYS +
       CURRENT_REQUEST_VERSION +
-      "\n\nReadiness is recomputed WHEN YOU READ, not frozen at request time: " +
-      "`readiness` is the verdict right now, `readinessAtRequest` is what the " +
-      "requester saw, and `readinessChanged` says whether it moved. So a blocker " +
-      "you saw an hour ago may already be resolved — and 'ready' means ready now.",
+      "\n\nTHE LIST CARRIES NO READINESS. On a row `readiness` and " +
+      "`readinessChanged` are null: the queue does not compute them per row. " +
+      "Before you judge or act on a request, open it with get_publish_approval — " +
+      "that read recomputes its readiness as the entity stands now. Approving " +
+      "computes it fresh again, so what decides is never the list.",
     {
       ...QUEUE_FILTERS,
       view: VIEW,
