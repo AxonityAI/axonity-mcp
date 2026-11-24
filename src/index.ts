@@ -228,10 +228,8 @@ const TILE_NUMBER_NOTE =
   "This sets it against another number, never its status. Quantity and " +
   "filter compatibility are checked when queried. `config.sparkline` is " +
   "none, trend (default), bullet or bars; bullet requires config.against. " +
-  "none/bullet ask for grain none, trend for auto; bars sets no grain of its " +
-  "own: `config.grain` decides (auto = the finest grain with at most 60 " +
-  "points, so this year to October opens per week; set month for bars per " +
-  "month). Only number tiles accept " +
+  "none/bullet ask for grain none, trend for auto; bars asks no series on " +
+  "the tile itself: it is drawn by a frame (see FRAMES). Only number tiles accept " +
   "against or sparkline. compare and against are independent: set " +
   "`compare: \"none\"` explicitly for the basis comparison alone. " +
   "For an S card with both comparisons, omit the trend or choose M; the " +
@@ -262,20 +260,34 @@ const LAYOUT_ARRANGING_NOTE =
   "`section.frame` (true) draws the section as a frame; a section without " +
   "`frame` looks as it does today, so frames and plain sections mix on one " +
   "dashboard. `section.hero` is the id of the hero: a number tile of that " +
-  "section, drawn large with its plan (`config.against`) and last year; give " +
-  "it `sparkline` bars and `config.grain` month to draw the months as bars " +
-  "with the plan per month. The plan per bucket comes only with against, a " +
-  "grain and no split; a grain finer than the plan's own (a plan set per " +
-  "month has no weeks) gives no plan per bucket but `against.seriesCode` " +
-  "grain_too_fine with `seriesError`, and the total stays. Every other tile of the section is a figure beside the hero, " +
-  "at most 3 figures beside its hero. Without `hero` it is a short frame: its " +
-  "status and the figures it has, again at most 3. `section.coming` is one " +
-  "line under the frame, plain text of at most 200 characters, e.g. " +
-  "\"Coming to this pillar: margin per market\"; absent shows no line. hero " +
-  "and coming are only on a frame: unless frame is true they are refused. " +
-  "null on frame, hero or coming is refused — leave the field out. With " +
-  "`layout.overview` each frame becomes a card at the top. When the " +
-  "dashboard is copied, a copy keeps its hero (pointing at the copied tile)." +
+  "section. Its chart is asked apart from its figure: from 1 January of the " +
+  "year its period ends in to that end, PER MONTH unless the tile sets " +
+  "`config.grain` (leave it out for months; a finer grain is a choice), with " +
+  "last year beside it and its plan (`config.against`) per month. Give the " +
+  "hero `sparkline` bars to draw the months as bars (otherwise a line, and the " +
+  "figure asks a trend of its own as well). The plan per bucket comes only " +
+  "with against, a grain and no split; a grain finer than the plan's own (a " +
+  "plan set per month has no weeks) gives no plan per bucket but " +
+  "`against.seriesCode` grain_too_fine with `seriesError`, and the total " +
+  "stays. Every other tile of the section is a figure beside the hero, at " +
+  "most 3 figures beside its hero, in the author's order. A figure is a " +
+  "number tile (its value, plan and change as one row) or a note tile (one " +
+  "line of text, for a figure that is still coming: \"Margin · comes with " +
+  "the cost data\"); other types (bars, trend, share, list, statement) are " +
+  "not drawn as charts in a frame — keep them in a plain section. Without " +
+  "`hero` it is a short frame: its status and the figures it has, again at " +
+  "most 3. `section.coming` is one line under the frame, plain text of at " +
+  "most 200 characters, e.g. \"Coming to this pillar: margin per market\"; " +
+  "absent shows no line. hero and coming are only on a frame: unless frame " +
+  "is true they are refused. null on frame, hero or coming is refused — " +
+  "leave the field out. In View a frame ignores `collapse`, `card` and " +
+  "`phoneOrder` (it has its own order: hero, then figures; Edit shows its " +
+  "tiles as a plain grid). With `layout.overview` and at least one frame " +
+  "with a hero, the top of the dashboard shows one card per frame WITH a " +
+  "hero; a short frame and a plain section get no card (they still count in " +
+  "\"Needs attention\"). Without any hero the overview stays the list of " +
+  "titled sections. When the dashboard is copied, a copy keeps its hero " +
+  "(pointing at the copied tile)." +
   "\n\nTHE VIEWER — bars per group with `against` or `compare` draw the plan " +
   "and last year as a marker line on each bar. A viewer may keep a period on " +
   "one tile from the drill panel; it is not saved, only carried in the link " +

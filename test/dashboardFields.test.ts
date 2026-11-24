@@ -129,10 +129,21 @@ it.each(TOOLS)("%s says what the backend refuses on a frame", (name) => {
   // A copy of the dashboard keeps its hero pointing at the copied tile.
   expect(text).toContain("a copy keeps its hero");
   // Bars set no grain: auto may open per week, so bars per month ask month (W1 5773d74c3).
-  expect(text).toContain("`config.grain` month");
   expect(text).toContain("grain_too_fine");
   expect(text).toContain("unless frame is true they are refused");
   expect(text).not.toContain("trend and bars for auto");
+  // Review of axonity-flow#2644 S1: the hero's chart is per month unless
+  // config.grain says otherwise (tileQueries heroChartQueryFor: grain ?? 'month').
+  expect(text).toContain("PER MONTH unless the tile sets `config.grain`");
+  expect(text).not.toContain("opens per week");
+  // A short frame gets no card; without any hero the overview stays the list.
+  expect(text).not.toContain("each frame becomes a card");
+  expect(text).toContain("one card per frame WITH a hero; a short frame and a plain section get no card");
+  expect(text).toContain("Without any hero the overview stays the list");
+  // What a figure can be, and what a frame ignores.
+  expect(text).toContain("A figure is a number tile");
+  expect(text).toContain("or a note tile");
+  expect(text).toContain("a frame ignores `collapse`, `card` and `phoneOrder`");
 });
 
 it.each(TOOLS)("%s forwards a dashboard of frames as given", async (name) => {
